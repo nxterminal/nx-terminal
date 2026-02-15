@@ -29,6 +29,9 @@ DB_SCHEMA = os.getenv("NX_DB_SCHEMA", "nx")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
+# Use sslmode=require for external Render PostgreSQL connections
+DB_SSLMODE = os.getenv("NX_DB_SSLMODE", "require")
+
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # ============================================================
@@ -41,15 +44,19 @@ _redis: Optional[aioredis.Redis] = None
 
 def init_db_pool(minconn: int = 2, maxconn: int = 10):
     global _pool
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn, maxconn,
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=DB_PASS,
-        options=f"-c search_path={DB_SCHEMA}",
-        sslmode="require",
-        cursor_factory=psycopg2.extras.RealDictCursor,
-    )
-    log.info(f"DB pool created ({minconn}-{maxconn} conns)")
+    try:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn, maxconn,
+            host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+            user=DB_USER, password=DB_PASS,
+            options=f"-c search_path={DB_SCHEMA}",
+            sslmode=DB_SSLMODE,
+            cursor_factory=psycopg2.extras.RealDictCursor,
+        )
+        log.info(f"DB pool created ({minconn}-{maxconn} conns) [host={DB_HOST}]")
+    except Exception as e:
+        log.error(f"Failed to create DB pool: {e}")
+        raise
 
 
 def close_db_pool():
