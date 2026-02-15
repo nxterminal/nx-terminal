@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+*.egg
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (frontend + contracts)
+node_modules/
+frontend/dist/
+frontend/build/
+
+# Hardhat/Foundry (contracts)
+contracts/cache/
+contracts/artifacts/
+contracts/out/
+contracts/typechain-types/
+
+# Misc
+*.log
+*.sqlite

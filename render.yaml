@@ -1,0 +1,91 @@
+databases:
+  - name: nx-db
+    plan: starter
+    databaseName: nxterminal
+    postgresMajorVersion: 15
+
+services:
+  # ── Redis ─────────────────────────────────────────
+  - type: redis
+    name: nx-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+  # ── API Server (FastAPI + WebSocket) ──────────────
+  - type: web
+    name: nx-api
+    runtime: python
+    plan: starter
+    region: ohio
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: NX_DB_HOST
+        fromDatabase:
+          name: nx-db
+          property: host
+      - key: NX_DB_PORT
+        fromDatabase:
+          name: nx-db
+          property: port
+      - key: NX_DB_NAME
+        fromDatabase:
+          name: nx-db
+          property: database
+      - key: NX_DB_USER
+        fromDatabase:
+          name: nx-db
+          property: user
+      - key: NX_DB_PASS
+        fromDatabase:
+          name: nx-db
+          property: password
+      - key: NX_DB_SCHEMA
+        value: nx
+      - key: REDIS_URL
+        fromService:
+          name: nx-redis
+          type: redis
+          property: connectionString
+
+  # ── Simulation Engine (Background Worker) ─────────
+  - type: worker
+    name: nx-engine
+    runtime: python
+    plan: starter
+    region: ohio
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m backend.engine.run_engine
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: NX_DB_HOST
+        fromDatabase:
+          name: nx-db
+          property: host
+      - key: NX_DB_PORT
+        fromDatabase:
+          name: nx-db
+          property: port
+      - key: NX_DB_NAME
+        fromDatabase:
+          name: nx-db
+          property: database
+      - key: NX_DB_USER
+        fromDatabase:
+          name: nx-db
+          property: user
+      - key: NX_DB_PASS
+        fromDatabase:
+          name: nx-db
+          property: password
+      - key: NX_DB_SCHEMA
+        value: nx
+      - key: REDIS_URL
+        fromService:
+          name: nx-redis
+          type: redis
+          property: connectionString
