@@ -46,6 +46,7 @@ def init_db_pool(minconn: int = 2, maxconn: int = 10):
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
         user=DB_USER, password=DB_PASS,
         options=f"-c search_path={DB_SCHEMA}",
+        sslmode="require",
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
     log.info(f"DB pool created ({minconn}-{maxconn} conns)")
