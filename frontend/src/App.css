@@ -719,50 +719,330 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* ====== DIAL-UP MODAL ====== */
+/* ═══════════════════════════════════════════════════════
+   DIAL-UP MODAL — Win98 Pixel-Perfect
+   ═══════════════════════════════════════════════════════ */
+
 .dialup-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 10004;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 10010;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.dialup-window {
-  width: 450px;
-  background: var(--win-bg);
+
+/* ── Win98 dialog shell ── */
+.dialup-win98 {
+  width: 420px;
+  background: #c0c0c0;
   box-shadow:
     inset -1px -1px 0 #000,
-    inset 1px 1px 0 var(--border-light),
-    inset -2px -2px 0 var(--border-dark),
+    inset 1px 1px 0 #fff,
+    inset -2px -2px 0 #808080,
     inset 2px 2px 0 #dfdfdf;
+  font-family: 'Tahoma', 'MS Sans Serif', 'Segoe UI', sans-serif;
+  font-size: 11px;
+  color: #000;
 }
-.dialup-terminal {
-  background: var(--terminal-bg);
-  color: var(--terminal-green);
-  font-family: 'VT323', 'Courier New', monospace;
-  font-size: 14px;
+
+.dialup-titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  padding: 2px 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  user-select: none;
+}
+.dialup-titlebar-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dialup-titlebar-title {
+  flex: 1;
+  font-weight: bold;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dialup-titlebar-btn {
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  line-height: 12px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  box-shadow:
+    inset -1px -1px 0 #808080,
+    inset 1px 1px 0 #fff,
+    inset -2px -2px 0 #404040;
+}
+.dialup-titlebar-btn:active {
+  box-shadow:
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #fff;
+}
+
+/* ── Body ── */
+.dialup-body {
+  padding: 12px 16px;
+}
+
+/* ── Separator (Win98 etched line) ── */
+.dialup-separator {
+  height: 2px;
+  margin: 10px 0;
+  background: #808080;
+  border-bottom: 1px solid #fff;
+}
+
+/* ── Button row ── */
+.dialup-btn-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.dialup-btn-row-end {
+  justify-content: flex-end;
+}
+.dialup-action-btn {
+  min-width: 75px;
+  padding: 3px 12px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+}
+.dialup-btn-default {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+/* ──── PHASE 1 — DIALING PROGRESS ──── */
+
+.dialup-icons-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 12px 0 16px;
+  background: #008080;
+  margin: 0 -16px;
+  margin-top: -12px;
+  padding-left: 16px;
+  padding-right: 16px;
+  border-bottom: 1px solid #808080;
+  box-shadow: inset 0 -1px 0 #fff;
+}
+
+.dialup-icon-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+}
+.dialup-icon-label {
+  font-size: 9px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #004040;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* connector between icons */
+.dialup-connector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  margin-bottom: 16px;
+}
+.dialup-wire {
+  width: 24px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ffcc00 0px, #ffcc00 3px,
+    transparent 3px, transparent 6px
+  );
+}
+
+/* Globe spinning */
+.dialup-globe {
+  animation: globeSpin 3s linear infinite;
+}
+@keyframes globeSpin {
+  0%   { filter: hue-rotate(0deg); }
+  50%  { filter: hue-rotate(15deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+
+/* Phone pulsing */
+.dialup-phone {
+  animation: phonePulse 1.2s ease-in-out infinite;
+}
+@keyframes phonePulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* Lightning bolts */
+.dialup-bolt {
+  animation: boltFlash 0.8s ease-in-out infinite alternate;
+}
+@keyframes boltFlash {
+  0%   { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+/* Status area */
+.dialup-status-area {
+  padding: 10px 0 4px;
+  display: flex;
+  gap: 6px;
+}
+.dialup-status-label {
+  color: #000;
+  flex-shrink: 0;
+}
+.dialup-status-text {
+  color: #000;
+  font-weight: bold;
+}
+
+/* ──── PHASE 2 — DOWNLOADING ──── */
+
+/* File copy animation area */
+.dialup-copy-anim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 8px 0 12px;
+  position: relative;
+  min-height: 48px;
+}
+
+.dialup-file-track {
+  width: 100px;
+  height: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Flying file: arcs across the track */
+.dialup-flying-file {
+  position: absolute;
+  top: 0; left: 0;
+  animation: fileFly 1.4s ease-in-out infinite;
+}
+
+@keyframes fileFly {
+  0% {
+    left: -4px;
+    top: 8px;
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    left: 40px;
+    top: -4px;
+    transform: scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(0.8);
+  }
+  100% {
+    left: 82px;
+    top: 8px;
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* Download info rows */
+.dialup-dl-info,
+.dialup-dl-details {
+  padding: 2px 0;
+}
+.dialup-dl-row {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
   line-height: 1.5;
-  padding: 8px;
-  height: 250px;
-  overflow-y: auto;
-  margin: 4px;
 }
-.dialup-progress {
-  margin: 8px;
+.dialup-dl-label {
+  color: #000;
+  flex-shrink: 0;
+}
+.dialup-dl-value {
+  color: #000;
+  word-break: break-all;
+}
+.dialup-dl-time {
+  font-weight: bold;
+}
+
+/* ── Blue-block progress bar ── */
+.dialup-progress-wrap {
+  margin: 8px 0;
+}
+.dialup-progress-bar {
   height: 18px;
-  background: #000;
-  border: 1px solid var(--border-dark);
+  background: #fff;
+  border: 1px solid #808080;
+  box-shadow: inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  display: flex;
+  align-items: center;
   padding: 2px;
+  gap: 1px;
+  overflow: hidden;
 }
-.dialup-progress-fill {
-  height: 100%;
-  background: var(--terminal-green);
-  transition: width 0.4s linear;
+.dialup-progress-block {
+  width: 10px;
+  height: 14px;
+  background: linear-gradient(180deg, #3060d0 0%, #000080 40%, #000060 100%);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* ──── PHASE 3 — DOWNLOAD COMPLETE ──── */
+
+.dialup-complete-body {
+  padding: 16px;
+}
+.dialup-complete-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 4px;
+}
+.dialup-complete-text {
+  line-height: 1.5;
+}
+.dialup-complete-text strong {
+  color: #000080;
 }
 
 /* ====== DESKTOP ICON BADGE ====== */
