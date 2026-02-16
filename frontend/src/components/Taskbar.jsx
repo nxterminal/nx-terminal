@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import StartMenu from './StartMenu';
 
-export default function Taskbar({ windows, onWindowClick }) {
+export default function Taskbar({ windows, onWindowClick, openWindow }) {
   const [cycle, setCycle] = useState(null);
+  const [startOpen, setStartOpen] = useState(false);
 
   useEffect(() => {
     const fetchCycle = () => {
@@ -17,7 +19,16 @@ export default function Taskbar({ windows, onWindowClick }) {
 
   return (
     <div className="taskbar">
-      <button className="win-btn start-btn">
+      <StartMenu
+        open={startOpen}
+        onClose={() => setStartOpen(false)}
+        openWindow={openWindow}
+      />
+
+      <button
+        className={`win-btn start-btn${startOpen ? ' active' : ''}`}
+        onClick={() => setStartOpen(s => !s)}
+      >
         <span style={{ fontSize: '14px' }}>&#x1F5A5;</span>
         <span>Start</span>
       </button>

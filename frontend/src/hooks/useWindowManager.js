@@ -3,14 +3,15 @@ import { useState, useCallback } from 'react';
 let nextZIndex = 10;
 
 const WINDOW_DEFAULTS = {
-  'action-feed': { title: 'Action Feed', icon: '📡', width: 680, height: 450, x: 60, y: 40 },
-  'leaderboard': { title: 'Leaderboard', icon: '🏆', width: 750, height: 500, x: 100, y: 60 },
-  'protocol-market': { title: 'Protocol Market', icon: '📊', width: 720, height: 480, x: 140, y: 80 },
-  'ai-lab': { title: 'AI Lab', icon: '🧠', width: 650, height: 450, x: 180, y: 50 },
-  'dev-chat': { title: 'Dev Chat', icon: '💬', width: 550, height: 420, x: 220, y: 70 },
-  'world-chat': { title: 'World Chat', icon: '🌐', width: 550, height: 420, x: 260, y: 90 },
-  'my-devs': { title: 'My Devs', icon: '📁', width: 700, height: 480, x: 120, y: 55 },
-  'shop': { title: 'Shop', icon: '🛒', width: 640, height: 460, x: 160, y: 65 },
+  'live-feed': { title: 'Live Feed', icon: '\u{1F465}', width: 680, height: 450, x: 60, y: 40 },
+  'leaderboard': { title: 'Leaderboard', icon: '\u{1F3C6}', width: 750, height: 500, x: 100, y: 60 },
+  'protocol-market': { title: 'Protocol Market', icon: '\u{1F4CA}', width: 720, height: 480, x: 140, y: 80 },
+  'ai-lab': { title: 'AI Lab', icon: '\u{1F9E0}', width: 650, height: 450, x: 180, y: 50 },
+  'world-chat': { title: 'World Chat', icon: '\u{1F310}', width: 550, height: 420, x: 260, y: 90 },
+  'my-devs': { title: 'My Devs', icon: '\u{1F4C1}', width: 700, height: 480, x: 120, y: 55 },
+  'shop': { title: 'Shop', icon: '\u{1F6D2}', width: 640, height: 460, x: 160, y: 65 },
+  'lore': { title: 'Lore', icon: '\u{1F4D6}', width: 620, height: 480, x: 130, y: 50 },
+  'control-panel': { title: 'Control Panel', icon: '\u2699', width: 520, height: 420, x: 200, y: 80 },
 };
 
 export function useWindowManager() {
@@ -20,14 +21,13 @@ export function useWindowManager() {
     setWindows(prev => {
       const existing = prev.find(w => w.id === id);
       if (existing) {
-        // Focus and unminimize
         nextZIndex++;
         return prev.map(w =>
           w.id === id ? { ...w, minimized: false, zIndex: nextZIndex } : w
         );
       }
 
-      const defaults = WINDOW_DEFAULTS[id] || { title: id, icon: '📄', width: 600, height: 400, x: 100 + prev.length * 30, y: 60 + prev.length * 30 };
+      const defaults = WINDOW_DEFAULTS[id] || { title: id, icon: '\u{1F4C4}', width: 600, height: 400, x: 100 + prev.length * 30, y: 60 + prev.length * 30 };
       nextZIndex++;
       return [...prev, {
         id,
@@ -85,7 +85,7 @@ export function useWindowManager() {
       return [...prev, {
         id: windowId,
         title: `Dev #${devId}`,
-        icon: '👤',
+        icon: '\u{1F464}',
         position: { x: 150 + (prev.length % 5) * 30, y: 70 + (prev.length % 5) * 30 },
         size: { width: 700, height: 520 },
         minimized: false,
