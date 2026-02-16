@@ -1,19 +1,23 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import DesktopIcon from './DesktopIcon';
 import Taskbar from './Taskbar';
 import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
+import ErrorPopup from './ErrorPopup';
+import BSOD from './BSOD';
+import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 
 const DESKTOP_ICONS = [
+  { id: 'nx-terminal', icon: '\u{1F5A5}', label: 'NX Terminal' },
   { id: 'live-feed', icon: '\u{1F465}', label: 'Live Feed' },
   { id: 'world-chat', icon: '\u{1F310}', label: 'World Chat' },
   { id: 'leaderboard', icon: '\u{1F3C6}', label: 'Leaderboard' },
   { id: 'protocol-market', icon: '\u{1F4CA}', label: 'Protocol Market' },
   { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
   { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
-  { id: 'shop', icon: '\u{1F6D2}', label: 'Shop' },
-  { id: 'lore', icon: '\u{1F4D6}', label: 'Lore' },
+  { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
+  { id: 'hire-devs', icon: '\u{1F4BB}', label: 'Hire Devs' },
   { id: 'control-panel', icon: '\u2699', label: 'Settings' },
 ];
 
@@ -59,6 +63,9 @@ export default function Desktop() {
 
   const [wallpaperStyle, setWallpaperStyle] = useState(getWallpaperStyle);
   const [wallpaperOverlay, setWallpaperOverlay] = useState(getWallpaperOverlay);
+  const [showBSOD, setShowBSOD] = useState(false);
+  const [showScreensaver, setShowScreensaver] = useState(false);
+  const idleTimerRef = useRef(null);
 
   const refreshWallpaper = useCallback(() => {
     setWallpaperStyle(getWallpaperStyle());
@@ -74,12 +81,40 @@ export default function Desktop() {
     return () => window.removeEventListener('nx-settings-changed', refreshWallpaper);
   }, [refreshWallpaper]);
 
+  // Screensaver: 60s inactivity
+  const resetIdleTimer = useCallback(() => {
+    if (showScreensaver) return;
+    clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      setShowScreensaver(true);
+    }, 60000);
+  }, [showScreensaver]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetIdleTimer));
+    resetIdleTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+      clearTimeout(idleTimerRef.current);
+    };
+  }, [resetIdleTimer]);
+
+  // BSOD: 2% chance on window open — wrap openWindow
+  const openWindowWithBSOD = useCallback((id, extraProps) => {
+    if (Math.random() < 0.02) {
+      setShowBSOD(true);
+      return;
+    }
+    openWindow(id, extraProps);
+  }, [openWindow]);
+
   const handleTaskbarClick = (id) => {
     const win = windows.find(w => w.id === id);
     if (win && !win.minimized) {
       minimizeWindow(id);
     } else {
-      openWindow(id);
+      openWindowWithBSOD(id);
     }
   };
 
@@ -94,7 +129,7 @@ export default function Desktop() {
             key={item.id}
             icon={item.icon}
             label={item.label}
-            onDoubleClick={() => openWindow(item.id)}
+            onDoubleClick={() => openWindowWithBSOD(item.id)}
           />
         ))}
       </div>
@@ -110,11 +145,15 @@ export default function Desktop() {
       />
 
       <NXAssistant />
+      <ErrorPopup />
+
+      {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
+      {showScreensaver && <Screensaver onDismiss={() => setShowScreensaver(false)} />}
 
       <Taskbar
         windows={windows}
         onWindowClick={handleTaskbarClick}
-        openWindow={openWindow}
+        openWindow={openWindowWithBSOD}
       />
     </div>
   );

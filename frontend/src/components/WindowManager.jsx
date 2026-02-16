@@ -5,10 +5,13 @@ import ProtocolMarket from '../windows/ProtocolMarket';
 import AILab from '../windows/AILab';
 import DevProfile from '../windows/DevProfile';
 import MyDevs from '../windows/MyDevs';
-import Shop from '../windows/Shop';
 import WorldChat from '../windows/WorldChat';
-import Lore from '../windows/Lore';
 import ControlPanel from '../windows/ControlPanel';
+import NXTerminal from '../windows/NXTerminal';
+import BugSweeper from '../windows/BugSweeper';
+import ProtocolSolitaire from '../windows/ProtocolSolitaire';
+import Inbox from '../windows/Inbox';
+import HireDevs from '../windows/HireDevs';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -16,10 +19,13 @@ const WINDOW_COMPONENTS = {
   'protocol-market': ProtocolMarket,
   'ai-lab': AILab,
   'my-devs': MyDevs,
-  'shop': Shop,
   'world-chat': WorldChat,
-  'lore': Lore,
   'control-panel': ControlPanel,
+  'nx-terminal': NXTerminal,
+  'bug-sweeper': BugSweeper,
+  'protocol-solitaire': ProtocolSolitaire,
+  'inbox': Inbox,
+  'hire-devs': HireDevs,
 };
 
 export default function WindowManager({
@@ -30,6 +36,7 @@ export default function WindowManager({
   maximizeWindow,
   moveWindow,
   openDevProfile,
+  onBSOD,
 }) {
   return (
     <>

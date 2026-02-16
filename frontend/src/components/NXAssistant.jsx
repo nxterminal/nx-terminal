@@ -25,23 +25,45 @@ const MESSAGES = [
     text: "It looks like you're writing a protocol. Would you like me to:",
     buttons: ['Add more bugs', 'Add blockchain', 'Both'],
   },
+  {
+    text: "I noticed you haven't opened the Leaderboard in a while. Your competitors are thriving. You are not.",
+    buttons: null,
+  },
+  {
+    text: 'TIP: Closing this window will not fix your problems. But it will make you feel briefly powerful.',
+    buttons: null,
+  },
+  {
+    text: "Your synergy levels are dangerously low. Management has been notified. (Management doesn't care.)",
+    buttons: null,
+  },
+  {
+    text: "It looks like you're trying to enjoy yourself. This is against corporate policy.",
+    buttons: ['Understood', 'File complaint'],
+  },
 ];
 
-const PIXEL_ROBOT = (
-  <svg width="48" height="48" viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
-    <rect x="5" y="1" width="6" height="2" fill="#808080" />
-    <rect x="7" y="0" width="2" height="1" fill="#ff4444" />
-    <rect x="4" y="3" width="8" height="6" fill="#c0c0c0" />
-    <rect x="3" y="3" width="1" height="6" fill="#808080" />
-    <rect x="12" y="3" width="1" height="6" fill="#808080" />
-    <rect x="5" y="4" width="2" height="2" fill="#000080" />
-    <rect x="9" y="4" width="2" height="2" fill="#000080" />
-    <rect x="6" y="7" width="4" height="1" fill="#404040" />
-    <rect x="5" y="9" width="6" height="4" fill="#808080" />
-    <rect x="3" y="10" width="2" height="3" fill="#c0c0c0" />
-    <rect x="11" y="10" width="2" height="3" fill="#c0c0c0" />
-    <rect x="5" y="13" width="2" height="2" fill="#404040" />
-    <rect x="9" y="13" width="2" height="2" fill="#404040" />
+// Clippy-style paperclip character in SVG
+const CLIPPY_SVG = (
+  <svg width="36" height="52" viewBox="0 0 36 52" style={{ imageRendering: 'auto' }}>
+    {/* Wire body */}
+    <path d="M18 4 C8 4 6 14 6 20 C6 28 8 32 12 36 L12 44" fill="none" stroke="#808080" strokeWidth="3" strokeLinecap="round" />
+    <path d="M18 4 C28 4 30 14 30 20 C30 28 28 32 24 36 L24 44" fill="none" stroke="#808080" strokeWidth="3" strokeLinecap="round" />
+    {/* Clip top */}
+    <path d="M14 4 C14 2 18 0 22 2 C26 4 22 8 18 4" fill="#c0c0c0" stroke="#808080" strokeWidth="1" />
+    {/* Eyes */}
+    <circle cx="14" cy="18" r="3" fill="white" stroke="#404040" strokeWidth="1" />
+    <circle cx="22" cy="18" r="3" fill="white" stroke="#404040" strokeWidth="1" />
+    <circle cx="14.5" cy="18.5" r="1.5" fill="#000080" />
+    <circle cx="22.5" cy="18.5" r="1.5" fill="#000080" />
+    {/* Eyebrows */}
+    <line x1="11" y1="14" x2="16" y2="14.5" stroke="#404040" strokeWidth="1" strokeLinecap="round" />
+    <line x1="20" y1="14.5" x2="25" y2="14" stroke="#404040" strokeWidth="1" strokeLinecap="round" />
+    {/* Mouth */}
+    <path d="M14 24 Q18 28 22 24" fill="none" stroke="#404040" strokeWidth="1.5" strokeLinecap="round" />
+    {/* Feet */}
+    <ellipse cx="12" cy="46" rx="4" ry="3" fill="#c0c0c0" stroke="#808080" strokeWidth="1" />
+    <ellipse cx="24" cy="46" rx="4" ry="3" fill="#c0c0c0" stroke="#808080" strokeWidth="1" />
   </svg>
 );
 
@@ -121,7 +143,7 @@ export default function NXAssistant() {
   return (
     <div className="nx-assistant">
       <div className="nx-assistant-character">
-        {PIXEL_ROBOT}
+        {CLIPPY_SVG}
       </div>
       <div className="nx-assistant-bubble">
         <button className="nx-assistant-close" onClick={handleClose} title="Close">
