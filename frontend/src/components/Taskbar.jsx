@@ -1,27 +1,14 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { useWallet } from '../contexts/WalletContext';
+import { useInbox } from '../contexts/InboxContext';
 
-export default function Taskbar({ windows, onWindowClick, onStartClick, startOpen }) {
-  const [cycle, setCycle] = useState(null);
+export default function Taskbar({ windows, onWindowClick, onStartClick, startOpen, openWindow }) {
+  const { unreadCount, notification, clearNotification } = useInbox();
   const [time, setTime] = useState('');
-  const { connected, truncated, connect } = useWallet();
-
-  useEffect(() => {
-    const fetchCycle = () => {
-      api.getSimulationState()
-        .then(data => setCycle(data.current_cycle || data.cycle || '?'))
-        .catch(() => {});
-    };
-    fetchCycle();
-    const id = setInterval(fetchCycle, 30000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }));
+      setTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
     };
     updateTime();
     const id = setInterval(updateTime, 30000);
@@ -54,16 +41,21 @@ export default function Taskbar({ windows, onWindowClick, onStartClick, startOpe
       </div>
 
       <div className="taskbar-tray">
-        <button
-          className="win-btn wallet-btn"
-          onClick={connect}
-          title={connected ? truncated : 'Connect Wallet'}
+        <div
+          className="taskbar-tray-icon"
+          onClick={() => openWindow('inbox')}
+          title={unreadCount > 0 ? `${unreadCount} unread` : 'Inbox'}
+          style={{ position: 'relative', cursor: 'pointer', fontSize: '14px', padding: '2px 4px' }}
         >
-          {connected ? `🔗 ${truncated}` : '🔗 Connect Wallet'}
-        </button>
-        <div className="taskbar-divider" />
-        <div className="taskbar-clock" title={`Cycle: ${cycle ?? '...'}`}>
-          <span>🔄 {cycle ?? '...'}</span>
+          📬
+          {unreadCount > 0 && <span className="tray-badge" />}
+        </div>
+        {notification && (
+          <div className="tray-notification" onClick={() => { clearNotification(); openWindow('inbox'); }}>
+            {notification}
+          </div>
+        )}
+        <div className="taskbar-clock">
           <span>{time}</span>
         </div>
       </div>

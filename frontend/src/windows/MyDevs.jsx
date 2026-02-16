@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useDevs } from '../contexts/DevsContext';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': '#ff4444', 'LURKER': '#808080', 'DEGEN': '#ffd700',
@@ -23,17 +22,7 @@ function EnergyBar({ energy }) {
 }
 
 export default function MyDevs({ openDevProfile }) {
-  const [devs, setDevs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.getDevs({ limit: 50, sort: 'balance' })
-      .then(d => {
-        setDevs(Array.isArray(d) ? d : d.devs || []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { devs } = useDevs();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -44,12 +33,12 @@ export default function MyDevs({ openDevProfile }) {
         fontFamily: "'VT323', monospace",
         fontSize: '14px',
       }}>
-        {'> Wallet not connected. Showing all devs as preview...'}
+        {'> Team Roster \u2014 ' + devs.length + ' dev(s) assigned'}
       </div>
 
       <div className="win-panel" style={{ flex: 1, overflow: 'auto' }}>
-        {loading ? (
-          <div className="loading">Loading devs...</div>
+        {devs.length === 0 ? (
+          <div className="loading">No devs hired yet. Visit Mint / Hire Devs to get started.</div>
         ) : (
           <table className="win-table">
             <thead>

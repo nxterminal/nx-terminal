@@ -961,3 +961,47 @@
   0%, 100% { opacity: 0.2; }
   50% { opacity: 1; }
 }
+
+/* ====== TRAY BADGE & NOTIFICATION ====== */
+.taskbar-tray-icon {
+  position: relative;
+  cursor: pointer;
+}
+
+.tray-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #ff0000;
+  border-radius: 50%;
+  border: 1px solid var(--win-bg);
+}
+
+.tray-notification {
+  position: absolute;
+  bottom: 36px;
+  right: 8px;
+  background: #ffffcc;
+  border: 1px solid #000;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: 'Tahoma', sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  animation: notificationSlideIn 0.3s ease-out;
+  z-index: 10002;
+}
+
+@keyframes notificationSlideIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

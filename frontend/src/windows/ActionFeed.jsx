@@ -29,6 +29,7 @@ const DEV_NAMES = [
   'EthMaxi_2049', 'FlashLoan_Kid', 'GasOptimizer', 'HodlGang_OG', 'IronDev_99',
   'JeetDetector', 'KeccakCrush', 'LiquidityNinja', 'MEV_Hunter_X', 'NonceSniffer',
   'OracleWhisper', 'PendingTx_404', 'RevertKing_0x', 'SolidityGod', 'TxPoolWatcher',
+  'NEXUS-7X', 'VOID-X', 'SPARK-3',
 ];
 
 const DETAILS_MAP = {

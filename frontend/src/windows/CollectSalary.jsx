@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
+import { useDevs } from '../contexts/DevsContext';
 
 export default function CollectSalary() {
   const { connected } = useWallet();
+  const { devs, totalSalary } = useDevs();
   const [collected, setCollected] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  const salary = 1250;
-  const bonus = 350;
+  const baseSalary = 1000;
+  const devBonus = totalSalary;
+  const total = baseSalary + devBonus;
 
   useEffect(() => {
     if (collected) {
@@ -36,7 +39,7 @@ export default function CollectSalary() {
       ) : collected ? (
         <>
           <div style={{ color: 'var(--terminal-green)', fontSize: '14px', fontWeight: 'bold' }}>
-            Salary Collected! +{salary + bonus} $NXT
+            Salary Collected! +{total} $NXT
           </div>
           <div style={{ fontSize: '11px', color: '#666' }}>
             Next collection available in: <strong>{formatTime(countdown)}</strong>
@@ -52,10 +55,10 @@ export default function CollectSalary() {
           <div className="win-panel" style={{ padding: '16px', width: '250px' }}>
             <table style={{ width: '100%', fontSize: '12px' }}>
               <tbody>
-                <tr><td style={{ color: '#666', textAlign: 'left' }}>Base Salary:</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{salary} $NXT</td></tr>
-                <tr><td style={{ color: '#666', textAlign: 'left' }}>Dev Bonus (4 devs):</td><td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--terminal-green)' }}>+{bonus} $NXT</td></tr>
+                <tr><td style={{ color: '#666', textAlign: 'left' }}>Base Salary:</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{baseSalary} $NXT</td></tr>
+                <tr><td style={{ color: '#666', textAlign: 'left' }}>Dev Bonus ({devs.length} devs):</td><td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--terminal-green)' }}>+{devBonus} $NXT</td></tr>
                 <tr><td colSpan={2}><hr style={{ border: 'none', borderTop: '1px solid var(--border-dark)', margin: '4px 0' }} /></td></tr>
-                <tr><td style={{ color: '#666', textAlign: 'left' }}>Total:</td><td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--gold)', fontSize: '14px' }}>{salary + bonus} $NXT</td></tr>
+                <tr><td style={{ color: '#666', textAlign: 'left' }}>Total:</td><td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--gold)', fontSize: '14px' }}>{total} $NXT</td></tr>
               </tbody>
             </table>
           </div>

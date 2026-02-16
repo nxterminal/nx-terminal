@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import EmployeeHandbook from './EmployeeHandbook';
+import Lore from './Lore';
 
 const FILE_SYSTEM = {
   'My Computer': {
@@ -41,7 +43,7 @@ function findNode(tree, path) {
   return node;
 }
 
-export default function MyComputer() {
+function FileBrowser() {
   const [path, setPath] = useState(['My Computer']);
   const root = FILE_SYSTEM['My Computer'];
 
@@ -84,6 +86,41 @@ export default function MyComputer() {
       </div>
       <div className="win98-statusbar">
         {entries.length} object(s)
+      </div>
+    </div>
+  );
+}
+
+const TABS = [
+  { key: 'system', label: '🖥️ System' },
+  { key: 'handbook', label: '📖 Handbook' },
+  { key: 'lore', label: '📜 Lore' },
+];
+
+export default function MyComputer({ initialTab }) {
+  const [activeTab, setActiveTab] = useState(initialTab || 'system');
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="win-tabs">
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            className={`win-tab${activeTab === tab.key ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, overflow: 'hidden', borderTop: '1px solid var(--border-dark)' }}>
+        {activeTab === 'system' && <FileBrowser />}
+        {activeTab === 'handbook' && <EmployeeHandbook />}
+        {activeTab === 'lore' && <Lore />}
       </div>
     </div>
   );

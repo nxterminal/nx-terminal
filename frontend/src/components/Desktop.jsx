@@ -8,6 +8,7 @@ import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
+import { useInbox } from '../contexts/InboxContext';
 
 const DESKTOP_ICONS = [
   { id: 'my-computer', icon: '🖥️', label: 'My Computer' },
@@ -22,12 +23,12 @@ const DESKTOP_ICONS = [
   { id: 'world-chat', icon: '🌐', label: 'World Chat' },
   { id: 'my-devs', icon: '📁', label: 'My Devs' },
   { id: 'shop', icon: '🛒', label: 'Shop' },
-  { id: 'hire-devs', icon: '🎫', label: 'Hire Devs' },
+  { id: 'hire-devs', icon: '💼', label: 'Mint / Hire Devs' },
   { id: 'collect-salary', icon: '💰', label: 'Collect Salary' },
   { id: 'nxt-stats', icon: '📈', label: 'NXT Stats' },
   { id: 'notepad', icon: '📝', label: 'Notepad' },
-  { id: 'employee-handbook', icon: '📖', label: 'Handbook' },
-  { id: 'lore', icon: '📜', label: 'Lore' },
+  { id: 'bug-sweeper', icon: '🐛', label: 'Bug Sweeper' },
+  { id: 'solitaire', icon: '🃏', label: 'Solitaire' },
 ];
 
 export default function Desktop() {
@@ -42,10 +43,23 @@ export default function Desktop() {
     openDevProfile,
   } = useWindowManager();
 
+  const { addEmail } = useInbox();
   const [startOpen, setStartOpen] = useState(false);
 
   useEffect(() => {
     openWindow('action-feed');
+  }, []);
+
+  // Welcome email 2 seconds after mount
+  useEffect(() => {
+    const t = setTimeout(() => {
+      addEmail({
+        from: 'admin@nxterminal.io',
+        subject: 'Welcome to NX Terminal!',
+        body: 'Welcome, Operator.\n\nYou have been granted Level 1 clearance to the NX Terminal network. Your assigned devs are standing by.\n\nRemember:\n- Collect your salary regularly\n- Monitor the Action Feed for opportunities\n- Keep your devs energized\n\nGood luck out there.\n\n\u2014 NX Terminal Admin',
+      });
+    }, 2000);
+    return () => clearTimeout(t);
   }, []);
 
   const handleTaskbarClick = (id) => {
@@ -78,6 +92,7 @@ export default function Desktop() {
         maximizeWindow={maximizeWindow}
         moveWindow={moveWindow}
         openDevProfile={openDevProfile}
+        openWindow={openWindow}
       />
 
       <StartMenu
@@ -91,6 +106,7 @@ export default function Desktop() {
         onWindowClick={handleTaskbarClick}
         onStartClick={() => setStartOpen(s => !s)}
         startOpen={startOpen}
+        openWindow={openWindow}
       />
 
       <Clippy />

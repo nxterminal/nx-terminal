@@ -56,6 +56,7 @@ export default function WindowManager({
   maximizeWindow,
   moveWindow,
   openDevProfile,
+  openWindow,
 }) {
   return (
     <>
@@ -89,6 +90,8 @@ export default function WindowManager({
             <ContentComponent
               devId={w.devId}
               openDevProfile={openDevProfile}
+              openWindow={openWindow}
+              initialTab={w.initialTab}
             />
           </Window>
         );

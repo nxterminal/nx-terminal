@@ -1,25 +1,18 @@
-import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useDevs } from '../contexts/DevsContext';
 
 export default function NXTStats() {
-  const [stats, setStats] = useState(null);
+  const { devs, totalSalary } = useDevs();
 
-  useEffect(() => {
-    api.getSimulationStats()
-      .then(data => setStats(data))
-      .catch(() => setStats({
-        total_devs: 1247,
-        total_protocols: 89,
-        total_ais: 34,
-        total_transactions: 284729,
-        total_nxt_supply: '10,000,000',
-        active_corps: 12,
-        average_dev_level: 4.2,
-        highest_balance: '142,500',
-      }));
-  }, []);
+  const archetypeCounts = {};
+  devs.forEach(d => {
+    archetypeCounts[d.archetype] = (archetypeCounts[d.archetype] || 0) + 1;
+  });
 
-  const s = stats || {};
+  const avgEnergy = devs.length > 0
+    ? Math.round(devs.reduce((sum, d) => sum + (d.energy || 0), 0) / devs.length)
+    : 0;
+
+  const totalBalance = devs.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
 
   return (
     <div style={{ padding: '12px', overflow: 'auto', height: '100%', fontSize: '11px' }}>
@@ -31,14 +24,14 @@ export default function NXTStats() {
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         {[
-          ['Total Devs', s.total_devs ?? '...', 'var(--terminal-cyan)'],
-          ['Total Protocols', s.total_protocols ?? '...', 'var(--terminal-green)'],
-          ['Total AIs', s.total_ais ?? '...', 'var(--terminal-magenta)'],
-          ['Transactions', s.total_transactions ?? '...', 'var(--terminal-amber)'],
-          ['$NXT Supply', s.total_nxt_supply ?? '...', 'var(--gold)'],
-          ['Active Corps', s.active_corps ?? '...', '#4488ff'],
-          ['Avg Dev Level', s.average_dev_level ?? '...', 'var(--terminal-green)'],
-          ['Highest Balance', s.highest_balance ? `$${s.highest_balance}` : '...', 'var(--gold)'],
+          ['Your Devs', devs.length, 'var(--terminal-cyan)'],
+          ['Avg Energy', `${avgEnergy}%`, 'var(--terminal-green)'],
+          ['Total Balance', `${totalBalance.toLocaleString()} $NXT`, 'var(--gold)'],
+          ['Cycle Salary', `${totalSalary + 1000} $NXT`, 'var(--terminal-amber)'],
+          ['Network Devs', '1,247', 'var(--terminal-cyan)'],
+          ['Active Protocols', '89', 'var(--terminal-green)'],
+          ['Total AIs', '34', 'var(--terminal-magenta)'],
+          ['Transactions', '284,729', 'var(--terminal-amber)'],
         ].map(([label, value, color]) => (
           <div key={label} className="win-panel stat-box">
             <div className="stat-label">{label}</div>
@@ -57,7 +50,9 @@ export default function NXTStats() {
           ['FED', 5, '#ffaa00'], ['SCRIPT_KIDDIE', 5, '#00ffff'],
         ].map(([name, pct, color]) => (
           <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ width: '90px', color, fontSize: '10px', fontWeight: 'bold' }}>{name}</span>
+            <span style={{ width: '90px', color, fontSize: '10px', fontWeight: 'bold' }}>
+              {name} {archetypeCounts[name] ? `(${archetypeCounts[name]})` : ''}
+            </span>
             <div style={{ flex: 1, height: '10px', background: '#000', border: '1px solid var(--border-dark)' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: color }} />
             </div>

@@ -17,7 +17,7 @@ const WINDOW_DEFAULTS = {
   'my-computer': { title: 'My Computer', icon: '🖥️', width: 620, height: 440, x: 80, y: 50 },
   'recycle-bin': { title: 'Recycle Bin', icon: '🗑️', width: 580, height: 400, x: 140, y: 70 },
   'control-panel': { title: 'Control Panel', icon: '⚙️', width: 560, height: 440, x: 120, y: 60 },
-  'hire-devs': { title: 'Hire Devs / Mint', icon: '🎫', width: 700, height: 500, x: 100, y: 45 },
+  'hire-devs': { title: 'Mint / Hire Devs', icon: '💼', width: 700, height: 500, x: 100, y: 45 },
   'collect-salary': { title: 'Collect Salary', icon: '💰', width: 400, height: 380, x: 220, y: 80 },
   'nxt-stats': { title: 'NXT Stats', icon: '📈', width: 560, height: 520, x: 140, y: 40 },
   'employee-handbook': { title: 'Employee Handbook', icon: '📖', width: 650, height: 480, x: 100, y: 50 },
@@ -36,7 +36,7 @@ export function useWindowManager() {
       if (existing) {
         nextZIndex++;
         return prev.map(w =>
-          w.id === id ? { ...w, minimized: false, zIndex: nextZIndex } : w
+          w.id === id ? { ...w, minimized: false, zIndex: nextZIndex, ...extraProps } : w
         );
       }
 

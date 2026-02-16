@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const MENU_ITEMS = [
   {
@@ -25,7 +25,7 @@ const MENU_ITEMS = [
       { id: 'nx-home', label: 'NX Home', icon: '🏠' },
       { id: 'my-devs', label: 'My Devs', icon: '📁' },
       { id: 'shop', label: 'Shop', icon: '🛒' },
-      { id: 'hire-devs', label: 'Hire Devs / Mint', icon: '🎫' },
+      { id: 'hire-devs', label: 'Mint / Hire Devs', icon: '💼' },
       { id: 'collect-salary', label: 'Collect Salary', icon: '💰' },
       { id: 'inbox', label: 'Inbox', icon: '📬' },
       { id: 'nxt-stats', label: 'NXT Stats', icon: '📈' },
@@ -33,8 +33,8 @@ const MENU_ITEMS = [
   },
   {
     label: 'Documents', icon: '📄', submenu: [
-      { id: 'employee-handbook', label: 'Employee Handbook', icon: '📖' },
-      { id: 'lore', label: 'Lore', icon: '📜' },
+      { id: 'my-computer', label: 'Employee Handbook', icon: '📖', extraProps: { initialTab: 'handbook' } },
+      { id: 'my-computer', label: 'Lore', icon: '📜', extraProps: { initialTab: 'lore' } },
     ]
   },
   {
@@ -49,7 +49,6 @@ const MENU_ITEMS = [
 
 function MenuItem({ item, onAction, level = 0 }) {
   const [showSub, setShowSub] = useState(false);
-  const timeoutRef = useRef(null);
 
   if (item.separator) {
     return <div className="start-menu-separator" />;
@@ -57,17 +56,12 @@ function MenuItem({ item, onAction, level = 0 }) {
 
   const hasSub = item.submenu && item.submenu.length > 0;
 
-  const handleEnter = () => {
-    clearTimeout(timeoutRef.current);
-    setShowSub(true);
-  };
-  const handleLeave = () => {
-    timeoutRef.current = setTimeout(() => setShowSub(false), 200);
-  };
+  const handleEnter = () => setShowSub(true);
+  const handleLeave = () => setShowSub(false);
 
   const handleClick = () => {
     if (item.id) {
-      onAction(item.id);
+      onAction(item.id, item.extraProps);
     }
   };
 
@@ -105,12 +99,12 @@ export default function StartMenu({ open, onClose, openWindow }) {
 
   if (!open) return null;
 
-  const handleAction = (id) => {
+  const handleAction = (id, extraProps) => {
     if (id === 'shut-down') {
       onClose();
       return;
     }
-    openWindow(id);
+    openWindow(id, extraProps);
     onClose();
   };
 
