@@ -374,58 +374,155 @@
 .rarity-legendary { color: #ffd700; }
 .rarity-mythic { color: #ff44ff; }
 
-/* ====== BOOT SCREEN ====== */
-.boot-screen {
+/* ====== BIOS BOOT SCREEN ====== */
+.bios-screen {
   width: 100%;
   height: 100%;
   background: #000;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  gap: 16px;
+  padding: 24px 32px;
+  font-family: 'VT323', 'Courier New', monospace;
+  color: #ccc;
+  overflow: hidden;
+  position: relative;
+  cursor: default;
 }
-.boot-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 36px;
-  color: var(--gold);
-  text-shadow: 2px 2px 0 #aa8800, 4px 4px 0 #553300;
+
+/* CRT off animation */
+.bios-screen.bios-crt-off {
+  animation: biosScreenFade 0.6s ease-out forwards;
 }
-.boot-subtitle {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 18px;
-  color: var(--terminal-red);
-  text-shadow: 1px 1px 0 #880000;
+
+@keyframes biosScreenFade {
+  0% { opacity: 1; }
+  40% { opacity: 1; }
+  100% { opacity: 0; }
 }
-.boot-loader {
-  width: 320px;
-  height: 20px;
-  border: 2px solid var(--border-dark);
+
+/* CRT horizontal line effect */
+.bios-crt-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  pointer-events: none;
   background: #000;
-  padding: 2px;
-  margin-top: 24px;
+  animation: crtOff 1s ease-out forwards;
 }
-.boot-loader-fill {
-  height: 100%;
-  background: var(--terminal-green);
-  transition: width 0.3s linear;
+
+@keyframes crtOff {
+  0% {
+    clip-path: inset(0 0 0 0);
+    background: #fff;
+    opacity: 0.8;
+  }
+  15% {
+    clip-path: inset(0 0 0 0);
+    background: #000;
+    opacity: 1;
+  }
+  30% {
+    clip-path: inset(45% 0 45% 0);
+    background: #fff;
+    opacity: 0.9;
+  }
+  60% {
+    clip-path: inset(49% 0 49% 0);
+    background: #fff;
+    opacity: 0.7;
+  }
+  80% {
+    clip-path: inset(49.8% 5% 49.8% 5%);
+    background: #fff;
+    opacity: 0.5;
+  }
+  100% {
+    clip-path: inset(50% 50% 50% 50%);
+    background: #fff;
+    opacity: 0;
+  }
 }
-.boot-message {
+
+/* Header: logo + brand */
+.bios-header {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.bios-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.bios-logo {
   font-family: 'VT323', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.1;
+  color: #4488ff;
+  margin: 0;
+  text-shadow: 0 0 6px rgba(68, 136, 255, 0.4);
+}
+
+.bios-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bios-brand-name {
+  font-size: 28px;
+  color: #4488ff;
+  text-shadow: 0 0 8px rgba(68, 136, 255, 0.3);
+}
+
+.bios-brand-sub {
   font-size: 16px;
+  color: #888;
+}
+
+/* Separator line */
+.bios-separator {
+  width: 100%;
+  height: 1px;
+  background: #444;
+  margin: 8px 0 12px 0;
+  flex-shrink: 0;
+}
+
+/* Body: system info lines */
+.bios-body {
+  flex: 1;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.bios-line {
+  white-space: pre-wrap;
+  min-height: 1.5em;
+}
+
+.bios-line-counting {
   color: var(--terminal-green);
-  margin-top: 16px;
 }
-.boot-continue {
-  font-family: 'VT323', 'Courier New', monospace;
-  font-size: 18px;
-  color: var(--terminal-amber);
-  animation: blink 1s infinite;
+
+/* Skip hint */
+.bios-skip-hint {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  font-size: 14px;
+  color: #555;
+  animation: biosBlink 1.5s infinite;
 }
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+@keyframes biosBlink {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.2; }
 }
 
 /* ====== ENERGY BAR ====== */
