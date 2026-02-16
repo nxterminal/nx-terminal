@@ -1,25 +1,25 @@
 import Window from './Window';
-import ActionFeed from '../windows/ActionFeed';
+import LiveFeed from '../windows/LiveFeed';
 import Leaderboard from '../windows/Leaderboard';
 import ProtocolMarket from '../windows/ProtocolMarket';
 import AILab from '../windows/AILab';
-import DevChat from '../windows/DevChat';
 import DevProfile from '../windows/DevProfile';
 import MyDevs from '../windows/MyDevs';
 import Shop from '../windows/Shop';
 import WorldChat from '../windows/WorldChat';
-import MintDevs from '../windows/MintDevs';
+import Lore from '../windows/Lore';
+import ControlPanel from '../windows/ControlPanel';
 
 const WINDOW_COMPONENTS = {
-  'action-feed': ActionFeed,
+  'live-feed': LiveFeed,
   'leaderboard': Leaderboard,
   'protocol-market': ProtocolMarket,
   'ai-lab': AILab,
-  'dev-chat': DevChat,
   'my-devs': MyDevs,
   'shop': Shop,
   'world-chat': WorldChat,
-  'mint-devs': MintDevs,
+  'lore': Lore,
+  'control-panel': ControlPanel,
 };
 
 export default function WindowManager({
@@ -40,7 +40,9 @@ export default function WindowManager({
         } else {
           ContentComponent = WINDOW_COMPONENTS[w.id];
         }
+
         if (!ContentComponent) return null;
+
         return (
           <Window
             key={w.id}
