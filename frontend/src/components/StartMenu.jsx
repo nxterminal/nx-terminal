@@ -7,18 +7,25 @@ const PROGRAMS = [
   { id: 'protocol-market', icon: '\u{1F4CA}', label: 'Protocol Market' },
   { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
   { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
-  { id: 'shop', icon: '\u{1F6D2}', label: 'Shop' },
-  { id: 'lore', icon: '\u{1F4D6}', label: 'Lore' },
+  { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
+  { id: 'hire-devs', icon: '\u{1F4BB}', label: 'Hire Devs' },
+];
+
+const GAMES = [
+  { id: 'bug-sweeper', icon: '\u{1F41B}', label: 'Bug Sweeper' },
+  { id: 'protocol-solitaire', icon: '\u{1F0CF}', label: 'Protocol Solitaire' },
 ];
 
 export default function StartMenu({ open, onClose, openWindow }) {
   const [showPrograms, setShowPrograms] = useState(false);
+  const [showGames, setShowGames] = useState(false);
   const [shutdownMsg, setShutdownMsg] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
     if (!open) {
       setShowPrograms(false);
+      setShowGames(false);
       setShutdownMsg(false);
     }
   }, [open]);
@@ -30,7 +37,6 @@ export default function StartMenu({ open, onClose, openWindow }) {
         onClose();
       }
     };
-    // Delay to avoid catching the click that opened the menu
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -68,7 +74,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
           <>
             <div
               className="start-menu-item start-menu-item-has-sub"
-              onMouseEnter={() => setShowPrograms(true)}
+              onMouseEnter={() => { setShowPrograms(true); setShowGames(false); }}
             >
               <span className="start-menu-item-icon">{'\u{1F4C2}'}</span>
               <span className="start-menu-item-label">Programs</span>
@@ -91,28 +97,54 @@ export default function StartMenu({ open, onClose, openWindow }) {
             </div>
 
             <div
-              className="start-menu-item"
-              onMouseEnter={() => setShowPrograms(false)}
-              onClick={() => handleItemClick('control-panel')}
+              className="start-menu-item start-menu-item-has-sub"
+              onMouseEnter={() => { setShowGames(true); setShowPrograms(false); }}
             >
-              <span className="start-menu-item-icon">{'\u2699'}</span>
-              <span className="start-menu-item-label">Settings</span>
-            </div>
+              <span className="start-menu-item-icon">{'\u{1F3AE}'}</span>
+              <span className="start-menu-item-label">Games</span>
+              <span className="start-menu-item-arrow">{'\u25B6'}</span>
 
-            <div
-              className="start-menu-item"
-              onMouseEnter={() => setShowPrograms(false)}
-              onClick={() => handleItemClick('lore')}
-            >
-              <span className="start-menu-item-icon">{'\u{1F4D6}'}</span>
-              <span className="start-menu-item-label">Lore</span>
+              {showGames && (
+                <div className="start-submenu" onMouseLeave={() => setShowGames(false)}>
+                  {GAMES.map(game => (
+                    <div
+                      key={game.id}
+                      className="start-menu-item"
+                      onClick={() => handleItemClick(game.id)}
+                    >
+                      <span className="start-menu-item-icon">{game.icon}</span>
+                      <span className="start-menu-item-label">{game.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="start-menu-divider" />
 
             <div
               className="start-menu-item"
-              onMouseEnter={() => setShowPrograms(false)}
+              onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
+              onClick={() => handleItemClick('nx-terminal')}
+            >
+              <span className="start-menu-item-icon">{'\u{1F5A5}'}</span>
+              <span className="start-menu-item-label">NX Terminal</span>
+            </div>
+
+            <div
+              className="start-menu-item"
+              onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
+              onClick={() => handleItemClick('control-panel')}
+            >
+              <span className="start-menu-item-icon">{'\u2699'}</span>
+              <span className="start-menu-item-label">Settings</span>
+            </div>
+
+            <div className="start-menu-divider" />
+
+            <div
+              className="start-menu-item"
+              onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
               onClick={handleShutdown}
             >
               <span className="start-menu-item-icon">{'\u{1F6D1}'}</span>

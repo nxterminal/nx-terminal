@@ -9,9 +9,12 @@ const WINDOW_DEFAULTS = {
   'ai-lab': { title: 'AI Lab', icon: '\u{1F9E0}', width: 650, height: 450, x: 180, y: 50 },
   'world-chat': { title: 'World Chat', icon: '\u{1F310}', width: 550, height: 420, x: 260, y: 90 },
   'my-devs': { title: 'My Devs', icon: '\u{1F4C1}', width: 700, height: 480, x: 120, y: 55 },
-  'shop': { title: 'Shop', icon: '\u{1F6D2}', width: 640, height: 460, x: 160, y: 65 },
-  'lore': { title: 'Lore', icon: '\u{1F4D6}', width: 620, height: 480, x: 130, y: 50 },
   'control-panel': { title: 'Control Panel', icon: '\u2699', width: 520, height: 420, x: 200, y: 80 },
+  'nx-terminal': { title: 'NX Terminal', icon: '\u{1F5A5}', width: 580, height: 440, x: 90, y: 50 },
+  'bug-sweeper': { title: 'Bug Sweeper', icon: '\u{1F41B}', width: 300, height: 380, x: 220, y: 60 },
+  'protocol-solitaire': { title: 'Protocol Solitaire', icon: '\u{1F0CF}', width: 360, height: 440, x: 250, y: 50 },
+  'inbox': { title: 'Inbox', icon: '\u{1F4E8}', width: 620, height: 450, x: 110, y: 45 },
+  'hire-devs': { title: 'Hire Devs', icon: '\u{1F4BB}', width: 640, height: 500, x: 130, y: 55 },
 };
 
 export function useWindowManager() {
