@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import PromptMemo from '../components/PromptMemo';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': '#ff4444', 'LURKER': '#808080', 'DEGEN': '#ffd700',
@@ -25,6 +26,7 @@ function EnergyBar({ energy }) {
 export default function MyDevs({ openDevProfile }) {
   const [devs, setDevs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [memoDev, setMemoDev] = useState(null);
 
   useEffect(() => {
     api.getDevs({ limit: 50, sort: 'balance' })
@@ -44,7 +46,7 @@ export default function MyDevs({ openDevProfile }) {
         fontFamily: "'VT323', monospace",
         fontSize: '14px',
       }}>
-        {'> Wallet not connected. Showing all devs as preview...'}
+        {'> Wallet not connected. Showing all devs as preview. Click a dev to send a memo.'}
       </div>
 
       <div className="win-panel" style={{ flex: 1, overflow: 'auto' }}>
@@ -60,6 +62,7 @@ export default function MyDevs({ openDevProfile }) {
                 <th>Energy</th>
                 <th>Balance</th>
                 <th>Mood</th>
+                <th>Memo</th>
               </tr>
             </thead>
             <tbody>
@@ -84,12 +87,32 @@ export default function MyDevs({ openDevProfile }) {
                     {formatNumber(dev.balance_nxt || dev.balance)} $NXT
                   </td>
                   <td>{dev.mood || '-'}</td>
+                  <td>
+                    <button
+                      className="win-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMemoDev(dev);
+                      }}
+                      style={{ fontSize: '10px', padding: '1px 6px' }}
+                    >
+                      {'\u{1F4DD}'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {memoDev && (
+        <PromptMemo
+          devId={memoDev.token_id || memoDev.id}
+          devName={memoDev.name}
+          onClose={() => setMemoDev(null)}
+        />
+      )}
     </div>
   );
 }

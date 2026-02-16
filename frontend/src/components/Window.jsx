@@ -9,6 +9,7 @@ export default function Window({
   minimized,
   maximized,
   zIndex,
+  isActive,
   onClose,
   onFocus,
   onMinimize,
@@ -56,7 +57,7 @@ export default function Window({
       onMouseDown={onFocus}
     >
       <div
-        className="win98-titlebar"
+        className={`win98-titlebar${isActive === false ? ' inactive' : ''}`}
         onMouseDown={handleMouseDown}
         ref={dragRef}
       >

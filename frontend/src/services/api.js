@@ -48,6 +48,13 @@ export const api = {
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),
 
+  // Prompts
+  sendPrompt: (devId, prompt) => fetch(`${API_BASE}/api/prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dev_id: devId, prompt }),
+  }).then(r => r.json()),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
