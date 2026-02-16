@@ -6,11 +6,12 @@ import './App.css';
 function App() {
   const [booted, setBooted] = useState(false);
 
-  if (!booted) {
-    return <BootScreen onComplete={() => setBooted(true)} />;
-  }
-
-  return <Desktop />;
+  return (
+    <>
+      <Desktop />
+      {!booted && <BootScreen onComplete={() => setBooted(true)} />}
+    </>
+  );
 }
 
 export default App;

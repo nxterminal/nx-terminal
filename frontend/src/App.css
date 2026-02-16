@@ -375,54 +375,131 @@
 .rarity-mythic { color: #ff44ff; }
 
 /* ====== BOOT SCREEN ====== */
-.boot-screen {
-  width: 100%;
-  height: 100%;
+
+/* Shared overlay base */
+.boot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
   background: #000;
+}
+
+/* Phase 1: BIOS POST */
+.boot-bios {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+.bios-line {
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 20px;
+  color: #cccccc;
+  line-height: 1.6;
+  white-space: pre;
+  min-height: 1.6em;
+}
+.bios-cursor {
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 20px;
+  color: #cccccc;
+  animation: blink 1s step-end infinite;
+}
+
+/* Phase 2: Splash */
+.boot-splash {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   gap: 16px;
+  cursor: pointer;
+  animation: splashFadeIn 0.3s ease-in;
 }
-.boot-title {
+.boot-splash-title {
   font-family: 'Press Start 2P', monospace;
   font-size: 36px;
   color: var(--gold);
   text-shadow: 2px 2px 0 #aa8800, 4px 4px 0 #553300;
 }
-.boot-subtitle {
+.boot-splash-subtitle {
   font-family: 'Press Start 2P', monospace;
   font-size: 18px;
   color: var(--terminal-red);
   text-shadow: 1px 1px 0 #880000;
 }
-.boot-loader {
-  width: 320px;
-  height: 20px;
-  border: 2px solid var(--border-dark);
-  background: #000;
-  padding: 2px;
-  margin-top: 24px;
-}
-.boot-loader-fill {
-  height: 100%;
-  background: var(--terminal-green);
-  transition: width 0.3s linear;
-}
-.boot-message {
+.boot-splash-tagline {
   font-family: 'VT323', 'Courier New', monospace;
-  font-size: 16px;
+  font-size: 20px;
   color: var(--terminal-green);
-  margin-top: 16px;
+  opacity: 0.6;
+  margin-top: 24px;
+  text-align: center;
 }
-.boot-continue {
-  font-family: 'VT323', 'Courier New', monospace;
-  font-size: 18px;
-  color: var(--terminal-amber);
-  animation: blink 1s infinite;
+
+@keyframes splashFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
+
+/* Phase 3: CRT Transition */
+.boot-crt-transition {
+  pointer-events: none;
+  background: transparent;
+}
+.crt-top,
+.crt-bottom {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: #000;
+}
+.crt-top {
+  top: 0;
+  height: 50%;
+  animation: crtTopSlide 0.7s 0.3s ease-out forwards;
+}
+.crt-bottom {
+  bottom: 0;
+  height: 50%;
+  animation: crtBottomSlide 0.7s 0.3s ease-out forwards;
+}
+.crt-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: #ffffff;
+  box-shadow:
+    0 0 20px 8px rgba(255, 255, 255, 0.7),
+    0 0 60px 20px rgba(255, 255, 255, 0.3);
+  animation: crtLineAppear 0.3s ease-out forwards, crtLineFade 0.4s 0.6s ease-in forwards;
+}
+
+@keyframes crtTopSlide {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes crtBottomSlide {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+@keyframes crtLineAppear {
+  0% { opacity: 0; transform: translateY(-50%) scaleX(0); }
+  100% { opacity: 1; transform: translateY(-50%) scaleX(1); }
+}
+@keyframes crtLineFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }

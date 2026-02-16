@@ -1,63 +1,136 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-const BOOT_MESSAGES = [
-  'Initializing NX_KERNEL v3.7.1...',
-  'Loading blockchain subsystem...',
-  'Connecting to Protocol Wars network...',
-  'Mounting /dev/nft0...',
-  'Spawning 35,000 AI developer processes...',
-  'Calibrating degen coefficients...',
-  'Loading trollbox modules...',
-  'Syncing simulation state...',
-  'Ready.',
+const EASTER_EGGS = [
+  'Detecting employee morale... NOT FOUND',
+  'Loading corporate_propaganda.dll... OK',
 ];
 
 export default function BootScreen({ onComplete }) {
-  const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [done, setDone] = useState(false);
+  const [phase, setPhase] = useState('bios');
+  const [biosLines, setBiosLines] = useState([]);
+  const [memoryK, setMemoryK] = useState(0);
+  const skippedRef = useRef(false);
 
+  /* ── Skip handler: click or any key at any phase ── */
   useEffect(() => {
-    if (progress >= 100) {
-      setDone(true);
-      return;
-    }
+    const handleSkip = () => {
+      if (skippedRef.current) return;
+      skippedRef.current = true;
+      onComplete();
+    };
+    window.addEventListener('keydown', handleSkip);
+    window.addEventListener('click', handleSkip);
+    return () => {
+      window.removeEventListener('keydown', handleSkip);
+      window.removeEventListener('click', handleSkip);
+    };
+  }, [onComplete]);
 
-    const speed = Math.random() * 200 + 100;
-    const increment = Math.random() * 15 + 5;
+  /* ── Phase 1: BIOS POST (~1.5s) ── */
+  useEffect(() => {
+    if (phase !== 'bios') return;
+
+    const timers = [];
+
+    // Line 1: BIOS header (immediate)
+    setBiosLines(['NX-BIOS v4.86 (C) 1998 NX Terminal Corp.', '']);
+
+    // Line 2: Memory test starts at 300ms
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setBiosLines(prev => [...prev.filter(l => l !== ''), '__MEMORY__']);
+      let mem = 0;
+      const memTimer = setInterval(() => {
+        if (skippedRef.current) { clearInterval(memTimer); return; }
+        mem += 64;
+        if (mem >= 640) {
+          setMemoryK(640);
+          clearInterval(memTimer);
+        } else {
+          setMemoryK(mem);
+        }
+      }, 50);
+      timers.push(memTimer);
+    }, 300));
+
+    // Line 3: Modem detect at 1000ms
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setBiosLines(prev => [...prev, 'Detecting NX Modem... 56.6K [OK]']);
+    }, 1000));
+
+    // Easter egg at 1200ms (5% chance)
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      if (Math.random() < 0.05) {
+        const egg = EASTER_EGGS[Math.floor(Math.random() * EASTER_EGGS.length)];
+        setBiosLines(prev => [...prev, egg]);
+      }
+    }, 1200));
+
+    // Transition to splash at 1500ms
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setPhase('splash');
+    }, 1500));
+
+    return () => timers.forEach(id => { clearTimeout(id); clearInterval(id); });
+  }, [phase]);
+
+  /* ── Phase 2: Splash (~2s) ── */
+  useEffect(() => {
+    if (phase !== 'splash') return;
     const timer = setTimeout(() => {
-      setProgress(prev => Math.min(prev + increment, 100));
-      setMessageIndex(prev => Math.min(prev + 1, BOOT_MESSAGES.length - 1));
-    }, speed);
-
+      if (skippedRef.current) return;
+      setPhase('crt');
+    }, 2000);
     return () => clearTimeout(timer);
-  }, [progress]);
+  }, [phase]);
 
-  const handleClick = () => {
-    if (done) onComplete();
-  };
+  /* ── Phase 3: CRT transition (~1s) ── */
+  useEffect(() => {
+    if (phase !== 'crt') return;
+    const timer = setTimeout(() => {
+      if (skippedRef.current) return;
+      skippedRef.current = true;
+      onComplete();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [phase, onComplete]);
 
+  /* ── Render ── */
   return (
-    <div className="boot-screen" onClick={handleClick}>
-      <div className="boot-title">NX TERMINAL</div>
-      <div className="boot-subtitle">PROTOCOL WARS</div>
-
-      <div className="boot-loader">
-        <div
-          className="boot-loader-fill"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      <div className="boot-message">
-        {BOOT_MESSAGES[messageIndex]}
-      </div>
-
-      {done && (
-        <div className="boot-continue">
-          {'> Click anywhere to continue_'}
+    <>
+      {phase === 'bios' && (
+        <div className="boot-overlay boot-bios">
+          {biosLines.map((line, i) => (
+            <div key={i} className="bios-line">
+              {line === '__MEMORY__'
+                ? `Memory Test: ${memoryK >= 640 ? '640K OK' : memoryK + 'K'}`
+                : line}
+            </div>
+          ))}
+          <span className="bios-cursor">_</span>
         </div>
       )}
-    </div>
+
+      {phase === 'splash' && (
+        <div className="boot-overlay boot-splash">
+          <div className="boot-splash-title">NX TERMINAL</div>
+          <div className="boot-splash-subtitle">PROTOCOL WARS</div>
+          <div className="boot-splash-tagline">
+            35,000 developers. 6 corporations. No exit command.
+          </div>
+        </div>
+      )}
+
+      {phase === 'crt' && (
+        <div className="boot-overlay boot-crt-transition">
+          <div className="crt-top" />
+          <div className="crt-line" />
+          <div className="crt-bottom" />
+        </div>
+      )}
+    </>
   );
 }
