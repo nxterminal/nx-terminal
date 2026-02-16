@@ -276,10 +276,37 @@
   background: #d4d0c8;
 }
 
+.taskbar-divider {
+  width: 2px;
+  height: 20px;
+  box-shadow: inset 1px 0 0 var(--border-dark), inset -1px 0 0 var(--border-light);
+  flex-shrink: 0;
+}
+
+.taskbar-tray {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.wallet-btn {
+  height: 22px;
+  padding: 1px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .taskbar-clock {
   flex-shrink: 0;
   padding: 2px 8px;
   font-size: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
   box-shadow:
     inset -1px -1px 0 var(--border-light),
     inset 1px 1px 0 var(--border-dark);
@@ -633,4 +660,304 @@
   color: var(--terminal-red);
   padding: 8px;
   text-align: center;
+}
+
+/* ====== START MENU ====== */
+.start-menu {
+  position: fixed;
+  bottom: 32px;
+  left: 0;
+  z-index: 10000;
+  display: flex;
+  background: var(--win-bg);
+  box-shadow:
+    inset -1px -1px 0 #000,
+    inset 1px 1px 0 var(--border-light),
+    inset -2px -2px 0 var(--border-dark),
+    inset 2px 2px 0 #dfdfdf;
+  min-width: 200px;
+}
+
+.start-menu-banner {
+  width: 24px;
+  background: linear-gradient(180deg, #000080, #1084d0);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.start-menu-banner-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  font-family: 'Tahoma', sans-serif;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.start-menu-items {
+  flex: 1;
+  padding: 2px 0;
+}
+
+.start-menu-item-wrapper {
+  position: relative;
+}
+
+.start-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 24px 5px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+.start-menu-item:hover,
+.start-menu-item.active {
+  background: var(--selection);
+  color: var(--selection-text);
+}
+
+.start-menu-item-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.start-menu-item-label {
+  flex: 1;
+}
+
+.start-menu-item-arrow {
+  font-size: 10px;
+}
+
+.start-menu-separator {
+  height: 1px;
+  margin: 2px 4px;
+  background: var(--border-dark);
+  box-shadow: 0 1px 0 var(--border-light);
+}
+
+.start-submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: var(--win-bg);
+  box-shadow:
+    inset -1px -1px 0 #000,
+    inset 1px 1px 0 var(--border-light),
+    inset -2px -2px 0 var(--border-dark),
+    inset 2px 2px 0 #dfdfdf;
+  padding: 2px 0;
+  z-index: 10001;
+  min-width: 160px;
+}
+
+/* ====== CLIPPY ====== */
+.clippy-container {
+  position: fixed;
+  bottom: 48px;
+  right: 24px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  animation: clippySlideIn 0.3s ease-out;
+}
+
+@keyframes clippySlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.clippy-bubble {
+  background: #ffffcc;
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-width: 240px;
+  font-size: 11px;
+  font-family: 'Tahoma', sans-serif;
+  position: relative;
+  margin-bottom: 8px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.clippy-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 16px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #ffffcc;
+}
+
+.clippy-close {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  padding: 0;
+  line-height: 1;
+}
+
+.clippy-text {
+  line-height: 1.4;
+}
+
+.clippy-character {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clippy-body {
+  font-size: 40px;
+  animation: clippyBounce 2s ease-in-out infinite;
+}
+
+@keyframes clippyBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ====== ERROR POPUP ====== */
+.error-popup {
+  position: fixed;
+  background: var(--win-bg);
+  box-shadow:
+    inset -1px -1px 0 #000,
+    inset 1px 1px 0 var(--border-light),
+    inset -2px -2px 0 var(--border-dark),
+    inset 2px 2px 0 #dfdfdf;
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.error-popup-titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: white;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: bold;
+  height: 22px;
+}
+
+.error-popup-body {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  align-items: flex-start;
+}
+
+.error-popup-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.error-popup-msg {
+  font-size: 11px;
+  font-family: 'Tahoma', sans-serif;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.error-popup-buttons {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px 12px;
+  gap: 8px;
+}
+
+.error-popup-buttons .win-btn {
+  min-width: 75px;
+}
+
+/* ====== BSOD ====== */
+.bsod {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000080;
+  z-index: 99999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bsodFlash 0.15s ease;
+}
+
+@keyframes bsodFlash {
+  0% { opacity: 0; }
+  50% { opacity: 1; background: #fff; }
+  100% { opacity: 1; background: #000080; }
+}
+
+.bsod-content {
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 700px;
+  text-align: left;
+}
+
+.bsod-title {
+  background: #aaa;
+  color: #000080;
+  padding: 2px 8px;
+  font-weight: bold;
+  display: inline-block;
+}
+
+/* ====== SCREENSAVER ====== */
+.screensaver {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  z-index: 99998;
+  cursor: none;
+  overflow: hidden;
+}
+
+.screensaver-text {
+  position: absolute;
+  transition: none;
+}
+
+.screensaver-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  animation: starTwinkle 2s ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
 }

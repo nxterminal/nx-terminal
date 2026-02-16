@@ -8,6 +8,20 @@ import DevProfile from '../windows/DevProfile';
 import MyDevs from '../windows/MyDevs';
 import Shop from '../windows/Shop';
 import WorldChat from '../windows/WorldChat';
+import Inbox from '../windows/Inbox';
+import NXHome from '../windows/NXHome';
+import Notepad from '../windows/Notepad';
+import MyComputer from '../windows/MyComputer';
+import RecycleBin from '../windows/RecycleBin';
+import ControlPanel from '../windows/ControlPanel';
+import HireDevs from '../windows/HireDevs';
+import CollectSalary from '../windows/CollectSalary';
+import NXTStats from '../windows/NXTStats';
+import EmployeeHandbook from '../windows/EmployeeHandbook';
+import Lore from '../windows/Lore';
+import MyAccount from '../windows/MyAccount';
+import BugSweeper from '../windows/BugSweeper';
+import Solitaire from '../windows/Solitaire';
 
 const WINDOW_COMPONENTS = {
   'action-feed': ActionFeed,
@@ -18,6 +32,20 @@ const WINDOW_COMPONENTS = {
   'my-devs': MyDevs,
   'shop': Shop,
   'world-chat': WorldChat,
+  'inbox': Inbox,
+  'nx-home': NXHome,
+  'notepad': Notepad,
+  'my-computer': MyComputer,
+  'recycle-bin': RecycleBin,
+  'control-panel': ControlPanel,
+  'hire-devs': HireDevs,
+  'collect-salary': CollectSalary,
+  'nxt-stats': NXTStats,
+  'employee-handbook': EmployeeHandbook,
+  'lore': Lore,
+  'my-account': MyAccount,
+  'bug-sweeper': BugSweeper,
+  'solitaire': Solitaire,
 };
 
 export default function WindowManager({

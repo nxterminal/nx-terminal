@@ -11,6 +11,20 @@ const WINDOW_DEFAULTS = {
   'world-chat': { title: 'World Chat', icon: '🌐', width: 550, height: 420, x: 260, y: 90 },
   'my-devs': { title: 'My Devs', icon: '📁', width: 700, height: 480, x: 120, y: 55 },
   'shop': { title: 'Shop', icon: '🛒', width: 640, height: 460, x: 160, y: 65 },
+  'inbox': { title: 'Inbox', icon: '📬', width: 680, height: 450, x: 80, y: 45 },
+  'nx-home': { title: 'NX Home', icon: '🏠', width: 550, height: 480, x: 100, y: 40 },
+  'notepad': { title: 'Notepad', icon: '📝', width: 500, height: 400, x: 200, y: 80 },
+  'my-computer': { title: 'My Computer', icon: '🖥️', width: 620, height: 440, x: 80, y: 50 },
+  'recycle-bin': { title: 'Recycle Bin', icon: '🗑️', width: 580, height: 400, x: 140, y: 70 },
+  'control-panel': { title: 'Control Panel', icon: '⚙️', width: 560, height: 440, x: 120, y: 60 },
+  'hire-devs': { title: 'Hire Devs / Mint', icon: '🎫', width: 700, height: 500, x: 100, y: 45 },
+  'collect-salary': { title: 'Collect Salary', icon: '💰', width: 400, height: 380, x: 220, y: 80 },
+  'nxt-stats': { title: 'NXT Stats', icon: '📈', width: 560, height: 520, x: 140, y: 40 },
+  'employee-handbook': { title: 'Employee Handbook', icon: '📖', width: 650, height: 480, x: 100, y: 50 },
+  'lore': { title: 'Lore', icon: '📜', width: 700, height: 500, x: 80, y: 35 },
+  'my-account': { title: 'My Account', icon: '👤', width: 480, height: 520, x: 200, y: 50 },
+  'bug-sweeper': { title: 'Bug Sweeper', icon: '🐛', width: 320, height: 400, x: 240, y: 40 },
+  'solitaire': { title: 'Protocol Solitaire', icon: '🃏', width: 500, height: 520, x: 120, y: 30 },
 };
 
 export function useWindowManager() {
@@ -20,7 +34,6 @@ export function useWindowManager() {
     setWindows(prev => {
       const existing = prev.find(w => w.id === id);
       if (existing) {
-        // Focus and unminimize
         nextZIndex++;
         return prev.map(w =>
           w.id === id ? { ...w, minimized: false, zIndex: nextZIndex } : w

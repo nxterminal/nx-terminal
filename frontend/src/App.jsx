@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BootScreen from './components/BootScreen';
 import Desktop from './components/Desktop';
+import { WalletProvider } from './contexts/WalletContext';
 import './App.css';
 
 function App() {
@@ -10,7 +11,11 @@ function App() {
     return <BootScreen onComplete={() => setBooted(true)} />;
   }
 
-  return <Desktop />;
+  return (
+    <WalletProvider>
+      <Desktop />
+    </WalletProvider>
+  );
 }
 
 export default App;
