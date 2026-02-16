@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+  --bg-desktop: #008080;
+  --win-bg: #c0c0c0;
+  --win-title-l: #000080;
+  --win-title-r: #1084d0;
+  --border-light: #ffffff;
+  --border-dark: #808080;
+  --border-darker: #404040;
+  --selection: #000080;
+  --selection-text: #ffffff;
+  --terminal-bg: #0c0c0c;
+  --terminal-green: #33ff33;
+  --terminal-amber: #ffaa00;
+  --terminal-red: #ff4444;
+  --terminal-cyan: #00ffff;
+  --terminal-magenta: #ff44ff;
+  --gold: #ffd700;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  color: #000;
+}
+
+::selection {
+  background: var(--selection);
+  color: var(--selection-text);
+}
