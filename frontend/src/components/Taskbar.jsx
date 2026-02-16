@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import StartMenu from './StartMenu';
+import { WINDOW_ICONS } from './WindowManager';
+import { IconStart, IconWallet, IconMail16 } from './icons';
 
 export default function Taskbar({
   windows,
@@ -11,6 +13,7 @@ export default function Taskbar({
   onWalletClick,
   hasUnread,
   onInboxClick,
+  onShutDown,
 }) {
   const [cycle, setCycle] = useState(null);
   const [clock, setClock] = useState('');
@@ -44,6 +47,7 @@ export default function Taskbar({
           onOpenWindow={(id) => { onOpenWindow(id); setShowStartMenu(false); }}
           onCloseAll={() => { onCloseAll(); setShowStartMenu(false); }}
           onClose={() => setShowStartMenu(false)}
+          onShutDown={onShutDown}
         />
       )}
       <div className="taskbar">
@@ -55,7 +59,7 @@ export default function Taskbar({
             background: '#d4d0c8',
           } : undefined}
         >
-          <span style={{ fontSize: '14px' }}>&#x1F5A5;</span>
+          <IconStart size={14} />
           <span>Start</span>
         </button>
 
@@ -72,7 +76,7 @@ export default function Taskbar({
             gap: '4px',
           }}
         >
-          <span style={{ fontSize: '12px' }}>{'\u{1F4B3}'}</span>
+          <IconWallet size={14} />
           <span>{wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : 'Connect'}</span>
         </button>
 
@@ -84,7 +88,10 @@ export default function Taskbar({
               onClick={() => onWindowClick(w.id)}
               title={w.title}
             >
-              <span>{w.icon} {w.title}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                {WINDOW_ICONS[w.id] || null}
+                {w.title}
+              </span>
             </button>
           ))}
         </div>
@@ -95,7 +102,7 @@ export default function Taskbar({
             onClick={onInboxClick}
             title="Inbox"
           >
-            {'\u2709'}
+            <IconMail16 size={14} />
             {hasUnread && <span className="unread-dot" />}
           </span>
           <span style={{ fontSize: '11px', color: '#333' }}>

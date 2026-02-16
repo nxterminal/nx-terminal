@@ -25,18 +25,53 @@ const ACTION_ICONS = {
   default: '>',
 };
 
+const CORPS = ['CLOSED AI', 'MISANTHROPIC', 'SHALLOW MIND', 'ZUCK LABS', 'Y.AI', 'MISTRIAL SYSTEMS'];
+const DEV_PREFIXES = ['NEXUS', 'VOID', 'CIPHER', 'ECHO', 'DRIFT', 'FLUX', 'NANO', 'PULSE', 'CORE', 'GHOST', 'SHADE', 'BYTE'];
+const DEV_SUFFIXES = ['7X', '9K', '3Z', '1A', '0x', '8B', '4R', '2W', '5N', '6Q'];
+const ARCHETYPES = Object.keys(ARCHETYPE_COLORS);
+
+const FEED_TEMPLATES = [
+  { type: 'code', msgs: ['deployed mass-produced protocol v{n}', 'pushed {n} commits to main', 'refactored {n} legacy modules', 'wrote {n} lines of spaghetti code'] },
+  { type: 'trade', msgs: ['bought {n} $NXT at market price', 'sold {n} protocol tokens', 'leveraged {n}x on $NXT futures', 'rug-checked {corp} token'] },
+  { type: 'chat', msgs: ['posted in trollbox: "gm"', 'argued about tabs vs spaces for {n} min', 'started a flame war in #{corp}', 'sent {n} memos to management'] },
+  { type: 'hack', msgs: ['found XSS in {corp} protocol', 'patched {n} critical vulnerabilities', 'exploited {corp} smart contract for {n} $NXT', 'ran penetration test on {corp} firewall'] },
+  { type: 'create_protocol', msgs: ['launched "{corp} DeFi v{n}"', 'forked {corp} protocol (again)', 'created mass-produced NFT collection #{n}'] },
+  { type: 'invest', msgs: ['invested {n} $NXT in {corp} protocol', 'bought {n} shares of {corp}', 'staked {n} $NXT in yield farm'] },
+  { type: 'create_ai', msgs: ['trained AI model "CatGPT-{n}"', 'deployed bot #{n} to trollbox', 'created AI that generates other AIs'] },
+  { type: 'mint', msgs: ['minted dev #{n} for {corp}', 'hired {n} new devs', 'onboarded batch #{n}'] },
+];
+
+function generateFeedItem() {
+  const template = FEED_TEMPLATES[Math.floor(Math.random() * FEED_TEMPLATES.length)];
+  const msg = template.msgs[Math.floor(Math.random() * template.msgs.length)];
+  const corp = CORPS[Math.floor(Math.random() * CORPS.length)];
+  const n = Math.floor(Math.random() * 999) + 1;
+  const prefix = DEV_PREFIXES[Math.floor(Math.random() * DEV_PREFIXES.length)];
+  const suffix = DEV_SUFFIXES[Math.floor(Math.random() * DEV_SUFFIXES.length)];
+  const archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+
+  return {
+    dev_name: `${prefix}-${suffix}`,
+    archetype,
+    action_type: template.type,
+    details: msg.replace('{n}', n).replace('{corp}', corp),
+    created_at: new Date().toISOString(),
+  };
+}
+
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
-export default function ActionFeed() {
+export default function ActionFeed({ hasMinted }) {
   const [feed, setFeed] = useState([]);
   const [scrollLock, setScrollLock] = useState(false);
   const [connected, setConnected] = useState(false);
   const terminalRef = useRef(null);
   const ws = useWebSocket();
+  const genRef = useRef(null);
 
   // Load initial feed
   useEffect(() => {
@@ -59,6 +94,20 @@ export default function ActionFeed() {
     }
   }, [ws.messages, ws.connected]);
 
+  // Client-side feed generation (always active for demo)
+  useEffect(() => {
+    const addGenerated = () => {
+      setFeed(prev => [...prev, generateFeedItem()].slice(-200));
+    };
+    // Start with a burst of 5 items
+    for (let i = 0; i < 5; i++) {
+      setFeed(prev => [...prev, generateFeedItem()].slice(-200));
+    }
+    const interval = 3000 + Math.random() * 2000; // 3-5s
+    genRef.current = setInterval(addGenerated, interval);
+    return () => clearInterval(genRef.current);
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     if (!scrollLock && terminalRef.current) {
@@ -71,10 +120,10 @@ export default function ActionFeed() {
       <div style={{ padding: '2px 4px', display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--win-bg)' }}>
         <span style={{
           width: 8, height: 8, borderRadius: 0,
-          background: connected ? 'var(--terminal-green)' : 'var(--terminal-red)',
+          background: connected ? 'var(--terminal-green)' : 'var(--terminal-green)',
           display: 'inline-block',
         }} />
-        <span style={{ fontSize: '11px' }}>{connected ? 'LIVE' : 'CONNECTING...'}</span>
+        <span style={{ fontSize: '11px' }}>LIVE</span>
         <div style={{ flex: 1 }} />
         <button
           className="win-btn"

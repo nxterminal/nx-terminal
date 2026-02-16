@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { IconMail16 } from './icons';
 
-export default function NotificationBalloon({ onOpen, onDismiss }) {
+export default function NotificationBalloon({ onOpen, onDismiss, message }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -33,11 +34,11 @@ export default function NotificationBalloon({ onOpen, onDismiss }) {
     <div className="notification-balloon" onClick={handleClick}>
       <button className="balloon-close" onClick={handleClose}>x</button>
       <div className="balloon-header">
-        <span>{'\u2709'}</span>
+        <span><IconMail16 size={14} /></span>
         <span>New Mail</span>
       </div>
       <div className="balloon-body">
-        You have a message from HR Department. Read it to start hiring devs.
+        {message || 'You have a message from HR Department. Read it to start hiring devs.'}
       </div>
     </div>
   );

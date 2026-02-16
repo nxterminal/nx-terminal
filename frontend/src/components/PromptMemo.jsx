@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../services/api';
+import { IconMemo } from './icons';
 
 const QUICK_ACTIONS = [
   'Invest in top protocol',
@@ -31,7 +32,7 @@ export default function PromptMemo({ devId, devName, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="memo-modal" onClick={e => e.stopPropagation()}>
         <div className="win98-titlebar" style={{ cursor: 'default' }}>
-          <span className="win98-titlebar-icon">{'\u{1F4DD}'}</span>
+          <span className="win98-titlebar-icon"><IconMemo size={16} /></span>
           <span className="win98-titlebar-title">Memo \u2014 {devName || `Dev #${devId}`}</span>
           <div className="win98-titlebar-buttons">
             <button className="win98-titlebar-btn" onClick={onClose}>
