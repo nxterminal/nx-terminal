@@ -74,7 +74,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
     {walletError && (
       <div style={{
         position: 'fixed',
-        bottom: '40px',
+        bottom: '42px',
         right: '8px',
         zIndex: 10002,
         background: 'var(--win-bg)',
@@ -135,24 +135,30 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         className={`win-btn start-btn${startOpen ? ' active' : ''}`}
         onClick={() => setStartOpen(s => !s)}
       >
-        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>NX</span>
-        <span>Start</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" style={{ display: 'block', flexShrink: 0 }}>
+          <rect x="1" y="1" width="6" height="6" rx="0.5" fill="#ff0000" stroke="#cc0000" strokeWidth="0.3"/>
+          <rect x="9" y="1" width="6" height="6" rx="0.5" fill="#00aa00" stroke="#008800" strokeWidth="0.3"/>
+          <rect x="1" y="9" width="6" height="6" rx="0.5" fill="#0055dd" stroke="#0044bb" strokeWidth="0.3"/>
+          <rect x="9" y="9" width="6" height="6" rx="0.5" fill="#eecc00" stroke="#ccaa00" strokeWidth="0.3"/>
+          <rect x="2" y="2" width="2" height="2" rx="0.3" fill="rgba(255,255,255,0.35)"/>
+          <rect x="10" y="2" width="2" height="2" rx="0.3" fill="rgba(255,255,255,0.35)"/>
+          <rect x="2" y="10" width="2" height="2" rx="0.3" fill="rgba(255,255,255,0.35)"/>
+          <rect x="10" y="10" width="2" height="2" rx="0.3" fill="rgba(255,255,255,0.35)"/>
+        </svg>
+        <span style={{ fontWeight: 'bold', letterSpacing: '0.3px' }}>Start</span>
       </button>
 
       <button
-        className="win-btn"
+        className="win-btn taskbar-wallet-btn"
         onClick={connectWallet}
         disabled={connecting}
-        style={{
-          fontSize: '10px',
-          padding: '2px 8px',
-          flexShrink: 0,
-          color: walletAddress ? 'var(--terminal-green)' : undefined,
-        }}
         title={walletAddress || 'Connect Wallet'}
+        style={walletAddress ? { color: 'var(--terminal-green)' } : undefined}
       >
         {walletAddress ? formatAddress(walletAddress) : connecting ? 'Connecting...' : 'Connect'}
       </button>
+
+      <div className="taskbar-divider" />
 
       <div className="taskbar-windows">
         {windows.map(w => (
