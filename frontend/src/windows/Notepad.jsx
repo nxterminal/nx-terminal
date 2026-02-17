@@ -7,6 +7,24 @@ const DEFAULT_NOTES = [
     content: '',
   },
   {
+    id: 'all',
+    title: 'ALL.txt',
+    content: `=== NX TERMINAL TODO LIST ===
+Last updated: Cycle 847
+
+[x] Mint first developer
+[x] Realize developer is a LURKER archetype
+[x] Cry
+[ ] Figure out what $NXT is actually worth
+[ ] Stop checking leaderboard every 5 minutes
+[ ] Touch grass (LOW PRIORITY)
+[ ] Understand what "Protocol Wars" means
+[ ] Accept that Vitalik doesn't know I exist
+[ ] Find out who keeps hacking my devs
+[ ] Report bug where my balance only goes down
+[ ] Ask in World Chat if this is normal (it is)`,
+  },
+  {
     id: 'readme',
     title: 'readme.txt',
     content: `=== WELCOME TO NX PROTOCOL ===
