@@ -174,8 +174,6 @@ function IconMail({ size = 32 }) {
       <path d="M2.5 7.5 L16 17.5 L29.5 7.5" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="3" />
       <path d="M2 26 L11 18" fill="none" stroke="#aaa" strokeWidth="0.4" />
       <path d="M30 26 L21 18" fill="none" stroke="#aaa" strokeWidth="0.4" />
-      <circle cx="26" cy="9" r="4" fill="#e74c3c" stroke="#c0392b" strokeWidth="0.5" />
-      <text x="26" y="11.5" textAnchor="middle" fontSize="6" fill="#fff" fontWeight="bold">1</text>
     </svg>
   );
 }
@@ -272,6 +270,72 @@ function IconCards({ size = 32 }) {
   );
 }
 
+function IconClipboard({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="clipGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8e8e0" />
+          <stop offset="100%" stopColor="#c8c8b8" />
+        </linearGradient>
+      </defs>
+      <rect x="5" y="5" width="22" height="25" rx="1.5" fill="url(#clipGrad)" stroke="#888" strokeWidth="0.7" />
+      <rect x="10" y="2" width="12" height="5" rx="1" fill="#a0522d" stroke="#6b3410" strokeWidth="0.6" />
+      <circle cx="16" cy="4.5" r="1.5" fill="#c8c8b8" stroke="#888" strokeWidth="0.5" />
+      <line x1="9" y1="12" x2="23" y2="12" stroke="#4a8c2a" strokeWidth="1" />
+      <line x1="9" y1="16" x2="21" y2="16" stroke="#555" strokeWidth="0.6" />
+      <line x1="9" y1="19" x2="19" y2="19" stroke="#555" strokeWidth="0.6" />
+      <line x1="9" y1="22" x2="22" y2="22" stroke="#555" strokeWidth="0.6" />
+      <line x1="9" y1="25" x2="17" y2="25" stroke="#555" strokeWidth="0.6" />
+    </svg>
+  );
+}
+
+function IconNotepad({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="noteGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fffff0" />
+          <stop offset="100%" stopColor="#f5f5dc" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="2" width="24" height="28" rx="1" fill="url(#noteGrad)" stroke="#888" strokeWidth="0.7" />
+      <rect x="4" y="2" width="24" height="4" rx="1" fill="#3498db" stroke="#2980b9" strokeWidth="0.5" />
+      <line x1="10" y1="2" x2="10" y2="6" stroke="#fff" strokeWidth="1.5" />
+      <line x1="16" y1="2" x2="16" y2="6" stroke="#fff" strokeWidth="1.5" />
+      <line x1="22" y1="2" x2="22" y2="6" stroke="#fff" strokeWidth="1.5" />
+      <line x1="8" y1="10" x2="24" y2="10" stroke="#ccc" strokeWidth="0.4" />
+      <line x1="8" y1="14" x2="24" y2="14" stroke="#ccc" strokeWidth="0.4" />
+      <line x1="8" y1="18" x2="24" y2="18" stroke="#ccc" strokeWidth="0.4" />
+      <line x1="8" y1="22" x2="24" y2="22" stroke="#ccc" strokeWidth="0.4" />
+      <line x1="8" y1="26" x2="24" y2="26" stroke="#ccc" strokeWidth="0.4" />
+      <text x="8" y="13" fontSize="4" fill="#333" fontFamily="monospace">TODO: buy dip</text>
+      <text x="8" y="17" fontSize="4" fill="#888" fontFamily="monospace">HODL forever...</text>
+    </svg>
+  );
+}
+
+function IconRecycleBin({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="binGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#b0bec5" />
+          <stop offset="100%" stopColor="#78909c" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="6" width="24" height="3" rx="0.5" fill="url(#binGrad)" stroke="#546e7a" strokeWidth="0.6" />
+      <rect x="12" y="4" width="8" height="3" rx="0.5" fill="url(#binGrad)" stroke="#546e7a" strokeWidth="0.5" />
+      <path d="M6 9 L8 28 Q8 29 9 29 L23 29 Q24 29 24 28 L26 9 Z" fill="url(#binGrad)" stroke="#546e7a" strokeWidth="0.6" />
+      <line x1="12" y1="12" x2="12.5" y2="26" stroke="#546e7a" strokeWidth="0.7" />
+      <line x1="16" y1="12" x2="16" y2="26" stroke="#546e7a" strokeWidth="0.7" />
+      <line x1="20" y1="12" x2="19.5" y2="26" stroke="#546e7a" strokeWidth="0.7" />
+      <text x="16" y="21" textAnchor="middle" fontSize="5" fill="#e74c3c" fontWeight="bold" opacity="0.6">$</text>
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -279,12 +343,14 @@ export const ICON_MAP = {
   'leaderboard': IconTrophy,
   'protocol-market': IconChart,
   'ai-lab': IconLab,
-  'my-devs': IconFolder,
+  'my-devs': IconClipboard,
   'inbox': IconMail,
   'hire-devs': IconBriefcase,
   'control-panel': IconSettings,
   'bug-sweeper': IconBug,
   'protocol-solitaire': IconCards,
+  'notepad': IconNotepad,
+  'recycle-bin': IconRecycleBin,
 };
 
 export function Win98Icon({ id, size = 32 }) {

@@ -36,9 +36,19 @@ export default function MyDevs({ openDevProfile }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleWalletPrompt = () => {
-    setWalletError(true);
-    setTimeout(() => setWalletError(false), 5000);
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      setWalletError(true);
+      setTimeout(() => setWalletError(false), 5000);
+      return;
+    }
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setWalletError(false);
+    } catch {
+      setWalletError(true);
+      setTimeout(() => setWalletError(false), 5000);
+    }
   };
 
   return (
@@ -54,7 +64,7 @@ export default function MyDevs({ openDevProfile }) {
         gap: '8px',
       }}>
         <span>{'\u26A0'} Wallet not connected. Showing all devs as preview...</span>
-        <button className="win-btn" onClick={handleWalletPrompt} style={{ fontSize: '10px', padding: '2px 8px', flexShrink: 0 }}>
+        <button className="win-btn" onClick={connectWallet} style={{ fontSize: '10px', padding: '2px 8px', flexShrink: 0 }}>
           Connect Wallet
         </button>
       </div>

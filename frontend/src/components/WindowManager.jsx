@@ -12,6 +12,8 @@ import BugSweeper from '../windows/BugSweeper';
 import ProtocolSolitaire from '../windows/ProtocolSolitaire';
 import Inbox from '../windows/Inbox';
 import HireDevs from '../windows/HireDevs';
+import Notepad from '../windows/Notepad';
+import RecycleBin from '../windows/RecycleBin';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -26,6 +28,8 @@ const WINDOW_COMPONENTS = {
   'protocol-solitaire': ProtocolSolitaire,
   'inbox': Inbox,
   'hire-devs': HireDevs,
+  'notepad': Notepad,
+  'recycle-bin': RecycleBin,
 };
 
 export default function WindowManager({

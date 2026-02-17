@@ -15,9 +15,11 @@ const DESKTOP_ICONS = [
   { id: 'leaderboard', icon: '\u{1F3C6}', label: 'Leaderboard' },
   { id: 'protocol-market', icon: '\u{1F4CA}', label: 'Protocol Market' },
   { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
-  { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
+  { id: 'my-devs', icon: '\u{1F4CB}', label: 'My Devs' },
   { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
   { id: 'hire-devs', icon: '\u{1F4BC}', label: 'Mint/Hire Devs' },
+  { id: 'notepad', icon: '\u{1F4DD}', label: 'Notepad' },
+  { id: 'recycle-bin', icon: '\u{1F5D1}', label: 'Recycle Bin' },
   { id: 'control-panel', icon: '\u2699', label: 'Settings' },
 ];
 
