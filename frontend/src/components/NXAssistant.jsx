@@ -219,7 +219,7 @@ export default function NXAssistant() {
 
   const scheduleNext = useCallback(() => {
     clearTimeout(timerRef.current);
-    const delay = (Math.random() * 120000) + 120000;
+    const delay = (Math.random() * 60000) + 60000; // 60-120 seconds between appearances
     timerRef.current = setTimeout(() => {
       showRandom();
       scheduleNext();
@@ -238,10 +238,11 @@ export default function NXAssistant() {
     window.addEventListener('nx-settings-changed', handleSettings);
 
     if (isEnabled()) {
+      // First appearance: 5-10 seconds after load
       timerRef.current = setTimeout(() => {
         showRandom();
         scheduleNext();
-      }, Math.random() * 30000 + 30000);
+      }, Math.random() * 5000 + 5000);
     }
 
     return () => {
