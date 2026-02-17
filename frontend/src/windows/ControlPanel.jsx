@@ -20,6 +20,9 @@ const SCREENSAVERS = [
   { id: 'matrix', name: 'Matrix Rain' },
 ];
 
+const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
+const AGENT_CDN = 'https://unpkg.com/clippyjs@0.0.3/assets/agents';
+
 function StarfieldPreview({ width, height }) {
   const canvasRef = useRef(null);
 
@@ -94,12 +97,8 @@ function PipesPreview({ width, height }) {
       ctx.stroke();
 
       step++;
-      if (step % 3 === 0) {
-        dir = Math.floor(Math.random() * 4);
-      }
-      if (step % 12 === 0) {
-        colorIdx++;
-      }
+      if (step % 3 === 0) dir = Math.floor(Math.random() * 4);
+      if (step % 12 === 0) colorIdx++;
       if (x <= 0 || x >= width || y <= 0 || y >= height) {
         x = Math.random() * width;
         y = Math.random() * height;
@@ -151,7 +150,6 @@ function MatrixPreview({ width, height }) {
   return <canvas ref={canvasRef} width={width} height={height} style={{ display: 'block' }} />;
 }
 
-// Compress image to reduce localStorage size
 function compressImage(dataUrl, maxWidth, quality) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -159,12 +157,10 @@ function compressImage(dataUrl, maxWidth, quality) {
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-
       if (width > maxWidth) {
         height = (height * maxWidth) / width;
         width = maxWidth;
       }
-
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -177,15 +173,20 @@ function compressImage(dataUrl, maxWidth, quality) {
 
 export default function ControlPanel() {
   const [tab, setTab] = useState('wallpaper');
+
+  // Saved (applied) values
   const [wallpaper, setWallpaper] = useState(() => localStorage.getItem('nx-wallpaper') || 'teal');
   const [customWallpaper, setCustomWallpaper] = useState(() => localStorage.getItem('nx-custom-wallpaper') || '');
   const [screensaver, setScreensaver] = useState(() => localStorage.getItem('nx-screensaver') || '3d-pipes');
   const [assistantEnabled, setAssistantEnabled] = useState(() => localStorage.getItem('nx-assistant-enabled') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
-
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
 
-  // Fake settings state (humor)
+  // Pending (selected but not yet applied) values
+  const [pendingWallpaper, setPendingWallpaper] = useState(null);
+  const [pendingScreensaver, setPendingScreensaver] = useState(null);
+  const [pendingAgent, setPendingAgent] = useState(null);
+
   const [morale, setMorale] = useState(23);
   const [synergy, setSynergy] = useState(47);
 
@@ -193,14 +194,32 @@ export default function ControlPanel() {
     window.dispatchEvent(new Event('nx-settings-changed'));
   }, []);
 
-  const handleWallpaperChange = (id) => {
+  // ── Apply functions (called on OK/Apply) ──
+  const applyWallpaper = () => {
+    const id = pendingWallpaper || wallpaper;
     setWallpaper(id);
     localStorage.setItem('nx-wallpaper', id);
     if (id !== 'custom') {
       localStorage.removeItem('nx-custom-wallpaper');
       setCustomWallpaper('');
     }
+    setPendingWallpaper(null);
     saveAndNotify();
+  };
+
+  const applyScreensaver = () => {
+    const id = pendingScreensaver || screensaver;
+    setScreensaver(id);
+    localStorage.setItem('nx-screensaver', id);
+    setPendingScreensaver(null);
+  };
+
+  const applyAssistant = () => {
+    const name = pendingAgent || assistantAgent;
+    setAssistantAgent(name);
+    localStorage.setItem('nx-assistant-agent', name);
+    setPendingAgent(null);
+    window.dispatchEvent(new Event('nx-assistant-changed'));
   };
 
   const handleCustomWallpaper = async (e) => {
@@ -211,22 +230,22 @@ export default function ControlPanel() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const raw = ev.target.result;
-      // Compress to fit localStorage (~5MB limit)
       const compressed = await compressImage(raw, 1920, 0.7);
       try {
         localStorage.setItem('nx-custom-wallpaper', compressed);
         setCustomWallpaper(compressed);
         setWallpaper('custom');
         localStorage.setItem('nx-wallpaper', 'custom');
+        setPendingWallpaper(null);
         saveAndNotify();
-      } catch (err) {
-        // If still too large, compress more aggressively
+      } catch {
         try {
           const smallerCompressed = await compressImage(raw, 1280, 0.5);
           localStorage.setItem('nx-custom-wallpaper', smallerCompressed);
           setCustomWallpaper(smallerCompressed);
           setWallpaper('custom');
           localStorage.setItem('nx-wallpaper', 'custom');
+          setPendingWallpaper(null);
           saveAndNotify();
         } catch {
           alert('Image too large. Please try a smaller image.');
@@ -241,19 +260,15 @@ export default function ControlPanel() {
     setWallpaper('teal');
     localStorage.setItem('nx-wallpaper', 'teal');
     localStorage.removeItem('nx-custom-wallpaper');
+    setPendingWallpaper(null);
     saveAndNotify();
-  };
-
-  const handleScreensaverChange = (id) => {
-    setScreensaver(id);
-    localStorage.setItem('nx-screensaver', id);
   };
 
   const handleAssistantToggle = () => {
     const newVal = !assistantEnabled;
     setAssistantEnabled(newVal);
     localStorage.setItem('nx-assistant-enabled', newVal ? 'true' : 'false');
-    saveAndNotify();
+    window.dispatchEvent(new Event('nx-assistant-changed'));
   };
 
   const handleThemeChange = (id) => {
@@ -262,6 +277,10 @@ export default function ControlPanel() {
     document.documentElement.setAttribute('data-theme', id);
     saveAndNotify();
   };
+
+  const activeWallpaper = pendingWallpaper || wallpaper;
+  const activeScreensaver = pendingScreensaver || screensaver;
+  const activeAgent = pendingAgent || assistantAgent;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -281,8 +300,8 @@ export default function ControlPanel() {
               {WALLPAPERS.map(wp => (
                 <div
                   key={wp.id}
-                  className={`cp-wallpaper-option${wallpaper === wp.id ? ' selected' : ''}`}
-                  onClick={() => handleWallpaperChange(wp.id)}
+                  className={`cp-wallpaper-option${activeWallpaper === wp.id ? ' selected' : ''}`}
+                  onClick={() => setPendingWallpaper(wp.id)}
                 >
                   <div className="cp-wallpaper-preview" style={wp.style}>
                     {wp.hasAnimation === 'matrix' && (
@@ -302,7 +321,7 @@ export default function ControlPanel() {
               ))}
 
               <div
-                className={`cp-wallpaper-option${wallpaper === 'custom' ? ' selected' : ''}`}
+                className={`cp-wallpaper-option${activeWallpaper === 'custom' ? ' selected' : ''}`}
                 onClick={() => document.getElementById('wp-upload').click()}
               >
                 <div className="cp-wallpaper-preview" style={{
@@ -315,17 +334,19 @@ export default function ControlPanel() {
               </div>
             </div>
             <input
-              type="file"
-              id="wp-upload"
-              accept=".jpg,.jpeg,.png,.gif,.webp"
-              style={{ display: 'none' }}
-              onChange={handleCustomWallpaper}
+              type="file" id="wp-upload" accept=".jpg,.jpeg,.png,.gif,.webp"
+              style={{ display: 'none' }} onChange={handleCustomWallpaper}
             />
             {customWallpaper && (
               <button className="win-btn" onClick={removeCustomWallpaper} style={{ marginTop: '8px', fontSize: '10px' }}>
                 Remove custom wallpaper
               </button>
             )}
+            <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
+              <button className="win-btn" onClick={applyWallpaper} disabled={!pendingWallpaper} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+                Apply
+              </button>
+            </div>
           </div>
         )}
 
@@ -338,48 +359,26 @@ export default function ControlPanel() {
                   key={t.id}
                   className={theme === t.id ? 'win-panel' : 'win-raised'}
                   style={{
-                    padding: '10px',
-                    cursor: 'pointer',
+                    padding: '10px', cursor: 'pointer',
                     border: theme === t.id ? '2px solid var(--terminal-green)' : '2px solid transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
+                    display: 'flex', alignItems: 'center', gap: '12px',
                   }}
                   onClick={() => handleThemeChange(t.id)}
                 >
-                  {/* Mini preview */}
                   <div style={{
-                    width: '80px', height: '50px',
-                    background: t.preview.bg,
-                    border: '1px solid var(--border-dark)',
-                    position: 'relative',
-                    flexShrink: 0,
-                    overflow: 'hidden',
+                    width: '80px', height: '50px', background: t.preview.bg,
+                    border: '1px solid var(--border-dark)', position: 'relative', flexShrink: 0, overflow: 'hidden',
                   }}>
-                    {/* Mini titlebar */}
+                    <div style={{ height: '8px', background: t.preview.titlebar, margin: '6px 8px 0 8px' }} />
                     <div style={{
-                      height: '8px',
-                      background: t.preview.titlebar,
-                      margin: '6px 8px 0 8px',
+                      height: '18px', background: t.id === 'classic' ? '#c0c0c0' : t.id === 'dark' ? '#2d2d3f' : '#000',
+                      margin: '0 8px', border: `1px solid ${t.preview.text}33`,
                     }} />
-                    {/* Mini window body */}
                     <div style={{
-                      height: '18px',
-                      background: t.id === 'classic' ? '#c0c0c0' : t.id === 'dark' ? '#2d2d3f' : '#000',
-                      margin: '0 8px',
-                      border: `1px solid ${t.preview.text}33`,
-                    }} />
-                    {/* Mini taskbar */}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: '5px',
+                      position: 'absolute', bottom: 0, left: 0, right: 0, height: '5px',
                       background: t.id === 'classic' ? '#c0c0c0' : t.id === 'dark' ? '#2d2d3f' : '#000',
                     }} />
                   </div>
-
                   <div>
                     <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>
                       {t.name}
@@ -403,8 +402,8 @@ export default function ControlPanel() {
               {SCREENSAVERS.map(ss => (
                 <div
                   key={ss.id}
-                  className={`cp-screensaver-option${screensaver === ss.id ? ' selected' : ''}`}
-                  onClick={() => handleScreensaverChange(ss.id)}
+                  className={`cp-screensaver-option${activeScreensaver === ss.id ? ' selected' : ''}`}
+                  onClick={() => setPendingScreensaver(ss.id)}
                 >
                   <div className="cp-screensaver-preview">
                     {ss.id === 'starfield' ? (
@@ -418,6 +417,11 @@ export default function ControlPanel() {
                   <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '4px', fontWeight: 'bold' }}>{ss.name}</div>
                 </div>
               ))}
+            </div>
+            <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
+              <button className="win-btn" onClick={applyScreensaver} disabled={!pendingScreensaver} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+                Apply
+              </button>
             </div>
           </div>
         )}
@@ -441,30 +445,33 @@ export default function ControlPanel() {
               <div style={{ padding: '8px', marginTop: '4px' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '8px' }}>Choose Your Assistant:</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                  {['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'].map(name => (
+                  {AGENT_LIST.map(name => (
                     <div
                       key={name}
-                      className={assistantAgent === name ? 'win-panel' : 'win-raised'}
+                      className={activeAgent === name ? 'win-panel' : 'win-raised'}
                       style={{
-                        padding: '8px 4px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        border: assistantAgent === name ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
-                        fontSize: '10px',
-                        fontWeight: assistantAgent === name ? 'bold' : 'normal',
+                        padding: '6px 4px', textAlign: 'center', cursor: 'pointer',
+                        border: activeAgent === name ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
+                        fontSize: '10px', fontWeight: activeAgent === name ? 'bold' : 'normal',
                       }}
-                      onClick={() => {
-                        setAssistantAgent(name);
-                        localStorage.setItem('nx-assistant-agent', name);
-                        window.dispatchEvent(new Event('nx-assistant-changed'));
-                      }}
+                      onClick={() => setPendingAgent(name)}
                     >
-                      <div style={{ fontSize: '18px', marginBottom: '2px' }}>
-                        {name === 'Clippy' ? '\u{1F4CE}' : name === 'Merlin' ? '\u{1F9D9}' : name === 'Rover' ? '\u{1F436}' : name === 'Links' ? '\u{1F3CC}' : name === 'Peedy' ? '\u{1F99C}' : name === 'Bonzi' ? '\u{1F412}' : name === 'Genius' ? '\u{1F4A1}' : '\u{1F3CE}'}
-                      </div>
+                      <div style={{
+                        width: '48px', height: '48px', margin: '0 auto 4px',
+                        backgroundImage: `url(${AGENT_CDN}/${name}/map.png)`,
+                        backgroundPosition: '0 0',
+                        backgroundSize: 'auto',
+                        imageRendering: 'auto',
+                        overflow: 'hidden',
+                      }} />
                       {name}
                     </div>
                   ))}
+                </div>
+                <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
+                  <button className="win-btn" onClick={applyAssistant} disabled={!pendingAgent} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+                    Apply
+                  </button>
                 </div>
               </div>
             )}
@@ -485,10 +492,7 @@ export default function ControlPanel() {
                 CORPORATE MORALE INDEX: {morale}%
               </div>
               <input
-                type="range"
-                min="0"
-                max="100"
-                value={morale}
+                type="range" min="0" max="100" value={morale}
                 onChange={(e) => setMorale(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
@@ -502,10 +506,7 @@ export default function ControlPanel() {
                 SYNERGY LEVEL: {synergy}%
               </div>
               <input
-                type="range"
-                min="0"
-                max="100"
-                value={synergy}
+                type="range" min="0" max="100" value={synergy}
                 onChange={(e) => setSynergy(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
