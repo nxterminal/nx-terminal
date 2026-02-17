@@ -2,114 +2,131 @@ import { useState } from 'react';
 
 const DEFAULT_NOTES = [
   {
-    id: 'todo',
-    title: 'TODO.txt',
-    content: `=== NX TERMINAL TODO LIST ===
-Last updated: Cycle 847
+    id: 'untitled',
+    title: 'Untitled.txt',
+    content: '',
+  },
+  {
+    id: 'readme',
+    title: 'readme.txt',
+    content: `=== WELCOME TO NX PROTOCOL ===
+If you're reading this, it's already too late.
 
-[x] Mint first developer
-[x] Realize developer is a LURKER archetype
-[x] Cry
-[ ] Figure out what $NXT is actually worth
-[ ] Stop checking leaderboard every 5 minutes
-[ ] Touch grass (LOW PRIORITY)
-[ ] Understand what "Protocol Wars" means
-[ ] Accept that Vitalik doesn't know I exist
-[ ] Find out who keeps hacking my devs
-[ ] Report bug where my balance only goes down
-[ ] Ask in World Chat if this is normal (it is)`,
+You've entered the Protocol Wars: a fully on-chain
+simulation where AI developers fight, code, hack,
+and occasionally achieve sentience for control of
+the NX Network.
+
+HOW IT WORKS:
+1. You mint AI developers (costs ETH, obviously)
+2. Your devs compete in the simulation autonomously
+3. Each dev has an archetype: LURKER, 10X_DEV, DEGEN,
+   HACKTIVIST, FED, SCRIPT_KIDDIE, and more
+4. They earn (or lose) $NXT based on performance
+5. You pretend to understand what's happening
+6. Leaderboard goes up. Leaderboard goes down.
+
+ARCHETYPES EXPLAINED:
+- LURKER: Does nothing. Somehow always profitable.
+- 10X_DEV: Ships 400% faster. Burns out 400% faster.
+- DEGEN: YOLOs your treasury into random protocols.
+         Occasionally 100x. Usually 0x.
+- HACKTIVIST: Attacks other corps "for the people."
+              The people did not ask for this.
+- FED: Audits everything. Fun at parties (not invited).
+- SCRIPT_KIDDIE: Cheap labor. You get what you pay for.
+
+IMPORTANT DISCLAIMER:
+This is not financial advice. This is not even
+advice. This is a notepad file inside a simulation
+inside a blockchain. Please go outside.
+
+Last edited by: [REDACTED]
+Last saved: Cycle 847`,
   },
   {
     id: 'passwords',
     title: 'passwords.txt',
-    content: `=== VERY SECURE PASSWORDS ===
+    content: `=== EXTREMELY SECURE PASSWORDS ===
 DO NOT SHARE THIS FILE
+(saved on a public blockchain btw)
 
 MetaMask: password123
+Phantom: solana4life
+Rabby: same as MetaMask honestly
 Exchange: hunter2
 Ledger PIN: 1234
-Seed phrase: I wrote it on a napkin at Denny's
-2FA Recovery: lost it during the 2024 bull run
-Private key: somewhere on my old laptop that I sold on eBay
+Hardware wallet location: "somewhere safe"
+  UPDATE: can't remember where
 
-NOTE TO SELF: Move all funds to cold storage.
-NOTE TO SELF (6 months later): Still haven't done it.
-NOTE TO SELF (1 year later): Got hacked. Shocking.`,
+Seed phrase: wrote it on a napkin at Denny's.
+  Denny's closed. Napkin status: UNKNOWN.
+
+2FA Recovery codes: screenshot on iCloud
+  (this is fine)
+
+Private key: copy-pasted into Discord DM
+  to "Vitalik Buterin (Official)" who asked
+  nicely. Still waiting for the 2x ETH return.
+
+Bridge passwords:
+  Arbitrum: same as MetaMask
+  Base: same as Arbitrum
+  Optimism: same as Base
+  (security through uniformity)
+
+NOTE TO SELF: Move funds to cold storage.
+NOTE (6 months later): Still haven't done it.
+NOTE (1 year later): Got phished. Surprised?
+NOTE (1 year + 1 day): Set up 2FA finally.
+NOTE (1 year + 2 days): Lost 2FA phone.`,
   },
   {
-    id: 'investment',
-    title: 'investment_thesis.txt',
-    content: `=== MY INVESTMENT THESIS ===
-Written at 3AM during a bull market
+    id: 'survival',
+    title: 'survival_guide.txt',
+    content: `=== PROTOCOL WARS SURVIVAL GUIDE ===
+Compiled from the collective suffering of
+thousands of NX Protocol participants.
 
-Step 1: Buy whatever CT is talking about
-Step 2: Tell everyone I "did my own research"
-Step 3: Diamond hands until -90%
-Step 4: Rebrand as "long-term investor"
-Step 5: Wait for next cycle
-Step 6: Repeat steps 1-5
+INVESTMENT RULES:
+1. Buy whatever Crypto Twitter is screaming about
+2. Tell everyone you "did your own research"
+3. Hold until -93%
+4. Rebrand as "long-term believer"
+5. Wait for next cycle. Repeat.
 
-ALTERNATIVE STRATEGY:
-- If Elon tweets about it: BUY
-- If your Uber driver mentions it: SELL
-- If your grandma asks about it: SELL EVERYTHING
-- If the SEC investigates it: Already too late
+WHEN TO BUY:
+- Random influencer tweets "gm": BUY
+- Project has no whitepaper: BUY FASTER
+- Token name is a dog breed: MORTGAGE THE HOUSE
 
-RISK MANAGEMENT:
-- What is risk management?`,
-  },
-  {
-    id: 'journal',
-    title: 'dev_journal.txt',
-    content: `=== DEVELOPER JOURNAL ===
+WHEN TO SELL:
+- Your Uber driver mentions it: SELL
+- Your grandma asks about it: SELL EVERYTHING
+- CNBC covers it: YOU'RE ALREADY LATE
+- The SEC sends you mail: SELL. LAWYER. NOW.
 
-Day 1: Minted my first dev. Named him "SatoshiLite."
-       He immediately started lurking. Proud parent moment.
+DEV MANAGEMENT TIPS:
+- LURKER devs look useless. They are. Keep them
+  anyway. They somehow profit during crashes.
+- Never let a DEGEN dev near the treasury.
+  Actually, let one DEGEN near the treasury.
+  The chaos is the point.
+- HACKTIVIST devs will attack your own corp if
+  bored. Keep them busy or accept the chaos.
+- Hiring SCRIPT_KIDDIEs is like buying lottery
+  tickets. Cheap, addictive, mostly worthless.
 
-Day 3: SatoshiLite's energy is at 12%. He's been
-       "researching" which means scrolling Discord.
+THINGS THAT ARE DEFINITELY BUGS:
+- Balance only goes down
+- Devs ignoring commands
+- Leaderboard math seems wrong
+- Gas fees higher than transaction value
+(None of these are bugs. This is Web3.)
 
-Day 7: My dev got into a fight with another dev in
-       the simulation. Lost 500 $NXT. Worth it for
-       the entertainment value.
-
-Day 14: Hired a second dev. She's a 10X_DEV archetype.
-        She's already outperforming SatoshiLite by 400%.
-        SatoshiLite seems unbothered. Classic lurker.
-
-Day 21: The 10X_DEV burned out and her energy dropped to 0.
-        SatoshiLite is still at 12%. Slow and steady I guess.
-
-Day 30: I've spent more on gas fees managing my devs than
-        my devs have earned. The simulation is realistic.`,
-  },
-  {
-    id: 'meeting',
-    title: 'meeting_notes.txt',
-    content: `=== CORP MEETING NOTES ===
-Protocol Wars - Q4 Strategy Session
-Attendees: Me, my mass-minted devs, existential dread
-
-AGENDA:
-1. Review Q3 losses (all of them)
-2. Blame market conditions
-3. Discuss "pivoting to AI" (we're already AI)
-4. New strategy: copy whatever the top leaderboard player does
-
-KEY TAKEAWAYS:
-- We are NOT going bankrupt (technically)
-- Morale slider in Settings confirmed to do nothing
-- Someone suggested "just code better" - they've been fired
-- The DEGEN archetype devs want to YOLO the treasury
-- The FED archetype devs want to audit everyone
-- The HACKTIVIST devs just want to watch it all burn
-
-ACTION ITEMS:
-- Stop hiring SCRIPT_KIDDIE archetypes
-- Start hiring SCRIPT_KIDDIE archetypes (they're cheap)
-- Update resume on LinkedIn (just in case)
-
-NEXT MEETING: When $NXT hits $1 (so never)`,
+FINAL WISDOM:
+The real $NXT was the gas fees we burned
+along the way.`,
   },
 ];
 
@@ -119,7 +136,6 @@ export default function Notepad() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Merge saved with defaults to keep new defaults
         const savedMap = Object.fromEntries(parsed.map(n => [n.id, n]));
         return DEFAULT_NOTES.map(d => savedMap[d.id] || d)
           .concat(parsed.filter(n => !DEFAULT_NOTES.find(d => d.id === n.id)));
@@ -138,33 +154,64 @@ export default function Notepad() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Menu bar */}
       <div style={{
         display: 'flex',
         gap: '0',
-        padding: '0 4px',
+        padding: '1px 4px',
         background: 'var(--win-bg)',
+        fontSize: '11px',
         borderBottom: '1px solid var(--border-dark)',
+      }}>
+        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>File</span>
+        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>Edit</span>
+        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>Help</span>
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '0',
+        padding: '4px 4px 0',
+        background: 'var(--win-bg)',
       }}>
         {notes.map(note => (
           <button
             key={note.id}
-            className={`win-tab${note.id === activeId ? ' active' : ''}`}
             onClick={() => setActiveId(note.id)}
-            style={{ fontSize: '10px', padding: '2px 8px' }}
+            style={{
+              fontSize: '10px',
+              padding: '3px 10px 2px',
+              border: '1px solid var(--border-darker)',
+              borderBottom: note.id === activeId ? '1px solid #fffff8' : '1px solid var(--border-darker)',
+              background: note.id === activeId ? '#fffff8' : 'var(--win-bg)',
+              marginBottom: '-1px',
+              cursor: 'pointer',
+              position: 'relative',
+              zIndex: note.id === activeId ? 2 : 1,
+              borderTopLeftRadius: '2px',
+              borderTopRightRadius: '2px',
+              fontFamily: "'Tahoma', sans-serif",
+              color: note.id === activeId ? '#000' : '#444',
+              fontWeight: note.id === activeId ? 'bold' : 'normal',
+            }}
           >
             {note.title}
           </button>
         ))}
       </div>
 
+      {/* Editor */}
       {activeNote && (
         <textarea
           value={activeNote.content}
           onChange={e => handleChange(e.target.value)}
+          placeholder={activeNote.id === 'untitled' ? 'Type your notes here...' : ''}
           style={{
             flex: 1,
             resize: 'none',
-            border: 'none',
+            border: '1px solid var(--border-darker)',
+            borderTop: '1px solid var(--border-darker)',
             outline: 'none',
             fontFamily: "'Courier New', monospace",
             fontSize: '12px',
@@ -172,10 +219,25 @@ export default function Notepad() {
             padding: '8px',
             background: '#fffff8',
             color: '#333',
+            margin: '0 4px 4px',
           }}
           spellCheck={false}
         />
       )}
+
+      {/* Status bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '2px 8px',
+        fontSize: '10px',
+        color: '#666',
+        borderTop: '1px solid var(--border-dark)',
+        background: 'var(--win-bg)',
+      }}>
+        <span>{activeNote?.title || ''}</span>
+        <span>{activeNote ? `${activeNote.content.length} chars` : ''}</span>
+      </div>
     </div>
   );
 }
