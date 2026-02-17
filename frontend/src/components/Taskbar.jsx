@@ -7,6 +7,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
   const [startOpen, setStartOpen] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
   const [connecting, setConnecting] = useState(false);
+  const [walletError, setWalletError] = useState(null);
 
   useEffect(() => {
     const fetchCycle = () => {
@@ -22,17 +23,22 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
   const connectWallet = useCallback(async () => {
     if (walletAddress) return;
     if (!window.ethereum) {
-      alert('MetaMask not detected. Install MetaMask to connect your wallet.');
+      setWalletError('MetaMask not detected. Install MetaMask or a compatible wallet extension to connect.');
       return;
     }
     setConnecting(true);
+    setWalletError(null);
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (accounts && accounts.length > 0) {
         setWalletAddress(accounts[0]);
       }
-    } catch {
-      // User rejected or error
+    } catch (err) {
+      if (err.code === 4001) {
+        setWalletError('Connection rejected. You must approve the wallet connection request to continue.');
+      } else {
+        setWalletError('Failed to connect wallet. Please try again or check your wallet extension.');
+      }
     } finally {
       setConnecting(false);
     }
@@ -47,6 +53,60 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
+    <>
+    {walletError && (
+      <div style={{
+        position: 'fixed',
+        bottom: '40px',
+        right: '8px',
+        zIndex: 10002,
+        background: 'var(--win-bg)',
+        border: '2px solid var(--border-darker)',
+        boxShadow: 'inset -1px -1px 0 #000, inset 1px 1px 0 var(--border-light), 3px 3px 8px rgba(0,0,0,0.4)',
+        maxWidth: '320px',
+        fontFamily: "'Tahoma', sans-serif",
+      }}>
+        <div style={{
+          background: 'linear-gradient(90deg, var(--terminal-red), #cc0000)',
+          color: 'white',
+          padding: '2px 6px',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span>{'\u26A0'} Wallet Error</span>
+          <button
+            onClick={() => setWalletError(null)}
+            style={{
+              background: 'var(--win-bg)',
+              border: 'none',
+              width: '16px',
+              height: '14px',
+              fontSize: '10px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#000',
+              boxShadow: 'inset -1px -1px 0 var(--border-darker), inset 1px 1px 0 var(--border-light)',
+            }}
+          >
+            x
+          </button>
+        </div>
+        <div style={{ padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '24px', flexShrink: 0 }}>{'\u274C'}</span>
+          <div>
+            <div style={{ fontSize: '11px', marginBottom: '10px', lineHeight: 1.4 }}>{walletError}</div>
+            <button className="win-btn" onClick={() => setWalletError(null)} style={{ padding: '3px 20px', fontSize: '11px' }}>
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="taskbar">
       <StartMenu
         open={startOpen}
@@ -97,5 +157,6 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
         </div>
       </div>
     </div>
+    </>
   );
 }

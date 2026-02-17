@@ -25,6 +25,7 @@ function EnergyBar({ energy }) {
 export default function MyDevs({ openDevProfile }) {
   const [devs, setDevs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [walletError, setWalletError] = useState(false);
 
   useEffect(() => {
     api.getDevs({ limit: 50, sort: 'balance' })
@@ -35,6 +36,11 @@ export default function MyDevs({ openDevProfile }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleWalletPrompt = () => {
+    setWalletError(true);
+    setTimeout(() => setWalletError(false), 5000);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{
@@ -43,9 +49,31 @@ export default function MyDevs({ openDevProfile }) {
         color: 'var(--terminal-amber)',
         fontFamily: "'VT323', monospace",
         fontSize: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
       }}>
-        {'> Wallet not connected. Showing all devs as preview...'}
+        <span>{'\u26A0'} Wallet not connected. Showing all devs as preview...</span>
+        <button className="win-btn" onClick={handleWalletPrompt} style={{ fontSize: '10px', padding: '2px 8px', flexShrink: 0 }}>
+          Connect Wallet
+        </button>
       </div>
+
+      {walletError && (
+        <div style={{
+          padding: '8px 12px',
+          background: 'var(--terminal-bg)',
+          borderBottom: '1px solid var(--terminal-red)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '16px' }}>{'\u274C'}</span>
+          <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+            ERROR: No wallet detected. Connect your wallet from the taskbar to view your developers.
+          </span>
+        </div>
+      )}
 
       <div className="win-panel" style={{ flex: 1, overflow: 'auto' }}>
         {loading ? (
