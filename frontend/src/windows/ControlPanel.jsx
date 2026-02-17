@@ -29,7 +29,7 @@ const TIMEOUT_OPTIONS = [
 ];
 
 const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
-const AGENT_CDN = 'https://unpkg.com/clippyjs@0.0.3/assets/agents';
+const AGENT_CDN = 'https://raw.githubusercontent.com/pi0/clippyjs/master/assets/agents';
 
 // Frame sizes for each agent sprite sheet (width x height of a single frame)
 const AGENT_FRAME = {
@@ -171,11 +171,28 @@ function MatrixPreview({ width, height }) {
 }
 
 function AgentPreview({ name, selected, onClick }) {
+  const canvasRef = useRef(null);
   const [fw, fh] = AGENT_FRAME[name] || [124, 93];
-  // Scale to fit in a 64x64 box while keeping aspect ratio
-  const scale = Math.min(64 / fw, 64 / fh);
-  const displayW = Math.round(fw * scale);
-  const displayH = Math.round(fh * scale);
+
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 64, 64);
+      // Scale first frame to fit 64x64 centered
+      const scale = Math.min(64 / fw, 64 / fh);
+      const dw = fw * scale;
+      const dh = fh * scale;
+      const dx = (64 - dw) / 2;
+      const dy = (64 - dh) / 2;
+      // Extract first frame (0,0,fw,fh) from sprite sheet and draw scaled
+      ctx.drawImage(img, 0, 0, fw, fh, dx, dy, dw, dh);
+    };
+    img.src = `${AGENT_CDN}/${name}/map.png`;
+  }, [name, fw, fh]);
 
   return (
     <div
@@ -187,21 +204,12 @@ function AgentPreview({ name, selected, onClick }) {
       }}
       onClick={onClick}
     >
-      <div style={{
-        width: '64px', height: '64px', margin: '0 auto 4px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: `${displayW}px`,
-          height: `${displayH}px`,
-          backgroundImage: `url(${AGENT_CDN}/${name}/map.png)`,
-          backgroundPosition: '0 0',
-          backgroundSize: `auto ${displayH}px`,
-          backgroundRepeat: 'no-repeat',
-          imageRendering: 'auto',
-        }} />
-      </div>
+      <canvas
+        ref={canvasRef}
+        width={64}
+        height={64}
+        style={{ display: 'block', margin: '0 auto 4px' }}
+      />
       {name}
     </div>
   );
