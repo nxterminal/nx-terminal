@@ -30,6 +30,7 @@ export default function HireDevs({ onMint }) {
   const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [walletConnected] = useState(false);
+  const [walletError, setWalletError] = useState(null);
 
   const handleAnswer = (questionId, optionId) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionId }));
@@ -47,9 +48,11 @@ export default function HireDevs({ onMint }) {
 
   const handleMint = () => {
     if (!walletConnected) {
+      setWalletError('No wallet detected. Please connect your wallet from the taskbar before minting developers.');
       if (onMint) onMint('no-wallet');
       return;
     }
+    setWalletError(null);
     if (onMint) onMint(answers, quantity);
   };
 
@@ -198,6 +201,28 @@ export default function HireDevs({ onMint }) {
                 </button>
               </div>
             </div>
+
+            {walletError && (
+              <div className="win-raised" style={{
+                marginTop: '12px',
+                padding: '10px 12px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                border: '2px solid var(--terminal-red)',
+              }}>
+                <span style={{ fontSize: '20px', flexShrink: 0 }}>{'\u26A0\uFE0F'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', color: 'var(--terminal-red)' }}>
+                    Wallet Connection Required
+                  </div>
+                  <div style={{ fontSize: '10px', marginBottom: '8px' }}>{walletError}</div>
+                  <button className="win-btn" onClick={() => setWalletError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>
+                    OK
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
               <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>

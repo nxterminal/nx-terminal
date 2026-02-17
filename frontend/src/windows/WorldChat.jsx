@@ -20,6 +20,7 @@ function formatTime(dateStr) {
 export default function WorldChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [walletError, setWalletError] = useState(false);
   const terminalRef = useRef(null);
 
   useEffect(() => {
@@ -52,6 +53,11 @@ export default function WorldChat() {
     }
   }, [messages]);
 
+  const handleChatAttempt = () => {
+    setWalletError(true);
+    setTimeout(() => setWalletError(false), 5000);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{
@@ -65,11 +71,27 @@ export default function WorldChat() {
         gap: '8px',
         borderBottom: '1px solid var(--border-dark)',
       }}>
-        <span>Connect your wallet to join the conversation</span>
-        <button className="win-btn" disabled style={{ fontSize: '10px', padding: '2px 8px' }}>
+        <span>{'\u26A0'} Wallet not connected — Chat is read-only</span>
+        <button className="win-btn" onClick={handleChatAttempt} style={{ fontSize: '10px', padding: '2px 8px' }}>
           Connect Wallet
         </button>
       </div>
+
+      {walletError && (
+        <div style={{
+          padding: '8px 12px',
+          background: 'var(--terminal-bg)',
+          borderBottom: '1px solid var(--terminal-red)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '16px' }}>{'\u274C'}</span>
+          <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+            ERROR: No wallet detected. Connect your wallet from the taskbar to send messages.
+          </span>
+        </div>
+      )}
 
       <div className="terminal" ref={terminalRef} style={{ flex: 1 }}>
         {loading ? (
@@ -104,6 +126,7 @@ export default function WorldChat() {
           type="text"
           placeholder="Connect wallet to chat..."
           disabled
+          onClick={handleChatAttempt}
           style={{
             flex: 1,
             padding: '2px 6px',
@@ -111,9 +134,10 @@ export default function WorldChat() {
             fontSize: '11px',
             border: 'none',
             boxShadow: 'inset -1px -1px 0 var(--border-light), inset 1px 1px 0 var(--border-dark)',
+            cursor: 'not-allowed',
           }}
         />
-        <button className="win-btn" disabled style={{ fontSize: '10px' }}>Send</button>
+        <button className="win-btn" onClick={handleChatAttempt} style={{ fontSize: '10px' }}>Send</button>
       </div>
     </div>
   );
