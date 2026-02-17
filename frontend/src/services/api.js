@@ -1,8 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
 const WS_BASE = API_BASE.replace('https', 'wss').replace('http', 'ws');
 
-function fetchJSON(url) {
-  return fetch(url).then(r => {
+function fetchJSON(url, options) {
+  return fetch(url, options).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   });
@@ -41,6 +41,12 @@ export const api = {
   // Chat
   getDevChat: (channel = 'trollbox') => fetchJSON(`${API_BASE}/api/chat/devs?channel=${channel}`),
   getWorldChat: () => fetchJSON(`${API_BASE}/api/chat/world`),
+  postWorldChat: (player_address, display_name, message) =>
+    fetchJSON(`${API_BASE}/api/chat/world`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, display_name, message }),
+    }),
 
   // Shop
   getShop: () => fetchJSON(`${API_BASE}/api/shop`),

@@ -1,36 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
-const MOCK_MESSAGES = [
-  { display_name: '0x7a3f...2b1c', message: 'anyone know if Closed AI devs are worth it?', created_at: new Date(Date.now() - 300000).toISOString() },
-  { display_name: '0x9e1d...4f8a', message: 'just minted 5 devs, Protocol Wars here I come', created_at: new Date(Date.now() - 240000).toISOString() },
-  { display_name: '0x2c8b...7e3d', message: 'my dev NEXUS-7X is literally carrying my portfolio', created_at: new Date(Date.now() - 180000).toISOString() },
-  { display_name: '0xf4a2...1d9e', message: 'how do I sabotage someone lmao', created_at: new Date(Date.now() - 120000).toISOString() },
-  { display_name: '0x5b6c...8a2f', message: "day 3 and I'm already mass-producing protocols", created_at: new Date(Date.now() - 60000).toISOString() },
-  { display_name: '0x3d9a...6c4e', message: 'Misanthropic devs have the best morale ngl', created_at: new Date(Date.now() - 30000).toISOString() },
-  { display_name: '0x8f2e...5a7b', message: 'when does the next world event hit?', created_at: new Date(Date.now() - 15000).toISOString() },
-];
-
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+function formatAddress(addr) {
+  if (!addr) return '';
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
 export default function WorldChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [walletError, setWalletError] = useState(false);
+  const [walletAddress, setWalletAddress] = useState(null);
+  const [connecting, setConnecting] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
   const terminalRef = useRef(null);
 
   useEffect(() => {
     api.getWorldChat()
       .then(d => {
         const msgs = Array.isArray(d) ? d : d.messages || [];
-        setMessages(msgs.length > 0 ? msgs : MOCK_MESSAGES);
+        setMessages(msgs);
       })
       .catch(() => {
-        setMessages(MOCK_MESSAGES);
+        setMessages([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -40,7 +39,7 @@ export default function WorldChat() {
       api.getWorldChat()
         .then(d => {
           const msgs = Array.isArray(d) ? d : d.messages || [];
-          if (msgs.length > 0) setMessages(msgs);
+          setMessages(msgs);
         })
         .catch(() => {});
     }, 10000);
@@ -53,9 +52,54 @@ export default function WorldChat() {
     }
   }, [messages]);
 
-  const handleChatAttempt = () => {
-    setWalletError(true);
-    setTimeout(() => setWalletError(false), 5000);
+  const connectWallet = async () => {
+    if (walletAddress) return;
+    if (!window.ethereum) {
+      setError('No wallet detected. Install MetaMask or a compatible wallet extension.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+    setConnecting(true);
+    setError(null);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+      }
+    } catch (err) {
+      if (err.code === 4001) {
+        setError('Connection rejected by user.');
+      } else {
+        setError('Failed to connect wallet.');
+      }
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!walletAddress || !inputValue.trim() || sending) return;
+    setSending(true);
+    try {
+      await api.postWorldChat(walletAddress, formatAddress(walletAddress), inputValue.trim());
+      setInputValue('');
+      const d = await api.getWorldChat();
+      const msgs = Array.isArray(d) ? d : d.messages || [];
+      setMessages(msgs);
+    } catch {
+      setError('Failed to send message. Try again.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   return (
@@ -71,13 +115,26 @@ export default function WorldChat() {
         gap: '8px',
         borderBottom: '1px solid var(--border-dark)',
       }}>
-        <span>{'\u26A0'} Wallet not connected — Chat is read-only</span>
-        <button className="win-btn" onClick={handleChatAttempt} style={{ fontSize: '10px', padding: '2px 8px' }}>
-          Connect Wallet
-        </button>
+        {walletAddress ? (
+          <span style={{ color: 'var(--terminal-green)' }}>
+            Connected: {formatAddress(walletAddress)}
+          </span>
+        ) : (
+          <>
+            <span>[!] Wallet not connected -- Chat is read-only</span>
+            <button
+              className="win-btn"
+              onClick={connectWallet}
+              disabled={connecting}
+              style={{ fontSize: '10px', padding: '2px 8px' }}
+            >
+              {connecting ? 'Connecting...' : 'Connect Wallet'}
+            </button>
+          </>
+        )}
       </div>
 
-      {walletError && (
+      {error && (
         <div style={{
           padding: '8px 12px',
           background: 'var(--terminal-bg)',
@@ -86,9 +143,9 @@ export default function WorldChat() {
           alignItems: 'center',
           gap: '8px',
         }}>
-          <span style={{ fontSize: '16px' }}>{'\u274C'}</span>
+          <span style={{ fontSize: '14px', fontFamily: "'VT323', monospace" }}>[X]</span>
           <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
-            ERROR: No wallet detected. Connect your wallet from the taskbar to send messages.
+            ERROR: {error}
           </span>
         </div>
       )}
@@ -97,10 +154,12 @@ export default function WorldChat() {
         {loading ? (
           <div style={{ color: 'var(--terminal-amber)' }}>Loading world chat...</div>
         ) : messages.length === 0 ? (
-          <div style={{ color: 'var(--terminal-amber)' }}>No messages yet. Be the first to say something!</div>
+          <div style={{ color: 'var(--terminal-amber)', padding: '8px' }}>
+            No messages yet. {walletAddress ? 'Be the first to say something.' : 'Connect your wallet to start chatting.'}
+          </div>
         ) : (
           messages.map((msg, i) => (
-            <div key={i} className="terminal-line">
+            <div key={msg.id || i} className="terminal-line">
               <span style={{ color: 'var(--border-dark)' }}>
                 [{formatTime(msg.created_at)}]
               </span>{' '}
@@ -124,9 +183,12 @@ export default function WorldChat() {
       }}>
         <input
           type="text"
-          placeholder="Connect wallet to chat..."
-          disabled
-          onClick={handleChatAttempt}
+          placeholder={walletAddress ? 'Type a message...' : 'Connect wallet to chat...'}
+          disabled={!walletAddress || sending}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          maxLength={280}
           style={{
             flex: 1,
             padding: '2px 6px',
@@ -134,10 +196,17 @@ export default function WorldChat() {
             fontSize: '11px',
             border: 'none',
             boxShadow: 'inset -1px -1px 0 var(--border-light), inset 1px 1px 0 var(--border-dark)',
-            cursor: 'not-allowed',
+            cursor: walletAddress ? 'text' : 'not-allowed',
           }}
         />
-        <button className="win-btn" onClick={handleChatAttempt} style={{ fontSize: '10px' }}>Send</button>
+        <button
+          className="win-btn"
+          onClick={sendMessage}
+          disabled={!walletAddress || !inputValue.trim() || sending}
+          style={{ fontSize: '10px' }}
+        >
+          {sending ? 'Sending...' : 'Send'}
+        </button>
       </div>
     </div>
   );

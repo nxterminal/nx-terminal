@@ -93,7 +93,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <span>{'\u26A0'} Wallet Error</span>
+          <span>[!] Wallet Error</span>
           <button
             onClick={() => setWalletError(null)}
             style={{
@@ -114,7 +114,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           </button>
         </div>
         <div style={{ padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <span style={{ fontSize: '24px', flexShrink: 0 }}>{'\u274C'}</span>
+          <span style={{ fontSize: '16px', fontWeight: 'bold', flexShrink: 0 }}>[X]</span>
           <div>
             <div style={{ fontSize: '11px', marginBottom: '10px', lineHeight: 1.4 }}>{walletError}</div>
             <button className="win-btn" onClick={() => setWalletError(null)} style={{ padding: '3px 20px', fontSize: '11px' }}>
@@ -135,8 +135,23 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         className={`win-btn start-btn${startOpen ? ' active' : ''}`}
         onClick={() => setStartOpen(s => !s)}
       >
-        <span style={{ fontSize: '14px' }}>&#x1F5A5;</span>
+        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>NX</span>
         <span>Start</span>
+      </button>
+
+      <button
+        className="win-btn"
+        onClick={connectWallet}
+        disabled={connecting}
+        style={{
+          fontSize: '10px',
+          padding: '2px 8px',
+          flexShrink: 0,
+          color: walletAddress ? 'var(--terminal-green)' : undefined,
+        }}
+        title={walletAddress || 'Connect Wallet'}
+      >
+        {walletAddress ? formatAddress(walletAddress) : connecting ? 'Connecting...' : 'Connect'}
       </button>
 
       <div className="taskbar-windows">
@@ -152,28 +167,13 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         ))}
       </div>
 
-      <button
-        className="win-btn"
-        onClick={connectWallet}
-        disabled={connecting}
-        style={{
-          fontSize: '10px',
-          padding: '2px 8px',
-          flexShrink: 0,
-          color: walletAddress ? 'var(--terminal-green)' : undefined,
-        }}
-        title={walletAddress || 'Connect Wallet'}
-      >
-        {walletAddress ? formatAddress(walletAddress) : connecting ? 'Connecting...' : '\u{1F4B0} Connect'}
-      </button>
-
       <div className="taskbar-tray">
         <button
           className="tray-icon"
           onClick={toggleAssistant}
           title={assistantOn ? 'Hide Assistant' : 'Show Assistant'}
         >
-          <span style={{ opacity: assistantOn ? 1 : 0.4 }}>{'\u{1F4CE}'}</span>
+          <span style={{ opacity: assistantOn ? 1 : 0.4, fontSize: '11px' }}>[A]</span>
         </button>
 
         <button
@@ -181,7 +181,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           onClick={() => openWindow('inbox')}
           title={unreadCount > 0 ? `${unreadCount} unread` : 'Inbox'}
         >
-          <span>{'\u2709'}</span>
+          <span style={{ fontSize: '11px' }}>M</span>
           {unreadCount > 0 && <span className="tray-badge" />}
         </button>
 

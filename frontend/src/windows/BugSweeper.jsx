@@ -99,7 +99,7 @@ export default function BugSweeper() {
     setStarted(false);
   };
 
-  const smiley = gameOver ? '\u{1F635}' : won ? '\u{1F60E}' : '\u{1F642}';
+  const smiley = gameOver ? 'X(' : won ? 'B)' : ':)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', background: 'var(--win-bg)', height: '100%' }}>
@@ -127,11 +127,11 @@ export default function BugSweeper() {
               if (cell.revealed) {
                 style.boxShadow = 'inset 1px 1px 0 #808080';
                 bg = '#c0c0c0';
-                if (cell.mine) { content = '\u{1F4A3}'; }
+                if (cell.mine) { content = '*'; }
                 else if (cell.adjacent > 0) { content = cell.adjacent; color = ADJ_COLORS[cell.adjacent]; }
               } else {
                 style.boxShadow = 'inset -1px -1px 0 #808080, inset 1px 1px 0 #fff, inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf';
-                if (cell.flagged) content = '\u{1F6A9}';
+                if (cell.flagged) content = 'P';
               }
               return (
                 <button key={c} style={{ ...style, background: bg, color }} onClick={() => reveal(r, c)} onContextMenu={(e) => flag(e, r, c)}>

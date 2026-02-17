@@ -63,7 +63,7 @@ export default function MyDevs({ openDevProfile }) {
         alignItems: 'center',
         gap: '8px',
       }}>
-        <span>{'\u26A0'} Wallet not connected. Showing all devs as preview...</span>
+        <span>[!] Wallet not connected. Showing all devs as preview...</span>
         <button className="win-btn" onClick={connectWallet} style={{ fontSize: '10px', padding: '2px 8px', flexShrink: 0 }}>
           Connect Wallet
         </button>
@@ -78,7 +78,7 @@ export default function MyDevs({ openDevProfile }) {
           alignItems: 'center',
           gap: '8px',
         }}>
-          <span style={{ fontSize: '16px' }}>{'\u274C'}</span>
+          <span style={{ fontSize: '14px', fontFamily: "'VT323', monospace" }}>[X]</span>
           <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
             ERROR: No wallet detected. Connect your wallet from the taskbar to view your developers.
           </span>

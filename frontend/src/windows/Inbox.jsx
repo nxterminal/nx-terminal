@@ -133,7 +133,7 @@ export default function Inbox({ onUnreadCount }) {
                   style={{ fontWeight: email.read ? 'normal' : 'bold' }}
                 >
                   <td style={{ textAlign: 'center' }}>
-                    {email.read ? '\u{1F4E8}' : '\u{1F4E9}'}
+                    {email.read ? '-' : '>'}
                   </td>
                   <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {email.from.split('<')[0].trim()}

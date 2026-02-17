@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 
 const ERROR_MESSAGES = [
-  { title: 'NX Terminal Error', text: 'Your developer has encountered an existential crisis and stopped working. Would you like to send an unhelpful report?', icon: '\u26A0' },
-  { title: 'Protocol Conflict', text: 'Two protocols are trying to occupy the same memory address. Neither will yield. This is now a political issue.', icon: '\u{1F6AB}' },
-  { title: 'Salary.exe', text: 'Insufficient funds to pay developer salaries. Developers have unionized. Productivity reduced by 100%.', icon: '\u{1F4B8}' },
-  { title: 'Morale Overflow', text: 'Developer morale has exceeded maximum integer value and wrapped around to -2,147,483,648. This is technically your fault.', icon: '\u2757' },
-  { title: 'Security Alert', text: 'A developer is attempting to access files above their clearance level. The files are just cat pictures.', icon: '\u{1F6E1}' },
-  { title: 'Network Error', text: 'Connection to NX Terminal mainframe lost. The hamster powering the server has escaped. Deploying replacement hamster.', icon: '\u{1F4E1}' },
-  { title: 'Memory Leak', text: 'Memory leak detected. 640K should have been enough for anyone, but your developers are very wasteful.', icon: '\u{1F4A7}' },
-  { title: 'HR Violation', text: 'A developer has been caught mining cryptocurrency during work hours. The cryptocurrency was also imaginary.', icon: '\u{1F46E}' },
-  { title: 'coffee.sys', text: 'CRITICAL: Coffee machine on floor 3 is offline. Developer productivity expected to drop to near-zero levels.', icon: '\u2615' },
-  { title: 'Ethics.dll', text: 'Ethics module not found. Proceeding without ethics. (This has been the default behavior for 6 quarters.)', icon: '\u{1F916}' },
-  { title: 'Disk Full', text: 'Hard drive is full. 498MB used by "important_work.zip" which is just 3 years of unread corporate memos.', icon: '\u{1F4BE}' },
-  { title: 'Update Required', text: 'NX Terminal requires an update. The update requires an update. The update to the update has been deprecated.', icon: '\u{1F504}' },
+  { title: 'NX Terminal Error', text: 'Your developer has encountered an existential crisis and stopped working. Would you like to send an unhelpful report?', icon: '[!]' },
+  { title: 'Protocol Conflict', text: 'Two protocols are trying to occupy the same memory address. Neither will yield. This is now a political issue.', icon: '[X]' },
+  { title: 'Salary.exe', text: 'Insufficient funds to pay developer salaries. Developers have unionized. Productivity reduced by 100%.', icon: '[$]' },
+  { title: 'Morale Overflow', text: 'Developer morale has exceeded maximum integer value and wrapped around to -2,147,483,648. This is technically your fault.', icon: '[!]' },
+  { title: 'Security Alert', text: 'A developer is attempting to access files above their clearance level. The files are just cat pictures.', icon: '[!]' },
+  { title: 'Network Error', text: 'Connection to NX Terminal mainframe lost. The hamster powering the server has escaped. Deploying replacement hamster.', icon: '[~]' },
+  { title: 'Memory Leak', text: 'Memory leak detected. 640K should have been enough for anyone, but your developers are very wasteful.', icon: '[~]' },
+  { title: 'HR Violation', text: 'A developer has been caught mining cryptocurrency during work hours. The cryptocurrency was also imaginary.', icon: '[!]' },
+  { title: 'coffee.sys', text: 'CRITICAL: Coffee machine on floor 3 is offline. Developer productivity expected to drop to near-zero levels.', icon: '[:::]' },
+  { title: 'Ethics.dll', text: 'Ethics module not found. Proceeding without ethics. (This has been the default behavior for 6 quarters.)', icon: '[?]' },
+  { title: 'Disk Full', text: 'Hard drive is full. 498MB used by "important_work.zip" which is just 3 years of unread corporate memos.', icon: '[=]' },
+  { title: 'Update Required', text: 'NX Terminal requires an update. The update requires an update. The update to the update has been deprecated.', icon: '[>>]' },
 ];
 
 export default function ErrorPopup() {
