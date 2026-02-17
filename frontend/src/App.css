@@ -276,13 +276,51 @@
   background: #d4d0c8;
 }
 
+.taskbar-tray {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+  padding: 2px 2px 2px 4px;
+  box-shadow:
+    inset -1px -1px 0 var(--border-light),
+    inset 1px 1px 0 var(--border-dark);
+}
+
+.tray-icon {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 2px;
+}
+.tray-icon:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tray-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background: var(--terminal-red);
+  border-radius: 50%;
+  border: 1px solid var(--win-bg);
+  pointer-events: none;
+}
+
 .taskbar-clock {
   flex-shrink: 0;
   padding: 2px 8px;
   font-size: 11px;
-  box-shadow:
-    inset -1px -1px 0 var(--border-light),
-    inset 1px 1px 0 var(--border-dark);
 }
 
 /* ====== TABS ====== */
