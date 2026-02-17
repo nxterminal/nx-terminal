@@ -7,24 +7,6 @@ const DEFAULT_NOTES = [
     content: '',
   },
   {
-    id: 'all',
-    title: 'ALL.txt',
-    content: `=== NX TERMINAL TODO LIST ===
-Last updated: Cycle 847
-
-[x] Mint first developer
-[x] Realize developer is a LURKER archetype
-[x] Cry
-[ ] Figure out what $NXT is actually worth
-[ ] Stop checking leaderboard every 5 minutes
-[ ] Touch grass (LOW PRIORITY)
-[ ] Understand what "Protocol Wars" means
-[ ] Accept that Vitalik doesn't know I exist
-[ ] Find out who keeps hacking my devs
-[ ] Report bug where my balance only goes down
-[ ] Ask in World Chat if this is normal (it is)`,
-  },
-  {
     id: 'readme',
     title: 'readme.txt',
     content: `=== WELCOME TO NX PROTOCOL ===
@@ -172,20 +154,6 @@ export default function Notepad() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Menu bar */}
-      <div style={{
-        display: 'flex',
-        gap: '0',
-        padding: '1px 4px',
-        background: 'var(--win-bg)',
-        fontSize: '11px',
-        borderBottom: '1px solid var(--border-dark)',
-      }}>
-        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>File</span>
-        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>Edit</span>
-        <span style={{ padding: '1px 6px', cursor: 'default', color: '#333' }}>Help</span>
-      </div>
-
       {/* Tabs */}
       <div style={{
         display: 'flex',
