@@ -131,7 +131,7 @@ export default function Screensaver({ onDismiss }) {
       {type === 'starfield' ? (
         <Starfield width={window.innerWidth} height={window.innerHeight} />
       ) : type === 'matrix' ? (
-        <MatrixRain width={window.innerWidth} height={window.innerHeight} fontSize={16} speed={1.2} />
+        <MatrixRain width={window.innerWidth} height={window.innerHeight} fontSize={16} speed={0.5} />
       ) : (
         <Pipes width={window.innerWidth} height={window.innerHeight} />
       )}
