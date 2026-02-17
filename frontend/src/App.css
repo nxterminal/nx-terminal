@@ -837,30 +837,6 @@
 }
 
 /* ====== WALLPAPER OVERLAYS ====== */
-.wallpaper-matrix {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 32px;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 20px,
-      rgba(0, 255, 0, 0.03) 20px,
-      rgba(0, 255, 0, 0.03) 21px
-    );
-  animation: matrixScroll 8s linear infinite;
-}
-
-@keyframes matrixScroll {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 200px; }
-}
 
 .wallpaper-scanlines {
   position: absolute;

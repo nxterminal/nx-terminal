@@ -17,6 +17,7 @@ const THEMES = [
 const SCREENSAVERS = [
   { id: '3d-pipes', name: '3D Pipes' },
   { id: 'starfield', name: 'Starfield' },
+  { id: 'matrix', name: 'Matrix Rain' },
 ];
 
 function StarfieldPreview({ width, height }) {
@@ -114,6 +115,42 @@ function PipesPreview({ width, height }) {
   return <canvas ref={canvasRef} width={width} height={height} style={{ display: 'block' }} />;
 }
 
+function MatrixPreview({ width, height }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const chars = 'アイウエオ01NX';
+    const fontSize = 8;
+    const cols = Math.ceil(width / fontSize);
+    const drops = Array.from({ length: cols }, () => Math.random() * -10);
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    let animId;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, width, height);
+      ctx.font = `${fontSize}px monospace`;
+      for (let i = 0; i < cols; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillStyle = `rgb(0, ${150 + Math.floor(Math.random() * 105)}, 0)`;
+        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+        drops[i] += 0.5 + Math.random() * 0.5;
+        if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0;
+      }
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, [width, height]);
+
+  return <canvas ref={canvasRef} width={width} height={height} style={{ display: 'block' }} />;
+}
+
 // Compress image to reduce localStorage size
 function compressImage(dataUrl, maxWidth, quality) {
   return new Promise((resolve) => {
@@ -145,6 +182,8 @@ export default function ControlPanel() {
   const [screensaver, setScreensaver] = useState(() => localStorage.getItem('nx-screensaver') || '3d-pipes');
   const [assistantEnabled, setAssistantEnabled] = useState(() => localStorage.getItem('nx-assistant-enabled') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
+
+  const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
 
   // Fake settings state (humor)
   const [morale, setMorale] = useState(23);
@@ -360,7 +399,7 @@ export default function ControlPanel() {
         {tab === 'screensaver' && (
           <div>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Screensaver:</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {SCREENSAVERS.map(ss => (
                 <div
                   key={ss.id}
@@ -369,9 +408,11 @@ export default function ControlPanel() {
                 >
                   <div className="cp-screensaver-preview">
                     {ss.id === 'starfield' ? (
-                      <StarfieldPreview width={160} height={100} />
+                      <StarfieldPreview width={140} height={90} />
+                    ) : ss.id === 'matrix' ? (
+                      <MatrixPreview width={140} height={90} />
                     ) : (
-                      <PipesPreview width={160} height={100} />
+                      <PipesPreview width={140} height={90} />
                     )}
                   </div>
                   <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '4px', fontWeight: 'bold' }}>{ss.name}</div>
@@ -383,7 +424,7 @@ export default function ControlPanel() {
 
         {tab === 'assistant' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>NX Assistant (Clippy)</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>NX Assistant</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
               <div
                 className={`cp-toggle${assistantEnabled ? ' on' : ''}`}
@@ -395,6 +436,39 @@ export default function ControlPanel() {
                 {assistantEnabled ? 'Enabled — Your helpful corporate assistant is active' : 'Disabled — The robot sleeps'}
               </span>
             </div>
+
+            {assistantEnabled && (
+              <div style={{ padding: '8px', marginTop: '4px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '8px' }}>Choose Your Assistant:</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                  {['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'].map(name => (
+                    <div
+                      key={name}
+                      className={assistantAgent === name ? 'win-panel' : 'win-raised'}
+                      style={{
+                        padding: '8px 4px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        border: assistantAgent === name ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
+                        fontSize: '10px',
+                        fontWeight: assistantAgent === name ? 'bold' : 'normal',
+                      }}
+                      onClick={() => {
+                        setAssistantAgent(name);
+                        localStorage.setItem('nx-assistant-agent', name);
+                        window.dispatchEvent(new Event('nx-assistant-changed'));
+                      }}
+                    >
+                      <div style={{ fontSize: '18px', marginBottom: '2px' }}>
+                        {name === 'Clippy' ? '\u{1F4CE}' : name === 'Merlin' ? '\u{1F9D9}' : name === 'Rover' ? '\u{1F436}' : name === 'Links' ? '\u{1F3CC}' : name === 'Peedy' ? '\u{1F99C}' : name === 'Bonzi' ? '\u{1F412}' : name === 'Genius' ? '\u{1F4A1}' : '\u{1F3CE}'}
+                      </div>
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ fontSize: '10px', color: '#666', padding: '8px', marginTop: '4px' }}>
               The NX Assistant appears periodically with helpful (useless) tips and observations.
               Disabling it will not affect your performance review. Probably.

@@ -6,6 +6,7 @@ import NXAssistant from './NXAssistant';
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
+import MatrixRain from './MatrixRain';
 import { useWindowManager } from '../hooks/useWindowManager';
 
 const DESKTOP_ICONS = [
@@ -126,7 +127,11 @@ export default function Desktop() {
 
   return (
     <div className="desktop" style={wallpaperStyle}>
-      {wallpaperOverlay === 'matrix' && <div className="wallpaper-matrix" />}
+      {wallpaperOverlay === 'matrix' && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 32, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+          <MatrixRain width={window.innerWidth} height={window.innerHeight - 32} fontSize={14} speed={0.8} />
+        </div>
+      )}
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
       <div className="desktop-icons">

@@ -1,242 +1,278 @@
-// Win98-style pixel art SVG icons (32x32)
+// Windows 2000 style icons — smoother gradients, richer colors, anti-aliased look
 
-export const IconMyPC = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Monitor body */}
-    <rect x="4" y="2" width="24" height="18" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="5" y="3" width="22" height="1" fill="#fff" />
-    <rect x="4" y="3" width="1" height="16" fill="#fff" />
-    {/* Screen */}
-    <rect x="7" y="5" width="18" height="12" fill="#000080" />
-    <rect x="8" y="6" width="16" height="10" fill="#0000aa" />
-    {/* Screen content - small NX */}
-    <rect x="12" y="8" width="2" height="6" fill="#fff" />
-    <rect x="14" y="10" width="2" height="2" fill="#fff" />
-    <rect x="16" y="8" width="2" height="6" fill="#fff" />
-    {/* Monitor base */}
-    <rect x="11" y="20" width="10" height="2" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="8" y="22" width="16" height="3" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="9" y="22" width="14" height="1" fill="#fff" />
-    {/* Power LED */}
-    <rect x="15" y="18" width="2" height="1" fill="#33ff33" />
-  </svg>
-);
+function IconMyPC({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="monGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8e8e0" />
+          <stop offset="100%" stopColor="#b8b8a8" />
+        </linearGradient>
+        <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1a3a6a" />
+          <stop offset="100%" stopColor="#0a1a3a" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#monGrad)" stroke="#666" strokeWidth="0.8" />
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#screenGrad)" />
+      <text x="10" y="14" fontFamily="monospace" fontSize="8" fill="#4a9aff" fontWeight="bold">NX</text>
+      <circle cx="16" cy="20.5" r="0.8" fill="#33cc33" />
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#monGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#monGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
 
-export const IconLiveFeed = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Person 1 */}
-    <circle cx="11" cy="8" r="4" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="6" y="13" width="10" height="10" rx="1" fill="#000080" stroke="#000" strokeWidth="1" />
-    <rect x="7" y="13" width="8" height="1" fill="#0000cc" />
-    {/* Person 2 */}
-    <circle cx="22" cy="8" r="4" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="17" y="13" width="10" height="10" rx="1" fill="#008080" stroke="#000" strokeWidth="1" />
-    <rect x="18" y="13" width="8" height="1" fill="#00aaaa" />
-    {/* Connection line */}
-    <line x1="13" y1="18" x2="19" y2="18" stroke="#ffd700" strokeWidth="2" />
-    {/* Signal waves */}
-    <path d="M14 26 Q16 24 18 26" fill="none" stroke="#33ff33" strokeWidth="1" />
-    <path d="M12 28 Q16 25 20 28" fill="none" stroke="#33ff33" strokeWidth="1" />
-  </svg>
-);
+function IconLiveFeed({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="person1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5b9bd5" />
+          <stop offset="100%" stopColor="#2e75b6" />
+        </linearGradient>
+        <linearGradient id="person2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#70ad47" />
+          <stop offset="100%" stopColor="#4a8c2a" />
+        </linearGradient>
+      </defs>
+      <circle cx="11" cy="8" r="4" fill="#ffd5a0" stroke="#cc9966" strokeWidth="0.5" />
+      <path d="M4 24 Q4 16 11 16 Q18 16 18 24" fill="url(#person1)" stroke="#1a5a8a" strokeWidth="0.5" />
+      <circle cx="21" cy="8" r="4" fill="#ffd5a0" stroke="#cc9966" strokeWidth="0.5" />
+      <path d="M14 24 Q14 16 21 16 Q28 16 28 24" fill="url(#person2)" stroke="#3a6c1a" strokeWidth="0.5" />
+      <path d="M14 11 Q16 9 18 11" fill="none" stroke="#ffa500" strokeWidth="0.8" opacity="0.7" />
+      <path d="M13 13 Q16 10 19 13" fill="none" stroke="#ffa500" strokeWidth="0.6" opacity="0.5" />
+    </svg>
+  );
+}
 
-export const IconGlobe = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Globe circle */}
-    <circle cx="16" cy="16" r="12" fill="#4488ff" stroke="#000" strokeWidth="1" />
-    <circle cx="16" cy="16" r="11" fill="#2266cc" />
-    {/* Continents - simplified pixel shapes */}
-    <rect x="10" y="8" width="6" height="4" fill="#33aa33" />
-    <rect x="12" y="12" width="4" height="3" fill="#33aa33" />
-    <rect x="18" y="10" width="5" height="6" fill="#33aa33" />
-    <rect x="20" y="16" width="4" height="4" fill="#33aa33" />
-    <rect x="8" y="18" width="4" height="3" fill="#33aa33" />
-    {/* Grid lines */}
-    <ellipse cx="16" cy="16" rx="6" ry="12" fill="none" stroke="#5599ee" strokeWidth="0.5" />
-    <line x1="4" y1="16" x2="28" y2="16" stroke="#5599ee" strokeWidth="0.5" />
-    <line x1="4" y1="10" x2="28" y2="10" stroke="#5599ee" strokeWidth="0.3" opacity="0.5" />
-    <line x1="4" y1="22" x2="28" y2="22" stroke="#5599ee" strokeWidth="0.3" opacity="0.5" />
-  </svg>
-);
+function IconGlobe({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="globeGrad" cx="40%" cy="35%">
+          <stop offset="0%" stopColor="#6ab7ff" />
+          <stop offset="60%" stopColor="#2e75b6" />
+          <stop offset="100%" stopColor="#1a3a6a" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="16" r="13" fill="url(#globeGrad)" stroke="#1a3a6a" strokeWidth="0.8" />
+      <ellipse cx="12" cy="12" rx="4" ry="3" fill="#4a9a4a" opacity="0.8" />
+      <ellipse cx="20" cy="15" rx="3" ry="5" fill="#4a9a4a" opacity="0.7" />
+      <ellipse cx="11" cy="20" rx="3" ry="2" fill="#4a9a4a" opacity="0.6" />
+      <ellipse cx="16" cy="16" rx="13" ry="6" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+      <ellipse cx="16" cy="16" rx="6" ry="13" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+      <line x1="3" y1="16" x2="29" y2="16" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+      <ellipse cx="12" cy="10" rx="5" ry="3" fill="rgba(255,255,255,0.15)" />
+    </svg>
+  );
+}
 
-export const IconTrophy = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Cup body */}
-    <path d="M9 4 L23 4 L21 18 L11 18 Z" fill="#ffd700" stroke="#000" strokeWidth="1" />
-    <rect x="10" y="4" width="12" height="2" fill="#ffee55" />
-    {/* Cup handles */}
-    <path d="M9 6 C4 6 3 12 7 14" fill="none" stroke="#000" strokeWidth="1.5" />
-    <path d="M9 7 C5 7 4 12 7 13" fill="none" stroke="#ffd700" strokeWidth="1" />
-    <path d="M23 6 C28 6 29 12 25 14" fill="none" stroke="#000" strokeWidth="1.5" />
-    <path d="M23 7 C27 7 28 12 25 13" fill="none" stroke="#ffd700" strokeWidth="1" />
-    {/* Stem */}
-    <rect x="14" y="18" width="4" height="4" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    {/* Base */}
-    <rect x="10" y="22" width="12" height="3" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="11" y="22" width="10" height="1" fill="#e0e0e0" />
-    {/* Star on cup */}
-    <polygon points="16,7 17,10 20,10 18,12 19,15 16,13 13,15 14,12 12,10 15,10" fill="#fff" opacity="0.6" />
-  </svg>
-);
+function IconTrophy({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="trophyGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffd700" />
+          <stop offset="50%" stopColor="#f0c000" />
+          <stop offset="100%" stopColor="#cc9900" />
+        </linearGradient>
+      </defs>
+      <path d="M9 4 L23 4 L21 16 Q16 20 11 16 Z" fill="url(#trophyGrad)" stroke="#aa8800" strokeWidth="0.7" />
+      <path d="M9 6 Q3 6 3 11 Q3 15 8 15" fill="none" stroke="url(#trophyGrad)" strokeWidth="2" />
+      <path d="M23 6 Q29 6 29 11 Q29 15 24 15" fill="none" stroke="url(#trophyGrad)" strokeWidth="2" />
+      <rect x="14" y="18" width="4" height="4" rx="0.5" fill="url(#trophyGrad)" stroke="#aa8800" strokeWidth="0.5" />
+      <rect x="10" y="22" width="12" height="3" rx="1" fill="url(#trophyGrad)" stroke="#aa8800" strokeWidth="0.5" />
+      <polygon points="16,7 17.2,10 20.5,10 18,12 19,15.5 16,13.5 13,15.5 14,12 11.5,10 14.8,10" fill="#fff8dc" opacity="0.8" />
+      <path d="M11 5 L12 15" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+    </svg>
+  );
+}
 
-export const IconChart = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Background */}
-    <rect x="3" y="2" width="26" height="24" fill="#fff" stroke="#000" strokeWidth="1" />
-    <rect x="4" y="3" width="24" height="1" fill="#c0c0c0" />
-    {/* Grid */}
-    <line x1="8" y1="5" x2="8" y2="23" stroke="#c0c0c0" strokeWidth="0.5" />
-    <line x1="14" y1="5" x2="14" y2="23" stroke="#c0c0c0" strokeWidth="0.5" />
-    <line x1="20" y1="5" x2="20" y2="23" stroke="#c0c0c0" strokeWidth="0.5" />
-    {/* Bars */}
-    <rect x="6" y="14" width="4" height="9" fill="#ff4444" />
-    <rect x="12" y="10" width="4" height="13" fill="#33ff33" />
-    <rect x="18" y="7" width="4" height="16" fill="#4488ff" />
-    <rect x="24" y="12" width="4" height="11" fill="#ffd700" />
-    {/* Line chart overlay */}
-    <polyline points="8,13 14,9 20,6 26,11" fill="none" stroke="#ff44ff" strokeWidth="1.5" />
-    {/* Axis */}
-    <line x1="5" y1="23" x2="28" y2="23" stroke="#000" strokeWidth="1" />
-    <line x1="5" y1="5" x2="5" y2="23" stroke="#000" strokeWidth="1" />
-  </svg>
-);
+function IconChart({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="chartBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e8e8e8" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="28" height="28" rx="1" fill="url(#chartBg)" stroke="#888" strokeWidth="0.7" />
+      <line x1="6" y1="8" x2="6" y2="24" stroke="#ccc" strokeWidth="0.5" />
+      <line x1="6" y1="24" x2="28" y2="24" stroke="#ccc" strokeWidth="0.5" />
+      <line x1="6" y1="16" x2="28" y2="16" stroke="#eee" strokeWidth="0.3" />
+      <line x1="6" y1="12" x2="28" y2="12" stroke="#eee" strokeWidth="0.3" />
+      <line x1="6" y1="20" x2="28" y2="20" stroke="#eee" strokeWidth="0.3" />
+      <rect x="8" y="18" width="3" height="6" rx="0.3" fill="#e74c3c" />
+      <rect x="12" y="14" width="3" height="10" rx="0.3" fill="#2ecc71" />
+      <rect x="16" y="10" width="3" height="14" rx="0.3" fill="#3498db" />
+      <rect x="20" y="12" width="3" height="12" rx="0.3" fill="#f39c12" />
+      <rect x="24" y="8" width="3" height="16" rx="0.3" fill="#9b59b6" />
+      <polyline points="9.5,17 13.5,13 17.5,9 21.5,11 25.5,7" fill="none" stroke="#e74c3c" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-export const IconLab = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Flask body */}
-    <path d="M12 2 L12 12 L5 26 L27 26 L20 12 L20 2 Z" fill="#e0e8ff" stroke="#000" strokeWidth="1" />
-    <rect x="12" y="2" width="8" height="2" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    {/* Flask highlight */}
-    <path d="M13 4 L13 12 L7 24" fill="none" stroke="#fff" strokeWidth="1" opacity="0.6" />
-    {/* Liquid */}
-    <path d="M8 20 L24 20 L27 26 L5 26 Z" fill="#33ff33" opacity="0.7" />
-    <path d="M10 22 L22 22 L25 26 L7 26 Z" fill="#00cc00" opacity="0.5" />
-    {/* Bubbles */}
-    <circle cx="12" cy="22" r="1.5" fill="#66ff66" opacity="0.8" />
-    <circle cx="18" cy="24" r="1" fill="#66ff66" opacity="0.6" />
-    <circle cx="15" cy="19" r="1" fill="#66ff66" opacity="0.5" />
-    {/* Brain symbol on flask */}
-    <path d="M14 8 Q16 6 18 8 Q16 10 14 8" fill="none" stroke="#808080" strokeWidth="0.8" />
-  </svg>
-);
+function IconLab({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="flaskGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8f5e9" />
+          <stop offset="100%" stopColor="#a5d6a7" />
+        </linearGradient>
+        <linearGradient id="liquidGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#66bb6a" />
+          <stop offset="100%" stopColor="#2e7d32" />
+        </linearGradient>
+      </defs>
+      <rect x="13" y="2" width="6" height="8" rx="1" fill="url(#flaskGrad)" stroke="#888" strokeWidth="0.6" />
+      <path d="M13 10 L6 24 Q6 28 10 28 L22 28 Q26 28 26 24 L19 10 Z" fill="url(#flaskGrad)" stroke="#888" strokeWidth="0.6" />
+      <path d="M8 20 L24 20 L26 24 Q26 28 22 28 L10 28 Q6 28 6 24 Z" fill="url(#liquidGrad)" opacity="0.8" />
+      <circle cx="14" cy="23" r="1.5" fill="rgba(255,255,255,0.5)" />
+      <circle cx="18" cy="21" r="1" fill="rgba(255,255,255,0.4)" />
+      <circle cx="16" cy="25" r="0.8" fill="rgba(255,255,255,0.4)" />
+      <circle cx="15" cy="17" r="0.6" fill="rgba(255,255,255,0.3)" />
+      <rect x="12.5" y="1" width="7" height="2" rx="0.5" fill="#d4a373" stroke="#a67c52" strokeWidth="0.4" />
+    </svg>
+  );
+}
 
-export const IconFolder = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Folder tab */}
-    <path d="M3 8 L3 6 L12 6 L14 8" fill="#ffd700" stroke="#000" strokeWidth="1" />
-    <rect x="4" y="6" width="8" height="1" fill="#ffee55" />
-    {/* Folder body */}
-    <rect x="3" y="8" width="26" height="18" fill="#ffd700" stroke="#000" strokeWidth="1" />
-    <rect x="4" y="9" width="24" height="1" fill="#ffee55" />
-    <rect x="4" y="9" width="1" height="16" fill="#ffee55" />
-    {/* Folder shadow */}
-    <rect x="28" y="9" width="1" height="17" fill="#cc9900" />
-    <rect x="4" y="25" width="25" height="1" fill="#cc9900" />
-  </svg>
-);
+function IconFolder({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="folderGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffd54f" />
+          <stop offset="100%" stopColor="#f9a825" />
+        </linearGradient>
+        <linearGradient id="folderFront" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffe082" />
+          <stop offset="100%" stopColor="#ffca28" />
+        </linearGradient>
+      </defs>
+      <path d="M2 8 L2 26 Q2 27 3 27 L29 27 Q30 27 30 26 L30 10 Q30 9 29 9 L15 9 L13 6 Q12.5 5 12 5 L3 5 Q2 5 2 6 Z" fill="url(#folderGrad)" stroke="#c89000" strokeWidth="0.6" />
+      <path d="M2 12 L30 12 L30 26 Q30 27 29 27 L3 27 Q2 27 2 26 Z" fill="url(#folderFront)" stroke="#c89000" strokeWidth="0.4" />
+      <line x1="4" y1="12" x2="28" y2="12" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8" />
+      <rect x="8" y="7" width="14" height="4" rx="0.5" fill="#fff" opacity="0.3" />
+    </svg>
+  );
+}
 
-export const IconMail = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Envelope body */}
-    <rect x="3" y="7" width="26" height="18" fill="#fff" stroke="#000" strokeWidth="1" />
-    <rect x="4" y="8" width="24" height="1" fill="#e0e0e0" />
-    {/* Envelope flap */}
-    <path d="M3 7 L16 17 L29 7" fill="none" stroke="#000" strokeWidth="1" />
-    <path d="M4 8 L16 16 L28 8" fill="none" stroke="#808080" strokeWidth="0.5" />
-    {/* Bottom flap lines */}
-    <line x1="3" y1="25" x2="12" y2="17" stroke="#c0c0c0" strokeWidth="0.5" />
-    <line x1="29" y1="25" x2="20" y2="17" stroke="#c0c0c0" strokeWidth="0.5" />
-    {/* Mail indicator */}
-    <rect x="22" y="3" width="8" height="6" rx="1" fill="#ff4444" stroke="#000" strokeWidth="0.5" />
-    <text x="26" y="8" textAnchor="middle" fill="#fff" fontSize="5" fontFamily="Tahoma" fontWeight="bold">1</text>
-  </svg>
-);
+function IconMail({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mailGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e0e0d8" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="7" width="28" height="19" rx="1.5" fill="url(#mailGrad)" stroke="#888" strokeWidth="0.7" />
+      <path d="M2 7 L16 18 L30 7" fill="none" stroke="#888" strokeWidth="0.7" />
+      <path d="M2.5 7.5 L16 17.5 L29.5 7.5" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="3" />
+      <path d="M2 26 L11 18" fill="none" stroke="#aaa" strokeWidth="0.4" />
+      <path d="M30 26 L21 18" fill="none" stroke="#aaa" strokeWidth="0.4" />
+      <circle cx="26" cy="9" r="4" fill="#e74c3c" stroke="#c0392b" strokeWidth="0.5" />
+      <text x="26" y="11.5" textAnchor="middle" fontSize="6" fill="#fff" fontWeight="bold">1</text>
+    </svg>
+  );
+}
 
-export const IconBriefcase = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Handle */}
-    <path d="M12 6 L12 10 M20 6 L20 10" stroke="#000" strokeWidth="1.5" />
-    <rect x="12" y="4" width="8" height="3" fill="none" stroke="#000" strokeWidth="1" rx="1" />
-    {/* Case body */}
-    <rect x="3" y="10" width="26" height="16" fill="#8B4513" stroke="#000" strokeWidth="1" rx="1" />
-    <rect x="4" y="11" width="24" height="2" fill="#A0522D" />
-    <rect x="4" y="11" width="1" height="14" fill="#A0522D" />
-    {/* Latch */}
-    <rect x="14" y="16" width="4" height="3" fill="#ffd700" stroke="#000" strokeWidth="0.5" />
-    <rect x="15" y="17" width="2" height="1" fill="#ffee55" />
-    {/* Bottom shadow */}
-    <rect x="28" y="11" width="1" height="15" fill="#5a2d0c" />
-    <rect x="4" y="25" width="25" height="1" fill="#5a2d0c" />
-  </svg>
-);
+function IconBriefcase({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="caseGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8d6e63" />
+          <stop offset="50%" stopColor="#6d4c41" />
+          <stop offset="100%" stopColor="#5d4037" />
+        </linearGradient>
+      </defs>
+      <path d="M12 8 L12 5 Q12 3 14 3 L18 3 Q20 3 20 5 L20 8" fill="none" stroke="#5d4037" strokeWidth="1.5" />
+      <rect x="2" y="8" width="28" height="18" rx="2" fill="url(#caseGrad)" stroke="#4e342e" strokeWidth="0.7" />
+      <rect x="14" y="14" width="4" height="3" rx="0.5" fill="#ffd54f" stroke="#c89000" strokeWidth="0.5" />
+      <circle cx="16" cy="15.5" r="0.6" fill="#4e342e" />
+      <line x1="2" y1="15" x2="14" y2="15" stroke="#4e342e" strokeWidth="0.8" />
+      <line x1="18" y1="15" x2="30" y2="15" stroke="#4e342e" strokeWidth="0.8" />
+      <rect x="4" y="9" width="24" height="1" rx="0.3" fill="rgba(255,255,255,0.15)" />
+    </svg>
+  );
+}
 
-export const IconSettings = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Panel background */}
-    <rect x="2" y="2" width="28" height="28" fill="#c0c0c0" stroke="#000" strokeWidth="1" />
-    <rect x="3" y="3" width="26" height="1" fill="#fff" />
-    <rect x="3" y="3" width="1" height="26" fill="#fff" />
-    {/* Sliders */}
-    <rect x="6" y="8" width="16" height="2" fill="#808080" />
-    <rect x="14" y="6" width="4" height="6" fill="#000080" stroke="#000" strokeWidth="0.5" />
-    <rect x="6" y="16" width="16" height="2" fill="#808080" />
-    <rect x="10" y="14" width="4" height="6" fill="#008000" stroke="#000" strokeWidth="0.5" />
-    <rect x="6" y="24" width="16" height="2" fill="#808080" />
-    <rect x="18" y="22" width="4" height="6" fill="#ff0000" stroke="#000" strokeWidth="0.5" />
-    {/* Color swatches */}
-    <rect x="24" y="7" width="4" height="4" fill="#ff0000" stroke="#000" strokeWidth="0.5" />
-    <rect x="24" y="15" width="4" height="4" fill="#00ff00" stroke="#000" strokeWidth="0.5" />
-    <rect x="24" y="23" width="4" height="4" fill="#0000ff" stroke="#000" strokeWidth="0.5" />
-  </svg>
-);
+function IconSettings({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gearGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#b0bec5" />
+          <stop offset="100%" stopColor="#78909c" />
+        </linearGradient>
+      </defs>
+      <path d="M16 2 L18 2 L18.5 5 L20 5.5 L22.5 3.5 L24 5 L22 7.5 L22.5 9 L25.5 9.5 L25.5 11.5 L22.5 12 L22 13.5 L24 16 L22.5 17.5 L20 15.5 L18.5 16 L18 19 L16 19 L15.5 16 L14 15.5 L11.5 17.5 L10 16 L12 13.5 L11.5 12 L8.5 11.5 L8.5 9.5 L11.5 9 L12 7.5 L10 5 L11.5 3.5 L14 5.5 L15.5 5 Z" fill="url(#gearGrad)" stroke="#546e7a" strokeWidth="0.5" />
+      <circle cx="17" cy="10.5" r="3" fill="#eceff1" stroke="#546e7a" strokeWidth="0.5" />
+      <circle cx="22" cy="22" r="5" fill="url(#gearGrad)" stroke="#546e7a" strokeWidth="0.5" />
+      <path d="M22 17 L23 17 L23.3 18.5 L24.3 19 L25.5 18 L26.5 19 L25.5 20.2 L26 21.2 L27.5 21.5 L27.5 22.5 L26 22.8 L25.5 23.8 L26.5 25 L25.5 26 L24.3 25 L23.3 25.5 L23 27 L22 27 L21.7 25.5 L20.7 25 L19.5 26 L18.5 25 L19.5 23.8 L19 22.8 L17.5 22.5 L17.5 21.5 L19 21.2 L19.5 20.2 L18.5 19 L19.5 18 L20.7 19 L21.7 18.5 Z" fill="url(#gearGrad)" stroke="#546e7a" strokeWidth="0.4" />
+      <circle cx="22" cy="22" r="2" fill="#eceff1" stroke="#546e7a" strokeWidth="0.4" />
+    </svg>
+  );
+}
 
-export const IconBug = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Body */}
-    <ellipse cx="16" cy="18" rx="8" ry="10" fill="#33aa33" stroke="#000" strokeWidth="1" />
-    {/* Head */}
-    <circle cx="16" cy="7" r="5" fill="#33aa33" stroke="#000" strokeWidth="1" />
-    {/* Eyes */}
-    <circle cx="14" cy="6" r="2" fill="#fff" stroke="#000" strokeWidth="0.5" />
-    <circle cx="18" cy="6" r="2" fill="#fff" stroke="#000" strokeWidth="0.5" />
-    <circle cx="14" cy="6" r="1" fill="#000" />
-    <circle cx="18" cy="6" r="1" fill="#000" />
-    {/* Antennae */}
-    <line x1="14" y1="3" x2="10" y2="0" stroke="#000" strokeWidth="1" />
-    <line x1="18" y1="3" x2="22" y2="0" stroke="#000" strokeWidth="1" />
-    <circle cx="10" cy="0" r="1" fill="#ff4444" />
-    <circle cx="22" cy="0" r="1" fill="#ff4444" />
-    {/* Legs */}
-    <line x1="8" y1="14" x2="3" y2="11" stroke="#000" strokeWidth="1.5" />
-    <line x1="8" y1="18" x2="3" y2="18" stroke="#000" strokeWidth="1.5" />
-    <line x1="8" y1="22" x2="3" y2="25" stroke="#000" strokeWidth="1.5" />
-    <line x1="24" y1="14" x2="29" y2="11" stroke="#000" strokeWidth="1.5" />
-    <line x1="24" y1="18" x2="29" y2="18" stroke="#000" strokeWidth="1.5" />
-    <line x1="24" y1="22" x2="29" y2="25" stroke="#000" strokeWidth="1.5" />
-    {/* Shell line */}
-    <line x1="16" y1="10" x2="16" y2="27" stroke="#228822" strokeWidth="1" />
-  </svg>
-);
+function IconBug({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bugGrad" cx="50%" cy="40%">
+          <stop offset="0%" stopColor="#66bb6a" />
+          <stop offset="100%" stopColor="#2e7d32" />
+        </radialGradient>
+      </defs>
+      <path d="M12 8 Q10 3 7 2" fill="none" stroke="#333" strokeWidth="1" strokeLinecap="round" />
+      <path d="M20 8 Q22 3 25 2" fill="none" stroke="#333" strokeWidth="1" strokeLinecap="round" />
+      <circle cx="7" cy="2" r="1" fill="#ff5722" />
+      <circle cx="25" cy="2" r="1" fill="#ff5722" />
+      <ellipse cx="16" cy="9" rx="5" ry="4" fill="url(#bugGrad)" stroke="#1b5e20" strokeWidth="0.6" />
+      <circle cx="13.5" cy="8" r="1.5" fill="#fff" />
+      <circle cx="18.5" cy="8" r="1.5" fill="#fff" />
+      <circle cx="13.5" cy="8" r="0.8" fill="#333" />
+      <circle cx="18.5" cy="8" r="0.8" fill="#333" />
+      <ellipse cx="16" cy="19" rx="8" ry="9" fill="url(#bugGrad)" stroke="#1b5e20" strokeWidth="0.6" />
+      <line x1="16" y1="11" x2="16" y2="27" stroke="#1b5e20" strokeWidth="0.5" />
+      <circle cx="12" cy="17" r="1" fill="rgba(0,0,0,0.15)" />
+      <circle cx="20" cy="17" r="1" fill="rgba(0,0,0,0.15)" />
+      <circle cx="12" cy="22" r="0.8" fill="rgba(0,0,0,0.15)" />
+      <circle cx="20" cy="22" r="0.8" fill="rgba(0,0,0,0.15)" />
+      <line x1="9" y1="14" x2="4" y2="12" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+      <line x1="23" y1="14" x2="28" y2="12" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+      <line x1="8" y1="19" x2="3" y2="19" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+      <line x1="24" y1="19" x2="29" y2="19" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+      <line x1="9" y1="24" x2="4" y2="26" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+      <line x1="23" y1="24" x2="28" y2="26" stroke="#333" strokeWidth="0.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-export const IconCards = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-    {/* Back card */}
-    <rect x="6" y="2" width="18" height="24" rx="2" fill="#000080" stroke="#000" strokeWidth="1" />
-    <rect x="8" y="4" width="14" height="20" fill="#0000aa" stroke="#ffd700" strokeWidth="0.5" />
-    {/* NX on back card */}
-    <text x="15" y="16" textAnchor="middle" fill="#ffd700" fontSize="8" fontFamily="monospace" fontWeight="bold">NX</text>
-    {/* Front card offset */}
-    <rect x="10" y="6" width="18" height="24" rx="2" fill="#fff" stroke="#000" strokeWidth="1" />
-    {/* Card content - Ace of spades */}
-    <text x="13" y="13" fill="#000" fontSize="7" fontFamily="serif" fontWeight="bold">A</text>
-    <text x="13" y="19" fill="#000" fontSize="6" fontFamily="serif">{'\u2660'}</text>
-    <text x="25" y="28" fill="#000" fontSize="7" fontFamily="serif" fontWeight="bold" textAnchor="end"
-      transform="rotate(180,24,25)">A</text>
-  </svg>
-);
+function IconCards({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="cardBack2k" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#1a3a6a" />
+          <stop offset="100%" stopColor="#0a1a3a" />
+        </linearGradient>
+      </defs>
+      <rect x="6" y="3" width="18" height="24" rx="2" fill="url(#cardBack2k)" stroke="#4a6a9a" strokeWidth="0.7" transform="rotate(-8 15 15)" />
+      <text x="12" y="18" fontFamily="monospace" fontSize="6" fill="#6a9adf" fontWeight="bold" transform="rotate(-8 15 15)">NX</text>
+      <rect x="8" y="4" width="18" height="24" rx="2" fill="#fffff8" stroke="#888" strokeWidth="0.7" />
+      <text x="10" y="11" fontSize="7" fill="#cc0000" fontWeight="bold">A</text>
+      <text x="10" y="17" fontSize="9" fill="#cc0000">{'\u2665'}</text>
+      <text x="22" y="26" fontSize="7" fill="#cc0000" fontWeight="bold" textAnchor="end" transform="rotate(180 21 23)">A</text>
+    </svg>
+  );
+}
 
-// Icon mapping by ID
-const ICON_MAP = {
+export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
   'world-chat': IconGlobe,
@@ -253,12 +289,6 @@ const ICON_MAP = {
 
 export function Win98Icon({ id, size = 32 }) {
   const IconComponent = ICON_MAP[id];
-  if (!IconComponent) return <span style={{ fontSize: size + 'px' }}>?</span>;
-  return (
-    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <IconComponent />
-    </div>
-  );
+  if (!IconComponent) return null;
+  return <IconComponent size={size} />;
 }
-
-export default ICON_MAP;
