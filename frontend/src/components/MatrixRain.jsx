@@ -12,7 +12,7 @@ export default function MatrixRain({ width, height, fontSize = 14, speed = 1 }) 
 
     const cols = Math.ceil(width / fontSize);
     const drops = Array.from({ length: cols }, () => Math.random() * -50);
-    const speeds = Array.from({ length: cols }, () => 0.5 + Math.random() * speed);
+    const speeds = Array.from({ length: cols }, () => 0.2 + Math.random() * speed);
     const brightness = Array.from({ length: cols }, () => Math.random());
 
     ctx.fillStyle = '#000';
@@ -51,7 +51,7 @@ export default function MatrixRain({ width, height, fontSize = 14, speed = 1 }) 
 
         if (y > height && Math.random() > 0.975) {
           drops[i] = 0;
-          speeds[i] = 0.5 + Math.random() * speed;
+          speeds[i] = 0.2 + Math.random() * speed;
           brightness[i] = Math.random();
         }
       }

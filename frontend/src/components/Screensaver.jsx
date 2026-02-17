@@ -65,11 +65,11 @@ function Pipes({ width, height }) {
     const draw = () => {
       for (let i = 0; i < 3; i++) {
         ctx.strokeStyle = colors[colorIdx % colors.length];
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 8;
         ctx.beginPath();
         ctx.moveTo(x, y);
 
-        const len = Math.random() * 30 + 10;
+        const len = Math.random() * 70 + 30;
         const dx = [len, 0, -len, 0][dir];
         const dy = [0, len, 0, -len][dir];
         x = Math.max(0, Math.min(width, x + dx));
@@ -80,7 +80,7 @@ function Pipes({ width, height }) {
 
         ctx.fillStyle = colors[colorIdx % colors.length];
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
         ctx.fill();
 
         step++;
@@ -131,7 +131,7 @@ export default function Screensaver({ onDismiss }) {
       {type === 'starfield' ? (
         <Starfield width={window.innerWidth} height={window.innerHeight} />
       ) : type === 'matrix' ? (
-        <MatrixRain width={window.innerWidth} height={window.innerHeight} fontSize={16} speed={0.5} />
+        <MatrixRain width={window.innerWidth} height={window.innerHeight} fontSize={16} speed={0.3} />
       ) : (
         <Pipes width={window.innerWidth} height={window.innerHeight} />
       )}
