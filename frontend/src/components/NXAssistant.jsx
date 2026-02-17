@@ -6,8 +6,8 @@ import clippy from 'clippyjs';
 window.jQuery = $;
 window.$ = $;
 
-// Override the broken default CDN (gitcdn.xyz) with unpkg
-const CLIPPY_CDN = 'https://unpkg.com/clippyjs@0.0.3/assets/agents/';
+// Override the broken default CDN (gitcdn.xyz) with GitHub raw
+const CLIPPY_CDN = 'https://raw.githubusercontent.com/pi0/clippyjs/master/assets/agents/';
 window.CLIPPY_CDN = CLIPPY_CDN;
 
 // Ensure window.clippy is set — JSONP agent scripts call window.clippy.ready()
