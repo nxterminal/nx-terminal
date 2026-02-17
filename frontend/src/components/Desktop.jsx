@@ -9,18 +9,18 @@ import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 
 const DESKTOP_ICONS = [
-  { id: 'nx-terminal', icon: '\u{1F4BB}', label: 'NX Terminal' },
-  { id: 'live-feed', icon: '\u{1F465}', label: 'Live Feed' },
-  { id: 'world-chat', icon: '\u{1F310}', label: 'World Chat' },
-  { id: 'leaderboard', icon: '\u{1F3C6}', label: 'Leaderboard' },
-  { id: 'protocol-market', icon: '\u{1F4CA}', label: 'Protocol Market' },
-  { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
-  { id: 'my-devs', icon: '\u{1F4CB}', label: 'My Devs' },
-  { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
-  { id: 'hire-devs', icon: '\u{1F4BC}', label: 'Mint/Hire Devs' },
-  { id: 'notepad', icon: '\u{1F4DD}', label: 'Notepad' },
-  { id: 'recycle-bin', icon: '\u{1F5D1}', label: 'Recycle Bin' },
-  { id: 'control-panel', icon: '\u2699', label: 'Settings' },
+  { id: 'nx-terminal', icon: '>_', label: 'NX Terminal' },
+  { id: 'live-feed', icon: '>>', label: 'Live Feed' },
+  { id: 'world-chat', icon: '#', label: 'World Chat' },
+  { id: 'leaderboard', icon: '*', label: 'Leaderboard' },
+  { id: 'protocol-market', icon: '$', label: 'Protocol Market' },
+  { id: 'ai-lab', icon: '~', label: 'AI Lab' },
+  { id: 'my-devs', icon: '=', label: 'My Devs' },
+  { id: 'inbox', icon: 'M', label: 'Inbox' },
+  { id: 'hire-devs', icon: '+', label: 'Mint/Hire Devs' },
+  { id: 'notepad', icon: 'N', label: 'Notepad' },
+  { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
+  { id: 'control-panel', icon: '::', label: 'Settings' },
 ];
 
 function getWallpaperStyle() {

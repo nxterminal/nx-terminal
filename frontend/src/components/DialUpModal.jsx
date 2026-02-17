@@ -69,7 +69,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
 
         <div style={{ padding: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '32px' }}>{'\u{1F4DE}'}</span>
+            <span style={{ fontSize: '16px', fontFamily: "'VT323', monospace", fontWeight: 'bold' }}>[MODEM]</span>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 'bold' }}>NX Terminal Dial-Up Connection</div>
               <div style={{ fontSize: '10px', color: '#666' }}>Connecting via 56K modem...</div>

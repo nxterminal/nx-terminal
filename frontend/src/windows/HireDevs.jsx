@@ -3,10 +3,10 @@ import { useState, useCallback } from 'react';
 const MINT_COST = '0.05 ETH';
 
 const WALLETS = [
-  { id: 'metamask', name: 'MetaMask', icon: '🦊', detect: () => !!window.ethereum?.isMetaMask },
-  { id: 'coinbase', name: 'Coinbase Wallet', icon: '🔵', detect: () => !!window.ethereum?.isCoinbaseWallet },
-  { id: 'walletconnect', name: 'WalletConnect', icon: '🔗', detect: () => false },
-  { id: 'injected', name: 'Browser Wallet', icon: '🌐', detect: () => !!window.ethereum },
+  { id: 'metamask', name: 'MetaMask', icon: '[M]', detect: () => !!window.ethereum?.isMetaMask },
+  { id: 'coinbase', name: 'Coinbase Wallet', icon: '[C]', detect: () => !!window.ethereum?.isCoinbaseWallet },
+  { id: 'walletconnect', name: 'WalletConnect', icon: '[W]', detect: () => false },
+  { id: 'injected', name: 'Browser Wallet', icon: '[B]', detect: () => !!window.ethereum },
 ];
 
 const QUESTIONS = [
@@ -133,7 +133,7 @@ export default function HireDevs({ onMint }) {
                 fontSize: '10px', fontWeight: 'bold',
                 border: '1px solid var(--border-darker)',
               }}>
-                {step > i ? '\u2713' : i + 1}
+                {step > i ? 'OK' : i + 1}
               </div>
               {i < QUESTIONS.length - 1 && (
                 <div style={{ width: '24px', height: '2px', background: step > i ? 'var(--terminal-green)' : 'var(--border-dark)' }} />
@@ -150,7 +150,7 @@ export default function HireDevs({ onMint }) {
               fontSize: '10px', fontWeight: 'bold',
               border: '1px solid var(--border-darker)',
             }}>
-              {'\u{1F4BC}'}
+              {'+'}
             </div>
           </div>
           <span style={{ fontSize: '10px', color: '#666', marginLeft: '8px' }}>
@@ -251,7 +251,7 @@ export default function HireDevs({ onMint }) {
                 display: 'flex', alignItems: 'flex-start', gap: '10px',
                 border: '2px solid var(--terminal-red)',
               }}>
-                <span style={{ fontSize: '20px', flexShrink: 0 }}>{'\u26A0\uFE0F'}</span>
+                <span style={{ fontSize: '14px', flexShrink: 0, fontWeight: 'bold' }}>[!]</span>
                 <div>
                   <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', color: 'var(--terminal-red)' }}>
                     Wallet Connection Error
