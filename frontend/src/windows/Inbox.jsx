@@ -70,6 +70,7 @@ export default function Inbox({ onUnreadCount }) {
 
   useEffect(() => {
     if (onUnreadCount) onUnreadCount(unreadCount);
+    window.dispatchEvent(new CustomEvent('nx-inbox-unread', { detail: unreadCount }));
   }, [unreadCount, onUnreadCount]);
 
   const handleSelect = (email) => {

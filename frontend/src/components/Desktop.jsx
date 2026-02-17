@@ -49,6 +49,11 @@ function getWallpaperOverlay() {
   return null;
 }
 
+function getInitialUnreadCount() {
+  const readIds = JSON.parse(localStorage.getItem('nx-inbox-read') || '[]');
+  return readIds.includes('welcome-1') ? 0 : 1;
+}
+
 export default function Desktop() {
   const {
     windows,
@@ -65,7 +70,14 @@ export default function Desktop() {
   const [wallpaperOverlay, setWallpaperOverlay] = useState(getWallpaperOverlay);
   const [showBSOD, setShowBSOD] = useState(false);
   const [showScreensaver, setShowScreensaver] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(getInitialUnreadCount);
   const idleTimerRef = useRef(null);
+
+  useEffect(() => {
+    const handleUnread = (e) => setUnreadCount(e.detail);
+    window.addEventListener('nx-inbox-unread', handleUnread);
+    return () => window.removeEventListener('nx-inbox-unread', handleUnread);
+  }, []);
 
   const refreshSettings = useCallback(() => {
     setWallpaperStyle(getWallpaperStyle());
@@ -173,6 +185,7 @@ export default function Desktop() {
         windows={windows}
         onWindowClick={handleTaskbarClick}
         openWindow={openWindowWithBSOD}
+        unreadCount={unreadCount}
       />
     </div>
   );

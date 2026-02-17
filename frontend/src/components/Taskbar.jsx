@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import StartMenu from './StartMenu';
 
-export default function Taskbar({ windows, onWindowClick, openWindow }) {
+export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0 }) {
   const [cycle, setCycle] = useState(null);
   const [startOpen, setStartOpen] = useState(false);
   const [walletAddress, setWalletAddress] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [walletError, setWalletError] = useState(null);
+  const [assistantOn, setAssistantOn] = useState(
+    () => localStorage.getItem('nx-assistant-enabled') !== 'false'
+  );
 
   useEffect(() => {
     const fetchCycle = () => {
@@ -48,6 +51,20 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
+
+  // Sync assistant state when toggled from Settings
+  useEffect(() => {
+    const sync = () => setAssistantOn(localStorage.getItem('nx-assistant-enabled') !== 'false');
+    window.addEventListener('nx-assistant-changed', sync);
+    return () => window.removeEventListener('nx-assistant-changed', sync);
+  }, []);
+
+  const toggleAssistant = useCallback(() => {
+    const next = !assistantOn;
+    localStorage.setItem('nx-assistant-enabled', String(next));
+    setAssistantOn(next);
+    window.dispatchEvent(new Event('nx-assistant-changed'));
+  }, [assistantOn]);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -150,10 +167,29 @@ export default function Taskbar({ windows, onWindowClick, openWindow }) {
         {walletAddress ? formatAddress(walletAddress) : connecting ? 'Connecting...' : '\u{1F4B0} Connect'}
       </button>
 
-      <div className="taskbar-clock">
-        <div style={{ fontSize: '10px', lineHeight: 1.1, textAlign: 'center' }}>
-          <div>{timeStr}</div>
-          <div style={{ fontSize: '9px', color: '#666' }}>Cycle: {cycle ?? '...'}</div>
+      <div className="taskbar-tray">
+        <button
+          className="tray-icon"
+          onClick={toggleAssistant}
+          title={assistantOn ? 'Hide Assistant' : 'Show Assistant'}
+        >
+          <span style={{ opacity: assistantOn ? 1 : 0.4 }}>{'\u{1F4CE}'}</span>
+        </button>
+
+        <button
+          className="tray-icon"
+          onClick={() => openWindow('inbox')}
+          title={unreadCount > 0 ? `${unreadCount} unread` : 'Inbox'}
+        >
+          <span>{'\u2709'}</span>
+          {unreadCount > 0 && <span className="tray-badge" />}
+        </button>
+
+        <div className="taskbar-clock">
+          <div style={{ fontSize: '10px', lineHeight: 1.1, textAlign: 'center' }}>
+            <div>{timeStr}</div>
+            <div style={{ fontSize: '9px', color: '#666' }}>Cycle: {cycle ?? '...'}</div>
+          </div>
         </div>
       </div>
     </div>
