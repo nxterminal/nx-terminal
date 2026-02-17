@@ -6,8 +6,9 @@ import clippy from 'clippyjs';
 window.jQuery = $;
 window.$ = $;
 
-// Override the broken default CDN (gitcdn.xyz) with GitHub raw
-const CLIPPY_CDN = 'https://raw.githubusercontent.com/pi0/clippyjs/master/assets/agents/';
+// jsDelivr serves GitHub files with correct MIME types (application/javascript)
+// raw.githubusercontent.com returns text/plain which browsers refuse to execute as scripts
+const CLIPPY_CDN = 'https://cdn.jsdelivr.net/gh/pi0/clippyjs@master/assets/agents/';
 window.CLIPPY_CDN = CLIPPY_CDN;
 
 // Ensure window.clippy is set — JSONP agent scripts call window.clippy.ready()

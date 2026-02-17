@@ -17,14 +17,10 @@ const ERROR_MESSAGES = [
 
 export default function ErrorPopup() {
   const [popup, setPopup] = useState(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const timerRef = useRef(null);
 
   const showError = () => {
     const msg = ERROR_MESSAGES[Math.floor(Math.random() * ERROR_MESSAGES.length)];
-    const x = Math.random() * (window.innerWidth - 380) + 40;
-    const y = Math.random() * (window.innerHeight - 200) + 40;
-    setPosition({ x, y });
     setPopup(msg);
   };
 
@@ -51,8 +47,9 @@ export default function ErrorPopup() {
   return (
     <div style={{
       position: 'fixed',
-      left: position.x,
-      top: position.y,
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
       zIndex: 10005,
       width: '340px',
       background: 'var(--win-bg)',
