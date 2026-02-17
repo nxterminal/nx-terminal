@@ -19,7 +19,13 @@ export default function MatrixRain({ width, height, fontSize = 14, speed = 1 }) 
     ctx.fillRect(0, 0, width, height);
 
     let animId;
-    const draw = () => {
+    let last = 0;
+    const interval = 33; // ~30fps
+    const draw = (now) => {
+      animId = requestAnimationFrame(draw);
+      if (now - last < interval) return;
+      last = now;
+
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
       ctx.fillRect(0, 0, width, height);
 
@@ -49,9 +55,8 @@ export default function MatrixRain({ width, height, fontSize = 14, speed = 1 }) 
           brightness[i] = Math.random();
         }
       }
-      animId = requestAnimationFrame(draw);
     };
-    draw();
+    animId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animId);
   }, [width, height, fontSize, speed]);
 
