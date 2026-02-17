@@ -649,6 +649,52 @@
   line-height: 1.5;
 }
 
+/* ====== CLIPPYJS REQUIRED CSS (missing from npm package) ====== */
+.clippy, .clippy-balloon {
+  position: fixed;
+  z-index: 10000;
+  cursor: pointer;
+}
+.clippy-balloon {
+  background: #FFC;
+  color: black;
+  padding: 8px;
+  border: 1px solid black;
+  border-radius: 5px;
+  max-width: 220px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  z-index: 10001;
+}
+.clippy-tip {
+  width: 10px;
+  height: 16px;
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAgCAMAAAAlvKiEAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAlQTFRF///MAAAA////52QwgAAAAAN0Uk5T//8A18oNQQAAAGxJREFUeNqs0kEOwCAIRFHn/S+9NcVNx+j8tKlIhgJBgN3IRg6LGLQA/gCOv/oJsi7gR2MI3AhOwTMcfYh/e5mOl7/1MFFIGAijAPgkROHRG7/AG/IBHuxK/rnAJnbmd3BTAWOB0CrlNBYAIB0EBwCxAN4HAAAADElEQVQ4jWNYMwQJAABelAJ9GE3VqwAAAABJRU5ErkJggg==) no-repeat;
+  position: absolute;
+}
+.clippy-top-left .clippy-tip {
+  top: 100%;
+  left: 100%;
+  margin-left: 0;
+}
+.clippy-top-right .clippy-tip {
+  top: 100%;
+  right: 100%;
+  margin-right: 0;
+}
+.clippy-bottom-right .clippy-tip {
+  bottom: 100%;
+  right: 100%;
+  margin-right: 0;
+  background-position: bottom right;
+}
+.clippy-bottom-left .clippy-tip {
+  bottom: 100%;
+  left: 100%;
+  margin-left: 0;
+  background-position: bottom left;
+}
+
 /* ====== NX ASSISTANT (CLIPPY) ====== */
 .nx-assistant {
   position: fixed;
