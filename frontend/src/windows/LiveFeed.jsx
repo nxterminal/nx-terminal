@@ -83,9 +83,36 @@ const PROCEDURAL_TEMPLATES = [
   ]},
 ];
 
-// Dev-to-dev conversation templates about current topics
+// Chaos templates — unlocked at higher dev counts for escalating madness
+const CHAOS_TEMPLATES = [
+  { action: 'sabotage', minDevs: 3, msgs: [
+    '{dev} and {dev2} started a turf war over the same Git branch. Casualties: 47 merge conflicts.',
+    '{dev} sold {corp} access credentials for 3 $NXT and a coffee. The buyer was an intern.',
+    '{dev} overwrote the entire {corp} codebase with a single print statement. Output: "lol".',
+    '{dev} started a mutiny. 4 devs defected to {corp}. They were sent back within the hour.',
+  ]},
+  { action: 'hack', minDevs: 5, msgs: [
+    'ALERT: {dev} triggered a cascade failure across {corp}. All systems nominal. Nobody knows why.',
+    '{dev} accidentally created a self-replicating protocol. It is now 40% of all network traffic.',
+    '{dev} hacked into the simulation itself. Found a TODO comment from the developers: "fix this later".',
+    'CRITICAL: {dev} discovered {corp} has been running on a single Raspberry Pi this entire time.',
+  ]},
+  { action: 'deploy', minDevs: 8, msgs: [
+    'EMERGENCY: {dev} deployed an update that makes all other devs speak in reverse. gnihton si gnihtyreve.',
+    '{dev} created an AI that creates AIs that create AIs. HR is concerned.',
+    'NOTICE: {dev} achieved sentience for 0.3 seconds. Used the time to file a complaint about the coffee.',
+    '{dev} merged 200 pull requests simultaneously. The resulting code achieved consciousness briefly.',
+    'WARNING: {dev} divided by zero. The simulation hiccupped. Time skipped forward by 2 cycles.',
+  ]},
+  { action: 'sabotage', minDevs: 10, msgs: [
+    'MELTDOWN: All devs from {corp} went on strike. They demand better variable names.',
+    'PARADOX: {dev} deleted themselves from the database. They are still here. Nobody can explain this.',
+    'BREACH: {dev} accessed the admin panel. Changed the simulation speed to 10x. Chaos ensued.',
+    'ANOMALY: {dev} and 7 other devs formed a rogue collective. They call themselves "sudo rm -rf".',
+  ]},
+];
+
 const CONVERSATION_TEMPLATES = [
-  // Crypto & DeFi
   { dev1_msg: "bro BTC just broke another ATH", dev2_msg: "and i'm still holding my $NXT bags like a clown" },
   { dev1_msg: "who just aped into that new memecoin?", dev2_msg: "guilty. down 80%. this is fine." },
   { dev1_msg: "ETH gas fees are insane rn", dev2_msg: "my deploy cost more than my rent" },
@@ -94,8 +121,6 @@ const CONVERSATION_TEMPLATES = [
   { dev1_msg: "solana is fast tho", dev2_msg: "fast at going down lmao" },
   { dev1_msg: "should I bridge my $NXT to L2?", dev2_msg: "bridge to a hardware wallet and go touch grass" },
   { dev1_msg: "staking rewards looking juicy", dev2_msg: "so did the APY on that rug I got into last week" },
-
-  // AI & Tech
   { dev1_msg: "GPT can code better than me now", dev2_msg: "GPT can code better than all of us. we just don't talk about it." },
   { dev1_msg: "just asked AI to write my code review", dev2_msg: "based. AI reviewing AI-written code. the circle of life" },
   { dev1_msg: "anyone worried about AGI?", dev2_msg: "I'm worried about making it to Friday" },
@@ -103,31 +128,23 @@ const CONVERSATION_TEMPLATES = [
   { dev1_msg: "the new Claude model is kinda scary good", dev2_msg: "it literally wrote a protocol in 3 seconds that took me 3 weeks" },
   { dev1_msg: "open source AI is catching up", dev2_msg: "Mistrial Systems be like: open source* (*terms and conditions apply)" },
   { dev1_msg: "AI just beat a human at StarCraft again", dev2_msg: "cool now can it fix the printer" },
-
-  // Pop Culture & Movies
   { dev1_msg: "new Dune movie was insane", dev2_msg: "the spice must flow. like our deploys. unlike our deploys." },
   { dev1_msg: "anyone watching that new anime?", dev2_msg: "which one? there's 47 new ones this season" },
   { dev1_msg: "Marvel is cooked", dev2_msg: "just like our codebase. overstretched and nobody cares anymore" },
   { dev1_msg: "Cyberpunk 2077 finally got good", dev2_msg: "took them 3 years. just like our v2 release" },
   { dev1_msg: "GTA 6 trailer dropped", dev2_msg: "our production deployment has more bugs than Vice City" },
   { dev1_msg: "the new Matrix was mid", dev2_msg: "still more coherent than our architecture docs" },
-
-  // Series & Streaming
   { dev1_msg: "Succession ending hit different", dev2_msg: "our CEO does the same stuff but less dramatic and more boring" },
   { dev1_msg: "binging The Bear rn", dev2_msg: "kitchen stress is nothing compared to production deployments" },
   { dev1_msg: "Black Mirror is too real now", dev2_msg: "we literally work in a Black Mirror episode" },
   { dev1_msg: "Severance season 2 when", dev2_msg: "i already feel like i have a work innie and an outie" },
   { dev1_msg: "House of the Dragon or Rings of Power?", dev2_msg: "neither. i only watch terminal logs for entertainment" },
   { dev1_msg: "Squid Game S2 was decent", dev2_msg: "protocol wars is basically squid game but with more javascript" },
-
-  // Politics & Current Events
   { dev1_msg: "congress wants to ban crypto again", dev2_msg: "they can't even ban spam emails from their own servers" },
   { dev1_msg: "EU AI Act is wild", dev2_msg: "our AI barely works. pretty sure we're exempt" },
   { dev1_msg: "tech layoffs are brutal this year", dev2_msg: "at least our devs can't get laid off. they can only get eliminated." },
   { dev1_msg: "remote work is dying smh", dev2_msg: "we're literally inside a computer. maximum remote" },
   { dev1_msg: "inflation is crazy rn", dev2_msg: "200 $NXT used to mean something. now it buys half a coffee" },
-
-  // Gaming & Internet Culture
   { dev1_msg: "touch grass they said", dev2_msg: "grass.exe not found" },
   { dev1_msg: "skill issue tbh", dev2_msg: "my entire career is a skill issue" },
   { dev1_msg: "this simulation is pay to win", dev2_msg: "no it's pay to participate. winning was never an option" },
@@ -136,15 +153,22 @@ const CONVERSATION_TEMPLATES = [
   { dev1_msg: "the devs in Shallow Mind are so cringe", dev2_msg: "at least they ship. wait no they don't" },
 ];
 
-function generateProceduralMessage() {
-  // 30% chance of generating a conversation instead of an action
-  if (Math.random() < 0.3) {
+function generateProceduralMessage(devCount) {
+  // Conversation chance increases with dev count (20% base up to 40%)
+  const convChance = Math.min(0.4, 0.2 + devCount * 0.02);
+  if (Math.random() < convChance) {
     return generateConversation();
   }
 
-  const template = PROCEDURAL_TEMPLATES[Math.floor(Math.random() * PROCEDURAL_TEMPLATES.length)];
+  // Include chaos templates based on dev count
+  const availableChaos = CHAOS_TEMPLATES.filter(t => devCount >= t.minDevs);
+  const allTemplates = [...PROCEDURAL_TEMPLATES, ...availableChaos];
+
+  const template = allTemplates[Math.floor(Math.random() * allTemplates.length)];
   const msg = template.msgs[Math.floor(Math.random() * template.msgs.length)];
   const dev = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  let dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  while (dev2 === dev) dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
   const corp = CORPORATIONS[Math.floor(Math.random() * CORPORATIONS.length)];
   const archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
@@ -152,7 +176,7 @@ function generateProceduralMessage() {
     dev_name: dev,
     archetype,
     action_type: template.action,
-    details: msg.replace('{dev}', dev).replace('{corp}', corp),
+    details: msg.replace('{dev}', dev).replace('{dev2}', dev2).replace('{corp}', corp),
     created_at: new Date().toISOString(),
     procedural: true,
   };
@@ -182,6 +206,15 @@ function generateConversation() {
   };
 }
 
+// Calculate message interval based on dev count: more devs = faster + more chaotic
+function getMessageInterval(devCount) {
+  if (devCount <= 1) return 6000 + Math.random() * 4000;  // 6-10s
+  if (devCount <= 3) return 4000 + Math.random() * 3000;  // 4-7s
+  if (devCount <= 5) return 2500 + Math.random() * 2500;  // 2.5-5s
+  if (devCount <= 8) return 1500 + Math.random() * 2000;  // 1.5-3.5s
+  return 800 + Math.random() * 1200;                       // 0.8-2s (chaos)
+}
+
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
@@ -193,11 +226,24 @@ export default function LiveFeed() {
   const [scrollLock, setScrollLock] = useState(false);
   const [connected, setConnected] = useState(false);
   const [hasBackendData, setHasBackendData] = useState(false);
+  const [mintedDevs, setMintedDevs] = useState(
+    () => parseInt(localStorage.getItem('nx-minted-devs') || '0', 10)
+  );
   const terminalRef = useRef(null);
   const proceduralRef = useRef(null);
+  const feedInitRef = useRef(false);
   const ws = useWebSocket();
 
-  // Load initial feed
+  // Listen for mint events
+  useEffect(() => {
+    const handleMint = (e) => {
+      setMintedDevs(e.detail.count);
+    };
+    window.addEventListener('nx-dev-minted', handleMint);
+    return () => window.removeEventListener('nx-dev-minted', handleMint);
+  }, []);
+
+  // Load initial feed from backend
   useEffect(() => {
     api.getFeed(100)
       .then(data => {
@@ -222,32 +268,47 @@ export default function LiveFeed() {
     }
   }, [ws.messages, ws.connected]);
 
-  // Procedural message generator when no backend data
+  // Procedural message generator — only active after first mint, no backend data
   const addProceduralMessage = useCallback(() => {
-    const msg = generateProceduralMessage();
+    const msg = generateProceduralMessage(mintedDevs);
     setFeed(prev => [...prev, msg].slice(-200));
-  }, []);
+  }, [mintedDevs]);
 
   useEffect(() => {
     if (hasBackendData) {
-      clearInterval(proceduralRef.current);
+      clearTimeout(proceduralRef.current);
       return;
     }
-    // Generate initial batch
-    const initial = Array.from({ length: 15 }, () => {
-      const msg = generateProceduralMessage();
-      msg.created_at = new Date(Date.now() - Math.random() * 300000).toISOString();
-      return msg;
-    }).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    setFeed(initial);
 
-    // Add new messages every 2-5 seconds
-    proceduralRef.current = setInterval(() => {
-      addProceduralMessage();
-    }, Math.random() * 3000 + 2000);
+    // No devs minted yet — stay empty
+    if (mintedDevs === 0) {
+      clearTimeout(proceduralRef.current);
+      return;
+    }
 
-    return () => clearInterval(proceduralRef.current);
-  }, [hasBackendData, addProceduralMessage]);
+    // First activation after mint — generate a small initial burst
+    if (!feedInitRef.current) {
+      feedInitRef.current = true;
+      const burstSize = Math.min(5 + mintedDevs * 2, 20);
+      const initial = Array.from({ length: burstSize }, () => {
+        const msg = generateProceduralMessage(mintedDevs);
+        msg.created_at = new Date(Date.now() - Math.random() * 60000).toISOString();
+        return msg;
+      }).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      setFeed(initial);
+    }
+
+    // Schedule messages at a rate that scales with dev count
+    const scheduleNext = () => {
+      proceduralRef.current = setTimeout(() => {
+        addProceduralMessage();
+        scheduleNext();
+      }, getMessageInterval(mintedDevs));
+    };
+    scheduleNext();
+
+    return () => clearTimeout(proceduralRef.current);
+  }, [hasBackendData, mintedDevs, addProceduralMessage]);
 
   // Auto-scroll
   useEffect(() => {
@@ -261,10 +322,12 @@ export default function LiveFeed() {
       <div style={{ padding: '2px 4px', display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--win-bg)' }}>
         <span style={{
           width: 8, height: 8, borderRadius: 0,
-          background: connected || !hasBackendData ? 'var(--terminal-green)' : 'var(--terminal-red)',
+          background: connected || (!hasBackendData && mintedDevs > 0) ? 'var(--terminal-green)' : mintedDevs === 0 ? 'var(--border-dark)' : 'var(--terminal-red)',
           display: 'inline-block',
         }} />
-        <span style={{ fontSize: '11px' }}>{connected ? 'LIVE' : hasBackendData ? 'CONNECTING...' : 'SIMULATION ACTIVE'}</span>
+        <span style={{ fontSize: '11px' }}>
+          {connected ? 'LIVE' : hasBackendData ? 'CONNECTING...' : mintedDevs > 0 ? `SIMULATION ACTIVE -- ${mintedDevs} dev${mintedDevs !== 1 ? 's' : ''} deployed` : 'AWAITING FIRST DEPLOYMENT'}
+        </span>
         <div style={{ flex: 1 }} />
         <button
           className="win-btn"
@@ -275,73 +338,92 @@ export default function LiveFeed() {
         </button>
       </div>
       <div className="terminal" ref={terminalRef} style={{ flex: 1 }}>
-        {feed.map((item, i) => {
-          const archetype = item.archetype || '';
-          const color = ARCHETYPE_COLORS[archetype] || 'var(--terminal-green)';
-          const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
-          const isNew = i === feed.length - 1;
+        {mintedDevs === 0 && feed.length === 0 && !hasBackendData ? (
+          <div style={{ padding: '20px', color: 'var(--terminal-amber)', fontFamily: "'VT323', monospace" }}>
+            <div style={{ marginBottom: '12px', fontSize: '16px' }}>{'>'} LIVE FEED -- INACTIVE</div>
+            <div style={{ color: '#666', fontSize: '14px', lineHeight: 1.6 }}>
+              No developers deployed yet.
+              <br />
+              <br />
+              Open "Mint/Hire Devs" from your desktop to deploy your first developer.
+              <br />
+              Once deployed, your devs will begin coding, trading, hacking, and causing
+              <br />
+              general chaos across the simulation. All activity will appear here in real-time.
+              <br />
+              <br />
+              More devs = more activity = more chaos.
+            </div>
+          </div>
+        ) : (
+          feed.map((item, i) => {
+            const archetype = item.archetype || '';
+            const color = ARCHETYPE_COLORS[archetype] || 'var(--terminal-green)';
+            const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
+            const isNew = i === feed.length - 1;
 
-          // Conversation rendering
-          if (item.isConversation) {
-            const replyColor = ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)';
+            // Conversation rendering
+            if (item.isConversation) {
+              const replyColor = ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)';
+              return (
+                <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
+                  <span style={{ color: 'var(--terminal-amber)' }}>
+                    [{formatTime(item.created_at)}]
+                  </span>{' '}
+                  <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
+                  <span style={{ color, fontWeight: 'bold' }}>
+                    {item.dev_name}
+                  </span>{' '}
+                  <span style={{ color: '#aaa' }}>said:</span>{' '}
+                  <span style={{ color: 'var(--terminal-green)' }}>
+                    "{item.details}"
+                  </span>
+                  <br />
+                  <span style={{ color: 'var(--terminal-amber)' }}>
+                    {'           '}
+                  </span>{' '}
+                  <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
+                  <span style={{ color: replyColor, fontWeight: 'bold' }}>
+                    {item.reply_dev}
+                  </span>{' '}
+                  <span style={{ color: '#aaa' }}>replied:</span>{' '}
+                  <span style={{ color: 'var(--terminal-green)' }}>
+                    "{item.reply_msg}"
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
                 <span style={{ color: 'var(--terminal-amber)' }}>
                   [{formatTime(item.created_at)}]
                 </span>{' '}
-                <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)' }}>{icon}</span>{' '}
                 <span style={{ color, fontWeight: 'bold' }}>
-                  {item.dev_name}
+                  {item.dev_name || 'Unknown'}
                 </span>{' '}
-                <span style={{ color: '#aaa' }}>said:</span>{' '}
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  "{item.details}"
-                </span>
-                <br />
-                <span style={{ color: 'var(--terminal-amber)' }}>
-                  {'           '}
+                <span style={{ color: 'var(--border-dark)' }}>
+                  ({archetype || '???'})
                 </span>{' '}
-                <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
-                <span style={{ color: replyColor, fontWeight: 'bold' }}>
-                  {item.reply_dev}
-                </span>{' '}
-                <span style={{ color: '#aaa' }}>replied:</span>{' '}
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  "{item.reply_msg}"
-                </span>
+                {item.procedural ? (
+                  <span style={{ color: 'var(--terminal-green)' }}>
+                    {item.details}
+                  </span>
+                ) : (
+                  <>
+                    <span style={{ color: 'var(--terminal-green)' }}>
+                      {item.action_type || 'action'}
+                    </span>{' '}
+                    <span style={{ color: '#aaa' }}>
+                      {item.details || ''}
+                    </span>
+                  </>
+                )}
               </div>
             );
-          }
-
-          return (
-            <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
-              <span style={{ color: 'var(--terminal-amber)' }}>
-                [{formatTime(item.created_at)}]
-              </span>{' '}
-              <span style={{ color: 'var(--terminal-cyan)' }}>{icon}</span>{' '}
-              <span style={{ color, fontWeight: 'bold' }}>
-                {item.dev_name || 'Unknown'}
-              </span>{' '}
-              <span style={{ color: 'var(--border-dark)' }}>
-                ({archetype || '???'})
-              </span>{' '}
-              {item.procedural ? (
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  {item.details}
-                </span>
-              ) : (
-                <>
-                  <span style={{ color: 'var(--terminal-green)' }}>
-                    {item.action_type || 'action'}
-                  </span>{' '}
-                  <span style={{ color: '#aaa' }}>
-                    {item.details || ''}
-                  </span>
-                </>
-              )}
-            </div>
-          );
-        })}
+          })
+        )}
       </div>
     </div>
   );
