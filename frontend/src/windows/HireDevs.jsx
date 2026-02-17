@@ -91,6 +91,10 @@ export default function HireDevs({ onMint }) {
       setShowWalletPicker(true);
       return;
     }
+    // Track minted devs in localStorage and notify LiveFeed
+    const current = parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);
+    localStorage.setItem('nx-minted-devs', String(current + quantity));
+    window.dispatchEvent(new CustomEvent('nx-dev-minted', { detail: { count: current + quantity, added: quantity } }));
     if (onMint) onMint(answers, quantity, walletAddress);
   };
 
