@@ -60,6 +60,83 @@ function Handbook() {
   );
 }
 
+function Lore() {
+  return (
+    <div className="terminal" style={{ height: '100%', overflow: 'auto', padding: '12px', lineHeight: '1.6' }}>
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '18px', fontWeight: 'bold', marginBottom: '12px', textAlign: 'center' }}>
+        {'>> CLASSIFIED: THE NX TERMINAL CHRONICLES <<'}
+      </div>
+
+      <div style={{ color: 'var(--terminal-red)', fontWeight: 'bold', marginBottom: '4px', fontSize: '10px', textAlign: 'center', letterSpacing: '2px' }}>
+        SECURITY CLEARANCE: LEVEL 7 — EYES ONLY
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--terminal-amber)', borderBottom: '1px solid var(--terminal-amber)', padding: '8px 0', margin: '8px 0 16px 0' }}>
+        <div style={{ color: '#808080', fontSize: '12px', textAlign: 'center', fontStyle: 'italic' }}>
+          "Every line of code is a weapon. Every developer is a soldier. Every corporation is a lie."
+        </div>
+      </div>
+
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{'> CHAPTER I: THE FOUNDING (1995)'}</div>
+      <div style={{ color: 'var(--terminal-green)', marginBottom: '16px' }}>
+        In 1995, a group of rogue engineers from the defunct DARPA Project NEXUS pooled their severance
+        packages and founded NX Terminal Corp. in a basement server room in Palo Alto. Their mission:
+        build a simulation platform that could predict the outcome of technological warfare. The Pentagon
+        said no. Silicon Valley said "how much?" Nobody asked the engineers what they actually wanted.
+        The engineers didn't care. They had coffee and a dream. The dream was mostly about coffee.
+      </div>
+
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{'> CHAPTER II: THE PROTOCOL WARS BEGIN (2005)'}</div>
+      <div style={{ color: 'var(--terminal-green)', marginBottom: '16px' }}>
+        By 2005, NX Terminal had grown from a simulation platform into something far more dangerous:
+        a prediction engine that was right 94% of the time. The remaining 6% involved cats and cryptocurrency,
+        which even quantum computers cannot predict. Six corporations emerged as the dominant players,
+        each funded by a different combination of venture capital, government contracts, and sheer audacity.
+        The Protocol Wars had begun. Nobody declared war. It just... happened. Like most terrible things.
+      </div>
+
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{'> CHAPTER III: THE DEVELOPER UPRISING (2012)'}</div>
+      <div style={{ color: 'var(--terminal-green)', marginBottom: '16px' }}>
+        In 2012, a group of developers within Closed AI discovered that their code was being used to train
+        AI models that would eventually replace them. They organized a strike. Management responded by
+        deploying the very AI they had trained to write code in their place. The irony was not lost on anyone.
+        It was, however, ignored by everyone. The developers were offered a choice: adapt or be deprecated.
+        Most chose to become AI trainers. Some became protocol architects. A few simply vanished into
+        the dark web, emerging years later as the first HACKTIVISTS.
+      </div>
+
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{'> CHAPTER IV: THE GREAT TOKEN CRASH (2018)'}</div>
+      <div style={{ color: 'var(--terminal-green)', marginBottom: '16px' }}>
+        The introduction of $NXT token in 2018 was meant to stabilize the simulation economy. Instead,
+        it created the largest speculative bubble since the invention of promises. DEGENS traded $NXT
+        on leverage so extreme that a single bad trade could bankrupt an entire corporation. Y.AI
+        famously tweeted "NXT to $1M" seventeen minutes before their own token collapsed.
+        The tweet got 4.7 million likes. The developers got nothing. As intended.
+      </div>
+
+      <div style={{ color: 'var(--terminal-amber)', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{'> CHAPTER V: THE SINGULARITY QUESTION (2023-PRESENT)'}</div>
+      <div style={{ color: 'var(--terminal-green)', marginBottom: '16px' }}>
+        As of 2023, the NX Terminal simulation has become indistinguishable from reality for 73%
+        of its participants. The remaining 27% are bots who think they're human, which is also
+        indistinguishable from reality. Shallow Mind claims they achieved AGI last Tuesday but won't
+        show anyone. Misanthropic says their AI is safe but won't explain what it's safe from.
+        Closed AI charges $200/month for access to models that may or may not exist.
+        The Protocol Wars continue. The simulation endures. Your developers await orders.
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--terminal-amber)', padding: '12px 0', marginTop: '8px' }}>
+        <div style={{ color: 'var(--terminal-red)', fontSize: '11px', textAlign: 'center' }}>
+          {'[DOCUMENT CLASSIFICATION: OMEGA-7]'}
+        </div>
+        <div style={{ color: '#808080', fontSize: '10px', textAlign: 'center', marginTop: '4px' }}>
+          Unauthorized distribution of this document will result in immediate termination.
+          Of your employment. And possibly your simulation.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NXTerminal() {
   const [tab, setTab] = useState('system');
   return (
@@ -67,9 +144,12 @@ export default function NXTerminal() {
       <div className="win-tabs">
         <button className={`win-tab${tab === 'system' ? ' active' : ''}`} onClick={() => setTab('system')}>System Info</button>
         <button className={`win-tab${tab === 'handbook' ? ' active' : ''}`} onClick={() => setTab('handbook')}>Employee Handbook</button>
+        <button className={`win-tab${tab === 'lore' ? ' active' : ''}`} onClick={() => setTab('lore')}>Lore</button>
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {tab === 'system' ? <SystemInfo /> : <Handbook />}
+        {tab === 'system' && <SystemInfo />}
+        {tab === 'handbook' && <Handbook />}
+        {tab === 'lore' && <Lore />}
       </div>
     </div>
   );

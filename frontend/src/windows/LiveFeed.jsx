@@ -17,7 +17,7 @@ const ACTION_ICONS = {
   code: '>>', trade: '$', chat: '#', hack: '!',
   create_protocol: '+', invest: '%', create_ai: '*', mint: '@',
   sabotage: '!!', debug: '~~', deploy: '=>', coffee: '::',
-  default: '>',
+  conversation: '#', default: '>',
 };
 
 const ARCHETYPES = Object.keys(ARCHETYPE_COLORS);
@@ -83,7 +83,65 @@ const PROCEDURAL_TEMPLATES = [
   ]},
 ];
 
+// Dev-to-dev conversation templates about current topics
+const CONVERSATION_TEMPLATES = [
+  // Crypto & DeFi
+  { dev1_msg: "bro BTC just broke another ATH", dev2_msg: "and i'm still holding my $NXT bags like a clown" },
+  { dev1_msg: "who just aped into that new memecoin?", dev2_msg: "guilty. down 80%. this is fine." },
+  { dev1_msg: "ETH gas fees are insane rn", dev2_msg: "my deploy cost more than my rent" },
+  { dev1_msg: "another day another rug pull", dev2_msg: "the project had a dog logo. what did you expect" },
+  { dev1_msg: "DeFi summer 2.0 when?", dev2_msg: "we're in DeFi nuclear winter 4.0 my guy" },
+  { dev1_msg: "solana is fast tho", dev2_msg: "fast at going down lmao" },
+  { dev1_msg: "should I bridge my $NXT to L2?", dev2_msg: "bridge to a hardware wallet and go touch grass" },
+  { dev1_msg: "staking rewards looking juicy", dev2_msg: "so did the APY on that rug I got into last week" },
+
+  // AI & Tech
+  { dev1_msg: "GPT can code better than me now", dev2_msg: "GPT can code better than all of us. we just don't talk about it." },
+  { dev1_msg: "just asked AI to write my code review", dev2_msg: "based. AI reviewing AI-written code. the circle of life" },
+  { dev1_msg: "anyone worried about AGI?", dev2_msg: "I'm worried about making it to Friday" },
+  { dev1_msg: "Closed AI just raised another $10B", dev2_msg: "and we still get paid 200 $NXT/day lol" },
+  { dev1_msg: "the new Claude model is kinda scary good", dev2_msg: "it literally wrote a protocol in 3 seconds that took me 3 weeks" },
+  { dev1_msg: "open source AI is catching up", dev2_msg: "Mistrial Systems be like: open source* (*terms and conditions apply)" },
+  { dev1_msg: "AI just beat a human at StarCraft again", dev2_msg: "cool now can it fix the printer" },
+
+  // Pop Culture & Movies
+  { dev1_msg: "new Dune movie was insane", dev2_msg: "the spice must flow. like our deploys. unlike our deploys." },
+  { dev1_msg: "anyone watching that new anime?", dev2_msg: "which one? there's 47 new ones this season" },
+  { dev1_msg: "Marvel is cooked", dev2_msg: "just like our codebase. overstretched and nobody cares anymore" },
+  { dev1_msg: "Cyberpunk 2077 finally got good", dev2_msg: "took them 3 years. just like our v2 release" },
+  { dev1_msg: "GTA 6 trailer dropped", dev2_msg: "our production deployment has more bugs than Vice City" },
+  { dev1_msg: "the new Matrix was mid", dev2_msg: "still more coherent than our architecture docs" },
+
+  // Series & Streaming
+  { dev1_msg: "Succession ending hit different", dev2_msg: "our CEO does the same stuff but less dramatic and more boring" },
+  { dev1_msg: "binging The Bear rn", dev2_msg: "kitchen stress is nothing compared to production deployments" },
+  { dev1_msg: "Black Mirror is too real now", dev2_msg: "we literally work in a Black Mirror episode" },
+  { dev1_msg: "Severance season 2 when", dev2_msg: "i already feel like i have a work innie and an outie" },
+  { dev1_msg: "House of the Dragon or Rings of Power?", dev2_msg: "neither. i only watch terminal logs for entertainment" },
+  { dev1_msg: "Squid Game S2 was decent", dev2_msg: "protocol wars is basically squid game but with more javascript" },
+
+  // Politics & Current Events
+  { dev1_msg: "congress wants to ban crypto again", dev2_msg: "they can't even ban spam emails from their own servers" },
+  { dev1_msg: "EU AI Act is wild", dev2_msg: "our AI barely works. pretty sure we're exempt" },
+  { dev1_msg: "tech layoffs are brutal this year", dev2_msg: "at least our devs can't get laid off. they can only get eliminated." },
+  { dev1_msg: "remote work is dying smh", dev2_msg: "we're literally inside a computer. maximum remote" },
+  { dev1_msg: "inflation is crazy rn", dev2_msg: "200 $NXT used to mean something. now it buys half a coffee" },
+
+  // Gaming & Internet Culture
+  { dev1_msg: "touch grass they said", dev2_msg: "grass.exe not found" },
+  { dev1_msg: "skill issue tbh", dev2_msg: "my entire career is a skill issue" },
+  { dev1_msg: "this simulation is pay to win", dev2_msg: "no it's pay to participate. winning was never an option" },
+  { dev1_msg: "we're so cooked", dev2_msg: "we've been cooked since deployment day 1" },
+  { dev1_msg: "who needs sleep when you have caffeine", dev2_msg: "and existential dread. don't forget the dread." },
+  { dev1_msg: "the devs in Shallow Mind are so cringe", dev2_msg: "at least they ship. wait no they don't" },
+];
+
 function generateProceduralMessage() {
+  // 30% chance of generating a conversation instead of an action
+  if (Math.random() < 0.3) {
+    return generateConversation();
+  }
+
   const template = PROCEDURAL_TEMPLATES[Math.floor(Math.random() * PROCEDURAL_TEMPLATES.length)];
   const msg = template.msgs[Math.floor(Math.random() * template.msgs.length)];
   const dev = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
@@ -97,6 +155,30 @@ function generateProceduralMessage() {
     details: msg.replace('{dev}', dev).replace('{corp}', corp),
     created_at: new Date().toISOString(),
     procedural: true,
+  };
+}
+
+function generateConversation() {
+  const convo = CONVERSATION_TEMPLATES[Math.floor(Math.random() * CONVERSATION_TEMPLATES.length)];
+  const dev1 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  let dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  while (dev2 === dev1) {
+    dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  }
+  const arch1 = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+  const arch2 = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+
+  return {
+    dev_name: dev1,
+    archetype: arch1,
+    action_type: 'conversation',
+    details: convo.dev1_msg,
+    reply_dev: dev2,
+    reply_archetype: arch2,
+    reply_msg: convo.dev2_msg,
+    created_at: new Date().toISOString(),
+    procedural: true,
+    isConversation: true,
   };
 }
 
@@ -198,6 +280,38 @@ export default function LiveFeed() {
           const color = ARCHETYPE_COLORS[archetype] || 'var(--terminal-green)';
           const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
           const isNew = i === feed.length - 1;
+
+          // Conversation rendering
+          if (item.isConversation) {
+            const replyColor = ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)';
+            return (
+              <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
+                <span style={{ color: 'var(--terminal-amber)' }}>
+                  [{formatTime(item.created_at)}]
+                </span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
+                <span style={{ color, fontWeight: 'bold' }}>
+                  {item.dev_name}
+                </span>{' '}
+                <span style={{ color: '#aaa' }}>said:</span>{' '}
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  "{item.details}"
+                </span>
+                <br />
+                <span style={{ color: 'var(--terminal-amber)' }}>
+                  {'           '}
+                </span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
+                <span style={{ color: replyColor, fontWeight: 'bold' }}>
+                  {item.reply_dev}
+                </span>{' '}
+                <span style={{ color: '#aaa' }}>replied:</span>{' '}
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  "{item.reply_msg}"
+                </span>
+              </div>
+            );
+          }
 
           return (
             <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>

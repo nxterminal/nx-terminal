@@ -9,7 +9,7 @@ import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 
 const DESKTOP_ICONS = [
-  { id: 'nx-terminal', icon: '\u{1F5A5}', label: 'NX Terminal' },
+  { id: 'nx-terminal', icon: '\u{1F4BB}', label: 'NX Terminal' },
   { id: 'live-feed', icon: '\u{1F465}', label: 'Live Feed' },
   { id: 'world-chat', icon: '\u{1F310}', label: 'World Chat' },
   { id: 'leaderboard', icon: '\u{1F3C6}', label: 'Leaderboard' },
@@ -17,7 +17,7 @@ const DESKTOP_ICONS = [
   { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
   { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
   { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
-  { id: 'hire-devs', icon: '\u{1F4BB}', label: 'Hire Devs' },
+  { id: 'hire-devs', icon: '\u{1F4BC}', label: 'Mint/Hire Devs' },
   { id: 'control-panel', icon: '\u2699', label: 'Settings' },
 ];
 
@@ -67,19 +67,25 @@ export default function Desktop() {
   const [showScreensaver, setShowScreensaver] = useState(false);
   const idleTimerRef = useRef(null);
 
-  const refreshWallpaper = useCallback(() => {
+  const refreshSettings = useCallback(() => {
     setWallpaperStyle(getWallpaperStyle());
     setWallpaperOverlay(getWallpaperOverlay());
+    // Apply theme
+    const theme = localStorage.getItem('nx-theme') || 'classic';
+    document.documentElement.setAttribute('data-theme', theme);
   }, []);
 
   useEffect(() => {
     openWindow('live-feed');
+    // Apply theme on mount
+    const theme = localStorage.getItem('nx-theme') || 'classic';
+    document.documentElement.setAttribute('data-theme', theme);
   }, []);
 
   useEffect(() => {
-    window.addEventListener('nx-settings-changed', refreshWallpaper);
-    return () => window.removeEventListener('nx-settings-changed', refreshWallpaper);
-  }, [refreshWallpaper]);
+    window.addEventListener('nx-settings-changed', refreshSettings);
+    return () => window.removeEventListener('nx-settings-changed', refreshSettings);
+  }, [refreshSettings]);
 
   // Screensaver: 60s inactivity
   const resetIdleTimer = useCallback(() => {
