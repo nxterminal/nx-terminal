@@ -20,8 +20,28 @@ const SCREENSAVERS = [
   { id: 'matrix', name: 'Matrix Rain' },
 ];
 
+const TIMEOUT_OPTIONS = [
+  { value: 60000, label: '1 minute' },
+  { value: 120000, label: '2 minutes' },
+  { value: 300000, label: '5 minutes' },
+  { value: 600000, label: '10 minutes' },
+  { value: 900000, label: '15 minutes' },
+];
+
 const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
 const AGENT_CDN = 'https://unpkg.com/clippyjs@0.0.3/assets/agents';
+
+// Frame sizes for each agent sprite sheet (width x height of a single frame)
+const AGENT_FRAME = {
+  Clippy: [124, 93],
+  Merlin: [124, 126],
+  Rover: [128, 100],
+  Links: [124, 110],
+  Peedy: [124, 113],
+  Bonzi: [200, 160],
+  Genius: [124, 93],
+  F1: [124, 93],
+};
 
 function StarfieldPreview({ width, height }) {
   const canvasRef = useRef(null);
@@ -150,6 +170,43 @@ function MatrixPreview({ width, height }) {
   return <canvas ref={canvasRef} width={width} height={height} style={{ display: 'block' }} />;
 }
 
+function AgentPreview({ name, selected, onClick }) {
+  const [fw, fh] = AGENT_FRAME[name] || [124, 93];
+  // Scale to fit in a 64x64 box while keeping aspect ratio
+  const scale = Math.min(64 / fw, 64 / fh);
+  const displayW = Math.round(fw * scale);
+  const displayH = Math.round(fh * scale);
+
+  return (
+    <div
+      className={selected ? 'win-panel' : 'win-raised'}
+      style={{
+        padding: '6px 4px', textAlign: 'center', cursor: 'pointer',
+        border: selected ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
+        fontSize: '10px', fontWeight: selected ? 'bold' : 'normal',
+      }}
+      onClick={onClick}
+    >
+      <div style={{
+        width: '64px', height: '64px', margin: '0 auto 4px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${displayW}px`,
+          height: `${displayH}px`,
+          backgroundImage: `url(${AGENT_CDN}/${name}/map.png)`,
+          backgroundPosition: '0 0',
+          backgroundSize: `auto ${displayH}px`,
+          backgroundRepeat: 'no-repeat',
+          imageRendering: 'auto',
+        }} />
+      </div>
+      {name}
+    </div>
+  );
+}
+
 function compressImage(dataUrl, maxWidth, quality) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -178,6 +235,9 @@ export default function ControlPanel() {
   const [wallpaper, setWallpaper] = useState(() => localStorage.getItem('nx-wallpaper') || 'teal');
   const [customWallpaper, setCustomWallpaper] = useState(() => localStorage.getItem('nx-custom-wallpaper') || '');
   const [screensaver, setScreensaver] = useState(() => localStorage.getItem('nx-screensaver') || '3d-pipes');
+  const [screensaverTimeout, setScreensaverTimeout] = useState(() => {
+    return parseInt(localStorage.getItem('nx-screensaver-timeout')) || 60000;
+  });
   const [assistantEnabled, setAssistantEnabled] = useState(() => localStorage.getItem('nx-assistant-enabled') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
@@ -185,7 +245,11 @@ export default function ControlPanel() {
   // Pending (selected but not yet applied) values
   const [pendingWallpaper, setPendingWallpaper] = useState(null);
   const [pendingScreensaver, setPendingScreensaver] = useState(null);
+  const [pendingTimeout, setPendingTimeout] = useState(null);
   const [pendingAgent, setPendingAgent] = useState(null);
+
+  // Screensaver preview state
+  const [showingPreview, setShowingPreview] = useState(false);
 
   const [morale, setMorale] = useState(23);
   const [synergy, setSynergy] = useState(47);
@@ -209,9 +273,14 @@ export default function ControlPanel() {
 
   const applyScreensaver = () => {
     const id = pendingScreensaver || screensaver;
+    const timeout = pendingTimeout || screensaverTimeout;
     setScreensaver(id);
+    setScreensaverTimeout(timeout);
     localStorage.setItem('nx-screensaver', id);
+    localStorage.setItem('nx-screensaver-timeout', String(timeout));
     setPendingScreensaver(null);
+    setPendingTimeout(null);
+    window.dispatchEvent(new Event('nx-screensaver-changed'));
   };
 
   const applyAssistant = () => {
@@ -278,9 +347,32 @@ export default function ControlPanel() {
     saveAndNotify();
   };
 
+  const handlePreviewScreensaver = () => {
+    setShowingPreview(true);
+  };
+
+  // Dismiss preview on any user input
+  useEffect(() => {
+    if (!showingPreview) return;
+    const dismiss = () => setShowingPreview(false);
+    const timer = setTimeout(() => {
+      window.addEventListener('mousemove', dismiss);
+      window.addEventListener('keydown', dismiss);
+      window.addEventListener('mousedown', dismiss);
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mousemove', dismiss);
+      window.removeEventListener('keydown', dismiss);
+      window.removeEventListener('mousedown', dismiss);
+    };
+  }, [showingPreview]);
+
   const activeWallpaper = pendingWallpaper || wallpaper;
   const activeScreensaver = pendingScreensaver || screensaver;
+  const activeTimeout = pendingTimeout || screensaverTimeout;
   const activeAgent = pendingAgent || assistantAgent;
+  const hasScreensaverChanges = pendingScreensaver !== null || pendingTimeout !== null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -398,28 +490,63 @@ export default function ControlPanel() {
         {tab === 'screensaver' && (
           <div>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Screensaver:</div>
+
+            {/* Preview monitor */}
+            <div className="win-panel" style={{
+              width: '200px', height: '130px', margin: '0 auto 12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', background: '#000',
+            }}>
+              {activeScreensaver === 'starfield' ? (
+                <StarfieldPreview width={200} height={130} />
+              ) : activeScreensaver === 'matrix' ? (
+                <MatrixPreview width={200} height={130} />
+              ) : (
+                <PipesPreview width={200} height={130} />
+              )}
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {SCREENSAVERS.map(ss => (
                 <div
                   key={ss.id}
-                  className={`cp-screensaver-option${activeScreensaver === ss.id ? ' selected' : ''}`}
+                  className={activeScreensaver === ss.id ? 'win-panel' : 'win-raised'}
+                  style={{
+                    padding: '8px', textAlign: 'center', cursor: 'pointer',
+                    border: activeScreensaver === ss.id ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
+                  }}
                   onClick={() => setPendingScreensaver(ss.id)}
                 >
-                  <div className="cp-screensaver-preview">
-                    {ss.id === 'starfield' ? (
-                      <StarfieldPreview width={140} height={90} />
-                    ) : ss.id === 'matrix' ? (
-                      <MatrixPreview width={140} height={90} />
-                    ) : (
-                      <PipesPreview width={140} height={90} />
-                    )}
-                  </div>
-                  <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '4px', fontWeight: 'bold' }}>{ss.name}</div>
+                  <div style={{ fontSize: '11px', fontWeight: activeScreensaver === ss.id ? 'bold' : 'normal' }}>{ss.name}</div>
                 </div>
               ))}
             </div>
-            <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
-              <button className="win-btn" onClick={applyScreensaver} disabled={!pendingScreensaver} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+
+            {/* Timeout setting */}
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Wait:</span>
+              <select
+                value={activeTimeout}
+                onChange={(e) => setPendingTimeout(Number(e.target.value))}
+                style={{
+                  fontSize: '11px', padding: '2px 4px',
+                  background: 'var(--bg-primary, #fff)',
+                  border: '1px solid var(--border-dark, #808080)',
+                }}
+              >
+                {TIMEOUT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted, #666)' }}>before activating</span>
+            </div>
+
+            {/* Preview + Apply */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
+              <button className="win-btn" onClick={handlePreviewScreensaver} style={{ padding: '4px 16px', fontSize: '11px' }}>
+                Preview
+              </button>
+              <button className="win-btn" onClick={applyScreensaver} disabled={!hasScreensaverChanges} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
                 Apply
               </button>
             </div>
@@ -446,26 +573,12 @@ export default function ControlPanel() {
                 <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '8px' }}>Choose Your Assistant:</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                   {AGENT_LIST.map(name => (
-                    <div
+                    <AgentPreview
                       key={name}
-                      className={activeAgent === name ? 'win-panel' : 'win-raised'}
-                      style={{
-                        padding: '6px 4px', textAlign: 'center', cursor: 'pointer',
-                        border: activeAgent === name ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
-                        fontSize: '10px', fontWeight: activeAgent === name ? 'bold' : 'normal',
-                      }}
+                      name={name}
+                      selected={activeAgent === name}
                       onClick={() => setPendingAgent(name)}
-                    >
-                      <div style={{
-                        width: '48px', height: '48px', margin: '0 auto 4px',
-                        backgroundImage: `url(${AGENT_CDN}/${name}/map.png)`,
-                        backgroundPosition: '0 0',
-                        backgroundSize: 'auto',
-                        imageRendering: 'auto',
-                        overflow: 'hidden',
-                      }} />
-                      {name}
-                    </div>
+                    />
                   ))}
                 </div>
                 <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
@@ -525,6 +638,28 @@ export default function ControlPanel() {
           </div>
         )}
       </div>
+
+      {/* Full-screen screensaver preview overlay */}
+      {showingPreview && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: '#000', zIndex: 99999, cursor: 'none',
+        }}>
+          {activeScreensaver === 'starfield' ? (
+            <StarfieldPreview width={window.innerWidth} height={window.innerHeight} />
+          ) : activeScreensaver === 'matrix' ? (
+            <MatrixPreview width={window.innerWidth} height={window.innerHeight} />
+          ) : (
+            <PipesPreview width={window.innerWidth} height={window.innerHeight} />
+          )}
+          <div style={{
+            position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+            color: '#666', fontSize: '12px', fontFamily: 'monospace',
+          }}>
+            Move mouse or press any key to exit preview
+          </div>
+        </div>
+      )}
     </div>
   );
 }
