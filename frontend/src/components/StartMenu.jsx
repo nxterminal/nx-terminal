@@ -10,6 +10,7 @@ const PROGRAMS = [
   { id: 'my-devs', label: 'My Devs' },
   { id: 'inbox', label: 'Inbox' },
   { id: 'hire-devs', label: 'Mint/Hire Devs' },
+  { id: 'notepad', label: 'Notepad' },
 ];
 
 const GAMES = [
