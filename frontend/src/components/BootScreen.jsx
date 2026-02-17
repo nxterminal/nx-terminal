@@ -151,9 +151,7 @@ export default function BootScreen({ onComplete }) {
 
   if (phase === 'crt') {
     return (
-      <div className="boot-bios" onClick={skip}>
-        <div className="crt-transition" />
-      </div>
+      <div className="boot-bios boot-fadeout" onClick={skip} />
     );
   }
 

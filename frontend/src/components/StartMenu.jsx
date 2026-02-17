@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
+import { Win98Icon } from './Win98Icons';
 
 const PROGRAMS = [
-  { id: 'live-feed', icon: '\u{1F465}', label: 'Live Feed' },
-  { id: 'world-chat', icon: '\u{1F310}', label: 'World Chat' },
-  { id: 'leaderboard', icon: '\u{1F3C6}', label: 'Leaderboard' },
-  { id: 'protocol-market', icon: '\u{1F4CA}', label: 'Protocol Market' },
-  { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
-  { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
-  { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
-  { id: 'hire-devs', icon: '\u{1F4BC}', label: 'Mint/Hire Devs' },
+  { id: 'live-feed', label: 'Live Feed' },
+  { id: 'world-chat', label: 'World Chat' },
+  { id: 'leaderboard', label: 'Leaderboard' },
+  { id: 'protocol-market', label: 'Protocol Market' },
+  { id: 'ai-lab', label: 'AI Lab' },
+  { id: 'my-devs', label: 'My Devs' },
+  { id: 'inbox', label: 'Inbox' },
+  { id: 'hire-devs', label: 'Mint/Hire Devs' },
 ];
 
 const GAMES = [
-  { id: 'bug-sweeper', icon: '\u{1F41B}', label: 'Bug Sweeper' },
-  { id: 'protocol-solitaire', icon: '\u{1F0CF}', label: 'Protocol Solitaire' },
+  { id: 'bug-sweeper', label: 'Bug Sweeper' },
+  { id: 'protocol-solitaire', label: 'Protocol Solitaire' },
 ];
 
 export default function StartMenu({ open, onClose, openWindow }) {
@@ -76,7 +77,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
               className="start-menu-item start-menu-item-has-sub"
               onMouseEnter={() => { setShowPrograms(true); setShowGames(false); }}
             >
-              <span className="start-menu-item-icon">{'\u{1F4C2}'}</span>
+              <span className="start-menu-item-icon"><Win98Icon id="my-devs" size={16} /></span>
               <span className="start-menu-item-label">Programs</span>
               <span className="start-menu-item-arrow">{'\u25B6'}</span>
 
@@ -88,7 +89,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
                       className="start-menu-item"
                       onClick={() => handleItemClick(prog.id)}
                     >
-                      <span className="start-menu-item-icon">{prog.icon}</span>
+                      <span className="start-menu-item-icon"><Win98Icon id={prog.id} size={16} /></span>
                       <span className="start-menu-item-label">{prog.label}</span>
                     </div>
                   ))}
@@ -100,7 +101,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
               className="start-menu-item start-menu-item-has-sub"
               onMouseEnter={() => { setShowGames(true); setShowPrograms(false); }}
             >
-              <span className="start-menu-item-icon">{'\u{1F3AE}'}</span>
+              <span className="start-menu-item-icon"><Win98Icon id="protocol-solitaire" size={16} /></span>
               <span className="start-menu-item-label">Games</span>
               <span className="start-menu-item-arrow">{'\u25B6'}</span>
 
@@ -112,7 +113,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
                       className="start-menu-item"
                       onClick={() => handleItemClick(game.id)}
                     >
-                      <span className="start-menu-item-icon">{game.icon}</span>
+                      <span className="start-menu-item-icon"><Win98Icon id={game.id} size={16} /></span>
                       <span className="start-menu-item-label">{game.label}</span>
                     </div>
                   ))}
@@ -127,7 +128,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
               onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
               onClick={() => handleItemClick('nx-terminal')}
             >
-              <span className="start-menu-item-icon">{'\u{1F5A5}'}</span>
+              <span className="start-menu-item-icon"><Win98Icon id="nx-terminal" size={16} /></span>
               <span className="start-menu-item-label">NX Terminal</span>
             </div>
 
@@ -136,7 +137,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
               onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
               onClick={() => handleItemClick('control-panel')}
             >
-              <span className="start-menu-item-icon">{'\u2699'}</span>
+              <span className="start-menu-item-icon"><Win98Icon id="control-panel" size={16} /></span>
               <span className="start-menu-item-label">Settings</span>
             </div>
 
@@ -147,7 +148,13 @@ export default function StartMenu({ open, onClose, openWindow }) {
               onMouseEnter={() => { setShowPrograms(false); setShowGames(false); }}
               onClick={handleShutdown}
             >
-              <span className="start-menu-item-icon">{'\u{1F6D1}'}</span>
+              <span className="start-menu-item-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16 }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
+                  <circle cx="8" cy="8" r="6" fill="#ff0000" stroke="#000" strokeWidth="1" />
+                  <rect x="6" y="3" width="4" height="6" fill="#fff" />
+                  <rect x="7" y="2" width="2" height="4" fill="#ff0000" stroke="#fff" strokeWidth="0.5" />
+                </svg>
+              </span>
               <span className="start-menu-item-label">Shut Down...</span>
             </div>
           </>

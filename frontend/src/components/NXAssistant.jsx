@@ -148,54 +148,69 @@ const MESSAGES = [
   },
 ];
 
-// Clippy-style paperclip character - more faithful to the original
+// Clippy - faithful recreation of the classic Microsoft Office Assistant
 const CLIPPY_SVG = (
-  <svg width="42" height="58" viewBox="0 0 42 58" style={{ imageRendering: 'auto' }}>
-    {/* Main wire body - the iconic paperclip shape */}
+  <svg width="60" height="90" viewBox="0 0 60 90" style={{ imageRendering: 'auto' }}>
+    <defs>
+      <linearGradient id="wireGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#d8d8d8" />
+        <stop offset="30%" stopColor="#b0b0b0" />
+        <stop offset="60%" stopColor="#888888" />
+        <stop offset="100%" stopColor="#a0a0a0" />
+      </linearGradient>
+      <linearGradient id="wireHighlight" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#e8e8e8" />
+        <stop offset="100%" stopColor="#c0c0c0" />
+      </linearGradient>
+    </defs>
+
+    {/* Outer wire - the main paperclip S-curve shape */}
+    {/* Right side going down, curves left at bottom, goes up, curves right at top */}
     <path
-      d="M21 2 C10 2 5 10 5 18 L5 34 C5 40 9 44 14 44 L14 44 C14 44 14 48 14 48"
-      fill="none" stroke="#a0a0a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
+      d="M30 4 C42 4 48 14 48 26 L48 52 C48 62 42 68 34 68 L34 72 C34 78 28 82 22 82 L22 82"
+      fill="none" stroke="url(#wireGrad)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"
     />
     <path
-      d="M21 2 C32 2 37 10 37 18 L37 34 C37 40 33 44 28 44 L28 44 C28 44 28 48 28 48"
-      fill="none" stroke="#a0a0a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
+      d="M30 4 C18 4 12 14 12 26 L12 52 C12 62 18 68 26 68 L26 72 C26 78 22 80 18 80"
+      fill="none" stroke="url(#wireGrad)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"
     />
-    {/* Inner wire highlight for 3D effect */}
+    {/* Wire highlight for 3D metallic look */}
     <path
-      d="M21 4 C12 4 7 11 7 18 L7 33 C7 38 10 42 14 42"
-      fill="none" stroke="#d0d0d0" strokeWidth="1.5" strokeLinecap="round"
+      d="M30 6 C41 6 46 15 46 26 L46 51 C46 60 41 66 34 66"
+      fill="none" stroke="url(#wireHighlight)" strokeWidth="2" strokeLinecap="round" opacity="0.7"
     />
     <path
-      d="M21 4 C30 4 35 11 35 18 L35 33 C35 38 32 42 28 42"
-      fill="none" stroke="#d0d0d0" strokeWidth="1.5" strokeLinecap="round"
+      d="M30 6 C19 6 14 15 14 26 L14 51 C14 60 19 66 26 66"
+      fill="none" stroke="url(#wireHighlight)" strokeWidth="2" strokeLinecap="round" opacity="0.7"
     />
 
-    {/* Eyes - large, round, expressive like original Clippy */}
-    <ellipse cx="15" cy="20" rx="4.5" ry="5" fill="white" stroke="#505050" strokeWidth="1.2" />
-    <ellipse cx="27" cy="20" rx="4.5" ry="5" fill="white" stroke="#505050" strokeWidth="1.2" />
-    {/* Pupils - looking slightly to the side */}
-    <ellipse cx="16.5" cy="21" rx="2.2" ry="2.5" fill="#1a1a3e" />
-    <ellipse cx="28.5" cy="21" rx="2.2" ry="2.5" fill="#1a1a3e" />
-    {/* Eye shine/reflection */}
-    <circle cx="15" cy="18.5" r="1.2" fill="white" opacity="0.9" />
-    <circle cx="27" cy="18.5" r="1.2" fill="white" opacity="0.9" />
+    {/* Eyes - large, oval, prominent like the original */}
+    <ellipse cx="22" cy="30" rx="6.5" ry="7.5" fill="white" stroke="#4a4a4a" strokeWidth="1.5" />
+    <ellipse cx="38" cy="30" rx="6.5" ry="7.5" fill="white" stroke="#4a4a4a" strokeWidth="1.5" />
+    {/* Pupils - round, looking slightly to the right */}
+    <circle cx="24" cy="31.5" r="3" fill="#1a1a2e" />
+    <circle cx="40" cy="31.5" r="3" fill="#1a1a2e" />
+    {/* Pupil inner highlight */}
+    <circle cx="23" cy="30" r="1" fill="#3a3a5e" />
+    <circle cx="39" cy="30" r="1" fill="#3a3a5e" />
+    {/* Eye shine - bright white reflection dots */}
+    <circle cx="21" cy="27.5" r="2" fill="white" />
+    <circle cx="37" cy="27.5" r="2" fill="white" />
+    <circle cx="24.5" cy="29" r="0.8" fill="white" opacity="0.6" />
+    <circle cx="40.5" cy="29" r="0.8" fill="white" opacity="0.6" />
 
-    {/* Eyebrows - expressive, slightly raised */}
-    <path d="M10 13.5 Q15 11 19 13" fill="none" stroke="#606060" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M23 13 Q27 11 32 13.5" fill="none" stroke="#606060" strokeWidth="1.5" strokeLinecap="round" />
+    {/* Eyebrows - thin, slightly raised, expressive */}
+    <path d="M15 20 Q22 16 28 19.5" fill="none" stroke="#5a5a5a" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M32 19.5 Q38 16 45 20" fill="none" stroke="#5a5a5a" strokeWidth="1.8" strokeLinecap="round" />
 
-    {/* Mouth - friendly smile */}
-    <path d="M16 28 Q21 33 26 28" fill="none" stroke="#505050" strokeWidth="1.5" strokeLinecap="round" />
+    {/* Mouth - friendly open smile */}
+    <path d="M24 42 Q30 48 36 42" fill="none" stroke="#4a4a4a" strokeWidth="1.8" strokeLinecap="round" />
 
-    {/* Nose hint */}
-    <ellipse cx="21" cy="25" rx="1" ry="0.8" fill="#b0b0b0" />
-
-    {/* Feet - the classic little shoes */}
-    <ellipse cx="14" cy="52" rx="5" ry="3.5" fill="#c0c0c0" stroke="#808080" strokeWidth="1.2" />
-    <ellipse cx="28" cy="52" rx="5" ry="3.5" fill="#c0c0c0" stroke="#808080" strokeWidth="1.2" />
-    {/* Shoe shine */}
-    <ellipse cx="13" cy="51" rx="2" ry="1" fill="#e0e0e0" opacity="0.5" />
-    <ellipse cx="27" cy="51" rx="2" ry="1" fill="#e0e0e0" opacity="0.5" />
+    {/* Feet / base */}
+    <ellipse cx="20" cy="83" rx="6" ry="3.5" fill="#c0c0c0" stroke="#888" strokeWidth="1" />
+    <ellipse cx="34" cy="83" rx="6" ry="3.5" fill="#c0c0c0" stroke="#888" strokeWidth="1" />
+    <ellipse cx="19" cy="82" rx="2.5" ry="1.2" fill="#e0e0e0" opacity="0.5" />
+    <ellipse cx="33" cy="82" rx="2.5" ry="1.2" fill="#e0e0e0" opacity="0.5" />
   </svg>
 );
 
