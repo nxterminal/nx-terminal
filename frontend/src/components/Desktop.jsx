@@ -133,6 +133,7 @@ export default function Desktop() {
         {DESKTOP_ICONS.map(item => (
           <DesktopIcon
             key={item.id}
+            id={item.id}
             icon={item.icon}
             label={item.label}
             onDoubleClick={() => openWindowWithBSOD(item.id)}
