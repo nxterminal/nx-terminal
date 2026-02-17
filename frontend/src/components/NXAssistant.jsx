@@ -6,6 +6,8 @@ window.jQuery = $;
 
 const AGENTS = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
 
+const WELCOME_MSG = 'Welcome to NX Terminal! I see you haven\'t connected your wallet yet. Open Mint/Hire Devs and click "Connect Wallet to Mint" to get started!';
+
 const MESSAGES = [
   "It looks like you're trying to win the Protocol Wars. Would you like help?",
   'Your developer has been staring at their screen for 3 hours. This is normal.',
@@ -39,12 +41,19 @@ const MESSAGES = [
   'A whale just dumped. Your developers are now worth negative vibes.',
   'Remember when Bitcoin was $100? Neither do your developers. They were not yet minted.',
   'The real utility of your NFT is the gas fees you spent along the way.',
-  'Breaking: Congress still doesn not understand crypto. Markets unchanged.',
+  'Breaking: Congress still does not understand crypto. Markets unchanged.',
 ];
+
+function isWalletConnected() {
+  try {
+    return window.ethereum && window.ethereum.selectedAddress;
+  } catch {
+    return false;
+  }
+}
 
 export default function NXAssistant() {
   const agentRef = useRef(null);
-  const containerRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const messageIndexRef = useRef(0);
 
@@ -53,49 +62,45 @@ export default function NXAssistant() {
   }, []);
 
   const loadAgent = useCallback((agentName) => {
-    // Clean up existing agent
     if (agentRef.current) {
       try { agentRef.current.hide(true, () => {}); } catch {}
       agentRef.current = null;
     }
-    // Remove any existing clippy elements
     $('.clippy, .clippy-balloon').remove();
-
     setLoaded(false);
 
     clippy.load(agentName, (agent) => {
       agentRef.current = agent;
       setLoaded(true);
 
-      // Position in bottom-right area
       agent.moveTo(window.innerWidth - 200, window.innerHeight - 180);
       agent.show();
       agent.play('Greeting');
 
-      // First message after a short delay
+      // Immediate first message — welcome if no wallet connected
       setTimeout(() => {
-        const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-        agent.speak(msg);
+        if (!isWalletConnected()) {
+          agent.speak(WELCOME_MSG);
+        } else {
+          agent.speak(MESSAGES[Math.floor(Math.random() * MESSAGES.length)]);
+        }
         agent.animate();
-      }, 3000);
+      }, 1500);
     }, () => {
-      // Error loading - fallback to Clippy
       if (agentName !== 'Clippy') {
         loadAgent('Clippy');
       }
     });
   }, []);
 
+  // Load immediately (no delay)
   useEffect(() => {
     const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
     if (!enabled) return;
 
-    const timer = setTimeout(() => {
-      loadAgent(getAgentName());
-    }, 5000);
+    loadAgent(getAgentName());
 
     return () => {
-      clearTimeout(timer);
       if (agentRef.current) {
         try { agentRef.current.hide(true, () => {}); } catch {}
         agentRef.current = null;
@@ -137,7 +142,6 @@ export default function NXAssistant() {
       }
 
       const newAgent = getAgentName();
-      // Reload if agent changed
       loadAgent(newAgent);
     };
 
@@ -145,5 +149,5 @@ export default function NXAssistant() {
     return () => window.removeEventListener('nx-assistant-changed', handleSettingsChanged);
   }, [loadAgent, getAgentName]);
 
-  return null; // clippyjs manages its own DOM
+  return null;
 }
