@@ -2,7 +2,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import $ from 'jquery';
 import clippy from 'clippyjs';
 
+// Must set jQuery globally BEFORE clippy uses it
 window.jQuery = $;
+window.$ = $;
+
+// Override the broken default CDN (gitcdn.xyz) with unpkg
+const CLIPPY_CDN = 'https://unpkg.com/clippyjs@0.0.3/assets/agents/';
+window.CLIPPY_CDN = CLIPPY_CDN;
+
+// Ensure window.clippy is set — JSONP agent scripts call window.clippy.ready()
+window.clippy = clippy;
 
 const AGENTS = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
 
@@ -56,12 +65,14 @@ export default function NXAssistant() {
   const agentRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const messageIndexRef = useRef(0);
+  const loadAttemptRef = useRef(0);
 
   const getAgentName = useCallback(() => {
     return localStorage.getItem('nx-assistant-agent') || 'Clippy';
   }, []);
 
   const loadAgent = useCallback((agentName) => {
+    // Clean up previous agent
     if (agentRef.current) {
       try { agentRef.current.hide(true, () => {}); } catch {}
       agentRef.current = null;
@@ -69,31 +80,40 @@ export default function NXAssistant() {
     $('.clippy, .clippy-balloon').remove();
     setLoaded(false);
 
+    loadAttemptRef.current++;
+    const thisAttempt = loadAttemptRef.current;
+
     clippy.load(agentName, (agent) => {
+      // Ignore if a newer load was triggered
+      if (thisAttempt !== loadAttemptRef.current) return;
+
       agentRef.current = agent;
       setLoaded(true);
 
       agent.moveTo(window.innerWidth - 200, window.innerHeight - 180);
       agent.show();
-      agent.play('Greeting');
 
-      // Immediate first message — welcome if no wallet connected
+      try { agent.play('Greeting'); } catch {}
+
+      // First message after greeting animation
       setTimeout(() => {
+        if (thisAttempt !== loadAttemptRef.current) return;
         if (!isWalletConnected()) {
           agent.speak(WELCOME_MSG);
         } else {
           agent.speak(MESSAGES[Math.floor(Math.random() * MESSAGES.length)]);
         }
-        agent.animate();
+        try { agent.animate(); } catch {}
       }, 1500);
     }, () => {
-      if (agentName !== 'Clippy') {
+      // Fallback to Clippy if specific agent fails
+      if (agentName !== 'Clippy' && thisAttempt === loadAttemptRef.current) {
         loadAgent('Clippy');
       }
-    });
+    }, CLIPPY_CDN);
   }, []);
 
-  // Load immediately (no delay)
+  // Load immediately
   useEffect(() => {
     const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
     if (!enabled) return;
@@ -121,7 +141,7 @@ export default function NXAssistant() {
       messageIndexRef.current++;
 
       agentRef.current.speak(msg);
-      agentRef.current.animate();
+      try { agentRef.current.animate(); } catch {}
     }, 60000 + Math.random() * 60000);
 
     return () => clearInterval(interval);

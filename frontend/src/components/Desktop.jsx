@@ -87,14 +87,26 @@ export default function Desktop() {
     return () => window.removeEventListener('nx-settings-changed', refreshSettings);
   }, [refreshSettings]);
 
-  // Screensaver: 60s inactivity
+  // Screensaver timeout from settings
+  const [ssTimeout, setSsTimeout] = useState(() => {
+    return parseInt(localStorage.getItem('nx-screensaver-timeout')) || 60000;
+  });
+
+  useEffect(() => {
+    const handleChange = () => {
+      setSsTimeout(parseInt(localStorage.getItem('nx-screensaver-timeout')) || 60000);
+    };
+    window.addEventListener('nx-screensaver-changed', handleChange);
+    return () => window.removeEventListener('nx-screensaver-changed', handleChange);
+  }, []);
+
   const resetIdleTimer = useCallback(() => {
     if (showScreensaver) return;
     clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       setShowScreensaver(true);
-    }, 60000);
-  }, [showScreensaver]);
+    }, ssTimeout);
+  }, [showScreensaver, ssTimeout]);
 
   useEffect(() => {
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
