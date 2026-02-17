@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 const MINT_COST = '0.05 ETH';
+
+const WALLETS = [
+  { id: 'metamask', name: 'MetaMask', icon: '🦊', detect: () => !!window.ethereum?.isMetaMask },
+  { id: 'coinbase', name: 'Coinbase Wallet', icon: '🔵', detect: () => !!window.ethereum?.isCoinbaseWallet },
+  { id: 'walletconnect', name: 'WalletConnect', icon: '🔗', detect: () => false },
+  { id: 'injected', name: 'Browser Wallet', icon: '🌐', detect: () => !!window.ethereum },
+];
 
 const QUESTIONS = [
   {
@@ -26,20 +33,53 @@ const QUESTIONS = [
 ];
 
 export default function HireDevs({ onMint }) {
-  const [step, setStep] = useState(0); // 0 = question 1, 1 = question 2, 2 = confirm
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [walletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState(null);
   const [walletError, setWalletError] = useState(null);
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const connectWallet = useCallback(async (walletId) => {
+    setConnecting(true);
+    setWalletError(null);
+    setShowWalletPicker(false);
+
+    try {
+      if (walletId === 'walletconnect') {
+        setWalletError('WalletConnect integration coming soon. Please use MetaMask or another browser wallet.');
+        setConnecting(false);
+        return;
+      }
+
+      if (!window.ethereum) {
+        setWalletError('No wallet extension detected. Please install MetaMask or a compatible Web3 wallet.');
+        setConnecting(false);
+        return;
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+        setWalletError(null);
+      }
+    } catch (err) {
+      if (err.code === 4001) {
+        setWalletError('Connection rejected. You must approve the wallet connection to mint.');
+      } else {
+        setWalletError(`Failed to connect: ${err.message || 'Unknown error'}`);
+      }
+    }
+    setConnecting(false);
+  }, []);
 
   const handleAnswer = (questionId, optionId) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionId }));
   };
 
   const handleNext = () => {
-    if (step < QUESTIONS.length) {
-      setStep(step + 1);
-    }
+    if (step < QUESTIONS.length) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -47,14 +87,16 @@ export default function HireDevs({ onMint }) {
   };
 
   const handleMint = () => {
-    if (!walletConnected) {
-      setWalletError('No wallet detected. Please connect your wallet from the taskbar before minting developers.');
-      if (onMint) onMint('no-wallet');
+    if (!walletAddress) {
+      setShowWalletPicker(true);
       return;
     }
-    setWalletError(null);
-    if (onMint) onMint(answers, quantity);
+    if (onMint) onMint(answers, quantity, walletAddress);
   };
+
+  const truncAddr = walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : null;
 
   const currentQuestion = QUESTIONS[step];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : null;
@@ -68,8 +110,14 @@ export default function HireDevs({ onMint }) {
         fontFamily: "'VT323', monospace",
         fontSize: '14px',
         borderBottom: '1px solid var(--border-dark)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        {'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy
+        <span>{'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy</span>
+        {walletAddress && (
+          <span style={{ fontSize: '12px', color: 'var(--terminal-green)' }}>
+            {truncAddr}
+          </span>
+        )}
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
@@ -125,34 +173,22 @@ export default function HireDevs({ onMint }) {
                   key={opt.id}
                   className={currentAnswer === opt.id ? 'win-panel' : 'win-raised'}
                   style={{
-                    padding: '10px',
-                    cursor: 'pointer',
+                    padding: '10px', cursor: 'pointer',
                     border: currentAnswer === opt.id ? '2px solid var(--terminal-green)' : '2px solid transparent',
                   }}
                   onClick={() => handleAnswer(currentQuestion.id, opt.id)}
                 >
-                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>
-                    {opt.label}
-                  </div>
-                  <div style={{ fontSize: '10px', color: '#444', lineHeight: 1.3 }}>
-                    {opt.desc}
-                  </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>{opt.label}</div>
+                  <div style={{ fontSize: '10px', color: '#444', lineHeight: 1.3 }}>{opt.desc}</div>
                 </div>
               ))}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'flex-end' }}>
               {step > 0 && (
-                <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>
-                  {'< Back'}
-                </button>
+                <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>{'< Back'}</button>
               )}
-              <button
-                className="win-btn"
-                onClick={handleNext}
-                disabled={!currentAnswer}
-                style={{ padding: '4px 16px', fontWeight: 'bold' }}
-              >
+              <button className="win-btn" onClick={handleNext} disabled={!currentAnswer} style={{ padding: '4px 16px', fontWeight: 'bold' }}>
                 {'Next >'}
               </button>
             </div>
@@ -195,50 +231,116 @@ export default function HireDevs({ onMint }) {
                 <button
                   className="win-btn"
                   onClick={handleMint}
+                  disabled={connecting}
                   style={{ padding: '4px 16px', fontWeight: 'bold' }}
                 >
-                  {walletConnected ? 'MINT DEVELOPERS' : 'Connect Wallet to Mint'}
+                  {connecting ? 'Connecting...' : walletAddress ? 'MINT DEVELOPERS' : 'Connect Wallet to Mint'}
                 </button>
               </div>
+
+              {walletAddress && (
+                <div style={{ fontSize: '10px', color: 'var(--terminal-green)', marginTop: '6px' }}>
+                  Connected: {truncAddr}
+                </div>
+              )}
             </div>
 
             {walletError && (
               <div className="win-raised" style={{
-                marginTop: '12px',
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
+                marginTop: '12px', padding: '10px 12px',
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
                 border: '2px solid var(--terminal-red)',
               }}>
                 <span style={{ fontSize: '20px', flexShrink: 0 }}>{'\u26A0\uFE0F'}</span>
                 <div>
                   <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', color: 'var(--terminal-red)' }}>
-                    Wallet Connection Required
+                    Wallet Connection Error
                   </div>
                   <div style={{ fontSize: '10px', marginBottom: '8px' }}>{walletError}</div>
-                  <button className="win-btn" onClick={() => setWalletError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>
-                    OK
-                  </button>
+                  <button className="win-btn" onClick={() => setWalletError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
                 </div>
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>
-                {'< Back'}
-              </button>
+              <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>{'< Back'}</button>
             </div>
           </div>
         )}
       </div>
 
+      {/* Wallet Picker Dialog */}
+      {showWalletPicker && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div className="win-raised" style={{
+            width: '320px', background: 'var(--win-bg, #c0c0c0)',
+          }}>
+            <div style={{
+              background: 'linear-gradient(90deg, #0a246a, #3a6ea5)',
+              color: '#fff', padding: '3px 6px', fontSize: '11px', fontWeight: 'bold',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span>Connect Wallet</span>
+              <button
+                onClick={() => setShowWalletPicker(false)}
+                style={{
+                  background: 'var(--win-bg, #c0c0c0)', border: '1px outset #ddd',
+                  width: '16px', height: '14px', fontSize: '9px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1, padding: 0,
+                }}
+              >
+                X
+              </button>
+            </div>
+            <div style={{ padding: '12px' }}>
+              <div style={{ fontSize: '11px', marginBottom: '10px' }}>
+                Select a wallet to connect:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {WALLETS.map(w => {
+                  const available = w.detect();
+                  return (
+                    <button
+                      key={w.id}
+                      className="win-btn"
+                      onClick={() => connectWallet(w.id)}
+                      disabled={connecting}
+                      style={{
+                        padding: '8px 12px', textAlign: 'left',
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        opacity: (w.id === 'walletconnect' || available || w.id === 'injected') ? 1 : 0.5,
+                      }}
+                    >
+                      <span style={{ fontSize: '18px' }}>{w.icon}</span>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{w.name}</div>
+                        <div style={{ fontSize: '9px', color: '#666' }}>
+                          {w.id === 'walletconnect' ? 'Scan QR code' : available ? 'Detected' : 'Not detected'}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ textAlign: 'right', marginTop: '10px' }}>
+                <button className="win-btn" onClick={() => setShowWalletPicker(false)} style={{ padding: '3px 20px', fontSize: '11px' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{
-        padding: '4px 8px',
-        borderTop: '1px solid var(--border-dark)',
-        fontSize: '10px',
-        color: '#666',
-        textAlign: 'center',
+        padding: '4px 8px', borderTop: '1px solid var(--border-dark)',
+        fontSize: '10px', color: '#666', textAlign: 'center',
       }}>
         Each developer is a unique AI agent with randomized traits and abilities. Corporation assigned via metadata. No refunds.
       </div>

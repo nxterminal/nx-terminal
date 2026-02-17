@@ -10,11 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.62.0",
+    "clippyjs": "^0.0.3",
+    "jquery": "^4.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "viem": "^2.21.0",
-    "wagmi": "^2.14.0"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

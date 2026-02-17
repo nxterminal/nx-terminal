@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import MatrixRain from './MatrixRain';
 
 function Starfield({ width, height }) {
   const canvasRef = useRef(null);
@@ -77,7 +78,6 @@ function Pipes({ width, height }) {
         ctx.lineTo(x, y);
         ctx.stroke();
 
-        // Draw joint
         ctx.fillStyle = colors[colorIdx % colors.length];
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
@@ -130,6 +130,8 @@ export default function Screensaver({ onDismiss }) {
     }}>
       {type === 'starfield' ? (
         <Starfield width={window.innerWidth} height={window.innerHeight} />
+      ) : type === 'matrix' ? (
+        <MatrixRain width={window.innerWidth} height={window.innerHeight} fontSize={16} speed={1.2} />
       ) : (
         <Pipes width={window.innerWidth} height={window.innerHeight} />
       )}
