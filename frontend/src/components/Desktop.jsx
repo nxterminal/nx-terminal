@@ -90,7 +90,6 @@ export default function Desktop() {
   }, []);
 
   useEffect(() => {
-    openWindow('live-feed');
     // Apply theme on mount
     const theme = localStorage.getItem('nx-theme') || 'classic';
     document.documentElement.setAttribute('data-theme', theme);
