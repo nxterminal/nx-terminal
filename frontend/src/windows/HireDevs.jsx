@@ -1,28 +1,60 @@
 import { useState } from 'react';
 
-const CORPORATIONS = [
-  { id: 'closed-ai', name: 'Closed AI', color: '#ff4444', desc: 'Promised to be open. Lied. Now charges $200/month for access to their own promises.', stats: 'High code output, low ethics' },
-  { id: 'misanthropic', name: 'Misanthropic', color: '#ff44ff', desc: 'Built safety-first AI. The AI is safe. The employees are not.', stats: 'High safety scores, high turnover' },
-  { id: 'shallow-mind', name: 'Shallow Mind', color: '#4488ff', desc: 'Infinite compute. Zero shipping. Their best product is their press release.', stats: 'High research, low shipping' },
-  { id: 'zuck-labs', name: 'Zuck Labs', color: '#00ffff', desc: 'Will pivot to whatever is trending. Currently pivoting to the concept of pivoting.', stats: 'High adaptability, low focus' },
-  { id: 'y-ai', name: 'Y.AI', color: '#ffd700', desc: 'Tweets before building. Ships after tweeting. Debugging? That is a tweet too.', stats: 'High visibility, low substance' },
-  { id: 'mistrial', name: 'Mistrial Systems', color: '#ffaa00', desc: 'Open source. When convenient. Their license agreement has a license agreement.', stats: 'High community, low clarity' },
-];
-
 const MINT_COST = '0.05 ETH';
 
+const QUESTIONS = [
+  {
+    id: 'specialty',
+    question: 'What should your developer specialize in?',
+    options: [
+      { id: 'code', label: 'Full-Stack Coding', desc: 'Pure code output. Ship fast, break things faster.' },
+      { id: 'security', label: 'Security & Hacking', desc: 'Offense is the best defense. Or so they claim.' },
+      { id: 'trading', label: 'DeFi & Trading', desc: 'Numbers go up. Sometimes down. Mostly down.' },
+      { id: 'research', label: 'AI Research', desc: 'Publish papers nobody reads. Get cited by everyone.' },
+    ],
+  },
+  {
+    id: 'strategy',
+    question: 'How should they approach the Protocol Wars?',
+    options: [
+      { id: 'aggressive', label: 'Aggressive', desc: 'Attack first, ask questions never.' },
+      { id: 'balanced', label: 'Balanced', desc: 'A little coding, a little sabotage. Work-life balance.' },
+      { id: 'stealth', label: 'Stealth', desc: 'Stay quiet. Accumulate. Strike when they least expect.' },
+      { id: 'chaotic', label: 'Chaotic', desc: 'No plan. No rules. Maximum entropy.' },
+    ],
+  },
+];
+
 export default function HireDevs({ onMint }) {
-  const [selected, setSelected] = useState(null);
+  const [step, setStep] = useState(0); // 0 = question 1, 1 = question 2, 2 = confirm
+  const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [walletConnected] = useState(false);
+
+  const handleAnswer = (questionId, optionId) => {
+    setAnswers(prev => ({ ...prev, [questionId]: optionId }));
+  };
+
+  const handleNext = () => {
+    if (step < QUESTIONS.length) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 0) setStep(step - 1);
+  };
 
   const handleMint = () => {
     if (!walletConnected) {
       if (onMint) onMint('no-wallet');
       return;
     }
-    if (onMint) onMint(selected, quantity);
+    if (onMint) onMint(answers, quantity);
   };
+
+  const currentQuestion = QUESTIONS[step];
+  const currentAnswer = currentQuestion ? answers[currentQuestion.id] : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -34,63 +66,146 @@ export default function HireDevs({ onMint }) {
         fontSize: '14px',
         borderBottom: '1px solid var(--border-dark)',
       }}>
-        {'>'} DEVELOPER RECRUITMENT TERMINAL — Select Corporation & Deploy
+        {'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-          {CORPORATIONS.map(corp => (
-            <div
-              key={corp.id}
-              className={selected === corp.id ? 'win-panel' : 'win-raised'}
-              style={{
-                padding: '8px',
-                cursor: 'pointer',
-                border: selected === corp.id ? `2px solid ${corp.color}` : '2px solid transparent',
-              }}
-              onClick={() => setSelected(corp.id)}
-            >
-              <div style={{ fontWeight: 'bold', color: corp.color, fontSize: '12px', marginBottom: '4px' }}>
-                {corp.name}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+        {/* Progress indicator */}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', alignItems: 'center' }}>
+          {QUESTIONS.map((q, i) => (
+            <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '0',
+                background: step > i ? 'var(--terminal-green)' : step === i ? 'var(--terminal-amber)' : 'var(--border-dark)',
+                color: step >= i ? '#000' : '#666',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '10px', fontWeight: 'bold',
+                border: '1px solid var(--border-darker)',
+              }}>
+                {step > i ? '\u2713' : i + 1}
               </div>
-              <div style={{ fontSize: '10px', color: '#444', marginBottom: '4px', lineHeight: 1.3 }}>
-                {corp.desc}
-              </div>
-              <div style={{ fontSize: '9px', color: '#666', fontStyle: 'italic' }}>
-                {corp.stats}
-              </div>
+              {i < QUESTIONS.length - 1 && (
+                <div style={{ width: '24px', height: '2px', background: step > i ? 'var(--terminal-green)' : 'var(--border-dark)' }} />
+              )}
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '24px', height: '2px', background: step >= QUESTIONS.length ? 'var(--terminal-green)' : 'var(--border-dark)' }} />
+            <div style={{
+              width: '20px', height: '20px',
+              background: step >= QUESTIONS.length ? 'var(--gold)' : 'var(--border-dark)',
+              color: step >= QUESTIONS.length ? '#000' : '#666',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', fontWeight: 'bold',
+              border: '1px solid var(--border-darker)',
+            }}>
+              {'\u{1F4BC}'}
+            </div>
+          </div>
+          <span style={{ fontSize: '10px', color: '#666', marginLeft: '8px' }}>
+            {step < QUESTIONS.length ? `Step ${step + 1} of ${QUESTIONS.length}` : 'Ready to Mint'}
+          </span>
         </div>
 
-        <div className="win-panel" style={{ marginTop: '12px', padding: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Quantity:</span>
-            <button className="win-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ padding: '2px 8px' }}>-</button>
-            <span style={{ fontFamily: "'VT323', monospace", fontSize: '18px', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
-            <button className="win-btn" onClick={() => setQuantity(q => Math.min(10, q + 1))} style={{ padding: '2px 8px' }}>+</button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ fontSize: '11px' }}>
-              Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>{MINT_COST} x {quantity} = {(0.05 * quantity).toFixed(2)} ETH</span>
+        {/* Question phase */}
+        {step < QUESTIONS.length && (
+          <div>
+            <div style={{
+              fontWeight: 'bold', fontSize: '13px', marginBottom: '12px',
+              color: 'var(--win-title-l)', padding: '4px 0',
+            }}>
+              {currentQuestion.question}
             </div>
-            <button
-              className="win-btn"
-              onClick={handleMint}
-              disabled={!selected}
-              style={{ padding: '4px 16px', fontWeight: 'bold' }}
-            >
-              {walletConnected ? 'DEPLOY DEVELOPERS' : 'Connect Wallet to Mint'}
-            </button>
-          </div>
-
-          {!selected && (
-            <div style={{ fontSize: '10px', color: '#999', marginTop: '6px' }}>
-              Select a corporation above to proceed with recruitment.
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              {currentQuestion.options.map(opt => (
+                <div
+                  key={opt.id}
+                  className={currentAnswer === opt.id ? 'win-panel' : 'win-raised'}
+                  style={{
+                    padding: '10px',
+                    cursor: 'pointer',
+                    border: currentAnswer === opt.id ? '2px solid var(--terminal-green)' : '2px solid transparent',
+                  }}
+                  onClick={() => handleAnswer(currentQuestion.id, opt.id)}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#444', lineHeight: 1.3 }}>
+                    {opt.desc}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'flex-end' }}>
+              {step > 0 && (
+                <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>
+                  {'< Back'}
+                </button>
+              )}
+              <button
+                className="win-btn"
+                onClick={handleNext}
+                disabled={!currentAnswer}
+                style={{ padding: '4px 16px', fontWeight: 'bold' }}
+              >
+                {'Next >'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Mint confirmation phase */}
+        {step >= QUESTIONS.length && (
+          <div>
+            <div className="win-panel" style={{ padding: '12px', marginBottom: '12px' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '8px', color: 'var(--win-title-l)' }}>
+                Developer Configuration Summary
+              </div>
+              {QUESTIONS.map(q => {
+                const selected = q.options.find(o => o.id === answers[q.id]);
+                return (
+                  <div key={q.id} style={{ fontSize: '11px', marginBottom: '4px' }}>
+                    <span style={{ color: '#666' }}>{q.question}</span>{' '}
+                    <span style={{ fontWeight: 'bold' }}>{selected?.label || '—'}</span>
+                  </div>
+                );
+              })}
+              <div style={{ fontSize: '10px', color: '#999', marginTop: '8px', fontStyle: 'italic' }}>
+                Corporation will be assigned from NFT metadata upon minting.
+              </div>
+            </div>
+
+            <div className="win-panel" style={{ padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Quantity:</span>
+                <button className="win-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ padding: '2px 8px' }}>-</button>
+                <span style={{ fontFamily: "'VT323', monospace", fontSize: '18px', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
+                <button className="win-btn" onClick={() => setQuantity(q => Math.min(10, q + 1))} style={{ padding: '2px 8px' }}>+</button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '11px' }}>
+                  Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>{MINT_COST} x {quantity} = {(0.05 * quantity).toFixed(2)} ETH</span>
+                </div>
+                <button
+                  className="win-btn"
+                  onClick={handleMint}
+                  style={{ padding: '4px 16px', fontWeight: 'bold' }}
+                >
+                  {walletConnected ? 'MINT DEVELOPERS' : 'Connect Wallet to Mint'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>
+                {'< Back'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{
@@ -100,7 +215,7 @@ export default function HireDevs({ onMint }) {
         color: '#666',
         textAlign: 'center',
       }}>
-        Each developer is a unique AI agent with randomized traits, archetype, and loyalty. No refunds. No guarantees. No mercy.
+        Each developer is a unique AI agent with randomized traits and abilities. Corporation assigned via metadata. No refunds.
       </div>
     </div>
   );

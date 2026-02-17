@@ -8,6 +8,12 @@ const WALLPAPERS = [
   { id: 'terminal', name: 'Terminal', style: { background: '#000000' }, hasAnimation: 'scanlines' },
 ];
 
+const THEMES = [
+  { id: 'classic', name: 'Classic', desc: 'The original Windows 98 look', preview: { bg: '#c0c0c0', titlebar: '#000080', text: '#000' } },
+  { id: 'dark', name: 'Dark Mode', desc: 'Easy on the eyes. Hard on the soul.', preview: { bg: '#2d2d3f', titlebar: '#4a148c', text: '#e0e0e0' } },
+  { id: 'high-contrast', name: 'High Contrast', desc: 'Maximum visibility. Maximum intensity.', preview: { bg: '#000000', titlebar: '#ffff00', text: '#ffffff' } },
+];
+
 const SCREENSAVERS = [
   { id: '3d-pipes', name: '3D Pipes' },
   { id: 'starfield', name: 'Starfield' },
@@ -108,12 +114,37 @@ function PipesPreview({ width, height }) {
   return <canvas ref={canvasRef} width={width} height={height} style={{ display: 'block' }} />;
 }
 
+// Compress image to reduce localStorage size
+function compressImage(dataUrl, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function ControlPanel() {
   const [tab, setTab] = useState('wallpaper');
   const [wallpaper, setWallpaper] = useState(() => localStorage.getItem('nx-wallpaper') || 'teal');
   const [customWallpaper, setCustomWallpaper] = useState(() => localStorage.getItem('nx-custom-wallpaper') || '');
   const [screensaver, setScreensaver] = useState(() => localStorage.getItem('nx-screensaver') || '3d-pipes');
   const [assistantEnabled, setAssistantEnabled] = useState(() => localStorage.getItem('nx-assistant-enabled') !== 'false');
+  const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
 
   // Fake settings state (humor)
   const [morale, setMorale] = useState(23);
@@ -133,19 +164,35 @@ export default function ControlPanel() {
     saveAndNotify();
   };
 
-  const handleCustomWallpaper = (e) => {
+  const handleCustomWallpaper = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.match(/^image\/(jpeg|png|gif)$/)) return;
+    if (!file.type.match(/^image\/(jpeg|png|gif|webp)$/)) return;
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const base64 = ev.target.result;
-      setCustomWallpaper(base64);
-      setWallpaper('custom');
-      localStorage.setItem('nx-wallpaper', 'custom');
-      localStorage.setItem('nx-custom-wallpaper', base64);
-      saveAndNotify();
+    reader.onload = async (ev) => {
+      const raw = ev.target.result;
+      // Compress to fit localStorage (~5MB limit)
+      const compressed = await compressImage(raw, 1920, 0.7);
+      try {
+        localStorage.setItem('nx-custom-wallpaper', compressed);
+        setCustomWallpaper(compressed);
+        setWallpaper('custom');
+        localStorage.setItem('nx-wallpaper', 'custom');
+        saveAndNotify();
+      } catch (err) {
+        // If still too large, compress more aggressively
+        try {
+          const smallerCompressed = await compressImage(raw, 1280, 0.5);
+          localStorage.setItem('nx-custom-wallpaper', smallerCompressed);
+          setCustomWallpaper(smallerCompressed);
+          setWallpaper('custom');
+          localStorage.setItem('nx-wallpaper', 'custom');
+          saveAndNotify();
+        } catch {
+          alert('Image too large. Please try a smaller image.');
+        }
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -170,10 +217,18 @@ export default function ControlPanel() {
     saveAndNotify();
   };
 
+  const handleThemeChange = (id) => {
+    setTheme(id);
+    localStorage.setItem('nx-theme', id);
+    document.documentElement.setAttribute('data-theme', id);
+    saveAndNotify();
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="win-tabs">
         <button className={`win-tab${tab === 'wallpaper' ? ' active' : ''}`} onClick={() => setTab('wallpaper')}>Wallpaper</button>
+        <button className={`win-tab${tab === 'theme' ? ' active' : ''}`} onClick={() => setTab('theme')}>Theme</button>
         <button className={`win-tab${tab === 'screensaver' ? ' active' : ''}`} onClick={() => setTab('screensaver')}>Screensaver</button>
         <button className={`win-tab${tab === 'assistant' ? ' active' : ''}`} onClick={() => setTab('assistant')}>NX Assistant</button>
         <button className={`win-tab${tab === 'corporate' ? ' active' : ''}`} onClick={() => setTab('corporate')}>Corporate</button>
@@ -223,7 +278,7 @@ export default function ControlPanel() {
             <input
               type="file"
               id="wp-upload"
-              accept=".jpg,.jpeg,.png,.gif"
+              accept=".jpg,.jpeg,.png,.gif,.webp"
               style={{ display: 'none' }}
               onChange={handleCustomWallpaper}
             />
@@ -232,6 +287,73 @@ export default function ControlPanel() {
                 Remove custom wallpaper
               </button>
             )}
+          </div>
+        )}
+
+        {tab === 'theme' && (
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Theme:</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {THEMES.map(t => (
+                <div
+                  key={t.id}
+                  className={theme === t.id ? 'win-panel' : 'win-raised'}
+                  style={{
+                    padding: '10px',
+                    cursor: 'pointer',
+                    border: theme === t.id ? '2px solid var(--terminal-green)' : '2px solid transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                  onClick={() => handleThemeChange(t.id)}
+                >
+                  {/* Mini preview */}
+                  <div style={{
+                    width: '80px', height: '50px',
+                    background: t.preview.bg,
+                    border: '1px solid var(--border-dark)',
+                    position: 'relative',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                  }}>
+                    {/* Mini titlebar */}
+                    <div style={{
+                      height: '8px',
+                      background: t.preview.titlebar,
+                      margin: '6px 8px 0 8px',
+                    }} />
+                    {/* Mini window body */}
+                    <div style={{
+                      height: '18px',
+                      background: t.id === 'classic' ? '#c0c0c0' : t.id === 'dark' ? '#2d2d3f' : '#000',
+                      margin: '0 8px',
+                      border: `1px solid ${t.preview.text}33`,
+                    }} />
+                    {/* Mini taskbar */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '5px',
+                      background: t.id === 'classic' ? '#c0c0c0' : t.id === 'dark' ? '#2d2d3f' : '#000',
+                    }} />
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>
+                      {t.name}
+                      {theme === t.id && <span style={{ color: 'var(--terminal-green)', marginLeft: '8px', fontSize: '10px' }}>[ACTIVE]</span>}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted, #666)' }}>{t.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted, #999)', marginTop: '8px', fontStyle: 'italic' }}>
+              Theme changes are applied immediately and persist across sessions.
+            </div>
           </div>
         )}
 

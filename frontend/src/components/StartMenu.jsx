@@ -8,7 +8,7 @@ const PROGRAMS = [
   { id: 'ai-lab', icon: '\u{1F9E0}', label: 'AI Lab' },
   { id: 'my-devs', icon: '\u{1F4C1}', label: 'My Devs' },
   { id: 'inbox', icon: '\u{1F4E8}', label: 'Inbox' },
-  { id: 'hire-devs', icon: '\u{1F4BB}', label: 'Hire Devs' },
+  { id: 'hire-devs', icon: '\u{1F4BC}', label: 'Mint/Hire Devs' },
 ];
 
 const GAMES = [
