@@ -29,7 +29,7 @@ const TIMEOUT_OPTIONS = [
 ];
 
 const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
-const AGENT_CDN = 'https://raw.githubusercontent.com/pi0/clippyjs/master/assets/agents';
+const AGENT_CDN = 'https://cdn.jsdelivr.net/gh/pi0/clippyjs@master/assets/agents';
 
 // Frame sizes for each agent sprite sheet (width x height of a single frame)
 const AGENT_FRAME = {
