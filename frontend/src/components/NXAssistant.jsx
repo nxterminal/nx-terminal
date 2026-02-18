@@ -90,12 +90,34 @@ export default function NXAssistant() {
       if (clippy.load._maps) delete clippy.load._maps[agentPath];
     } catch {}
 
+    // Pre-resolve sounds deferred — clippyjs _loadScript has NO onerror handler,
+    // so if sounds-mp3.js fails to load/parse, the deferred hangs forever and
+    // $.when(map, agent, sounds) NEVER completes (neither success nor fail fires).
+    // This bypasses sounds loading entirely, preventing silent infinite hangs.
+    try {
+      clippy.load._sounds[agentName] = $.Deferred().resolve({});
+    } catch {}
+
     loadAttemptRef.current++;
     const thisAttempt = loadAttemptRef.current;
 
+    let loadCompleted = false;
+
+    // Safety timeout — if clippyjs hangs (e.g. agent.js script fails with no
+    // onerror handler), force fallback instead of silently failing forever
+    const loadTimeout = setTimeout(() => {
+      if (loadCompleted || thisAttempt !== loadAttemptRef.current) return;
+      loadCompleted = true;
+      if (agentName !== 'Clippy') {
+        loadAgent('Clippy');
+      }
+    }, 8000);
+
     clippy.load(agentName, (agent) => {
+      clearTimeout(loadTimeout);
       // Ignore if a newer load was triggered
-      if (thisAttempt !== loadAttemptRef.current) return;
+      if (loadCompleted || thisAttempt !== loadAttemptRef.current) return;
+      loadCompleted = true;
 
       agentRef.current = agent;
       setLoaded(true);
@@ -116,8 +138,10 @@ export default function NXAssistant() {
         try { agent.animate(); } catch {}
       }, 1500);
     }, () => {
+      clearTimeout(loadTimeout);
       // Fallback to Clippy if specific agent fails
-      if (agentName !== 'Clippy' && thisAttempt === loadAttemptRef.current) {
+      if (!loadCompleted && agentName !== 'Clippy' && thisAttempt === loadAttemptRef.current) {
+        loadCompleted = true;
         loadAgent('Clippy');
       }
     }, CLIPPY_CDN);
