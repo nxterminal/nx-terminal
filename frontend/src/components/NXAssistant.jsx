@@ -81,6 +81,15 @@ export default function NXAssistant() {
     $('.clippy, .clippy-balloon').remove();
     setLoaded(false);
 
+    // Clear clippyjs internal caches for this agent to avoid stale deferreds
+    // (e.g. if a previous load failed with a different CDN, the pending deferred stays stuck forever)
+    const agentPath = CLIPPY_CDN + agentName;
+    try {
+      if (clippy.load._data) delete clippy.load._data[agentName];
+      if (clippy.load._sounds) delete clippy.load._sounds[agentName];
+      if (clippy.load._maps) delete clippy.load._maps[agentPath];
+    } catch {}
+
     loadAttemptRef.current++;
     const thisAttempt = loadAttemptRef.current;
 
