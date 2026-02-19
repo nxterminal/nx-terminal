@@ -564,7 +564,12 @@ def run_scheduler_tick(conn) -> int:
 # ============================================================
 
 def pay_salaries(conn):
-    """Pay salary to all active devs. Run every 4 hours."""
+    """Pay salary to all active devs. Run every 12 hours.
+
+    balance_nxt in DB tracks the player-visible amount (100 per interval).
+    The on-chain sync uses CLAIMABLE_PER_INTERVAL_WEI (111.11... NXT in wei)
+    so that after the 10% contract fee, the player nets exactly 100 NXT.
+    """
     cur = get_cursor(conn)
     cur.execute("""
         UPDATE devs SET
@@ -584,6 +589,31 @@ def pay_salaries(conn):
     count = cur.rowcount
     conn.commit()
     log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen")
+    return count
+
+
+def take_balance_snapshots(conn):
+    """Save daily balance snapshot for each player with devs. Run once per day."""
+    cur = get_cursor(conn)
+    cur.execute("""
+        INSERT INTO balance_snapshots (wallet_address, balance_claimable, balance_claimed, balance_total_earned, snapshot_date)
+        SELECT
+            p.wallet_address,
+            COALESCE(SUM(d.balance_nxt), 0),
+            p.balance_claimed,
+            p.balance_total_earned,
+            CURRENT_DATE
+        FROM players p
+        LEFT JOIN devs d ON d.owner_address = p.wallet_address
+        GROUP BY p.wallet_address, p.balance_claimed, p.balance_total_earned
+        ON CONFLICT (wallet_address, snapshot_date) DO UPDATE SET
+            balance_claimable = EXCLUDED.balance_claimable,
+            balance_claimed = EXCLUDED.balance_claimed,
+            balance_total_earned = EXCLUDED.balance_total_earned
+    """)
+    count = cur.rowcount
+    conn.commit()
+    log.info(f"📸 Saved balance snapshots for {count} players")
     return count
 
 
@@ -667,7 +697,9 @@ def run_engine():
 
     cycle = 0
     last_salary = datetime.now(timezone.utc)
+    last_snapshot = datetime.now(timezone.utc)
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
+    snapshot_interval = timedelta(hours=24)
 
     while True:
         try:
@@ -677,6 +709,11 @@ def run_engine():
                 if now - last_salary >= salary_interval:
                     pay_salaries(conn)
                     last_salary = now
+
+                # Daily balance snapshots
+                if now - last_snapshot >= snapshot_interval:
+                    take_balance_snapshots(conn)
+                    last_snapshot = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)

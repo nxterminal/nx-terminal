@@ -16,6 +16,7 @@ const DESKTOP_ICONS = [
   { id: 'protocol-market', icon: '$', label: 'Protocol Market' },
   { id: 'ai-lab', icon: '~', label: 'AI Lab' },
   { id: 'my-devs', icon: '=', label: 'My Devs' },
+  { id: 'nxt-wallet', icon: '$', label: 'NXT Wallet' },
   { id: 'inbox', icon: 'M', label: 'Inbox' },
   { id: 'hire-devs', icon: '+', label: 'Mint/Hire Devs' },
   { id: 'notepad', icon: 'N', label: 'Notepad' },

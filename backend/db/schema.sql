@@ -344,6 +344,23 @@ CREATE TABLE claim_history (
 CREATE INDEX idx_claims_player ON claim_history(player_address);
 
 -- ============================================================
+-- TABLA: balance_snapshots (daily wallet balance history)
+-- ============================================================
+
+CREATE TABLE balance_snapshots (
+    id                  SERIAL PRIMARY KEY,
+    wallet_address      VARCHAR(42) NOT NULL REFERENCES players(wallet_address),
+    balance_claimable   BIGINT NOT NULL DEFAULT 0,
+    balance_claimed     BIGINT NOT NULL DEFAULT 0,
+    balance_total_earned BIGINT NOT NULL DEFAULT 0,
+    snapshot_date       DATE NOT NULL,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(wallet_address, snapshot_date)
+);
+
+CREATE INDEX idx_snapshots_wallet ON balance_snapshots(wallet_address, snapshot_date DESC);
+
+-- ============================================================
 -- SEED DATA: Estado inicial de la simulación
 -- ============================================================
 

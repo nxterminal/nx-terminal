@@ -53,6 +53,12 @@ export const api = {
 
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),
+  getClaimHistory: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/claim-history`),
+
+  // Wallet
+  getWalletSummary: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/wallet-summary`),
+  getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),
+  getMovements: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/players/${wallet}/movements?limit=${limit}`),
 
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
