@@ -9,6 +9,7 @@ const WINDOW_DEFAULTS = {
   'ai-lab': { title: 'AI Lab', icon: '~', width: 650, height: 450, x: 180, y: 50 },
   'world-chat': { title: 'World Chat', icon: '#', width: 550, height: 420, x: 260, y: 90 },
   'my-devs': { title: 'My Devs', icon: '=', width: 700, height: 480, x: 120, y: 55 },
+  'nxt-wallet': { title: 'NXT Wallet', icon: '$', width: 720, height: 500, x: 90, y: 45 },
   'control-panel': { title: 'Control Panel', icon: '::', width: 520, height: 420, x: 200, y: 80 },
   'nx-terminal': { title: 'NX Terminal', icon: '>_', width: 580, height: 440, x: 90, y: 50 },
   'bug-sweeper': { title: 'Bug Sweeper', icon: '%', width: 300, height: 380, x: 220, y: 60 },

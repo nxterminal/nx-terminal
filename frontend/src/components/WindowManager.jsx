@@ -14,6 +14,7 @@ import Inbox from '../windows/Inbox';
 import HireDevs from '../windows/HireDevs';
 import Notepad from '../windows/Notepad';
 import RecycleBin from '../windows/RecycleBin';
+import NxtWallet from '../windows/NxtWallet';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -21,6 +22,7 @@ const WINDOW_COMPONENTS = {
   'protocol-market': ProtocolMarket,
   'ai-lab': AILab,
   'my-devs': MyDevs,
+  'nxt-wallet': NxtWallet,
   'world-chat': WorldChat,
   'control-panel': ControlPanel,
   'nx-terminal': NXTerminal,
