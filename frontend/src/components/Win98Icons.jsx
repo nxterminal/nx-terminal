@@ -336,6 +336,33 @@ function IconRecycleBin({ size = 32 }) {
   );
 }
 
+function IconWallet({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="walletGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6d4c41" />
+          <stop offset="50%" stopColor="#5d4037" />
+          <stop offset="100%" stopColor="#4e342e" />
+        </linearGradient>
+        <linearGradient id="walletFlap" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8d6e63" />
+          <stop offset="100%" stopColor="#6d4c41" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="8" width="28" height="20" rx="2" fill="url(#walletGrad)" stroke="#3e2723" strokeWidth="0.7" />
+      <rect x="2" y="8" width="28" height="5" rx="2" fill="url(#walletFlap)" stroke="#3e2723" strokeWidth="0.5" />
+      <line x1="4" y1="13" x2="28" y2="13" stroke="#3e2723" strokeWidth="0.5" />
+      <rect x="20" y="16" width="10" height="7" rx="1.5" fill="#e8e0d8" stroke="#a89080" strokeWidth="0.5" />
+      <circle cx="24" cy="19.5" r="2" fill="url(#walletGrad)" stroke="#3e2723" strokeWidth="0.5" />
+      <circle cx="24" cy="19.5" r="0.8" fill="#ffd700" />
+      <text x="8" y="21" fontFamily="monospace" fontSize="6" fill="#ffd700" fontWeight="bold">$</text>
+      <text x="13" y="21" fontFamily="monospace" fontSize="5" fill="#c8a860">NXT</text>
+      <rect x="4" y="9" width="24" height="1" rx="0.3" fill="rgba(255,255,255,0.1)" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -351,6 +378,7 @@ export const ICON_MAP = {
   'protocol-solitaire': IconCards,
   'notepad': IconNotepad,
   'recycle-bin': IconRecycleBin,
+  'nxt-wallet': IconWallet,
 };
 
 export function Win98Icon({ id, size = 32 }) {
