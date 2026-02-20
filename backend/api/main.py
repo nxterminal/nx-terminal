@@ -75,6 +75,11 @@ app.include_router(players.router, prefix="/api/players", tags=["Players"])
 app.include_router(shop.router, prefix="/api/shop", tags=["Shop"])
 app.include_router(ws_router, tags=["WebSocket"])
 
+# ── NFT Metadata (tokenURI) — baseURI + tokenId ──
+@app.get("/metadata/{token_id}")
+async def nft_metadata(token_id: int):
+    from backend.api.routes.devs import get_dev_metadata
+    return await get_dev_metadata(token_id)
 
 # ============================================================
 # HEALTH
