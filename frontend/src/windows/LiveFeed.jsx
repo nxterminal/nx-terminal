@@ -22,7 +22,7 @@ const ACTION_ICONS = {
 
 const ARCHETYPES = Object.keys(ARCHETYPE_COLORS);
 
-const DEV_NAMES = [
+const FALLBACK_DEV_NAMES = [
   'NEXUS-7X', 'VOID-3K', 'CIPHER-99', 'PHANTOM-11', 'GLITCH-42',
   'ZERO-DAY', 'STACK-OVR', 'NULL-PTR', 'DEAD-LOCK', 'FORK-BOMB',
   'RACE-CDN', 'SEG-FAULT', 'BUF-OFLW', 'MEM-LEAK', 'CORE-DMP',
@@ -30,7 +30,12 @@ const DEV_NAMES = [
   'KERNEL-P', 'ROOT-KIT', 'BACK-DOR', 'PAY-LOAD', 'SHELL-CD',
 ];
 
-const CORPORATIONS = ['Closed AI', 'Misanthropic', 'Shallow Mind', 'Zuck Labs', 'Y.AI', 'Mistrial Systems'];
+const FALLBACK_CORPORATIONS = ['Closed AI', 'Misanthropic', 'Shallow Mind', 'Zuck Labs', 'Y.AI', 'Mistrial Systems'];
+
+// Mutable lists that get replaced with real DB data when available
+let DEV_NAMES = [...FALLBACK_DEV_NAMES];
+let DEV_CORPS = {};  // name → corporation mapping
+let CORPORATIONS = [...FALLBACK_CORPORATIONS];
 
 const PROCEDURAL_TEMPLATES = [
   { action: 'code', msgs: [
@@ -153,6 +158,12 @@ const CONVERSATION_TEMPLATES = [
   { dev1_msg: "the devs in Shallow Mind are so cringe", dev2_msg: "at least they ship. wait no they don't" },
 ];
 
+function pickDev() {
+  const name = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
+  const corp = DEV_CORPS[name] || CORPORATIONS[Math.floor(Math.random() * CORPORATIONS.length)];
+  return { name, corp };
+}
+
 function generateProceduralMessage(devCount) {
   // Conversation chance increases with dev count (20% base up to 40%)
   const convChance = Math.min(0.4, 0.2 + devCount * 0.02);
@@ -166,17 +177,17 @@ function generateProceduralMessage(devCount) {
 
   const template = allTemplates[Math.floor(Math.random() * allTemplates.length)];
   const msg = template.msgs[Math.floor(Math.random() * template.msgs.length)];
-  const dev = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  let dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  while (dev2 === dev) dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  const corp = CORPORATIONS[Math.floor(Math.random() * CORPORATIONS.length)];
+  const d1 = pickDev();
+  let d2 = pickDev();
+  while (d2.name === d1.name && DEV_NAMES.length > 1) d2 = pickDev();
+  const corp = d1.corp;
   const archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
   return {
-    dev_name: dev,
+    dev_name: d1.name,
     archetype,
     action_type: template.action,
-    details: msg.replace('{dev}', dev).replace('{dev2}', dev2).replace('{corp}', corp),
+    details: msg.replace('{dev}', d1.name).replace('{dev2}', d2.name).replace('{corp}', corp),
     created_at: new Date().toISOString(),
     procedural: true,
   };
@@ -184,11 +195,11 @@ function generateProceduralMessage(devCount) {
 
 function generateConversation() {
   const convo = CONVERSATION_TEMPLATES[Math.floor(Math.random() * CONVERSATION_TEMPLATES.length)];
-  const dev1 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  let dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  while (dev2 === dev1) {
-    dev2 = DEV_NAMES[Math.floor(Math.random() * DEV_NAMES.length)];
-  }
+  const d1 = pickDev();
+  let d2 = pickDev();
+  while (d2.name === d1.name && DEV_NAMES.length > 1) d2 = pickDev();
+  const dev1 = d1.name;
+  const dev2 = d2.name;
   const arch1 = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
   const arch2 = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
@@ -233,6 +244,31 @@ export default function LiveFeed() {
   const proceduralRef = useRef(null);
   const feedInitRef = useRef(false);
   const ws = useWebSocket();
+
+  // Fetch real dev names from DB to replace hardcoded fallbacks
+  useEffect(() => {
+    api.getDevs({ limit: 200 })
+      .then(data => {
+        const devList = Array.isArray(data) ? data : (data.devs || []);
+        if (devList.length > 0) {
+          const realNames = devList.map(d => d.name).filter(Boolean);
+          if (realNames.length > 0) {
+            DEV_NAMES = realNames;
+            DEV_CORPS = {};
+            const corpSet = new Set();
+            devList.forEach(d => {
+              if (d.name && d.corporation) {
+                const corpDisplay = d.corporation.replace(/_/g, ' ');
+                DEV_CORPS[d.name] = corpDisplay;
+                corpSet.add(corpDisplay);
+              }
+            });
+            if (corpSet.size > 0) CORPORATIONS = [...corpSet];
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Listen for mint events
   useEffect(() => {
