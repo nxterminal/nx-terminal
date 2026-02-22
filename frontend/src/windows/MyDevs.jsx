@@ -84,7 +84,73 @@ function GifImage({ src, alt, arcColor, tokenId }) {
   );
 }
 
-function DevCard({ dev, onClick }) {
+function QuickPrompt({ devId, devName, address }) {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
+
+  const handleSend = (e) => {
+    e.stopPropagation();
+    if (!text.trim() || !address) return;
+    setStatus('sending');
+    api.postPrompt(devId, address, text.trim())
+      .then(() => {
+        setStatus('sent');
+        setText('');
+        setTimeout(() => setStatus(null), 3000);
+      })
+      .catch(() => setStatus('error'));
+  };
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        display: 'flex', gap: '3px', alignItems: 'center',
+        marginTop: '3px', position: 'relative',
+      }}
+    >
+      {status === 'sent' ? (
+        <span style={{
+          fontSize: '10px', color: 'var(--terminal-green, #33ff33)',
+          fontFamily: "'VT323', monospace",
+        }}>
+          Order sent to {devName}!
+        </span>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend(e)}
+            placeholder={`Give orders to ${devName}...`}
+            maxLength={500}
+            disabled={status === 'sending'}
+            style={{
+              flex: 1, background: 'var(--terminal-bg, #111)', color: 'var(--terminal-green, #33ff33)',
+              border: '1px solid var(--border-dark, #444)', padding: '2px 5px',
+              fontFamily: "'VT323', monospace", fontSize: '11px', outline: 'none',
+              minWidth: 0,
+            }}
+          />
+          <button
+            className="win-btn"
+            onClick={handleSend}
+            disabled={!text.trim() || status === 'sending'}
+            style={{ fontSize: '10px', padding: '1px 6px', flexShrink: 0, fontWeight: 'bold' }}
+          >
+            {status === 'sending' ? '..' : '>'}
+          </button>
+          {status === 'error' && (
+            <span style={{ fontSize: '9px', color: 'var(--terminal-red, #ff4444)' }}>err</span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function DevCard({ dev, onClick, address }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -172,6 +238,11 @@ function DevCard({ dev, onClick }) {
             </span>
           )}
         </div>
+
+        {/* Row 6: Quick prompt input */}
+        {address && (
+          <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
+        )}
       </div>
     </div>
   );
@@ -310,6 +381,7 @@ export default function MyDevs({ openDevProfile }) {
             <DevCard
               key={dev.token_id}
               dev={dev}
+              address={address}
               onClick={() => openDevProfile?.(dev.token_id)}
             />
           ))
