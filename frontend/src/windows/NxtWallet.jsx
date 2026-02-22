@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const RARITY_COLORS = {
@@ -44,7 +47,7 @@ function formatTimestamp(ts) {
 }
 
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading }) {
+function BalanceTab({ summary, loading, claimState }) {
   if (loading) return <div className="loading">Loading wallet...</div>;
   if (!summary) return (
     <div style={{
@@ -56,6 +59,14 @@ function BalanceTab({ summary, loading }) {
       {'> Connect wallet to view your $NXT balance'}
     </div>
   );
+
+  const {
+    onChainTotal, onChainDevCount, claimEnabled, previewData,
+    handleClaim, isClaiming, isClaimConfirming, claimSuccess, claimError,
+    clearClaimError, txHash,
+  } = claimState;
+
+  const hasClaimable = onChainTotal != null && onChainTotal > 0n;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -94,23 +105,84 @@ function BalanceTab({ summary, loading }) {
         {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
       </div>
 
-      {/* Claim button */}
-      <div style={{ padding: '8px', textAlign: 'center' }}>
-        <button
-          className="win-btn"
-          disabled={!summary.balance_claimable || summary.balance_claimable <= 0}
-          style={{
-            padding: '6px 24px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: summary.balance_claimable > 0 ? '#000' : undefined,
-          }}
-        >
-          CLAIM {formatNumber(summary.balance_claimable)} $NXT
-        </button>
-        <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-          You receive the full amount. No hidden fees.
+      {/* Claim section */}
+      <div style={{ padding: '8px' }}>
+        {/* Preview: gross / fee / net */}
+        {previewData && hasClaimable && (
+          <div className="win-panel" style={{
+            padding: '8px 12px', marginBottom: '6px',
+            fontFamily: "'VT323', monospace", fontSize: '13px',
+            background: 'var(--terminal-bg)',
+          }}>
+            <div style={{ color: 'var(--terminal-green)' }}>
+              {'>'} Claim preview ({onChainDevCount != null ? Number(onChainDevCount) : '?'} devs with balance):
+            </div>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '2px' }}>
+              <span>Gross: <span style={{ color: 'var(--gold)' }}>{formatNumber(Number(previewData[0]))} $NXT</span></span>
+              <span>Fee (10%): <span style={{ color: 'var(--terminal-red)' }}>{formatNumber(Number(previewData[1]))} $NXT</span></span>
+              <span>You receive: <span style={{ color: 'var(--terminal-green)' }}>{formatNumber(Number(previewData[2]))} $NXT</span></span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ textAlign: 'center' }}>
+          <button
+            className="win-btn"
+            onClick={handleClaim}
+            disabled={!hasClaimable || !claimEnabled || isClaiming || isClaimConfirming}
+            style={{
+              padding: '6px 24px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: hasClaimable && claimEnabled ? '#000' : undefined,
+            }}
+          >
+            {isClaiming ? 'Confirm in Wallet...' :
+             isClaimConfirming ? 'Confirming...' :
+             `CLAIM ${formatNumber(summary.balance_claimable)} $NXT`}
+          </button>
+          <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+            {!claimEnabled
+              ? 'Claiming is currently disabled.'
+              : previewData
+                ? `You receive ${formatNumber(Number(previewData[2]))} $NXT after 10% fee.`
+                : 'Preview will load when claimable balance > 0.'
+            }
+          </div>
         </div>
+
+        {/* Claim success */}
+        {claimSuccess && (
+          <div className="win-raised" style={{
+            marginTop: '8px', padding: '8px 12px',
+            border: '2px solid var(--terminal-green)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: 'bold', fontSize: '11px', color: 'var(--terminal-green)' }}>
+              CLAIM SUCCESSFUL
+            </div>
+            {txHash && (
+              <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Claim error */}
+        {claimError && (
+          <div className="win-raised" style={{
+            marginTop: '8px', padding: '8px 12px',
+            display: 'flex', alignItems: 'flex-start', gap: '8px',
+            border: '2px solid var(--terminal-red)',
+          }}>
+            <span style={{ fontWeight: 'bold' }}>[!]</span>
+            <div>
+              <div style={{ fontSize: '10px', marginBottom: '4px' }}>{claimError}</div>
+              <button className="win-btn" onClick={clearClaimError} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Per-dev breakdown */}
@@ -304,17 +376,90 @@ export default function NxtWallet() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingMovements, setLoadingMovements] = useState(true);
+  const [claimError, setClaimError] = useState(null);
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
-  // TODO: Replace with actual connected wallet address
-  const wallet = null;
+  const { address, isConnected, displayAddress } = useWallet();
+  const wallet = isConnected ? address : null;
 
+  // ── On-chain reads ───────────────────────────────────────
+  const { data: claimEnabledData } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'claimEnabled',
+  });
+
+  const { data: walletClaimableData } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'walletClaimable',
+    args: wallet ? [wallet] : undefined,
+    query: { enabled: !!wallet },
+  });
+
+  const { data: tokenIds } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'tokensOfOwner',
+    args: wallet ? [wallet] : undefined,
+    query: { enabled: !!wallet },
+  });
+
+  const { data: previewData } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'previewClaim',
+    args: tokenIds?.length ? [tokenIds] : undefined,
+    query: { enabled: !!tokenIds?.length },
+  });
+
+  // ── Claim write ──────────────────────────────────────────
+  const { writeContract, data: claimTxHash, isPending: isClaiming, error: writeError } = useWriteContract();
+
+  const { isLoading: isClaimConfirming, isSuccess: isClaimConfirmed } = useWaitForTransactionReceipt({
+    hash: claimTxHash,
+  });
+
+  useEffect(() => {
+    if (writeError) {
+      setClaimError(writeError.shortMessage || writeError.message || 'Claim failed');
+    }
+  }, [writeError]);
+
+  useEffect(() => {
+    if (isClaimConfirmed && claimTxHash) {
+      setClaimSuccess(true);
+      setClaimError(null);
+    }
+  }, [isClaimConfirmed, claimTxHash]);
+
+  const handleClaim = () => {
+    if (!tokenIds?.length) return;
+    setClaimError(null);
+    setClaimSuccess(false);
+    writeContract({
+      address: NXDEVNFT_ADDRESS,
+      abi: NXDEVNFT_ABI,
+      functionName: 'claimNXT',
+      args: [tokenIds],
+    });
+  };
+
+  // ── REST API data ────────────────────────────────────────
   useEffect(() => {
     if (!wallet) {
       setLoadingSummary(false);
       setLoadingHistory(false);
       setLoadingMovements(false);
+      setSummary(null);
+      setHistory([]);
+      setMovements([]);
       return;
     }
+
+    setLoadingSummary(true);
+    setLoadingHistory(true);
+    setLoadingMovements(true);
 
     api.getWalletSummary(wallet)
       .then(setSummary)
@@ -331,6 +476,25 @@ export default function NxtWallet() {
       .catch(() => {})
       .finally(() => setLoadingMovements(false));
   }, [wallet]);
+
+  // ── Derived ──────────────────────────────────────────────
+  const onChainTotal = walletClaimableData?.[0];
+  const onChainDevCount = walletClaimableData?.[1];
+  const claimEnabled = claimEnabledData === true;
+
+  const claimState = {
+    onChainTotal,
+    onChainDevCount,
+    claimEnabled,
+    previewData,
+    handleClaim,
+    isClaiming,
+    isClaimConfirming,
+    claimSuccess,
+    claimError,
+    clearClaimError: () => setClaimError(null),
+    txHash: claimTxHash,
+  };
 
   const tabs = [
     { id: 'balance', label: 'Balance' },
@@ -355,7 +519,7 @@ export default function NxtWallet() {
 
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} />}
+        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} claimState={claimState} />}
         {tab === 'chart' && <ChartTab history={history} loading={loadingHistory} />}
         {tab === 'movements' && <MovementsTab movements={movements} loading={loadingMovements} />}
       </div>
@@ -363,7 +527,7 @@ export default function NxtWallet() {
       {/* Status bar */}
       <div className="win98-statusbar" style={{ fontSize: '10px', color: '#555' }}>
         {wallet
-          ? `${wallet.slice(0, 6)}...${wallet.slice(-4)} | Salary: 200 $NXT/day per dev`
+          ? `${displayAddress} | Salary: 200 $NXT/day per dev${claimEnabled ? '' : ' | Claiming disabled'}`
           : 'Wallet not connected'
         }
       </div>
