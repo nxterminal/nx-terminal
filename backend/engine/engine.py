@@ -19,6 +19,7 @@ from templates import (
     gen_dev_name, gen_protocol_name, gen_protocol_description,
     gen_ai_name, gen_ai_description, gen_chat_message, gen_visual_traits,
 )
+from prompt_system import process_prompt
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nx_engine")
@@ -162,6 +163,12 @@ def apply_context_modifiers(weights: dict, dev: dict, context: dict) -> dict:
         w["INVEST"] *= event_effects["invest_weight_boost"]
     if event_effects.get("sell_weight_boost"):
         w["SELL"] *= event_effects["sell_weight_boost"]
+
+    # --- Player prompt weight modifiers ---
+    prompt_mods = context.get("prompt_weight_modifiers", {})
+    for action, mult in prompt_mods.items():
+        if action in w:
+            w[action] *= mult
 
     # --- Personality seed variation (±15%) ---
     seed = dev.get("personality_seed", 0)
@@ -341,7 +348,12 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
 
     elif action == "MOVE":
         old_loc = dev["location"]
-        new_loc = random.choice([l for l in LOCATIONS if l != old_loc])
+        # Use prompt target location if specified, otherwise random
+        prompt_loc = context.get("prompt_target_location")
+        if prompt_loc and prompt_loc in LOCATIONS and prompt_loc != old_loc:
+            new_loc = prompt_loc
+        else:
+            new_loc = random.choice([l for l in LOCATIONS if l != old_loc])
         result["energy_cost"] = COST_MOVE_ENERGY
         result["details"] = {"from": old_loc, "to": new_loc}
 
@@ -473,10 +485,100 @@ def calc_next_interval(dev: dict, context: dict) -> int:
 # PROCESS SINGLE DEV CYCLE
 # ============================================================
 
+def check_and_process_prompt(conn, dev: dict, context: dict) -> Optional[dict]:
+    """Check for a pending player prompt, process it, and return result if any."""
+    cur = get_cursor(conn)
+
+    # Fetch oldest unconsumed prompt for this dev
+    cur.execute("""
+        SELECT id, player_address, prompt_text
+        FROM player_prompts
+        WHERE dev_id = %s AND consumed = FALSE
+        ORDER BY created_at ASC
+        LIMIT 1
+    """, (dev["token_id"],))
+    prompt_row = cur.fetchone()
+    if not prompt_row:
+        return None
+
+    # Gather known protocol names for context
+    cur.execute("SELECT name FROM protocols WHERE status = 'active'")
+    known_protocols = [r["name"] for r in cur.fetchall()]
+
+    # Fetch extra dev stats needed by process_prompt
+    cur.execute("""
+        SELECT protocols_created, ais_created, bugs_found, code_reviews_done
+        FROM devs WHERE token_id = %s
+    """, (dev["token_id"],))
+    stats = cur.fetchone()
+    dev_full = {**dev, **stats} if stats else dev
+
+    # Process the prompt through the personality system
+    prompt_result = process_prompt(prompt_row["prompt_text"], dev_full, known_protocols)
+
+    # Mark prompt as consumed
+    cur.execute("""
+        UPDATE player_prompts SET consumed = TRUE, consumed_at = NOW()
+        WHERE id = %s
+    """, (prompt_row["id"],))
+
+    # Save dev response as a chat message
+    if prompt_result.get("response"):
+        cur.execute("""
+            INSERT INTO chat_messages (dev_id, dev_name, archetype, channel, location, message)
+            VALUES (%s, %s, %s, 'trollbox', NULL, %s)
+        """, (dev["token_id"], dev["name"], dev["archetype"],
+              prompt_result["response"][:500]))
+
+    # Log as action
+    cur.execute("""
+        INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+        VALUES (%s, %s, %s, 'CHAT', %s, 0, 0)
+    """, (dev["token_id"], dev["name"], dev["archetype"],
+          json.dumps({
+              "event": "prompt_response",
+              "player_prompt": prompt_row["prompt_text"][:200],
+              "intent": prompt_result.get("intent"),
+              "compliance": prompt_result.get("compliance"),
+              "response": prompt_result.get("response", ""),
+          })))
+
+    log.info(f"📨 {dev['name']} received prompt: \"{prompt_row['prompt_text'][:60]}\"")
+    log.info(f"   → [{prompt_result.get('compliance', '?')}] \"{prompt_result.get('response', '')[:80]}\"")
+
+    return prompt_result
+
+
+def apply_prompt_modifiers(context: dict, prompt_result: dict) -> dict:
+    """Apply weight modifiers from a processed prompt to the dev's context."""
+    if not prompt_result or not prompt_result.get("weight_modifiers"):
+        return context
+
+    ctx = context.copy()
+    ctx["prompt_weight_modifiers"] = {
+        k: v for k, v in prompt_result["weight_modifiers"].items()
+        if not k.startswith("_")
+    }
+    # If prompt specifies a target location, pass it through
+    if prompt_result.get("target_location"):
+        ctx["prompt_target_location"] = prompt_result["target_location"]
+    return ctx
+
+
 def process_dev(conn, dev: dict, context: dict) -> dict:
-    """Full cycle for one dev: decide → execute → return result."""
+    """Full cycle for one dev: check prompt → decide → execute → return result."""
+    # Check for pending player prompts before deciding action
+    prompt_result = check_and_process_prompt(conn, dev, context)
+    if prompt_result:
+        context = apply_prompt_modifiers(context, prompt_result)
+
     action = decide_action(dev, context)
     result = execute_action(conn, dev, action, context)
+
+    # Attach prompt info to result for logging
+    if prompt_result:
+        result["prompt_response"] = prompt_result.get("response", "")
+
     return result
 
 
