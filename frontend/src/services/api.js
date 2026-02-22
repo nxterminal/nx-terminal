@@ -60,6 +60,14 @@ export const api = {
   getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),
   getMovements: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/players/${wallet}/movements?limit=${limit}`),
 
+  // Prompts
+  postPrompt: (devId, playerAddress, promptText) =>
+    fetchJSON(`${API_BASE}/api/prompts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dev_id: devId, player_address: playerAddress, prompt_text: promptText }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
