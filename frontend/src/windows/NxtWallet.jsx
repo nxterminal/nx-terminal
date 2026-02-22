@@ -479,10 +479,13 @@ export default function NxtWallet() {
     setLoadingMovements(true);
 
     api.getWalletSummary(wallet)
-      .then(setSummary)
+      .then(data => {
+        setSummary(data);
+        setLoadingSummary(false);
+      })
       .catch((err) => {
         console.warn('[NxtWallet] wallet-summary failed:', err.message);
-        // Fallback: build partial summary from on-chain tokenIds + individual dev fetches
+        // Fallback: build summary from on-chain tokenIds + individual dev API calls
         if (tokenIds && tokenIds.length > 0) {
           const ids = Array.from(tokenIds).map(id => Number(id));
           Promise.all(ids.map(id => api.getDev(id).catch(() => null)))
@@ -490,11 +493,12 @@ export default function NxtWallet() {
               const valid = devs.filter(Boolean);
               if (valid.length > 0) {
                 const totalClaimable = valid.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
+                const totalEarned = valid.reduce((sum, d) => sum + (d.total_earned || 0), 0);
                 setSummary({
                   wallet_address: wallet,
                   balance_claimable: totalClaimable,
                   balance_claimed: 0,
-                  balance_total_earned: valid.reduce((sum, d) => sum + (d.total_earned || 0), 0),
+                  balance_total_earned: totalEarned,
                   total_devs: valid.length,
                   salary_per_day: valid.length * 200,
                   devs: valid.map(d => ({
@@ -503,16 +507,18 @@ export default function NxtWallet() {
                     rarity_tier: d.rarity_tier,
                     balance_nxt: d.balance_nxt || 0,
                     total_earned: d.total_earned || 0,
-                    status: d.status,
+                    status: d.status || 'active',
                   })),
                   _fallback: true,
                 });
               }
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setLoadingSummary(false));
+        } else {
+          setLoadingSummary(false);
         }
-      })
-      .finally(() => setLoadingSummary(false));
+      });
 
     api.getBalanceHistory(wallet)
       .then(setHistory)
