@@ -47,16 +47,33 @@ function formatTimestamp(ts) {
 }
 
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading, claimState }) {
+function BalanceTab({ summary, loading, claimState, isConnected }) {
   if (loading) return <div className="loading">Loading wallet...</div>;
-  if (!summary) return (
+  if (!isConnected) return (
     <div style={{
-      padding: '16px', textAlign: 'center',
+      padding: '24px', textAlign: 'center',
       fontFamily: "'VT323', monospace", fontSize: '14px',
       color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
-      height: '100%',
+      height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '8px',
     }}>
-      {'> Connect wallet to view your $NXT balance'}
+      <div style={{ fontSize: '28px' }}>$</div>
+      <div>{'> Connect wallet to view your $NXT balance'}</div>
+    </div>
+  );
+  if (!summary) return (
+    <div style={{
+      padding: '24px', textAlign: 'center',
+      fontFamily: "'VT323', monospace", fontSize: '14px',
+      color: 'var(--terminal-green)', background: 'var(--terminal-bg)',
+      height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '8px',
+    }}>
+      <div style={{ fontSize: '28px' }}>+</div>
+      <div>{'> No devs yet. Mint your first developer to start earning $NXT!'}</div>
+      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+        {'Each dev earns 200 $NXT/day. Open Mint/Hire Devs to get started.'}
+      </div>
     </div>
   );
 
@@ -519,7 +536,7 @@ export default function NxtWallet() {
 
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} claimState={claimState} />}
+        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} claimState={claimState} isConnected={isConnected} />}
         {tab === 'chart' && <ChartTab history={history} loading={loadingHistory} />}
         {tab === 'movements' && <MovementsTab movements={movements} loading={loadingMovements} />}
       </div>

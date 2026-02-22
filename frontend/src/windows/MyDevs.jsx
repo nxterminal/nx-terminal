@@ -10,17 +10,129 @@ const ARCHETYPE_COLORS = {
   'FED': '#ffaa00', 'SCRIPT_KIDDIE': '#00ffff',
 };
 
+const PINATA_GW = 'https://gateway.pinata.cloud/ipfs/';
+
 function formatNumber(n) {
   if (n == null) return '0';
   return Number(n).toLocaleString();
 }
 
-function EnergyBar({ energy }) {
-  const pct = Math.max(0, Math.min(100, energy || 0));
-  const cls = pct > 60 ? 'energy-high' : pct > 30 ? 'energy-mid' : 'energy-low';
+function StatBar({ label, value, max = 100 }) {
+  const pct = Math.max(0, Math.min(100, ((value || 0) / max) * 100));
+  const color = pct > 66 ? '#33ff33' : pct > 33 ? '#ffaa00' : '#ff4444';
   return (
-    <div className="energy-bar" style={{ width: '60px', display: 'inline-block' }}>
-      <div className={`energy-bar-fill ${cls}`} style={{ width: `${pct}%` }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+      <span style={{ width: '24px', color: '#888', textTransform: 'uppercase' }}>{label}</span>
+      <div style={{
+        flex: 1, height: '6px', background: '#222',
+        border: '1px solid #444', position: 'relative',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color,
+          transition: 'width 0.3s',
+        }} />
+      </div>
+      <span style={{ width: '18px', textAlign: 'right', color }}>{value || 0}</span>
+    </div>
+  );
+}
+
+function DevCard({ dev, onClick }) {
+  const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
+  const gifUrl = dev.ipfs_hash ? `${PINATA_GW}${dev.ipfs_hash}` : null;
+  const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
+  const energyColor = energyPct > 60 ? '#33ff33' : energyPct > 30 ? '#ffaa00' : '#ff4444';
+
+  return (
+    <div
+      className="win-raised"
+      onClick={onClick}
+      style={{
+        display: 'flex', gap: '10px', padding: '8px',
+        cursor: 'pointer', marginBottom: '4px',
+        border: '1px solid var(--border-dark)',
+      }}
+    >
+      {/* GIF / placeholder */}
+      <div style={{
+        width: '80px', height: '80px', flexShrink: 0,
+        background: '#111', border: '1px solid #333',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {gifUrl ? (
+          <img
+            src={gifUrl}
+            alt={dev.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }}
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+          />
+        ) : null}
+        <div style={{
+          display: gifUrl ? 'none' : 'flex',
+          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: '#555', fontSize: '10px', width: '100%', height: '100%',
+          fontFamily: "'VT323', monospace",
+        }}>
+          <div style={{ fontSize: '24px', color: arcColor }}>@</div>
+          <div>#{dev.token_id}</div>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* Row 1: Name + Archetype */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{dev.name}</span>
+          <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
+            [{dev.archetype}]
+          </span>
+          {dev.rarity_tier && dev.rarity_tier !== 'common' && (
+            <span style={{ fontSize: '9px', color: '#ffd700', textTransform: 'uppercase' }}>
+              {dev.rarity_tier}
+            </span>
+          )}
+        </div>
+
+        {/* Row 2: Corporation + Species */}
+        <div style={{ fontSize: '10px', color: '#888', display: 'flex', gap: '8px' }}>
+          {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
+          {dev.species && <span>| {dev.species}</span>}
+          <span>| #{dev.token_id}</span>
+        </div>
+
+        {/* Row 3: Stats bars */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: '2px' }}>
+          <StatBar label="COD" value={dev.stat_coding} />
+          <StatBar label="HAK" value={dev.stat_hacking} />
+          <StatBar label="TRD" value={dev.stat_trading} />
+          <StatBar label="SOC" value={dev.stat_social} />
+          <StatBar label="END" value={dev.stat_endurance} />
+          <StatBar label="LCK" value={dev.stat_luck} />
+        </div>
+
+        {/* Row 4: Dynamic status */}
+        <div style={{
+          display: 'flex', gap: '8px', fontSize: '10px', marginTop: '2px',
+          flexWrap: 'wrap', alignItems: 'center',
+        }}>
+          <span style={{ color: energyColor }}>
+            E: {dev.energy ?? 0}/{dev.max_energy ?? 10}
+          </span>
+          <span style={{ color: 'var(--gold)' }}>
+            {formatNumber(dev.balance_nxt)} $NXT
+          </span>
+          <span style={{ color: '#aaa' }}>
+            {dev.mood || '-'}
+          </span>
+          <span style={{
+            color: dev.status === 'active' ? '#33ff33' : dev.status === 'resting' ? '#ffaa00' : '#ff4444',
+            textTransform: 'uppercase', fontWeight: 'bold',
+          }}>
+            {dev.status || 'active'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -55,14 +167,15 @@ export default function MyDevs({ openDevProfile }) {
 
     Promise.all(
       tokenIds.map(id =>
-        api.getDev(id).catch(() => ({
-          token_id: id,
-          name: `Dev #${id}`,
-          archetype: 'UNKNOWN',
-          energy: 0,
-          balance_nxt: 0,
-          mood: '?',
-        }))
+        api.getDev(id).catch((err) => {
+          console.warn(`[MyDevs] Failed to fetch dev #${id}:`, err.message);
+          return {
+            token_id: id,
+            name: `Dev #${id}`,
+            archetype: 'UNKNOWN',
+            _fetchFailed: true,
+          };
+        })
       )
     )
       .then(results => setDevs(results))
@@ -72,18 +185,20 @@ export default function MyDevs({ openDevProfile }) {
 
   const isLoadingAny = tokensLoading || loading;
 
+  const headerStyle = {
+    padding: '6px 8px',
+    background: 'var(--terminal-bg)',
+    fontFamily: "'VT323', monospace",
+    fontSize: '14px',
+    borderBottom: '1px solid var(--border-dark)',
+    display: 'flex', justifyContent: 'space-between',
+  };
+
   // ── Not connected ──
   if (!isConnected) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{
-          padding: '6px 8px',
-          background: 'var(--terminal-bg)',
-          color: 'var(--terminal-amber)',
-          fontFamily: "'VT323', monospace",
-          fontSize: '14px',
-          borderBottom: '1px solid var(--border-dark)',
-        }}>
+        <div style={{ ...headerStyle, color: 'var(--terminal-amber)' }}>
           {'>'} MY DEVELOPERS
         </div>
         <div style={{
@@ -91,7 +206,7 @@ export default function MyDevs({ openDevProfile }) {
           alignItems: 'center', justifyContent: 'center', gap: '12px',
           padding: '24px',
         }}>
-          <div style={{ fontSize: '32px' }}>🔌</div>
+          <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: '#555' }}>[@]</div>
           <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center' }}>
             Connect wallet to see your devs
           </div>
@@ -110,15 +225,7 @@ export default function MyDevs({ openDevProfile }) {
   if (!isLoadingAny && devs.length === 0 && !fetchError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{
-          padding: '6px 8px',
-          background: 'var(--terminal-bg)',
-          color: 'var(--terminal-green)',
-          fontFamily: "'VT323', monospace",
-          fontSize: '14px',
-          borderBottom: '1px solid var(--border-dark)',
-          display: 'flex', justifyContent: 'space-between',
-        }}>
+        <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
           <span>{'>'} MY DEVELOPERS</span>
           <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
         </div>
@@ -127,7 +234,7 @@ export default function MyDevs({ openDevProfile }) {
           alignItems: 'center', justifyContent: 'center', gap: '12px',
           padding: '24px',
         }}>
-          <div style={{ fontSize: '32px' }}>📭</div>
+          <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: '#555' }}>[+]</div>
           <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center' }}>
             No devs yet
           </div>
@@ -142,15 +249,7 @@ export default function MyDevs({ openDevProfile }) {
   // ── Connected with devs ──
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{
-        padding: '6px 8px',
-        background: 'var(--terminal-bg)',
-        color: 'var(--terminal-green)',
-        fontFamily: "'VT323', monospace",
-        fontSize: '14px',
-        borderBottom: '1px solid var(--border-dark)',
-        display: 'flex', justifyContent: 'space-between',
-      }}>
+      <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
         <span>{'>'} MY DEVELOPERS ({devs.length})</span>
         <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
       </div>
@@ -168,47 +267,17 @@ export default function MyDevs({ openDevProfile }) {
         </div>
       )}
 
-      <div className="win-panel" style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '4px' }}>
         {isLoadingAny ? (
           <div className="loading">Loading devs...</div>
         ) : (
-          <table className="win-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Archetype</th>
-                <th>Energy</th>
-                <th>Balance</th>
-                <th>Mood</th>
-              </tr>
-            </thead>
-            <tbody>
-              {devs.map((dev) => (
-                <tr
-                  key={dev.token_id || dev.id}
-                  className="clickable"
-                  onClick={() => openDevProfile?.(dev.token_id || dev.id)}
-                >
-                  <td>#{dev.token_id || dev.id}</td>
-                  <td style={{ fontWeight: 'bold' }}>{dev.name}</td>
-                  <td>
-                    <span
-                      className={`badge badge-${dev.archetype}`}
-                      style={{ color: ARCHETYPE_COLORS[dev.archetype] }}
-                    >
-                      {dev.archetype}
-                    </span>
-                  </td>
-                  <td><EnergyBar energy={dev.energy} /></td>
-                  <td style={{ color: 'var(--gold)' }}>
-                    {formatNumber(dev.balance_nxt || dev.balance)} $NXT
-                  </td>
-                  <td>{dev.mood || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          devs.map((dev) => (
+            <DevCard
+              key={dev.token_id}
+              dev={dev}
+              onClick={() => openDevProfile?.(dev.token_id)}
+            />
+          ))
         )}
       </div>
     </div>

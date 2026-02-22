@@ -3,6 +3,7 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
+import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
 const DEPLOY_STEPS = [
@@ -36,6 +37,20 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
       // Last N minted tokens (most recent)
       const ids = ownedTokens.slice(-quantity).map(id => Number(id));
       setMintedIds(ids);
+
+      // Dispatch events for Inbox and NXAssistant with dev data
+      ids.forEach(tokenId => {
+        api.getDev(tokenId)
+          .then(dev => {
+            window.dispatchEvent(new CustomEvent('nx-dev-hired', { detail: { dev } }));
+          })
+          .catch(() => {
+            // Fallback: dispatch with minimal info
+            window.dispatchEvent(new CustomEvent('nx-dev-hired', {
+              detail: { dev: { token_id: tokenId, name: `Dev #${tokenId}`, corporation: 'UNKNOWN', archetype: 'UNKNOWN', species: 'Unknown' } },
+            }));
+          });
+      });
     }
   }, [ownedTokens, quantity]);
 
