@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
 import StartMenu from './StartMenu';
 
 export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0 }) {
   const [cycle, setCycle] = useState(null);
   const [startOpen, setStartOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [connecting, setConnecting] = useState(false);
+  const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError } = useWallet();
   const [walletError, setWalletError] = useState(null);
   const [assistantOn, setAssistantOn] = useState(
     () => localStorage.getItem('nx-assistant-enabled') !== 'false'
@@ -23,33 +23,25 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
     return () => clearInterval(id);
   }, []);
 
-  const connectWallet = useCallback(async () => {
-    if (walletAddress) return;
-    if (!window.ethereum) {
-      setWalletError('MetaMask not detected. Install MetaMask or a compatible wallet extension to connect.');
-      return;
-    }
-    setConnecting(true);
-    setWalletError(null);
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-      }
-    } catch (err) {
-      if (err.code === 4001) {
+  // Surface wagmi connect errors
+  useEffect(() => {
+    if (connectError) {
+      if (connectError.name === 'UserRejectedRequestError') {
         setWalletError('Connection rejected. You must approve the wallet connection request to continue.');
+      } else if (connectError.message?.includes('Connector not found')) {
+        setWalletError('No wallet detected. Install MetaMask or a compatible wallet extension.');
       } else {
-        setWalletError('Failed to connect wallet. Please try again or check your wallet extension.');
+        setWalletError(connectError.shortMessage || connectError.message || 'Failed to connect wallet.');
       }
-    } finally {
-      setConnecting(false);
     }
-  }, [walletAddress]);
+  }, [connectError]);
 
-  const formatAddress = (addr) => {
-    if (!addr) return '';
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const handleWalletClick = () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      connect();
+    }
   };
 
   // Sync assistant state when toggled from Settings
@@ -150,12 +142,12 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
 
       <button
         className="win-btn taskbar-wallet-btn"
-        onClick={connectWallet}
-        disabled={connecting}
-        title={walletAddress || 'Connect Wallet'}
-        style={walletAddress ? { color: 'var(--terminal-green)' } : undefined}
+        onClick={handleWalletClick}
+        disabled={isConnecting}
+        title={isConnected ? `${address} (click to disconnect)` : 'Connect Wallet'}
+        style={isConnected ? { color: 'var(--terminal-green)' } : undefined}
       >
-        {walletAddress ? formatAddress(walletAddress) : connecting ? 'Connecting...' : 'Connect'}
+        {isConnected ? displayAddress : isConnecting ? 'Connecting...' : 'Connect'}
       </button>
 
       <div className="taskbar-divider" />
