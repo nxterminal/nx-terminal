@@ -52,6 +52,24 @@ export default function ProtocolMarket() {
       <div className="win-panel" style={{ flex: 1, overflow: 'auto' }}>
         {loading ? (
           <div className="loading">Loading protocols...</div>
+        ) : protocols.length === 0 ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', height: '100%', gap: '12px', padding: '24px',
+          }}>
+            <div style={{ fontFamily: "'VT323', monospace", fontSize: '24px', color: 'var(--text-muted, #555)' }}>[~]</div>
+            <div style={{ fontWeight: 'bold', fontSize: '13px', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
+              No protocols deployed yet
+            </div>
+            <div style={{
+              fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center',
+              fontFamily: "'VT323', monospace", lineHeight: 1.6, maxWidth: '300px',
+            }}>
+              {'>'} The simulation hasn&apos;t started yet.{'\n'}
+              Once your devs begin their cycles, they&apos;ll create protocols, invest in them, and compete for dominance.{'\n\n'}
+              {'>'} Deploy devs first. Protocols follow.
+            </div>
+          </div>
         ) : (
           <table className="win-table">
             <thead>
