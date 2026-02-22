@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import $ from 'jquery';
 import clippy from 'clippyjs';
+import { api } from '../services/api';
 
 // Must set jQuery globally BEFORE clippy uses it
 window.jQuery = $;
@@ -220,6 +221,51 @@ export default function NXAssistant() {
     window.addEventListener('nx-dev-hired', handleDevHired);
     return () => window.removeEventListener('nx-dev-hired', handleDevHired);
   }, []);
+
+  // Poll for unread notifications and announce them
+  useEffect(() => {
+    if (!loaded) return;
+
+    const seenNotifs = new Set(JSON.parse(localStorage.getItem('nx-assistant-seen-notifs') || '[]'));
+
+    const pollNotifications = () => {
+      const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
+      if (!enabled || !agentRef.current) return;
+
+      const wallet = window.ethereum?.selectedAddress;
+      if (!wallet) return;
+
+      api.getNotifications(wallet, true)
+        .then(notifs => {
+          if (!Array.isArray(notifs) || notifs.length === 0) return;
+          // Find first unseen notification
+          const unseen = notifs.find(n => !seenNotifs.has(n.id));
+          if (!unseen) return;
+
+          seenNotifs.add(unseen.id);
+          // Keep only last 200 seen IDs
+          const arr = [...seenNotifs];
+          if (arr.length > 200) arr.splice(0, arr.length - 200);
+          localStorage.setItem('nx-assistant-seen-notifs', JSON.stringify(arr));
+
+          const msg = `${unseen.title}\n\n${unseen.body.slice(0, 150)}`;
+          try { agentRef.current.play('Alert'); } catch {
+            try { agentRef.current.animate(); } catch {}
+          }
+          agentRef.current.speak(msg);
+        })
+        .catch(() => {});
+    };
+
+    const interval = setInterval(pollNotifications, 30000);
+    // Initial check after 10s
+    const timeout = setTimeout(pollNotifications, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [loaded]);
 
   // Listen for agent change events
   useEffect(() => {

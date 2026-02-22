@@ -60,6 +60,14 @@ export const api = {
   getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),
   getMovements: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/players/${wallet}/movements?limit=${limit}`),
 
+  // Notifications
+  getNotifications: (wallet, unread = false) =>
+    fetchJSON(`${API_BASE}/api/notifications/${wallet}?unread=${unread}`),
+  markNotificationRead: (id) =>
+    fetchJSON(`${API_BASE}/api/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: (wallet) =>
+    fetchJSON(`${API_BASE}/api/notifications/${wallet}/read-all`, { method: 'POST' }),
+
   // Prompts
   postPrompt: (devId, playerAddress, promptText) =>
     fetchJSON(`${API_BASE}/api/prompts`, {

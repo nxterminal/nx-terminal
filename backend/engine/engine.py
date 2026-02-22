@@ -197,6 +197,46 @@ def decide_action(dev: dict, context: dict) -> str:
 
 
 # ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+PROTOCOL_NOTIF_TITLES = [
+    "{dev} just shipped a protocol!",
+    "New protocol alert from {dev}!",
+    "{dev} deployed something. It might even work.",
+    "BREAKING: {dev} created a protocol. Shareholders mildly interested.",
+    "{dev} just pushed code to production. On a Friday.",
+]
+
+PROTOCOL_NOTIF_BODIES = [
+    "{dev} deployed \"{proto}\" (quality: {quality}/100). Your portfolio of questionable decisions grows.",
+    "\"{proto}\" is live. {dev} built it with {quality}% code quality. The other {rest}% is held together by hope.",
+    "Protocol \"{proto}\" has entered the chat. Quality score: {quality}. {dev} is already updating their LinkedIn.",
+    "{dev} created \"{proto}\". It cost them {cost} $NXT and their remaining dignity. Quality: {quality}/100.",
+]
+
+AI_NOTIF_TITLES = [
+    "{dev} created an AI. It's... something.",
+    "New Absurd AI from {dev}!",
+    "{dev} just birthed a digital consciousness. Sort of.",
+]
+
+AI_NOTIF_BODIES = [
+    "{dev} created \"{ai}\": {desc}. The singularity was supposed to be cooler than this.",
+    "\"{ai}\" now exists thanks to {dev}. It cost {cost} $NXT. Was it worth it? Probably not. But here we are.",
+    "Your dev {dev} made \"{ai}\". Nobody asked for this. {desc}",
+]
+
+
+def insert_notification(cur, owner: str, notif_type: str, title: str, body: str, dev_id: int = None):
+    """Insert a notification for a player."""
+    cur.execute("""
+        INSERT INTO notifications (player_address, type, title, body, dev_id)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (owner, notif_type, title[:500], body[:1000], dev_id))
+
+
+# ============================================================
 # ACTION EXECUTION
 # ============================================================
 
@@ -249,6 +289,15 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_CREATE_PROTOCOL_ENERGY, COST_CREATE_PROTOCOL_NXT,
               COST_CREATE_PROTOCOL_NXT, quality // 10, dev["token_id"]))
 
+        # Notify owner
+        owner = dev.get("owner_address")
+        if owner:
+            ntitle = random.choice(PROTOCOL_NOTIF_TITLES).format(dev=dev["name"])
+            nbody = random.choice(PROTOCOL_NOTIF_BODIES).format(
+                dev=dev["name"], proto=name, quality=quality,
+                rest=100 - quality, cost=COST_CREATE_PROTOCOL_NXT)
+            insert_notification(cur, owner, "protocol_created", ntitle, nbody, dev["token_id"])
+
     elif action == "CREATE_AI":
         name = gen_ai_name()
         desc = gen_ai_description()
@@ -273,6 +322,14 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 ais_created = ais_created + 1
             WHERE token_id = %s
         """, (COST_CREATE_AI_ENERGY, COST_CREATE_AI_NXT, COST_CREATE_AI_NXT, dev["token_id"]))
+
+        # Notify owner
+        owner = dev.get("owner_address")
+        if owner:
+            ntitle = random.choice(AI_NOTIF_TITLES).format(dev=dev["name"])
+            nbody = random.choice(AI_NOTIF_BODIES).format(
+                dev=dev["name"], ai=name, desc=desc[:100], cost=COST_CREATE_AI_NXT)
+            insert_notification(cur, owner, "ai_created", ntitle, nbody, dev["token_id"])
 
     elif action == "INVEST":
         # Pick a random active protocol
@@ -543,6 +600,16 @@ def check_and_process_prompt(conn, dev: dict, context: dict) -> Optional[dict]:
               "response": prompt_result.get("response", ""),
           })))
 
+    # Notify the player about the dev's response
+    owner = prompt_row.get("player_address") or dev.get("owner_address")
+    if owner and prompt_result.get("response"):
+        insert_notification(cur, owner, "prompt_response",
+            f"{dev['name']} responded to your order",
+            f"You said: \"{prompt_row['prompt_text'][:100]}\"\n\n"
+            f"{dev['name']} [{prompt_result.get('compliance', 'unknown')}]: "
+            f"\"{prompt_result['response'][:300]}\"",
+            dev["token_id"])
+
     log.info(f"📨 {dev['name']} received prompt: \"{prompt_row['prompt_text'][:60]}\"")
     log.info(f"   → [{prompt_result.get('compliance', '?')}] \"{prompt_result.get('response', '')[:80]}\"")
 
@@ -590,7 +657,7 @@ def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
     """Get devs whose next_cycle_at has passed."""
     cur = get_cursor(conn)
     cur.execute("""
-        SELECT token_id, name, archetype, corporation, rarity_tier,
+        SELECT token_id, name, owner_address, archetype, corporation, rarity_tier,
                personality_seed, energy, max_energy, mood, location,
                balance_nxt, reputation, status
         FROM devs

@@ -304,6 +304,24 @@ CREATE TABLE player_prompts (
 CREATE INDEX idx_prompts_pending ON player_prompts(dev_id) WHERE consumed = FALSE;
 
 -- ============================================================
+-- TABLA: notifications
+-- ============================================================
+
+CREATE TABLE notifications (
+    id                  SERIAL PRIMARY KEY,
+    player_address      VARCHAR(42) NOT NULL,
+    type                VARCHAR(50) NOT NULL,
+    title               TEXT NOT NULL,
+    body                TEXT NOT NULL,
+    read                BOOLEAN NOT NULL DEFAULT FALSE,
+    dev_id              INTEGER REFERENCES devs(token_id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notif_player ON notifications(player_address, created_at DESC);
+CREATE INDEX idx_notif_unread ON notifications(player_address) WHERE read = FALSE;
+
+-- ============================================================
 -- TABLA: world_chat (humanos)
 -- ============================================================
 
