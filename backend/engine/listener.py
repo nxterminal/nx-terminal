@@ -64,6 +64,30 @@ def dev_exists(cur, token_id):
     return cur.fetchone() is not None
 
 
+def ensure_player(cur, owner, corporation):
+    """Create player record if it doesn't exist (upsert)."""
+    cur.execute("""
+        INSERT INTO players (wallet_address, corporation, total_devs_minted)
+        VALUES (%s, %s, 1)
+        ON CONFLICT (wallet_address) DO UPDATE SET
+            total_devs_minted = players.total_devs_minted + 1,
+            last_active_at = NOW()
+    """, (owner.lower(), corporation))
+
+
+def insert_action_mint(cur, token_id, dev_name, archetype):
+    """Insert a RECEIVE_SALARY action to record the mint in the feed."""
+    cur.execute("""
+        INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost, cycle_number)
+        VALUES (%s, %s, %s, 'RECEIVE_SALARY', %s, 0, 0, 0)
+    """, (
+        token_id,
+        dev_name,
+        archetype,
+        json.dumps({"event": "mint", "message": f"{dev_name} has been hired and deployed to the simulation."}),
+    ))
+
+
 def insert_dev(cur, token_id, owner, metadata):
     """Insert a dev into the DB from IPFS metadata."""
     attrs = {}
@@ -346,7 +370,28 @@ def run_listener():
 
                     # Insert into DB
                     try:
+                        # Parse metadata for corp/archetype needed by ensure_player and action
+                        mint_attrs = {}
+                        for a in metadata.get("attributes", []):
+                            mint_attrs[a["trait_type"]] = a["value"]
+
+                        corp_map_local = {
+                            "Closed AI": "CLOSED_AI", "Misanthropic": "MISANTHROPIC",
+                            "Shallow Mind": "SHALLOW_MIND", "Zuck Labs": "ZUCK_LABS",
+                            "Y.AI": "Y_AI", "Mistrial Systems": "MISTRIAL_SYSTEMS",
+                        }
+                        arch_map_local = {
+                            "10X Dev": "10X_DEV", "Lurker": "LURKER", "Degen": "DEGEN",
+                            "Grinder": "GRINDER", "Influencer": "INFLUENCER",
+                            "Hacktivist": "HACKTIVIST", "Fed": "FED", "Script Kiddie": "SCRIPT_KIDDIE",
+                        }
+                        mint_corp = corp_map_local.get(mint_attrs.get("Corporation", ""), "CLOSED_AI")
+                        mint_arch = arch_map_local.get(mint_attrs.get("Archetype", ""), "LURKER")
+                        mint_name = metadata.get("name", f"Dev #{token_id}")
+
+                        ensure_player(cur, owner, mint_corp)
                         insert_dev(cur, token_id, owner, metadata)
+                        insert_action_mint(cur, token_id, mint_name, mint_arch)
                         minted_count += 1
                     except Exception as e:
                         log.error(f"Failed to insert dev #{token_id}: {e}")
