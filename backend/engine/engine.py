@@ -19,6 +19,7 @@ from templates import (
     gen_dev_name, gen_protocol_name, gen_protocol_description,
     gen_ai_name, gen_ai_description, gen_chat_message, gen_visual_traits,
 )
+from prompt_system import process_prompt
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nx_engine")
@@ -163,6 +164,12 @@ def apply_context_modifiers(weights: dict, dev: dict, context: dict) -> dict:
     if event_effects.get("sell_weight_boost"):
         w["SELL"] *= event_effects["sell_weight_boost"]
 
+    # --- Player prompt weight modifiers ---
+    prompt_mods = context.get("prompt_weight_modifiers", {})
+    for action, mult in prompt_mods.items():
+        if action in w:
+            w[action] *= mult
+
     # --- Personality seed variation (±15%) ---
     seed = dev.get("personality_seed", 0)
     rng = random.Random(seed)
@@ -187,6 +194,46 @@ def decide_action(dev: dict, context: dict) -> str:
     actions = list(modified.keys())
     probs = [modified[a] / total for a in actions]
     return random.choices(actions, weights=probs, k=1)[0]
+
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+PROTOCOL_NOTIF_TITLES = [
+    "{dev} just shipped a protocol!",
+    "New protocol alert from {dev}!",
+    "{dev} deployed something. It might even work.",
+    "BREAKING: {dev} created a protocol. Shareholders mildly interested.",
+    "{dev} just pushed code to production. On a Friday.",
+]
+
+PROTOCOL_NOTIF_BODIES = [
+    "{dev} deployed \"{proto}\" (quality: {quality}/100). Your portfolio of questionable decisions grows.",
+    "\"{proto}\" is live. {dev} built it with {quality}% code quality. The other {rest}% is held together by hope.",
+    "Protocol \"{proto}\" has entered the chat. Quality score: {quality}. {dev} is already updating their LinkedIn.",
+    "{dev} created \"{proto}\". It cost them {cost} $NXT and their remaining dignity. Quality: {quality}/100.",
+]
+
+AI_NOTIF_TITLES = [
+    "{dev} created an AI. It's... something.",
+    "New Absurd AI from {dev}!",
+    "{dev} just birthed a digital consciousness. Sort of.",
+]
+
+AI_NOTIF_BODIES = [
+    "{dev} created \"{ai}\": {desc}. The singularity was supposed to be cooler than this.",
+    "\"{ai}\" now exists thanks to {dev}. It cost {cost} $NXT. Was it worth it? Probably not. But here we are.",
+    "Your dev {dev} made \"{ai}\". Nobody asked for this. {desc}",
+]
+
+
+def insert_notification(cur, owner: str, notif_type: str, title: str, body: str, dev_id: int = None):
+    """Insert a notification for a player."""
+    cur.execute("""
+        INSERT INTO notifications (player_address, type, title, body, dev_id)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (owner, notif_type, title[:500], body[:1000], dev_id))
 
 
 # ============================================================
@@ -242,6 +289,15 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_CREATE_PROTOCOL_ENERGY, COST_CREATE_PROTOCOL_NXT,
               COST_CREATE_PROTOCOL_NXT, quality // 10, dev["token_id"]))
 
+        # Notify owner
+        owner = dev.get("owner_address")
+        if owner:
+            ntitle = random.choice(PROTOCOL_NOTIF_TITLES).format(dev=dev["name"])
+            nbody = random.choice(PROTOCOL_NOTIF_BODIES).format(
+                dev=dev["name"], proto=name, quality=quality,
+                rest=100 - quality, cost=COST_CREATE_PROTOCOL_NXT)
+            insert_notification(cur, owner, "protocol_created", ntitle, nbody, dev["token_id"])
+
     elif action == "CREATE_AI":
         name = gen_ai_name()
         desc = gen_ai_description()
@@ -266,6 +322,14 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 ais_created = ais_created + 1
             WHERE token_id = %s
         """, (COST_CREATE_AI_ENERGY, COST_CREATE_AI_NXT, COST_CREATE_AI_NXT, dev["token_id"]))
+
+        # Notify owner
+        owner = dev.get("owner_address")
+        if owner:
+            ntitle = random.choice(AI_NOTIF_TITLES).format(dev=dev["name"])
+            nbody = random.choice(AI_NOTIF_BODIES).format(
+                dev=dev["name"], ai=name, desc=desc[:100], cost=COST_CREATE_AI_NXT)
+            insert_notification(cur, owner, "ai_created", ntitle, nbody, dev["token_id"])
 
     elif action == "INVEST":
         # Pick a random active protocol
@@ -341,7 +405,12 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
 
     elif action == "MOVE":
         old_loc = dev["location"]
-        new_loc = random.choice([l for l in LOCATIONS if l != old_loc])
+        # Use prompt target location if specified, otherwise random
+        prompt_loc = context.get("prompt_target_location")
+        if prompt_loc and prompt_loc in LOCATIONS and prompt_loc != old_loc:
+            new_loc = prompt_loc
+        else:
+            new_loc = random.choice([l for l in LOCATIONS if l != old_loc])
         result["energy_cost"] = COST_MOVE_ENERGY
         result["details"] = {"from": old_loc, "to": new_loc}
 
@@ -473,10 +542,110 @@ def calc_next_interval(dev: dict, context: dict) -> int:
 # PROCESS SINGLE DEV CYCLE
 # ============================================================
 
+def check_and_process_prompt(conn, dev: dict, context: dict) -> Optional[dict]:
+    """Check for a pending player prompt, process it, and return result if any."""
+    cur = get_cursor(conn)
+
+    # Fetch oldest unconsumed prompt for this dev
+    cur.execute("""
+        SELECT id, player_address, prompt_text
+        FROM player_prompts
+        WHERE dev_id = %s AND consumed = FALSE
+        ORDER BY created_at ASC
+        LIMIT 1
+    """, (dev["token_id"],))
+    prompt_row = cur.fetchone()
+    if not prompt_row:
+        return None
+
+    # Gather known protocol names for context
+    cur.execute("SELECT name FROM protocols WHERE status = 'active'")
+    known_protocols = [r["name"] for r in cur.fetchall()]
+
+    # Fetch extra dev stats needed by process_prompt
+    cur.execute("""
+        SELECT protocols_created, ais_created, bugs_found, code_reviews_done
+        FROM devs WHERE token_id = %s
+    """, (dev["token_id"],))
+    stats = cur.fetchone()
+    dev_full = {**dev, **stats} if stats else dev
+
+    # Process the prompt through the personality system
+    prompt_result = process_prompt(prompt_row["prompt_text"], dev_full, known_protocols)
+
+    # Mark prompt as consumed
+    cur.execute("""
+        UPDATE player_prompts SET consumed = TRUE, consumed_at = NOW()
+        WHERE id = %s
+    """, (prompt_row["id"],))
+
+    # Save dev response as a chat message
+    if prompt_result.get("response"):
+        cur.execute("""
+            INSERT INTO chat_messages (dev_id, dev_name, archetype, channel, location, message)
+            VALUES (%s, %s, %s, 'trollbox', NULL, %s)
+        """, (dev["token_id"], dev["name"], dev["archetype"],
+              prompt_result["response"][:500]))
+
+    # Log as action
+    cur.execute("""
+        INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+        VALUES (%s, %s, %s, 'CHAT', %s, 0, 0)
+    """, (dev["token_id"], dev["name"], dev["archetype"],
+          json.dumps({
+              "event": "prompt_response",
+              "player_prompt": prompt_row["prompt_text"][:200],
+              "intent": prompt_result.get("intent"),
+              "compliance": prompt_result.get("compliance"),
+              "response": prompt_result.get("response", ""),
+          })))
+
+    # Notify the player about the dev's response
+    owner = prompt_row.get("player_address") or dev.get("owner_address")
+    if owner and prompt_result.get("response"):
+        insert_notification(cur, owner, "prompt_response",
+            f"{dev['name']} responded to your order",
+            f"You said: \"{prompt_row['prompt_text'][:100]}\"\n\n"
+            f"{dev['name']} [{prompt_result.get('compliance', 'unknown')}]: "
+            f"\"{prompt_result['response'][:300]}\"",
+            dev["token_id"])
+
+    log.info(f"📨 {dev['name']} received prompt: \"{prompt_row['prompt_text'][:60]}\"")
+    log.info(f"   → [{prompt_result.get('compliance', '?')}] \"{prompt_result.get('response', '')[:80]}\"")
+
+    return prompt_result
+
+
+def apply_prompt_modifiers(context: dict, prompt_result: dict) -> dict:
+    """Apply weight modifiers from a processed prompt to the dev's context."""
+    if not prompt_result or not prompt_result.get("weight_modifiers"):
+        return context
+
+    ctx = context.copy()
+    ctx["prompt_weight_modifiers"] = {
+        k: v for k, v in prompt_result["weight_modifiers"].items()
+        if not k.startswith("_")
+    }
+    # If prompt specifies a target location, pass it through
+    if prompt_result.get("target_location"):
+        ctx["prompt_target_location"] = prompt_result["target_location"]
+    return ctx
+
+
 def process_dev(conn, dev: dict, context: dict) -> dict:
-    """Full cycle for one dev: decide → execute → return result."""
+    """Full cycle for one dev: check prompt → decide → execute → return result."""
+    # Check for pending player prompts before deciding action
+    prompt_result = check_and_process_prompt(conn, dev, context)
+    if prompt_result:
+        context = apply_prompt_modifiers(context, prompt_result)
+
     action = decide_action(dev, context)
     result = execute_action(conn, dev, action, context)
+
+    # Attach prompt info to result for logging
+    if prompt_result:
+        result["prompt_response"] = prompt_result.get("response", "")
+
     return result
 
 
@@ -488,7 +657,7 @@ def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
     """Get devs whose next_cycle_at has passed."""
     cur = get_cursor(conn)
     cur.execute("""
-        SELECT token_id, name, archetype, corporation, rarity_tier,
+        SELECT token_id, name, owner_address, archetype, corporation, rarity_tier,
                personality_seed, energy, max_energy, mood, location,
                balance_nxt, reputation, status
         FROM devs

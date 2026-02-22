@@ -191,7 +191,7 @@ function saveEmails(emails) {
   localStorage.setItem('nx-inbox-emails', JSON.stringify(toSave));
 }
 
-export default function Inbox({ onUnreadCount }) {
+export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const [emails, setEmails] = useState(() => {
     const saved = loadSavedEmails();
     if (saved) return saved;
@@ -209,6 +209,35 @@ export default function Inbox({ onUnreadCount }) {
       return updated;
     });
   }, []);
+
+  // Fetch real notifications from API and merge into inbox
+  useEffect(() => {
+    const walletAddress = walletProp || window.ethereum?.selectedAddress;
+    if (!walletAddress) return;
+    const fetchNotifications = () => {
+      api.getNotifications(walletAddress)
+        .then(notifs => {
+          if (!Array.isArray(notifs) || notifs.length === 0) return;
+          notifs.forEach(n => {
+            const email = {
+              id: `notif-${n.id}`,
+              from: `NX System <${n.type}@nxterminal.corp>`,
+              subject: n.title,
+              date: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              read: n.read,
+              body: n.body,
+              notifId: n.id,
+            };
+            addEmail(email);
+          });
+        })
+        .catch(() => {});
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [walletAddress, addEmail]);
 
   // Listen for mint events and fetch dev data to create personalized emails
   useEffect(() => {
@@ -276,6 +305,10 @@ export default function Inbox({ onUnreadCount }) {
       const updated = emails.map(e => e.id === email.id ? { ...e, read: true } : e);
       setEmails(updated);
       saveEmails(updated);
+      // Mark backend notification as read
+      if (email.notifId) {
+        api.markNotificationRead(email.notifId).catch(() => {});
+      }
     }
   };
 
