@@ -1,111 +1,9 @@
-export const NXDEV_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7';
+// NXDevNFT contract on MegaETH (chain 4326)
+export const NXDEVNFT_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7';
 
-export const NXDEV_ABI = [
-  // Read functions
-  {
-    name: 'mintPrice',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'whitelistPrice',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'totalMinted',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'mintPhase',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint8' }],
-  },
-  {
-    name: 'maxPerWallet',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'owner', type: 'address' }],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'tokensOfOwner',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'owner_', type: 'address' }],
-    outputs: [{ type: 'uint256[]' }],
-  },
-  {
-    name: 'whitelisted',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: '', type: 'address' }],
-    outputs: [{ type: 'bool' }],
-  },
-  {
-    name: 'freeMintAllowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: '', type: 'address' }],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'remainingSupply',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'getDevInfo',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    outputs: [
-      { name: 'owner_', type: 'address' },
-      { name: 'locked_', type: 'bool' },
-      { name: 'state_', type: 'uint8' },
-      { name: 'corpId_', type: 'uint8' },
-      { name: 'corpSet_', type: 'bool' },
-      { name: 'claimable_', type: 'uint256' },
-      { name: 'claimed_', type: 'uint256' },
-    ],
-  },
-  {
-    name: 'claimEnabled',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'bool' }],
-  },
-  {
-    name: 'previewClaim',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'tokenIds', type: 'uint256[]' }],
-    outputs: [
-      { name: 'gross', type: 'uint256' },
-      { name: 'fee', type: 'uint256' },
-      { name: 'net', type: 'uint256' },
-    ],
-  },
-  // Write functions
+// Minimal ABI — only the functions the frontend needs
+export const NXDEVNFT_ABI = [
+  // ── Write functions ──────────────────────────────────────
   {
     name: 'mint',
     type: 'function',
@@ -134,21 +32,102 @@ export const NXDEV_ABI = [
     inputs: [{ name: 'tokenIds', type: 'uint256[]' }],
     outputs: [],
   },
-  // Events
+
+  // ── Read functions ───────────────────────────────────────
   {
-    name: 'DevMinted',
-    type: 'event',
-    inputs: [
-      { name: 'owner', type: 'address', indexed: true },
-      { name: 'tokenId', type: 'uint256', indexed: true },
+    name: 'mintPrice',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'mintPhase',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }],
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'tokensOfOwner',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'owner_', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256[]' }],
+  },
+  {
+    name: 'whitelisted',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'freeMintAllowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'remainingSupply',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'claimEnabled',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'walletClaimable',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'wallet', type: 'address' }],
+    outputs: [
+      { name: 'total', type: 'uint256' },
+      { name: 'devCount', type: 'uint256' },
     ],
   },
   {
-    name: 'BatchMinted',
-    type: 'event',
-    inputs: [
-      { name: 'owner', type: 'address', indexed: true },
-      { name: 'tokenIds', type: 'uint256[]', indexed: false },
+    name: 'previewClaim',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenIds', type: 'uint256[]' }],
+    outputs: [
+      { name: 'gross', type: 'uint256' },
+      { name: 'fee', type: 'uint256' },
+      { name: 'net', type: 'uint256' },
     ],
+  },
+  {
+    name: 'getMintPrices',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      { name: 'ethPublic', type: 'uint256' },
+      { name: 'ethWL', type: 'uint256' },
+      { name: 'tokenPublic', type: 'uint256' },
+      { name: 'tokenWL', type: 'uint256' },
+    ],
+  },
+  {
+    name: 'totalMinted',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
   },
 ];
