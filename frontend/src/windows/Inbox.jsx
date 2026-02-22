@@ -187,7 +187,7 @@ function loadSavedEmails() {
 }
 
 function saveEmails(emails) {
-  const toSave = emails.map(({ id, from, subject, date, read, body }) => ({ id, from, subject, date, read, body }));
+  const toSave = emails.map(({ id, from, subject, date, read, body, notifId }) => ({ id, from, subject, date, read, body, notifId }));
   localStorage.setItem('nx-inbox-emails', JSON.stringify(toSave));
 }
 
@@ -237,7 +237,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [walletAddress, addEmail]);
+  }, [walletProp, addEmail]);
 
   // Listen for mint events and fetch dev data to create personalized emails
   useEffect(() => {
