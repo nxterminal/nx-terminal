@@ -452,7 +452,9 @@ export default function LiveFeed() {
                       {item.action_type || 'action'}
                     </span>{' '}
                     <span style={{ color: '#aaa' }}>
-                      {item.details || ''}
+                      {typeof item.details === 'object' && item.details !== null
+                        ? (item.details.message || item.details.event || item.details.name || JSON.stringify(item.details))
+                        : (item.details || '')}
                     </span>
                   </>
                 )}

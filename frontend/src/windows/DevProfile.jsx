@@ -73,8 +73,13 @@ function PromptInput({ devId, devName }) {
         setTimeout(() => setStatus(null), 4000);
       })
       .catch((err) => {
-        setStatus('error');
-        setErrorMsg(err.message || 'Failed to send prompt');
+        if (err.message && err.message.includes('429')) {
+          setStatus('error');
+          setErrorMsg(`${devName} is still processing the last order. Please wait.`);
+        } else {
+          setStatus('error');
+          setErrorMsg(err.message || 'Failed to send prompt');
+        }
       });
   };
 
@@ -344,12 +349,14 @@ export default function DevProfile({ devId }) {
           <div className="loading">Loading...</div>
         ) : tab === 'history' ? (
           <div className="terminal" style={{ minHeight: 100 }}>
-            {tabData.length === 0 && <div style={{ color: 'var(--terminal-amber)' }}>No history yet. Simulation is in pre-launch.</div>}
+            {tabData.length === 0 && <div style={{ color: 'var(--terminal-amber)' }}>No actions recorded yet. Your dev will start acting once the engine processes them.</div>}
             {tabData.map((item, i) => (
               <div key={i} className="terminal-line">
                 <span style={{ color: 'var(--terminal-amber)' }}>[{formatTime(item.created_at)}]</span>{' '}
                 <span style={{ color: 'var(--terminal-cyan)' }}>{item.action_type}</span>{' '}
-                <span>{item.details || ''}</span>
+                <span>{typeof item.details === 'object' && item.details !== null
+                  ? (item.details.message || item.details.event || item.details.name || JSON.stringify(item.details))
+                  : (item.details || '')}</span>
               </div>
             ))}
           </div>
