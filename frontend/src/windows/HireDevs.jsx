@@ -373,7 +373,7 @@ export default function HireDevs({ onMint, openDevProfile }) {
 
   // ── Derived state ────────────────────────────────────────
   const phase = mintPhase != null ? Number(mintPhase) : null;
-  const isClosed = phase === PHASE_CLOSED;
+  const isClosed = phase == null || phase === PHASE_CLOSED;
   const hasFreeMint = freeAllowance != null && Number(freeAllowance) > 0;
   const canWhitelistMint = phase === PHASE_WHITELIST && isWhitelisted;
   const canPublicMint = phase === PHASE_PUBLIC;
@@ -621,7 +621,7 @@ export default function HireDevs({ onMint, openDevProfile }) {
                 <button
                   className="win-btn"
                   onClick={handleMint}
-                  disabled={txBusy || (isClosed && !hasFreeMint)}
+                  disabled={txBusy || phase == null || (isClosed && !hasFreeMint)}
                   style={{ padding: '4px 16px', fontWeight: 'bold' }}
                 >
                   {getMintButtonLabel()}

@@ -52,7 +52,7 @@ app.add_middleware(
         "http://localhost:5173",
         "https://nxterminal.onrender.com",
         "https://nx-terminal.onrender.com",
-        # Add your custom domain here
+        "https://nx-frontend-5cbf.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
