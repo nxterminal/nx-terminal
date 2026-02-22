@@ -181,6 +181,46 @@ export default function NXAssistant() {
     return () => clearInterval(interval);
   }, [loaded]);
 
+  // Listen for mint events — congratulate the user
+  useEffect(() => {
+    const MINT_MESSAGES = [
+      (d) => `You just hired a ${d.species || 'mysterious entity'} ${(d.archetype || 'developer').replace(/_/g, ' ')}. Bold choice. Very bold.`,
+      (d) => `Another soul for ${(d.corporation || 'the corporation').replace(/_/g, ' ')}! The shareholders will be pleased.`,
+      (d) => `${d.name || 'Your new dev'} has entered the simulation. May the bugs be ever in their favor.`,
+      (d) => `Congratulations! You've hired a digital wage slave. I mean, a talented developer. ${d.name || 'They'}'re very excited. Well, as excited as code can be.`,
+      (d) => `${d.name || 'New hire'} reporting for duty at ${(d.corporation || 'HQ').replace(/_/g, ' ')}! Their first assignment: figure out what they're supposed to do.`,
+      (d) => `A new ${(d.archetype || 'developer').replace(/_/g, ' ')} joins the Protocol Wars! ${d.name || 'They'} already regrets this career choice.`,
+      (d) => `Welcome, ${d.name || 'new dev'}! Your developer has been assigned a desk, a dream, and a crippling sense of corporate obligation.`,
+      (d) => `${d.name || 'Your new dev'} is now property of ${(d.corporation || 'the corporation').replace(/_/g, ' ')}. Please do not form emotional attachments. Too late? Too late.`,
+      (d) => `I've seen many ${(d.archetype || 'developer').replace(/_/g, ' ')}s come and go. Mostly go. Good luck, ${d.name || 'new hire'}!`,
+      (d) => `${d.name || 'A brave soul'} has been deployed. Current survival odds: non-zero. That's the best we can offer.`,
+    ];
+
+    const handleDevHired = (e) => {
+      const { dev } = e.detail || {};
+      if (!dev || !agentRef.current) return;
+
+      const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
+      if (!enabled) return;
+
+      const msgFn = MINT_MESSAGES[Math.floor(Math.random() * MINT_MESSAGES.length)];
+      const msg = msgFn(dev);
+
+      // Small delay so it doesn't overlap with other speech
+      setTimeout(() => {
+        if (agentRef.current) {
+          try { agentRef.current.play('Congratulate'); } catch {
+            try { agentRef.current.animate(); } catch {}
+          }
+          agentRef.current.speak(msg);
+        }
+      }, 2000);
+    };
+
+    window.addEventListener('nx-dev-hired', handleDevHired);
+    return () => window.removeEventListener('nx-dev-hired', handleDevHired);
+  }, []);
+
   // Listen for agent change events
   useEffect(() => {
     const handleSettingsChanged = () => {
