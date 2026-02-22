@@ -9,10 +9,12 @@ import os
 import sys
 import time
 import json
+import random
 import logging
 import requests
 import psycopg2
 import psycopg2.extras
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 # ═══════════════════════════════════════════════════════════
@@ -136,6 +138,7 @@ def insert_dev(cur, token_id, owner, metadata):
     cur.execute("""
         INSERT INTO devs (
             token_id, name, owner_address, archetype, corporation, rarity_tier,
+            personality_seed,
             alignment, risk_level, social_style, coding_style, work_ethic,
             species, skin, clothing, glow, vibe,
             hair_style, hair_color, facial, headgear, extra,
@@ -143,9 +146,11 @@ def insert_dev(cur, token_id, owner, metadata):
             stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck,
             status, mood, location, energy,
             coffee_count, lines_of_code, bugs_shipped, hours_since_sleep,
+            next_cycle_at,
             minted_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s,
+            %s,
             %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
@@ -153,6 +158,7 @@ def insert_dev(cur, token_id, owner, metadata):
             %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s,
             %s, %s, %s, %s,
+            NOW(),
             NOW()
         )
     """, (
@@ -162,6 +168,7 @@ def insert_dev(cur, token_id, owner, metadata):
         arch,
         corp,
         rarity,
+        random.getrandbits(64),
         attrs.get("Alignment", "True Neutral"),
         attrs.get("Risk Level", "Moderate"),
         attrs.get("Social Style", "Quiet"),
@@ -276,11 +283,26 @@ def fetch_metadata(token_id):
 # ═══════════════════════════════════════════════════════════
 
 def update_simulation_state(cur, total_minted):
-    """Update the simulation state with the new mint count."""
+    """Update the simulation state with the new mint count and activate if first dev."""
     cur.execute(
-        "UPDATE simulation_state SET value = %s WHERE key = 'total_devs_minted'",
+        "UPDATE simulation_state SET value = %s, updated_at = NOW() WHERE key = 'total_devs_minted'",
         (json.dumps(total_minted),)
     )
+    # Transition from pre_launch to running on first dev
+    if total_minted >= 1:
+        cur.execute("""
+            UPDATE simulation_state SET value = '"running"', updated_at = NOW()
+            WHERE key = 'simulation_status' AND value = '"pre_launch"'
+        """)
+        cur.execute("""
+            UPDATE simulation_state SET value = %s, updated_at = NOW()
+            WHERE key = 'simulation_started_at' AND value = 'null'
+        """, (json.dumps(datetime.now(timezone.utc).isoformat()),))
+    # Ensure all active devs have next_cycle_at set for engine processing
+    cur.execute("""
+        UPDATE devs SET next_cycle_at = NOW()
+        WHERE next_cycle_at IS NULL AND status = 'active'
+    """)
 
 
 # ═══════════════════════════════════════════════════════════
