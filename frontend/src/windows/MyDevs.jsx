@@ -10,7 +10,7 @@ const ARCHETYPE_COLORS = {
   'FED': '#ffaa00', 'SCRIPT_KIDDIE': '#00ffff',
 };
 
-const IPFS_GW = 'https://cloudflare-ipfs.com/ipfs/';
+const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
 function formatNumber(n) {
   if (n == null) return '0';

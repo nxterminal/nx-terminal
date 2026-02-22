@@ -13,7 +13,7 @@ const RARITY_COLORS = {
   legendary: '#ffd700', mythic: '#ff44ff',
 };
 
-const IPFS_GW = 'https://cloudflare-ipfs.com/ipfs/';
+const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
 function formatNumber(n) {
   if (n == null) return '0';
