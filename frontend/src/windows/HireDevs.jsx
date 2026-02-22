@@ -1,8 +1,245 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
+
+// ── Post-mint deploy animation ──────────────────────────────
+const DEPLOY_STEPS = [
+  { text: 'Connecting to MegaETH mainnet...', duration: 800 },
+  { text: 'Downloading developer genome...', duration: 1000 },
+  { text: 'Installing neural pathways...', duration: 800 },
+  { text: 'Compiling personality matrix...', duration: 1200 },
+  { text: 'Deploying to corporation...', duration: 1000 },
+  { text: 'Developer deployed successfully!', duration: 0 },
+];
+
+function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
+  const [phase, setPhase] = useState('dialup'); // dialup | copying | deploying | done
+  const [dialStep, setDialStep] = useState(0);
+  const [deployStep, setDeployStep] = useState(-1);
+  const [copyProgress, setCopyProgress] = useState(0);
+  const [mintedIds, setMintedIds] = useState([]);
+  const timerRef = useRef(null);
+
+  // Fetch token IDs owned by this wallet
+  const { data: ownedTokens } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'tokensOfOwner',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  useEffect(() => {
+    if (ownedTokens && ownedTokens.length > 0) {
+      // Last N minted tokens (most recent)
+      const ids = ownedTokens.slice(-quantity).map(id => Number(id));
+      setMintedIds(ids);
+    }
+  }, [ownedTokens, quantity]);
+
+  // ── Dial-up phase ──
+  const DIAL_LINES = [
+    'ATDT 555-0198-NXT',
+    'Negotiating baud rate... 56000 bps',
+    'Authenticating employee credentials...',
+    'Verifying corporate loyalty score...',
+    'Connection established!',
+  ];
+
+  useEffect(() => {
+    if (phase !== 'dialup') return;
+    if (dialStep >= DIAL_LINES.length) {
+      timerRef.current = setTimeout(() => setPhase('copying'), 600);
+      return;
+    }
+    timerRef.current = setTimeout(() => setDialStep(s => s + 1), 700);
+    return () => clearTimeout(timerRef.current);
+  }, [phase, dialStep]);
+
+  // ── Copy phase ──
+  useEffect(() => {
+    if (phase !== 'copying') return;
+    if (copyProgress >= 100) {
+      timerRef.current = setTimeout(() => {
+        setPhase('deploying');
+        setDeployStep(0);
+      }, 400);
+      return;
+    }
+    const increment = Math.random() * 15 + 3;
+    timerRef.current = setTimeout(
+      () => setCopyProgress(p => Math.min(100, p + increment)),
+      150 + Math.random() * 200,
+    );
+    return () => clearTimeout(timerRef.current);
+  }, [phase, copyProgress]);
+
+  // ── Deploy phase ──
+  useEffect(() => {
+    if (phase !== 'deploying') return;
+    if (deployStep < 0) return;
+    if (deployStep >= DEPLOY_STEPS.length) {
+      setPhase('done');
+      return;
+    }
+    const step = DEPLOY_STEPS[deployStep];
+    if (step.duration === 0) {
+      // last step — stay
+      timerRef.current = setTimeout(() => setPhase('done'), 800);
+      return;
+    }
+    timerRef.current = setTimeout(() => setDeployStep(s => s + 1), step.duration);
+    return () => clearTimeout(timerRef.current);
+  }, [phase, deployStep]);
+
+  // Cleanup
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const termStyle = {
+    background: '#0a0a0a',
+    border: '1px solid #333',
+    padding: '10px 12px',
+    fontFamily: "'VT323', monospace",
+    fontSize: '13px',
+    color: '#33ff33',
+    lineHeight: 1.6,
+    minHeight: '120px',
+  };
+
+  // ── DIAL-UP ──
+  if (phase === 'dialup') {
+    return (
+      <div>
+        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px', textAlign: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Connecting to NX Terminal Corp.</span>
+        </div>
+        <div style={termStyle}>
+          <div style={{ marginBottom: '6px', color: '#ffaa00' }}>
+            {'  '}[=PC=]---{'((☎))'}---[🌐]
+          </div>
+          {DIAL_LINES.slice(0, dialStep).map((line, i) => (
+            <div key={i}>{'>'} {line}</div>
+          ))}
+          <span style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── COPYING FILES ──
+  if (phase === 'copying') {
+    const filled = Math.round(copyProgress / 5);
+    const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
+    return (
+      <div>
+        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '16px' }}>📁→📂</span>
+            <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Copying developer files...</span>
+          </div>
+        </div>
+        <div style={termStyle}>
+          <div>Copying genome_v{Math.floor(Math.random() * 9) + 1}.dat</div>
+          <div>Copying neural_net.bin</div>
+          <div>Copying personality.cfg</div>
+          <div style={{ marginTop: '8px' }}>
+            [{bar}] {Math.round(copyProgress)}%
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── DEPLOYING ──
+  if (phase === 'deploying') {
+    return (
+      <div>
+        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px', textAlign: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Deploying Developer{quantity > 1 ? 's' : ''}...</span>
+        </div>
+        <div style={termStyle}>
+          {DEPLOY_STEPS.slice(0, deployStep + 1).map((step, i) => (
+            <div key={i} style={{
+              color: i === DEPLOY_STEPS.length - 1 ? '#ffaa00' : '#33ff33',
+            }}>
+              {'>'} {step.text}
+            </div>
+          ))}
+          {deployStep < DEPLOY_STEPS.length - 1 && (
+            <span style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── DONE ──
+  return (
+    <div>
+      <div className="win-raised" style={{
+        padding: '12px',
+        border: '2px solid var(--terminal-green)',
+        marginBottom: '8px',
+      }}>
+        <div style={{
+          fontWeight: 'bold', fontSize: '14px',
+          color: 'var(--terminal-green)', marginBottom: '8px',
+          textAlign: 'center',
+        }}>
+          DEPLOYMENT COMPLETE
+        </div>
+        <div style={{ fontSize: '11px', textAlign: 'center', marginBottom: '8px' }}>
+          {quantity} developer{quantity > 1 ? 's' : ''} deployed to the Protocol Wars
+        </div>
+
+        {mintedIds.length > 0 && (
+          <div className="win-panel" style={{ padding: '8px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>Token ID{mintedIds.length > 1 ? 's' : ''}:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {mintedIds.map(id => (
+                <button
+                  key={id}
+                  className="win-btn"
+                  onClick={() => openDevProfile?.(id)}
+                  style={{ fontSize: '11px', padding: '3px 10px' }}
+                >
+                  Dev #{id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {txHash && (
+          <div style={{ fontSize: '10px', color: '#888', textAlign: 'center', marginBottom: '8px' }}>
+            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          {mintedIds.length === 1 && (
+            <button
+              className="win-btn"
+              onClick={() => openDevProfile?.(mintedIds[0])}
+              style={{ padding: '4px 16px', fontWeight: 'bold' }}
+            >
+              View Developer
+            </button>
+          )}
+          <button
+            className="win-btn"
+            onClick={onReset}
+            style={{ padding: '4px 16px' }}
+          >
+            Mint Another
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const PHASE_CLOSED = 0;
 const PHASE_WHITELIST = 1;
@@ -37,12 +274,13 @@ const QUESTIONS = [
   },
 ];
 
-export default function HireDevs({ onMint }) {
+export default function HireDevs({ onMint, openDevProfile }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [mintError, setMintError] = useState(null);
   const [mintSuccess, setMintSuccess] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   const { address, isConnected, isConnecting, connect, displayAddress } = useWallet();
 
@@ -96,10 +334,11 @@ export default function HireDevs({ onMint }) {
     }
   }, [writeError]);
 
-  // Handle successful mint
+  // Handle successful mint — trigger animation
   useEffect(() => {
     if (isConfirmed && txHash) {
       setMintSuccess(true);
+      setShowAnimation(true);
       setMintError(null);
       // Track minted devs in localStorage and notify LiveFeed
       const current = parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);
@@ -108,6 +347,14 @@ export default function HireDevs({ onMint }) {
       if (onMint) onMint(answers, quantity, address);
     }
   }, [isConfirmed, txHash]);
+
+  const handleAnimationReset = () => {
+    setShowAnimation(false);
+    setMintSuccess(false);
+    setStep(0);
+    setAnswers({});
+    setQuantity(1);
+  };
 
   // ── Derived state ────────────────────────────────────────
   const phase = mintPhase != null ? Number(mintPhase) : null;
@@ -396,23 +643,16 @@ export default function HireDevs({ onMint }) {
               </div>
             )}
 
-            {/* Mint success */}
-            {mintSuccess && (
-              <div className="win-raised" style={{
-                marginTop: '12px', padding: '12px',
-                border: '2px solid var(--terminal-green)',
-              }}>
-                <div style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--terminal-green)', marginBottom: '4px' }}>
-                  MINT SUCCESSFUL
-                </div>
-                <div style={{ fontSize: '11px' }}>
-                  {quantity} developer{quantity > 1 ? 's' : ''} minted! Check "My Devs" to see your new agents.
-                </div>
-                {txHash && (
-                  <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                    TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-                  </div>
-                )}
+            {/* Mint success — animated deploy sequence */}
+            {showAnimation && (
+              <div style={{ marginTop: '12px' }}>
+                <MintAnimation
+                  quantity={quantity}
+                  txHash={txHash}
+                  address={address}
+                  openDevProfile={openDevProfile}
+                  onReset={handleAnimationReset}
+                />
               </div>
             )}
 
