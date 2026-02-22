@@ -1,25 +1,37 @@
 import Window from './Window';
-import ActionFeed from '../windows/ActionFeed';
+import LiveFeed from '../windows/LiveFeed';
 import Leaderboard from '../windows/Leaderboard';
 import ProtocolMarket from '../windows/ProtocolMarket';
 import AILab from '../windows/AILab';
-import DevChat from '../windows/DevChat';
 import DevProfile from '../windows/DevProfile';
 import MyDevs from '../windows/MyDevs';
-import Shop from '../windows/Shop';
 import WorldChat from '../windows/WorldChat';
-import MintDevs from '../windows/MintDevs';
+import ControlPanel from '../windows/ControlPanel';
+import NXTerminal from '../windows/NXTerminal';
+import BugSweeper from '../windows/BugSweeper';
+import ProtocolSolitaire from '../windows/ProtocolSolitaire';
+import Inbox from '../windows/Inbox';
+import HireDevs from '../windows/HireDevs';
+import Notepad from '../windows/Notepad';
+import RecycleBin from '../windows/RecycleBin';
+import NxtWallet from '../windows/NxtWallet';
 
 const WINDOW_COMPONENTS = {
-  'action-feed': ActionFeed,
+  'live-feed': LiveFeed,
   'leaderboard': Leaderboard,
   'protocol-market': ProtocolMarket,
   'ai-lab': AILab,
-  'dev-chat': DevChat,
   'my-devs': MyDevs,
-  'shop': Shop,
+  'nxt-wallet': NxtWallet,
   'world-chat': WorldChat,
-  'mint-devs': MintDevs,
+  'control-panel': ControlPanel,
+  'nx-terminal': NXTerminal,
+  'bug-sweeper': BugSweeper,
+  'protocol-solitaire': ProtocolSolitaire,
+  'inbox': Inbox,
+  'hire-devs': HireDevs,
+  'notepad': Notepad,
+  'recycle-bin': RecycleBin,
 };
 
 export default function WindowManager({
@@ -30,6 +42,7 @@ export default function WindowManager({
   maximizeWindow,
   moveWindow,
   openDevProfile,
+  onBSOD,
 }) {
   return (
     <>
@@ -40,7 +53,9 @@ export default function WindowManager({
         } else {
           ContentComponent = WINDOW_COMPONENTS[w.id];
         }
+
         if (!ContentComponent) return null;
+
         return (
           <Window
             key={w.id}

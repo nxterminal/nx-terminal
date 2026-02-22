@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
-:root {
+:root, [data-theme="classic"] {
   --bg-desktop: #008080;
   --win-bg: #c0c0c0;
   --win-title-l: #000080;
@@ -17,6 +17,102 @@
   --terminal-cyan: #00ffff;
   --terminal-magenta: #ff44ff;
   --gold: #ffd700;
+  --text-primary: #000000;
+  --text-secondary: #444444;
+  --text-muted: #666666;
+}
+
+[data-theme="dark"] {
+  --bg-desktop: #1a1a2e;
+  --win-bg: #2d2d3f;
+  --win-title-l: #4a148c;
+  --win-title-r: #7c43bd;
+  --border-light: #4a4a5e;
+  --border-dark: #1a1a2e;
+  --border-darker: #0d0d1a;
+  --selection: #6200ea;
+  --selection-text: #ffffff;
+  --terminal-bg: #0a0a14;
+  --terminal-green: #33ff33;
+  --terminal-amber: #ffaa00;
+  --terminal-red: #ff4444;
+  --terminal-cyan: #00ffff;
+  --terminal-magenta: #ff44ff;
+  --gold: #ffd700;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .win-btn,
+[data-theme="dark"] .win-table th,
+[data-theme="dark"] .win-tab {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .win-tab:not(.active) {
+  background: #252538;
+}
+
+[data-theme="dark"] .win-table td {
+  color: var(--text-primary);
+  border-bottom-color: #3a3a4e;
+}
+
+[data-theme="dark"] .nx-assistant-bubble {
+  background: #2a2a3e;
+  color: var(--text-primary);
+  border-color: #4a4a5e;
+}
+
+[data-theme="dark"] .nx-assistant-bubble::after {
+  border-right-color: #2a2a3e;
+}
+
+[data-theme="dark"] .nx-assistant-bubble::before {
+  border-right-color: #4a4a5e;
+}
+
+[data-theme="dark"] .taskbar-btn.active {
+  background: #3a3a4e;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+[data-theme="high-contrast"] {
+  --bg-desktop: #000000;
+  --win-bg: #000000;
+  --win-title-l: #ffff00;
+  --win-title-r: #ffff00;
+  --border-light: #ffffff;
+  --border-dark: #ffffff;
+  --border-darker: #ffffff;
+  --selection: #ffff00;
+  --selection-text: #000000;
+  --terminal-bg: #000000;
+  --terminal-green: #00ff00;
+  --terminal-amber: #ffff00;
+  --terminal-red: #ff0000;
+  --terminal-cyan: #00ffff;
+  --terminal-magenta: #ff00ff;
+  --gold: #ffff00;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #ffff00;
+  color: #ffffff;
+}
+
+[data-theme="high-contrast"] .win-btn {
+  color: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+[data-theme="high-contrast"] .win98-titlebar {
+  background: #ffff00;
+  color: #000000;
 }
 
 * {

@@ -1,7 +1,7 @@
-import { http, createConfig } from 'wagmi';
+import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// MegaETH Mainnet chain definition
+// MegaETH Mainnet — not in viem's default chains
 export const megaeth = {
   id: 4326,
   name: 'MegaETH',
@@ -10,15 +10,13 @@ export const megaeth = {
     default: { http: ['https://mainnet.megaeth.com/rpc'] },
   },
   blockExplorers: {
-    default: { name: 'Blockscout', url: 'https://megaeth.blockscout.com' },
+    default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },
   },
 };
 
-export const config = createConfig({
+export const wagmiConfig = createConfig({
   chains: [megaeth],
-  connectors: [
-    injected(), // MetaMask, Rabby, etc.
-  ],
+  connectors: [injected()],
   transports: {
     [megaeth.id]: http('https://mainnet.megaeth.com/rpc'),
   },
