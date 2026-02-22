@@ -480,19 +480,50 @@ export default function NxtWallet() {
 
     api.getWalletSummary(wallet)
       .then(setSummary)
-      .catch(() => {})
+      .catch((err) => {
+        console.warn('[NxtWallet] wallet-summary failed:', err.message);
+        // Fallback: build partial summary from on-chain tokenIds + individual dev fetches
+        if (tokenIds && tokenIds.length > 0) {
+          const ids = Array.from(tokenIds).map(id => Number(id));
+          Promise.all(ids.map(id => api.getDev(id).catch(() => null)))
+            .then(devs => {
+              const valid = devs.filter(Boolean);
+              if (valid.length > 0) {
+                const totalClaimable = valid.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
+                setSummary({
+                  wallet_address: wallet,
+                  balance_claimable: totalClaimable,
+                  balance_claimed: 0,
+                  balance_total_earned: valid.reduce((sum, d) => sum + (d.total_earned || 0), 0),
+                  total_devs: valid.length,
+                  salary_per_day: valid.length * 200,
+                  devs: valid.map(d => ({
+                    token_id: d.token_id,
+                    name: d.name,
+                    rarity_tier: d.rarity_tier,
+                    balance_nxt: d.balance_nxt || 0,
+                    total_earned: d.total_earned || 0,
+                    status: d.status,
+                  })),
+                  _fallback: true,
+                });
+              }
+            })
+            .catch(() => {});
+        }
+      })
       .finally(() => setLoadingSummary(false));
 
     api.getBalanceHistory(wallet)
       .then(setHistory)
-      .catch(() => {})
+      .catch(() => setHistory([]))
       .finally(() => setLoadingHistory(false));
 
     api.getMovements(wallet)
       .then(setMovements)
-      .catch(() => {})
+      .catch(() => setMovements([]))
       .finally(() => setLoadingMovements(false));
-  }, [wallet]);
+  }, [wallet, tokenIds]);
 
   // ── Derived ──────────────────────────────────────────────
   const onChainTotal = walletClaimableData?.[0];
