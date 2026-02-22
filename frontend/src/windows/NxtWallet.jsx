@@ -143,6 +143,19 @@ function BalanceTab({ summary, loading, claimState, isConnected }) {
         )}
 
         <div style={{ textAlign: 'center' }}>
+          {!claimEnabled && (
+            <div className="win-panel" style={{
+              padding: '6px 12px', marginBottom: '6px',
+              fontFamily: "'VT323', monospace", fontSize: '13px',
+              color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
+              border: '1px solid var(--terminal-amber)',
+            }}>
+              {'>'} Claiming is not enabled yet. The contract owner has not activated claims.
+              <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                Your $NXT balance is accumulating and will be claimable once enabled.
+              </div>
+            </div>
+          )}
           <button
             className="win-btn"
             onClick={handleClaim}
@@ -156,16 +169,16 @@ function BalanceTab({ summary, loading, claimState, isConnected }) {
           >
             {isClaiming ? 'Confirm in Wallet...' :
              isClaimConfirming ? 'Confirming...' :
+             !claimEnabled ? 'CLAIMING DISABLED' :
              `CLAIM ${formatNumber(summary.balance_claimable)} $NXT`}
           </button>
-          <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-            {!claimEnabled
-              ? 'Claiming is currently disabled.'
-              : previewData
+          {claimEnabled && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              {previewData
                 ? `You receive ${formatNumber(Number(previewData[2]))} $NXT after 10% fee.`
-                : 'Preview will load when claimable balance > 0.'
-            }
-          </div>
+                : 'Preview will load when claimable balance > 0.'}
+            </div>
+          )}
         </div>
 
         {/* Claim success */}

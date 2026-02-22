@@ -98,7 +98,14 @@ function QuickPrompt({ devId, devName, address }) {
         setText('');
         setTimeout(() => setStatus(null), 3000);
       })
-      .catch(() => setStatus('error'));
+      .catch((err) => {
+        if (err.message && err.message.includes('429')) {
+          setStatus('busy');
+          setTimeout(() => setStatus(null), 5000);
+        } else {
+          setStatus('error');
+        }
+      });
   };
 
   return (
@@ -115,6 +122,13 @@ function QuickPrompt({ devId, devName, address }) {
           fontFamily: "'VT323', monospace",
         }}>
           Order sent to {devName}!
+        </span>
+      ) : status === 'busy' ? (
+        <span style={{
+          fontSize: '10px', color: 'var(--terminal-amber, #ffaa00)',
+          fontFamily: "'VT323', monospace",
+        }}>
+          {devName} is still processing the last order. Wait...
         </span>
       ) : (
         <>
