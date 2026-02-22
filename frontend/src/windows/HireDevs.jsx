@@ -1,13 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { formatEther, parseEther } from 'viem';
+import { useWallet } from '../hooks/useWallet';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 
-const MINT_COST = '0.05 ETH';
+const PHASE_CLOSED = 0;
+const PHASE_WHITELIST = 1;
+const PHASE_PUBLIC = 2;
 
-const WALLETS = [
-  { id: 'metamask', name: 'MetaMask', icon: '[M]', detect: () => !!window.ethereum?.isMetaMask },
-  { id: 'coinbase', name: 'Coinbase Wallet', icon: '[C]', detect: () => !!window.ethereum?.isCoinbaseWallet },
-  { id: 'walletconnect', name: 'WalletConnect', icon: '[W]', detect: () => false },
-  { id: 'injected', name: 'Browser Wallet', icon: '[B]', detect: () => !!window.ethereum },
-];
+const PHASE_LABELS = {
+  [PHASE_CLOSED]: 'CLOSED',
+  [PHASE_WHITELIST]: 'WHITELIST',
+  [PHASE_PUBLIC]: 'PUBLIC',
+};
 
 const QUESTIONS = [
   {
@@ -36,43 +41,98 @@ export default function HireDevs({ onMint }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [walletError, setWalletError] = useState(null);
-  const [showWalletPicker, setShowWalletPicker] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const [mintError, setMintError] = useState(null);
+  const [mintSuccess, setMintSuccess] = useState(false);
 
-  const connectWallet = useCallback(async (walletId) => {
-    setConnecting(true);
-    setWalletError(null);
-    setShowWalletPicker(false);
+  const { address, isConnected, isConnecting, connect, displayAddress } = useWallet();
 
-    try {
-      if (walletId === 'walletconnect') {
-        setWalletError('WalletConnect integration coming soon. Please use MetaMask or another browser wallet.');
-        setConnecting(false);
-        return;
-      }
+  // ── Contract reads ───────────────────────────────────────
+  const { data: mintPrice } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'mintPrice',
+  });
 
-      if (!window.ethereum) {
-        setWalletError('No wallet extension detected. Please install MetaMask or a compatible Web3 wallet.');
-        setConnecting(false);
-        return;
-      }
+  const { data: mintPhase } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'mintPhase',
+  });
 
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-        setWalletError(null);
-      }
-    } catch (err) {
-      if (err.code === 4001) {
-        setWalletError('Connection rejected. You must approve the wallet connection to mint.');
-      } else {
-        setWalletError(`Failed to connect: ${err.message || 'Unknown error'}`);
-      }
+  const { data: remaining } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'remainingSupply',
+  });
+
+  const { data: freeAllowance } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'freeMintAllowance',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: isWhitelisted } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'whitelisted',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  // ── Contract write ───────────────────────────────────────
+  const { writeContract, data: txHash, isPending: isMinting, error: writeError } = useWriteContract();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // Surface write errors
+  useEffect(() => {
+    if (writeError) {
+      const msg = writeError.shortMessage || writeError.message || 'Transaction failed';
+      setMintError(msg);
     }
-    setConnecting(false);
-  }, []);
+  }, [writeError]);
+
+  // Handle successful mint
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      setMintSuccess(true);
+      setMintError(null);
+      // Track minted devs in localStorage and notify LiveFeed
+      const current = parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);
+      localStorage.setItem('nx-minted-devs', String(current + quantity));
+      window.dispatchEvent(new CustomEvent('nx-dev-minted', { detail: { count: current + quantity, added: quantity } }));
+      if (onMint) onMint(answers, quantity, address);
+    }
+  }, [isConfirmed, txHash]);
+
+  // ── Derived state ────────────────────────────────────────
+  const phase = mintPhase != null ? Number(mintPhase) : null;
+  const isClosed = phase === PHASE_CLOSED;
+  const hasFreeMint = freeAllowance != null && Number(freeAllowance) > 0;
+  const canWhitelistMint = phase === PHASE_WHITELIST && isWhitelisted;
+  const canPublicMint = phase === PHASE_PUBLIC;
+  const canMint = hasFreeMint || canWhitelistMint || canPublicMint;
+
+  const pricePerUnit = mintPrice != null ? mintPrice : 0n;
+  const priceDisplay = mintPrice != null ? formatEther(mintPrice) : '...';
+  const totalCost = mintPrice != null ? mintPrice * BigInt(quantity) : 0n;
+  const totalCostDisplay = mintPrice != null ? formatEther(totalCost) : '...';
+  const remainingDisplay = remaining != null ? Number(remaining).toLocaleString() : '...';
+
+  // Determine which mint function to call
+  const getMintMethod = () => {
+    if (hasFreeMint && Number(freeAllowance) >= quantity) {
+      return 'free';
+    }
+    if (phase === PHASE_WHITELIST && isWhitelisted) {
+      return 'whitelist';
+    }
+    return 'public';
+  };
 
   const handleAnswer = (questionId, optionId) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionId }));
@@ -87,23 +147,55 @@ export default function HireDevs({ onMint }) {
   };
 
   const handleMint = () => {
-    if (!walletAddress) {
-      setShowWalletPicker(true);
+    if (!isConnected) {
+      connect();
       return;
     }
-    // Track minted devs in localStorage and notify LiveFeed
-    const current = parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);
-    localStorage.setItem('nx-minted-devs', String(current + quantity));
-    window.dispatchEvent(new CustomEvent('nx-dev-minted', { detail: { count: current + quantity, added: quantity } }));
-    if (onMint) onMint(answers, quantity, walletAddress);
-  };
 
-  const truncAddr = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : null;
+    setMintError(null);
+    setMintSuccess(false);
+    const method = getMintMethod();
+
+    if (method === 'free') {
+      writeContract({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'freeMint',
+        args: [BigInt(quantity)],
+      });
+    } else if (method === 'whitelist') {
+      writeContract({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'whitelistMint',
+        args: [BigInt(quantity)],
+        value: pricePerUnit * BigInt(quantity),
+      });
+    } else {
+      writeContract({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'mint',
+        args: [BigInt(quantity)],
+        value: pricePerUnit * BigInt(quantity),
+      });
+    }
+  };
 
   const currentQuestion = QUESTIONS[step];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : null;
+  const mintMethod = getMintMethod();
+  const isFree = mintMethod === 'free';
+  const txBusy = isMinting || isConfirming;
+
+  // ── Mint button label ────────────────────────────────────
+  const getMintButtonLabel = () => {
+    if (!isConnected) return isConnecting ? 'Connecting...' : 'Connect Wallet to Mint';
+    if (isMinting) return 'Confirm in Wallet...';
+    if (isConfirming) return 'Confirming...';
+    if (isFree) return `FREE MINT (${Number(freeAllowance)} left)`;
+    return 'MINT DEVELOPERS';
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -117,11 +209,19 @@ export default function HireDevs({ onMint }) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span>{'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy</span>
-        {walletAddress && (
-          <span style={{ fontSize: '12px', color: 'var(--terminal-green)' }}>
-            {truncAddr}
-          </span>
-        )}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
+          {phase != null && (
+            <span style={{
+              color: isClosed ? 'var(--terminal-red)' : 'var(--terminal-green)',
+            }}>
+              [{PHASE_LABELS[phase] || 'UNKNOWN'}]
+            </span>
+          )}
+          <span style={{ color: '#888' }}>{remainingDisplay} left</span>
+          {isConnected && (
+            <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
@@ -202,6 +302,22 @@ export default function HireDevs({ onMint }) {
         {/* Mint confirmation phase */}
         {step >= QUESTIONS.length && (
           <div>
+            {/* Mint closed banner */}
+            {isClosed && !hasFreeMint && (
+              <div className="win-raised" style={{
+                padding: '12px', marginBottom: '12px',
+                border: '2px solid var(--terminal-red)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-red)', marginBottom: '4px' }}>
+                  MINTING IS CURRENTLY CLOSED
+                </div>
+                <div style={{ fontSize: '11px', color: '#666' }}>
+                  Check back soon. Follow our announcements for the next mint phase.
+                </div>
+              </div>
+            )}
+
             <div className="win-panel" style={{ padding: '12px', marginBottom: '12px' }}>
               <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '8px', color: 'var(--win-title-l)' }}>
                 Developer Configuration Summary
@@ -223,33 +339,85 @@ export default function HireDevs({ onMint }) {
             <div className="win-panel" style={{ padding: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Quantity:</span>
-                <button className="win-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ padding: '2px 8px' }}>-</button>
+                <button className="win-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={txBusy} style={{ padding: '2px 8px' }}>-</button>
                 <span style={{ fontFamily: "'VT323', monospace", fontSize: '18px', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
-                <button className="win-btn" onClick={() => setQuantity(q => Math.min(10, q + 1))} style={{ padding: '2px 8px' }}>+</button>
+                <button className="win-btn" onClick={() => setQuantity(q => Math.min(20, q + 1))} disabled={txBusy} style={{ padding: '2px 8px' }}>+</button>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: '11px' }}>
-                  Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>{MINT_COST} x {quantity} = {(0.05 * quantity).toFixed(2)} ETH</span>
+                  {isFree ? (
+                    <span style={{ fontWeight: 'bold', color: 'var(--terminal-green)' }}>FREE MINT</span>
+                  ) : (
+                    <>
+                      Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>
+                        {priceDisplay} ETH x {quantity} = {totalCostDisplay} ETH
+                      </span>
+                    </>
+                  )}
                 </div>
                 <button
                   className="win-btn"
                   onClick={handleMint}
-                  disabled={connecting}
+                  disabled={txBusy || (isClosed && !hasFreeMint)}
                   style={{ padding: '4px 16px', fontWeight: 'bold' }}
                 >
-                  {connecting ? 'Connecting...' : walletAddress ? 'MINT DEVELOPERS' : 'Connect Wallet to Mint'}
+                  {getMintButtonLabel()}
                 </button>
               </div>
 
-              {walletAddress && (
-                <div style={{ fontSize: '10px', color: 'var(--terminal-green)', marginTop: '6px' }}>
-                  Connected: {truncAddr}
+              {isConnected && (
+                <div style={{ fontSize: '10px', marginTop: '6px', color: '#888' }}>
+                  {hasFreeMint && (
+                    <span style={{ color: 'var(--terminal-green)' }}>
+                      Free mints available: {Number(freeAllowance)}{' | '}
+                    </span>
+                  )}
+                  {canWhitelistMint && (
+                    <span style={{ color: 'var(--terminal-cyan)' }}>
+                      Whitelisted{' | '}
+                    </span>
+                  )}
+                  <span style={{ color: 'var(--terminal-green)' }}>Connected: {displayAddress}</span>
                 </div>
               )}
             </div>
 
-            {walletError && (
+            {/* Transaction status */}
+            {txHash && !mintSuccess && (
+              <div className="win-panel" style={{
+                marginTop: '12px', padding: '10px 12px',
+                fontFamily: "'VT323', monospace", fontSize: '13px',
+                background: 'var(--terminal-bg)', color: 'var(--terminal-amber)',
+              }}>
+                {'>'} Transaction sent: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                <br />
+                {'>'} Waiting for confirmation...
+              </div>
+            )}
+
+            {/* Mint success */}
+            {mintSuccess && (
+              <div className="win-raised" style={{
+                marginTop: '12px', padding: '12px',
+                border: '2px solid var(--terminal-green)',
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--terminal-green)', marginBottom: '4px' }}>
+                  MINT SUCCESSFUL
+                </div>
+                <div style={{ fontSize: '11px' }}>
+                  {quantity} developer{quantity > 1 ? 's' : ''} minted! Check "My Devs" to see your new agents.
+                </div>
+                {txHash && (
+                  <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                    TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mint error */}
+            {mintError && (
               <div className="win-raised" style={{
                 marginTop: '12px', padding: '10px 12px',
                 display: 'flex', alignItems: 'flex-start', gap: '10px',
@@ -258,89 +426,20 @@ export default function HireDevs({ onMint }) {
                 <span style={{ fontSize: '14px', flexShrink: 0, fontWeight: 'bold' }}>[!]</span>
                 <div>
                   <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', color: 'var(--terminal-red)' }}>
-                    Wallet Connection Error
+                    Mint Error
                   </div>
-                  <div style={{ fontSize: '10px', marginBottom: '8px' }}>{walletError}</div>
-                  <button className="win-btn" onClick={() => setWalletError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
+                  <div style={{ fontSize: '10px', marginBottom: '8px' }}>{mintError}</div>
+                  <button className="win-btn" onClick={() => setMintError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
                 </div>
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <button className="win-btn" onClick={handleBack} style={{ padding: '4px 16px' }}>{'< Back'}</button>
+              <button className="win-btn" onClick={handleBack} disabled={txBusy} style={{ padding: '4px 16px' }}>{'< Back'}</button>
             </div>
           </div>
         )}
       </div>
-
-      {/* Wallet Picker Dialog */}
-      {showWalletPicker && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100,
-        }}>
-          <div className="win-raised" style={{
-            width: '320px', background: 'var(--win-bg, #c0c0c0)',
-          }}>
-            <div style={{
-              background: 'linear-gradient(90deg, #0a246a, #3a6ea5)',
-              color: '#fff', padding: '3px 6px', fontSize: '11px', fontWeight: 'bold',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span>Connect Wallet</span>
-              <button
-                onClick={() => setShowWalletPicker(false)}
-                style={{
-                  background: 'var(--win-bg, #c0c0c0)', border: '1px outset #ddd',
-                  width: '16px', height: '14px', fontSize: '9px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  lineHeight: 1, padding: 0,
-                }}
-              >
-                X
-              </button>
-            </div>
-            <div style={{ padding: '12px' }}>
-              <div style={{ fontSize: '11px', marginBottom: '10px' }}>
-                Select a wallet to connect:
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {WALLETS.map(w => {
-                  const available = w.detect();
-                  return (
-                    <button
-                      key={w.id}
-                      className="win-btn"
-                      onClick={() => connectWallet(w.id)}
-                      disabled={connecting}
-                      style={{
-                        padding: '8px 12px', textAlign: 'left',
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        opacity: (w.id === 'walletconnect' || available || w.id === 'injected') ? 1 : 0.5,
-                      }}
-                    >
-                      <span style={{ fontSize: '18px' }}>{w.icon}</span>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{w.name}</div>
-                        <div style={{ fontSize: '9px', color: '#666' }}>
-                          {w.id === 'walletconnect' ? 'Scan QR code' : available ? 'Detected' : 'Not detected'}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ textAlign: 'right', marginTop: '10px' }}>
-                <button className="win-btn" onClick={() => setShowWalletPicker(false)} style={{ padding: '3px 20px', fontSize: '11px' }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div style={{
         padding: '4px 8px', borderTop: '1px solid var(--border-dark)',
