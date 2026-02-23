@@ -15,6 +15,7 @@ import HireDevs from '../windows/HireDevs';
 import Notepad from '../windows/Notepad';
 import RecycleBin from '../windows/RecycleBin';
 import NxtWallet from '../windows/NxtWallet';
+import CorpWars from '../windows/CorpWars';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -32,6 +33,7 @@ const WINDOW_COMPONENTS = {
   'hire-devs': HireDevs,
   'notepad': Notepad,
   'recycle-bin': RecycleBin,
+  'corp-wars': CorpWars,
 };
 
 export default function WindowManager({

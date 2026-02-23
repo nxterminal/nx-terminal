@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { detectCombos } from '../utils/comboDetector';
+import FeedHighlight from '../components/FeedHighlight';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': '#ff4444',
@@ -392,6 +394,18 @@ export default function LiveFeed() {
     }
   }, [feed, scrollLock]);
 
+  // Detect combo highlights and build a map of insertAfterIndex -> highlight
+  const highlightMap = useMemo(() => {
+    const combos = detectCombos(feed);
+    const map = {};
+    for (const h of combos) {
+      const idx = h.insertAfterIndex;
+      if (!map[idx]) map[idx] = [];
+      map[idx].push(h);
+    }
+    return map;
+  }, [feed]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '2px 4px', display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--win-bg)' }}>
@@ -436,41 +450,36 @@ export default function LiveFeed() {
             const color = ARCHETYPE_COLORS[archetype] || 'var(--terminal-green)';
             const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
             const isNew = i === feed.length - 1;
+            const highlights = highlightMap[i];
 
-            // Conversation rendering
-            if (item.isConversation) {
-              const replyColor = ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)';
-              return (
-                <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
-                  <span style={{ color: 'var(--terminal-amber)' }}>
-                    [{formatTime(item.created_at)}]
-                  </span>{' '}
-                  <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
-                  <span style={{ color, fontWeight: 'bold' }}>
-                    {item.dev_name}
-                  </span>{' '}
-                  <span style={{ color: '#aaa' }}>said:</span>{' '}
-                  <span style={{ color: 'var(--terminal-green)' }}>
-                    "{item.details}"
-                  </span>
-                  <br />
-                  <span style={{ color: 'var(--terminal-amber)' }}>
-                    {'           '}
-                  </span>{' '}
-                  <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
-                  <span style={{ color: replyColor, fontWeight: 'bold' }}>
-                    {item.reply_dev}
-                  </span>{' '}
-                  <span style={{ color: '#aaa' }}>replied:</span>{' '}
-                  <span style={{ color: 'var(--terminal-green)' }}>
-                    "{item.reply_msg}"
-                  </span>
-                </div>
-              );
-            }
-
-            return (
-              <div key={i} className={`terminal-line${isNew ? ' new' : ''}`}>
+            const feedLine = item.isConversation ? (
+              <div key={`feed-${i}`} className={`terminal-line${isNew ? ' new' : ''}`}>
+                <span style={{ color: 'var(--terminal-amber)' }}>
+                  [{formatTime(item.created_at)}]
+                </span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
+                <span style={{ color, fontWeight: 'bold' }}>
+                  {item.dev_name}
+                </span>{' '}
+                <span style={{ color: '#aaa' }}>said:</span>{' '}
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  &quot;{item.details}&quot;
+                </span>
+                <br />
+                <span style={{ color: 'var(--terminal-amber)' }}>
+                  {'           '}
+                </span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
+                <span style={{ color: ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)', fontWeight: 'bold' }}>
+                  {item.reply_dev}
+                </span>{' '}
+                <span style={{ color: '#aaa' }}>replied:</span>{' '}
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  &quot;{item.reply_msg}&quot;
+                </span>
+              </div>
+            ) : (
+              <div key={`feed-${i}`} className={`terminal-line${isNew ? ' new' : ''}`}>
                 <span style={{ color: 'var(--terminal-amber)' }}>
                   [{formatTime(item.created_at)}]
                 </span>{' '}
@@ -488,6 +497,15 @@ export default function LiveFeed() {
                 </span>
               </div>
             );
+
+            if (!highlights) return feedLine;
+
+            return [
+              feedLine,
+              ...highlights.map((h, hi) => (
+                <FeedHighlight key={`hl-${i}-${hi}`} type={h.type} message={h.message} level={h.level} />
+              )),
+            ];
           })
         )}
       </div>
