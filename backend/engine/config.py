@@ -40,8 +40,8 @@ CYCLE_OWNER_OFFLINE = 3600       # 60 min — owner offline >24h
 # ECONOMY
 # ============================================================
 SALARY_PER_DAY = 200             # $NXT the player RECEIVES clean per dev per day
-SALARY_INTERVAL_HOURS = 12       # Pay every 12 hours
-SALARY_PER_INTERVAL = SALARY_PER_DAY // (24 // SALARY_INTERVAL_HOURS)  # 100 $NXT
+SALARY_INTERVAL_HOURS = 1        # Pay every hour (more frequent = more dynamic game)
+SALARY_PER_INTERVAL = SALARY_PER_DAY // (24 // SALARY_INTERVAL_HOURS)  # ~8 $NXT per hour
 
 CLAIM_FEE_BPS = 1000             # 10% — mirrors on-chain constant, reference only
 
@@ -52,10 +52,10 @@ CLAIMABLE_AMOUNT_WEI_PER_DAY = 222222222222222222222
 CLAIMABLE_PER_INTERVAL_WEI = 111111111111111111111  # half per 12h interval
 
 # Action costs
-COST_CREATE_PROTOCOL_NXT = 1000
-COST_CREATE_PROTOCOL_ENERGY = 8
-COST_CREATE_AI_NXT = 500
-COST_CREATE_AI_ENERGY = 3
+COST_CREATE_PROTOCOL_NXT = 50
+COST_CREATE_PROTOCOL_ENERGY = 2
+COST_CREATE_AI_NXT = 25
+COST_CREATE_AI_ENERGY = 1
 COST_MOVE_ENERGY = 2
 COST_INVEST_ENERGY = 1
 COST_REVIEW_ENERGY = 3
