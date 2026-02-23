@@ -1,5 +1,12 @@
 import { useState } from 'react';
+import { useReadContract } from 'wagmi';
 import { SIMULATION_CONFIG } from '../config/gameConfig';
+import {
+  NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS,
+  TREASURY_ADDRESS, EXPLORER_BASE,
+} from '../services/contract';
+
+const EXPLORER_ADDR = (addr) => `${EXPLORER_BASE}/address/${addr}`;
 
 function SystemInfo() {
   return (
@@ -137,6 +144,102 @@ function Lore() {
   );
 }
 
+function ExplorerLink({ address, label }) {
+  return (
+    <a
+      href={EXPLORER_ADDR(address)}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '12px' }}
+    >
+      {label || '[View on Explorer]'}
+    </a>
+  );
+}
+
+function Contracts() {
+  const { data: totalMinted } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'totalMinted',
+  });
+
+  const minted = totalMinted != null ? Number(totalMinted).toLocaleString() : '...';
+
+  const line = { color: 'var(--terminal-green)', marginBottom: '2px' };
+  const label = { color: '#808080' };
+  const val = { color: 'var(--terminal-green)' };
+  const addr = { color: 'var(--terminal-cyan)', fontSize: '11px', wordBreak: 'break-all' };
+  const section = { marginBottom: '16px' };
+  const divider = { color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '8px', marginTop: '4px' };
+
+  return (
+    <div className="terminal" style={{ height: '100%', overflow: 'auto', padding: '12px', fontFamily: "'VT323', monospace" }}>
+      <div style={divider}>
+        {'CONTRACT REGISTRY'}<br />
+        {'═══════════════════════════════════════'}
+      </div>
+
+      {/* NXDevNFT */}
+      <div style={section}>
+        <div style={{ ...line, color: 'var(--terminal-amber)', fontWeight: 'bold' }}>
+          NXDevNFT (Employee Badges)
+        </div>
+        <div style={line}><span style={label}>Address: </span><span style={addr}>{NXDEVNFT_ADDRESS}</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>MegaETH (4326)</span></div>
+        <div style={line}><span style={label}>Supply:  </span><span style={val}>{minted} / 35,000 minted</span></div>
+        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0025 ETH</span></div>
+        <ExplorerLink address={NXDEVNFT_ADDRESS} />
+      </div>
+
+      {/* $NXT Token */}
+      <div style={section}>
+        <div style={{ ...line, color: 'var(--terminal-amber)', fontWeight: 'bold' }}>
+          $NXT Token (Protocol Wars Currency)
+        </div>
+        <div style={line}><span style={label}>Address: </span><span style={addr}>{NXT_TOKEN_ADDRESS}</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>MegaETH (4326)</span></div>
+        <div style={line}><span style={label}>Total Supply: </span><span style={val}>1,000,000,000 NXT</span></div>
+        <ExplorerLink address={NXT_TOKEN_ADDRESS} />
+      </div>
+
+      {/* Treasury */}
+      <div style={section}>
+        <div style={{ ...line, color: 'var(--terminal-amber)', fontWeight: 'bold' }}>
+          Treasury
+        </div>
+        <div style={line}><span style={label}>Address: </span><span style={addr}>{TREASURY_ADDRESS}</span></div>
+        <ExplorerLink address={TREASURY_ADDRESS} />
+      </div>
+
+      {/* Tokenomics */}
+      <div style={divider}>
+        {'TOKENOMICS'}<br />
+        {'═══════════════════════════════════════'}
+      </div>
+
+      <div style={line}><span style={label}>Total Supply:    </span><span style={val}>1,000,000,000 $NXT</span></div>
+      <div style={line}><span style={label}>Player Rewards:  </span><span style={val}>400,000,000 (40%)</span></div>
+      <div style={line}><span style={label}>Ecosystem:       </span><span style={val}>200,000,000 (20%)</span></div>
+      <div style={line}><span style={label}>Community:       </span><span style={val}>150,000,000 (15%)</span></div>
+      <div style={line}><span style={label}>DEX Liquidity:   </span><span style={val}>150,000,000 (15%)</span></div>
+      <div style={line}><span style={label}>Team:            </span><span style={val}>100,000,000 (10%)</span></div>
+
+      <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
+        <div style={line}>
+          <span style={label}>Dev Salary: </span>
+          <span style={{ color: 'var(--gold)' }}>200 $NXT/day</span>
+          <span style={label}> (clean, per dev)</span>
+        </div>
+      </div>
+
+      <div style={{ color: '#808080', marginTop: '16px', fontSize: '11px', textAlign: 'center' }}>
+        NX Terminal Corp. (C) 1998. All contracts verified on MegaETH.
+      </div>
+    </div>
+  );
+}
+
 export default function NXTerminal() {
   const [tab, setTab] = useState('system');
   return (
@@ -145,11 +248,13 @@ export default function NXTerminal() {
         <button className={`win-tab${tab === 'system' ? ' active' : ''}`} onClick={() => setTab('system')}>System Info</button>
         <button className={`win-tab${tab === 'handbook' ? ' active' : ''}`} onClick={() => setTab('handbook')}>Employee Handbook</button>
         <button className={`win-tab${tab === 'lore' ? ' active' : ''}`} onClick={() => setTab('lore')}>Lore</button>
+        <button className={`win-tab${tab === 'contracts' ? ' active' : ''}`} onClick={() => setTab('contracts')}>Contracts</button>
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'system' && <SystemInfo />}
         {tab === 'handbook' && <Handbook />}
         {tab === 'lore' && <Lore />}
+        {tab === 'contracts' && <Contracts />}
       </div>
     </div>
   );
