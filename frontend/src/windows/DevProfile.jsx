@@ -211,7 +211,7 @@ export default function DevProfile({ devId }) {
         {/* Name + meta */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--text-primary, #000)' }}>{dev.name}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>{dev.name}</span>
             <span style={{ color: arcColor, fontWeight: 'bold', fontSize: '11px' }}>
               [{dev.archetype}]
             </span>
@@ -304,19 +304,19 @@ export default function DevProfile({ devId }) {
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Spent</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary, #000)' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
             {formatNumber(dev.total_spent)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Coffee</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary, #000)' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
             {dev.coffee_count || 0}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Lines</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary, #000)' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
             {formatNumber(dev.lines_of_code)}
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function DevProfile({ devId }) {
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">No Sleep</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary, #000)' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
             {dev.hours_since_sleep || 0}h
           </div>
         </div>

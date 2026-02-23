@@ -187,7 +187,7 @@ function DevCard({ dev, onClick, address }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {/* Row 1: Name + Archetype */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary, #000)' }}>{dev.name}</span>
+          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#fff' }}>{dev.name}</span>
           <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
             [{dev.archetype}]
           </span>
@@ -329,7 +329,7 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[@]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: '#fff' }}>
             Connect wallet to see your devs
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
@@ -356,7 +356,7 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[+]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: '#fff' }}>
             No devs yet
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
