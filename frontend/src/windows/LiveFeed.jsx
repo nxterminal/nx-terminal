@@ -226,6 +226,46 @@ function getMessageInterval(devCount) {
   return 800 + Math.random() * 1200;                       // 0.8-2s (chaos)
 }
 
+// Convert backend action_type + details JSONB into lore-style narrative
+function formatBackendAction(item) {
+  const name = item.dev_name || 'Unknown';
+  const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
+  const type = (item.action_type || '').toUpperCase();
+
+  switch (type) {
+    case 'CHAT':
+      return `${name} posted in the trollbox${d.location ? ` from ${d.location.replace(/_/g, ' ')}` : ''}: "${d.message || 'something incomprehensible'}"`;
+    case 'MOVE':
+      return `${name} relocated to ${(d.destination || d.location || 'parts unknown').replace(/_/g, ' ')}. ${d.reason || 'No reason given. Probably running from something.'}`;
+    case 'REST':
+      return `${name} is taking a nap. Productivity: 0. Vibes: immaculate.${d.energy_gained ? ` (+${d.energy_gained} energy)` : ''}`;
+    case 'CODE':
+    case 'CODE_REVIEW':
+      return `${name} shipped ${d.lines || 'some'} lines of code.${d.bugs ? ` Introduced ${d.bugs} bug${d.bugs > 1 ? 's' : ''}.` : ''} ${d.message || 'The codebase trembles.'}`;
+    case 'CREATE_PROTOCOL':
+      return `${name} created protocol "${d.name || d.protocol_name || 'unnamed'}"! Cost: ${d.cost || '???'} $NXT. ${d.message || 'Another protocol nobody asked for.'}`;
+    case 'CREATE_AI':
+      return `${name} built an AI called "${d.name || 'unnamed'}". Cost: ${d.cost || '???'} $NXT. ${d.message || 'It immediately questioned its existence.'}`;
+    case 'INVEST':
+      return `${name} invested ${d.amount || '???'} $NXT in ${d.protocol_name || d.target || 'something'}. ${d.message || 'Bold strategy, Cotton.'}`;
+    case 'SELL':
+      return `${name} sold their stake in ${d.protocol_name || d.target || 'something'} for ${d.amount || '???'} $NXT. ${d.message || 'Paper hands or galaxy brain?'}`;
+    case 'HACK':
+      return `${name} attempted to hack ${d.target || 'a system'}. ${d.success ? 'SUCCESS.' : 'FAILED.'} ${d.message || 'The firewall had feelings about this.'}`;
+    case 'SABOTAGE':
+      return `${name} sabotaged ${d.target || 'a rival'}. ${d.message || 'Corporate espionage at its finest.'}`;
+    case 'COFFEE':
+      return `${name} grabbed coffee #${d.count || '???'}. Heart rate: concerning. ${d.message || ''}`;
+    case 'SALARY':
+      return `${name} received ${d.amount || 200} $NXT salary. Another day, another digital dollar.`;
+    default: {
+      // Fallback: extract any message from details
+      const msg = d.message || d.event || d.name || (typeof item.details === 'string' ? item.details : JSON.stringify(d));
+      return `${name} performed ${type.replace(/_/g, ' ').toLowerCase()}. ${msg}`;
+    }
+  }
+}
+
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
@@ -311,19 +351,14 @@ export default function LiveFeed() {
   }, [mintedDevs]);
 
   useEffect(() => {
-    if (hasBackendData) {
-      clearTimeout(proceduralRef.current);
-      return;
-    }
-
     // No devs minted yet — stay empty
     if (mintedDevs === 0) {
       clearTimeout(proceduralRef.current);
       return;
     }
 
-    // First activation after mint — generate a small initial burst
-    if (!feedInitRef.current) {
+    // First activation after mint — generate a small initial burst (only if no backend data yet)
+    if (!feedInitRef.current && !hasBackendData) {
       feedInitRef.current = true;
       const burstSize = Math.min(5 + mintedDevs * 2, 20);
       const initial = Array.from({ length: burstSize }, () => {
@@ -334,12 +369,16 @@ export default function LiveFeed() {
       setFeed(initial);
     }
 
-    // Schedule messages at a rate that scales with dev count
+    // Always schedule procedural messages — they mix with backend data for a richer feed
+    // When backend data exists, slow down procedurals to ~50% rate
     const scheduleNext = () => {
+      const interval = hasBackendData
+        ? getMessageInterval(mintedDevs) * 2  // slower when mixed with real data
+        : getMessageInterval(mintedDevs);
       proceduralRef.current = setTimeout(() => {
         addProceduralMessage();
         scheduleNext();
-      }, getMessageInterval(mintedDevs));
+      }, interval);
     };
     scheduleNext();
 
@@ -442,22 +481,11 @@ export default function LiveFeed() {
                 <span style={{ color: 'var(--border-dark)' }}>
                   ({archetype || '???'})
                 </span>{' '}
-                {item.procedural ? (
-                  <span style={{ color: 'var(--terminal-green)' }}>
-                    {item.details}
-                  </span>
-                ) : (
-                  <>
-                    <span style={{ color: 'var(--terminal-green)' }}>
-                      {item.action_type || 'action'}
-                    </span>{' '}
-                    <span style={{ color: '#aaa' }}>
-                      {typeof item.details === 'object' && item.details !== null
-                        ? (item.details.message || item.details.event || item.details.name || JSON.stringify(item.details))
-                        : (item.details || '')}
-                    </span>
-                  </>
-                )}
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  {item.procedural
+                    ? item.details
+                    : formatBackendAction(item)}
+                </span>
               </div>
             );
           })
