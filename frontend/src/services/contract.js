@@ -1,5 +1,9 @@
 // NXDevNFT contract on MegaETH (chain 4326)
 export const NXDEVNFT_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7';
+export const NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47';
+export const TREASURY_ADDRESS = '0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC';
+export const MEGAETH_CHAIN_ID = 4326;
+export const EXPLORER_BASE = 'https://megaeth.blockscout.com';
 
 // Minimal ABI — only the functions the frontend needs
 export const NXDEVNFT_ABI = [
@@ -128,6 +132,20 @@ export const NXDEVNFT_ABI = [
     type: 'function',
     stateMutability: 'view',
     inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'totalClaimed',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'totalClaimedByWallet',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'wallet', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
   },
 ];
