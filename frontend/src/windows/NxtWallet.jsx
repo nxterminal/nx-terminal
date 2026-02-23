@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useReadContract } from 'wagmi';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
@@ -14,7 +14,6 @@ const MOVEMENT_ICONS = {
   salary: '+',
   sell: '+',
   spend: '-',
-  claim: '\u2193',
   shop: '-',
 };
 
@@ -22,7 +21,6 @@ const MOVEMENT_COLORS = {
   salary: '#33ff33',
   sell: '#33ff33',
   spend: '#ff4444',
-  claim: '#ffaa00',
   shop: '#ff4444',
 };
 
@@ -47,7 +45,7 @@ function formatTimestamp(ts) {
 }
 
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading, claimState, isConnected }) {
+function BalanceTab({ summary, loading, isConnected }) {
   if (loading) return <div className="loading">Loading wallet...</div>;
   if (!isConnected) return (
     <div style={{
@@ -77,29 +75,21 @@ function BalanceTab({ summary, loading, claimState, isConnected }) {
     </div>
   );
 
-  const {
-    onChainTotal, onChainDevCount, claimEnabled, previewData,
-    handleClaim, isClaiming, isClaimConfirming, claimSuccess, claimError,
-    clearClaimError, txHash,
-  } = claimState;
-
-  const hasClaimable = onChainTotal != null && onChainTotal > 0n;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Summary cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-box win-panel">
-          <div className="stat-label">Available</div>
+          <div className="stat-label">Balance</div>
           <div className="stat-value" style={{ color: 'var(--gold)' }}>
             {formatNumber(summary.balance_claimable)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
-          <div className="stat-label">Claimed</div>
-          <div className="stat-value" style={{ color: 'var(--terminal-green)' }}>
-            {formatNumber(summary.balance_claimed)}
+          <div className="stat-label">Total Spent</div>
+          <div className="stat-value" style={{ color: 'var(--terminal-red)' }}>
+            {formatNumber(summary.balance_claimed || 0)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
@@ -122,101 +112,21 @@ function BalanceTab({ summary, loading, claimState, isConnected }) {
         {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
       </div>
 
-      {/* Claim section */}
-      <div style={{ padding: '8px' }}>
-        {/* Preview: gross / fee / net */}
-        {previewData && hasClaimable && (
-          <div className="win-panel" style={{
-            padding: '8px 12px', marginBottom: '6px',
-            fontFamily: "'VT323', monospace", fontSize: '13px',
-            background: 'var(--terminal-bg)',
-          }}>
-            <div style={{ color: 'var(--terminal-green)' }}>
-              {'>'} Claim preview ({onChainDevCount != null ? Number(onChainDevCount) : '?'} devs with balance):
-            </div>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '2px' }}>
-              <span>Gross: <span style={{ color: 'var(--gold)' }}>{formatNumber(Number(previewData[0]))} $NXT</span></span>
-              <span>Fee (10%): <span style={{ color: 'var(--terminal-red)' }}>{formatNumber(Number(previewData[1]))} $NXT</span></span>
-              <span>You receive: <span style={{ color: 'var(--terminal-green)' }}>{formatNumber(Number(previewData[2]))} $NXT</span></span>
-            </div>
-          </div>
-        )}
-
-        <div style={{ textAlign: 'center' }}>
-          {!claimEnabled && (
-            <div className="win-panel" style={{
-              padding: '6px 12px', marginBottom: '6px',
-              fontFamily: "'VT323', monospace", fontSize: '13px',
-              color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
-              border: '1px solid var(--terminal-amber)',
-            }}>
-              {'>'} Claiming is not enabled yet. The contract owner has not activated claims.
-              <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                Your $NXT balance is accumulating and will be claimable once enabled.
-              </div>
-            </div>
-          )}
-          <button
-            className="win-btn"
-            onClick={handleClaim}
-            disabled={!hasClaimable || !claimEnabled || isClaiming || isClaimConfirming}
-            style={{
-              padding: '6px 24px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              color: hasClaimable && claimEnabled ? '#000' : undefined,
-            }}
-          >
-            {isClaiming ? 'Confirm in Wallet...' :
-             isClaimConfirming ? 'Confirming...' :
-             !claimEnabled ? 'CLAIMING DISABLED' :
-             `CLAIM ${formatNumber(summary.balance_claimable)} $NXT`}
-          </button>
-          {claimEnabled && (
-            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-              {previewData
-                ? `You receive ${formatNumber(Number(previewData[2]))} $NXT after 10% fee.`
-                : 'Preview will load when claimable balance > 0.'}
-            </div>
-          )}
+      {/* Virtual currency notice */}
+      <div style={{
+        padding: '6px 12px', margin: '4px 8px',
+        fontFamily: "'VT323', monospace", fontSize: '13px',
+        color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
+        border: '1px solid var(--border-dark)',
+      }}>
+        {'>'} Your $NXT balance accumulates automatically from dev salaries.
+        <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+          Spend $NXT on protocols, AI creation, investments, and more.
         </div>
-
-        {/* Claim success */}
-        {claimSuccess && (
-          <div className="win-raised" style={{
-            marginTop: '8px', padding: '8px 12px',
-            border: '2px solid var(--terminal-green)',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontWeight: 'bold', fontSize: '11px', color: 'var(--terminal-green)' }}>
-              CLAIM SUCCESSFUL
-            </div>
-            {txHash && (
-              <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
-                TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Claim error */}
-        {claimError && (
-          <div className="win-raised" style={{
-            marginTop: '8px', padding: '8px 12px',
-            display: 'flex', alignItems: 'flex-start', gap: '8px',
-            border: '2px solid var(--terminal-red)',
-          }}>
-            <span style={{ fontWeight: 'bold' }}>[!]</span>
-            <div>
-              <div style={{ fontSize: '10px', marginBottom: '4px' }}>{claimError}</div>
-              <button className="win-btn" onClick={clearClaimError} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Per-dev breakdown */}
-      <div className="win-panel" style={{ flex: 1, overflow: 'auto', margin: '0 4px 4px' }}>
+      <div className="win-panel" style={{ flex: 1, overflow: 'auto', margin: '4px 4px 4px' }}>
         <table className="win-table">
           <thead>
             <tr>
@@ -266,12 +176,12 @@ function ChartTab({ history, loading }) {
 
   const data = history.map(s => ({
     date: formatDate(s.snapshot_date),
-    claimable: Number(s.balance_claimable),
+    balance: Number(s.balance_claimable),
     earned: Number(s.balance_total_earned),
   }));
 
-  const firstVal = data[0]?.claimable || 0;
-  const lastVal = data[data.length - 1]?.claimable || 0;
+  const firstVal = data[0]?.balance || 0;
+  const lastVal = data[data.length - 1]?.balance || 0;
   const trend = lastVal >= firstVal ? 'up' : 'down';
 
   return (
@@ -309,11 +219,11 @@ function ChartTab({ history, loading }) {
               }}
               formatter={(value, name) => [
                 `${formatNumber(value)} $NXT`,
-                name === 'claimable' ? 'Available' : 'Total Earned',
+                name === 'balance' ? 'Balance' : 'Total Earned',
               ]}
             />
             <Line
-              type="monotone" dataKey="claimable" name="claimable"
+              type="monotone" dataKey="balance" name="balance"
               stroke="#ffd700" strokeWidth={2} dot={false}
               activeDot={{ r: 4, fill: '#ffd700' }}
             />
@@ -328,7 +238,7 @@ function ChartTab({ history, loading }) {
       </div>
 
       <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '4px', fontSize: '10px' }}>
-        <span><span style={{ color: '#ffd700' }}>{'\u2501\u2501'}</span> Available</span>
+        <span><span style={{ color: '#ffd700' }}>{'\u2501\u2501'}</span> Balance</span>
         <span><span style={{ color: '#33ff33' }}>{'- -'}</span> Total Earned</span>
       </div>
     </div>
@@ -406,27 +316,11 @@ export default function NxtWallet() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingMovements, setLoadingMovements] = useState(true);
-  const [claimError, setClaimError] = useState(null);
-  const [claimSuccess, setClaimSuccess] = useState(false);
 
   const { address, isConnected, displayAddress } = useWallet();
   const wallet = isConnected ? address : null;
 
-  // ── On-chain reads ───────────────────────────────────────
-  const { data: claimEnabledData } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'claimEnabled',
-  });
-
-  const { data: walletClaimableData } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'walletClaimable',
-    args: wallet ? [wallet] : undefined,
-    query: { enabled: !!wallet },
-  });
-
+  // On-chain read: tokensOfOwner (for fallback summary when API has no players record)
   const { data: tokenIds } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
@@ -434,46 +328,6 @@ export default function NxtWallet() {
     args: wallet ? [wallet] : undefined,
     query: { enabled: !!wallet },
   });
-
-  const { data: previewData } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'previewClaim',
-    args: tokenIds?.length ? [tokenIds] : undefined,
-    query: { enabled: !!tokenIds?.length },
-  });
-
-  // ── Claim write ──────────────────────────────────────────
-  const { writeContract, data: claimTxHash, isPending: isClaiming, error: writeError } = useWriteContract();
-
-  const { isLoading: isClaimConfirming, isSuccess: isClaimConfirmed } = useWaitForTransactionReceipt({
-    hash: claimTxHash,
-  });
-
-  useEffect(() => {
-    if (writeError) {
-      setClaimError(writeError.shortMessage || writeError.message || 'Claim failed');
-    }
-  }, [writeError]);
-
-  useEffect(() => {
-    if (isClaimConfirmed && claimTxHash) {
-      setClaimSuccess(true);
-      setClaimError(null);
-    }
-  }, [isClaimConfirmed, claimTxHash]);
-
-  const handleClaim = () => {
-    if (!tokenIds?.length) return;
-    setClaimError(null);
-    setClaimSuccess(false);
-    writeContract({
-      address: NXDEVNFT_ADDRESS,
-      abi: NXDEVNFT_ABI,
-      functionName: 'claimNXT',
-      args: [tokenIds],
-    });
-  };
 
   // ── REST API data ────────────────────────────────────────
   useEffect(() => {
@@ -505,12 +359,13 @@ export default function NxtWallet() {
             .then(devs => {
               const valid = devs.filter(Boolean);
               if (valid.length > 0) {
-                const totalClaimable = valid.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
+                const totalBalance = valid.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
                 const totalEarned = valid.reduce((sum, d) => sum + (d.total_earned || 0), 0);
+                const totalSpent = valid.reduce((sum, d) => sum + (d.total_spent || 0), 0);
                 setSummary({
                   wallet_address: wallet,
-                  balance_claimable: totalClaimable,
-                  balance_claimed: 0,
+                  balance_claimable: totalBalance,
+                  balance_claimed: totalSpent,
                   balance_total_earned: totalEarned,
                   total_devs: valid.length,
                   salary_per_day: valid.length * 200,
@@ -544,25 +399,6 @@ export default function NxtWallet() {
       .finally(() => setLoadingMovements(false));
   }, [wallet, tokenIds]);
 
-  // ── Derived ──────────────────────────────────────────────
-  const onChainTotal = walletClaimableData?.[0];
-  const onChainDevCount = walletClaimableData?.[1];
-  const claimEnabled = claimEnabledData === true;
-
-  const claimState = {
-    onChainTotal,
-    onChainDevCount,
-    claimEnabled,
-    previewData,
-    handleClaim,
-    isClaiming,
-    isClaimConfirming,
-    claimSuccess,
-    claimError,
-    clearClaimError: () => setClaimError(null),
-    txHash: claimTxHash,
-  };
-
   const tabs = [
     { id: 'balance', label: 'Balance' },
     { id: 'chart', label: 'Chart' },
@@ -586,7 +422,7 @@ export default function NxtWallet() {
 
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} claimState={claimState} isConnected={isConnected} />}
+        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} isConnected={isConnected} />}
         {tab === 'chart' && <ChartTab history={history} loading={loadingHistory} />}
         {tab === 'movements' && <MovementsTab movements={movements} loading={loadingMovements} />}
       </div>
@@ -594,7 +430,7 @@ export default function NxtWallet() {
       {/* Status bar */}
       <div className="win98-statusbar" style={{ fontSize: '10px', color: '#555' }}>
         {wallet
-          ? `${displayAddress} | Salary: 200 $NXT/day per dev${claimEnabled ? '' : ' | Claiming disabled'}`
+          ? `${displayAddress} | Salary: 200 $NXT/day per dev | $NXT is virtual currency`
           : 'Wallet not connected'
         }
       </div>
