@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useReadContract } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contract';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const RARITY_COLORS = {
@@ -29,6 +30,12 @@ function formatNumber(n) {
   return Number(n).toLocaleString();
 }
 
+function formatNxt(wei) {
+  if (!wei) return '0';
+  const n = Number(formatUnits(BigInt(wei), 18));
+  return n % 1 === 0 ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
 function formatDate(d) {
   if (!d) return '-';
   const date = new Date(d);
@@ -44,8 +51,157 @@ function formatTimestamp(ts) {
   });
 }
 
+// ── Claim Section (On-Chain) ─────────────────────────────
+function ClaimSection({ wallet, tokenIds }) {
+  const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
+
+  // Read claimEnabled
+  const { data: claimEnabled } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'claimEnabled',
+    query: { enabled: !!wallet },
+  });
+
+  // Read previewClaim to get gross/fee/net
+  const { data: preview, refetch: refetchPreview } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'previewClaim',
+    args: [ids],
+    query: { enabled: !!wallet && ids.length > 0 },
+  });
+
+  // Write: claimNXT
+  const { data: txHash, writeContract, isPending: isSending, reset: resetTx } = useWriteContract();
+
+  // Wait for TX receipt
+  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // After successful claim, refetch preview
+  useEffect(() => {
+    if (isConfirmed) {
+      refetchPreview();
+    }
+  }, [isConfirmed, refetchPreview]);
+
+  const netWei = preview ? preview[2] : BigInt(0);
+  const netDisplay = formatNxt(netWei);
+  const hasClaimable = netWei > BigInt(0);
+
+  const handleClaim = () => {
+    resetTx();
+    writeContract({
+      address: NXDEVNFT_ADDRESS,
+      abi: NXDEVNFT_ABI,
+      functionName: 'claimNXT',
+      args: [ids],
+    });
+  };
+
+  const claimDisabled = !claimEnabled || !hasClaimable || isSending || isMining;
+
+  return (
+    <div style={{
+      margin: '4px 8px', padding: '8px',
+      border: '1px solid var(--border-dark)',
+      background: 'var(--terminal-bg)',
+    }}>
+      <div style={{
+        fontFamily: "'VT323', monospace", fontSize: '14px',
+        color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '6px',
+      }}>
+        {'>'} CLAIM $NXT (On-Chain)
+      </div>
+
+      {claimEnabled === false && (
+        <div style={{
+          fontFamily: "'VT323', monospace", fontSize: '13px',
+          color: 'var(--terminal-amber)', padding: '4px 0',
+        }}>
+          Claiming will be enabled soon.
+        </div>
+      )}
+
+      {claimEnabled !== false && !hasClaimable && ids.length > 0 && (
+        <div style={{
+          fontFamily: "'VT323', monospace", fontSize: '13px',
+          color: '#888', padding: '4px 0',
+        }}>
+          No $NXT to claim yet. Your devs earn 200 $NXT/day.
+        </div>
+      )}
+
+      {claimEnabled !== false && ids.length === 0 && (
+        <div style={{
+          fontFamily: "'VT323', monospace", fontSize: '13px',
+          color: '#888', padding: '4px 0',
+        }}>
+          No devs found. Mint a dev to start earning $NXT.
+        </div>
+      )}
+
+      {hasClaimable && (
+        <div style={{
+          fontFamily: "'VT323', monospace", fontSize: '16px',
+          color: 'var(--gold)', padding: '4px 0',
+        }}>
+          Claimable: {netDisplay} $NXT
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+        <button
+          className="win-btn"
+          disabled={claimDisabled}
+          onClick={handleClaim}
+          style={{
+            padding: '4px 16px',
+            fontWeight: 'bold',
+            fontSize: '11px',
+            color: claimDisabled ? undefined : 'var(--win-text)',
+          }}
+        >
+          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? netDisplay : '0'} $NXT`}
+        </button>
+
+        {/* TX status */}
+        {txHash && !isConfirmed && (
+          <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-amber)' }}>
+            TX pending...{' '}
+            <a
+              href={`${EXPLORER_BASE}/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}
+            >
+              View
+            </a>
+          </span>
+        )}
+
+        {isConfirmed && (
+          <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-green)' }}>
+            Successfully claimed {netDisplay} $NXT!{' '}
+            <a
+              href={`${EXPLORER_BASE}/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}
+            >
+              View TX
+            </a>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading, isConnected }) {
+function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
   if (loading) return <div className="loading">Loading wallet...</div>;
   if (!isConnected) return (
     <div style={{
@@ -76,7 +232,16 @@ function BalanceTab({ summary, loading, isConnected }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+      {/* ── Section 1: Game Balance (Virtual) ── */}
+      <div style={{
+        padding: '4px 8px', margin: '4px 8px 0',
+        fontFamily: "'VT323', monospace", fontSize: '14px',
+        color: 'var(--terminal-amber)', fontWeight: 'bold',
+      }}>
+        {'>'} GAME BALANCE (Virtual)
+      </div>
+
       {/* Summary cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-box win-panel">
@@ -114,19 +279,15 @@ function BalanceTab({ summary, loading, isConnected }) {
 
       {/* Virtual currency notice */}
       <div style={{
-        padding: '6px 12px', margin: '4px 8px',
-        fontFamily: "'VT323', monospace", fontSize: '13px',
-        color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
-        border: '1px solid var(--border-dark)',
+        padding: '4px 8px', margin: '2px 8px',
+        fontFamily: "'VT323', monospace", fontSize: '11px',
+        color: '#888',
       }}>
-        {'>'} Your $NXT balance accumulates automatically from dev salaries.
-        <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-          Spend $NXT on protocols, AI creation, investments, and more.
-        </div>
+        Game balance is used for protocols, AIs, and investments.
       </div>
 
       {/* Per-dev breakdown */}
-      <div className="win-panel" style={{ flex: 1, overflow: 'auto', margin: '4px 4px 4px' }}>
+      <div className="win-panel" style={{ overflow: 'auto', margin: '2px 4px', maxHeight: '140px' }}>
         <table className="win-table">
           <thead>
             <tr>
@@ -156,6 +317,9 @@ function BalanceTab({ summary, loading, isConnected }) {
           </tbody>
         </table>
       </div>
+
+      {/* ── Section 2: Claim $NXT (On-Chain) ── */}
+      <ClaimSection wallet={wallet} tokenIds={tokenIds} />
     </div>
   );
 }
@@ -422,7 +586,15 @@ export default function NxtWallet() {
 
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {tab === 'balance' && <BalanceTab summary={summary} loading={loadingSummary} isConnected={isConnected} />}
+        {tab === 'balance' && (
+          <BalanceTab
+            summary={summary}
+            loading={loadingSummary}
+            isConnected={isConnected}
+            wallet={wallet}
+            tokenIds={tokenIds}
+          />
+        )}
         {tab === 'chart' && <ChartTab history={history} loading={loadingHistory} />}
         {tab === 'movements' && <MovementsTab movements={movements} loading={loadingMovements} />}
       </div>
@@ -430,7 +602,7 @@ export default function NxtWallet() {
       {/* Status bar */}
       <div className="win98-statusbar" style={{ fontSize: '10px', color: '#555' }}>
         {wallet
-          ? `${displayAddress} | Salary: 200 $NXT/day per dev | $NXT is virtual currency`
+          ? `${displayAddress} | Salary: 200 $NXT/day per dev`
           : 'Wallet not connected'
         }
       </div>
