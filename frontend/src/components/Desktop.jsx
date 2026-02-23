@@ -21,6 +21,7 @@ const DESKTOP_ICONS = [
   { id: 'hire-devs', icon: '+', label: 'Mint/Hire Devs' },
   { id: 'notepad', icon: 'N', label: 'Notepad' },
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
+  { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
 ];
 

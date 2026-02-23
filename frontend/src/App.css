@@ -1001,3 +1001,246 @@
     rgba(255, 255, 255, 0.02) 4px
   );
 }
+
+/* ====== FEED HIGHLIGHTS (Combo Streaks) ====== */
+.feed-highlight {
+  padding: 4px 8px;
+  margin: 2px 0;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+}
+
+.feed-highlight-streak-1 {
+  background: linear-gradient(90deg, transparent, rgba(51, 255, 51, 0.1), transparent);
+  border-left: 3px solid #33ff33;
+  color: #33ff33;
+}
+
+.feed-highlight-streak-2 {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.15), transparent);
+  border-left: 3px solid #ffd700;
+  border-right: 3px solid #ffd700;
+  color: #ffd700;
+  animation: streakGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes streakGlow {
+  0% { text-shadow: 0 0 4px rgba(255, 215, 0, 0.4); }
+  100% { text-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.3); }
+}
+
+.feed-highlight-rivalry {
+  background: linear-gradient(90deg, transparent, rgba(255, 68, 68, 0.1), transparent);
+  border-left: 3px solid #ff4444;
+  color: #ff4444;
+}
+
+.feed-highlight-world-event {
+  background: linear-gradient(90deg, #1a1a00, #332200, #1a1a00);
+  border: 1px solid #664400;
+  text-align: center;
+  color: #ffaa00;
+  font-size: 16px;
+}
+
+.feed-highlight-corp-clash {
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.08), transparent);
+  border-left: 3px solid #00ffff;
+  color: #00ffff;
+}
+
+/* ====== PROTOCOL CHART ====== */
+.protocol-chart {
+  background: #0c0c0c;
+  border: 2px solid;
+  border-color: #404040 #fff #fff #404040;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-grid-line {
+  stroke: #111;
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke: #33ff33;
+  stroke-width: 2;
+}
+
+.chart-fill {
+  opacity: 0.3;
+}
+
+.chart-volume-bar {
+  fill: #1a3a1a;
+  opacity: 0.5;
+}
+
+.chart-marker-invest { fill: #ffaa00; }
+.chart-marker-fork { fill: #ff4444; }
+.chart-marker-event { fill: #00ffff; }
+
+.chart-marker {
+  cursor: pointer;
+}
+
+.chart-tooltip {
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #404040 #404040 #fff;
+  padding: 2px 6px;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: #000;
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.chart-activity-log {
+  background: #0c0c0c;
+  border: 2px solid;
+  border-color: #404040 #fff #fff #404040;
+  color: #33ff33;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  padding: 4px 8px;
+  overflow-y: auto;
+  max-height: 120px;
+}
+
+.chart-activity-line {
+  padding: 1px 0;
+}
+
+.chart-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 8px;
+  background: #0c0c0c;
+  font-family: 'VT323', monospace;
+  border-bottom: 1px solid #222;
+}
+
+.chart-footer {
+  display: flex;
+  gap: 16px;
+  padding: 4px 8px;
+  background: #0c0c0c;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: #888;
+  border-top: 1px solid #222;
+}
+
+/* ====== CORP WARS ====== */
+.corp-section-title {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #33ff33;
+  padding: 6px 8px 2px;
+}
+
+.corp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+}
+
+.corp-bar-name {
+  width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.corp-bar-track {
+  flex: 1;
+  height: 16px;
+  background: #1a1a1a;
+  border: 1px solid;
+  border-color: #404040 #666 #666 #404040;
+  position: relative;
+  overflow: hidden;
+}
+
+.corp-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.corp-bar-pct {
+  width: 50px;
+  text-align: right;
+}
+
+.corp-bar-rank {
+  width: 24px;
+  text-align: center;
+}
+
+.territory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.territory-cell {
+  background: #111;
+  border: 2px solid #333;
+  padding: 6px;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.territory-cell-name {
+  color: #888;
+  font-size: 11px;
+}
+
+.territory-cell-controller {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.territory-cell.contested {
+  border-style: dashed;
+  animation: contestedPulse 2s ease-in-out infinite;
+}
+
+@keyframes contestedPulse {
+  0%, 100% { border-color: #555; }
+  50% { border-color: #ff4444; }
+}
+
+.corp-feed {
+  background: #0c0c0c;
+  border: 2px solid;
+  border-color: #404040 #fff #fff #404040;
+  color: #33ff33;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  padding: 4px 8px;
+  overflow-y: auto;
+  max-height: 130px;
+}
+
+.corp-feed-line {
+  padding: 1px 0;
+}
