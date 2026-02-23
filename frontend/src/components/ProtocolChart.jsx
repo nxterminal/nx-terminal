@@ -26,7 +26,7 @@ export default function ProtocolChart({
   const svgRef = useRef(null);
 
   const W = containerWidth || 600;
-  const H = containerHeight || 220;
+  const H = containerHeight || 140;
   const PAD = { top: 10, right: 10, bottom: 20, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
