@@ -89,22 +89,9 @@ export default function ProtocolMarket() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* TABLE — top half */}
       <div style={{ flex: '0 0 auto' }}>
-        <div style={{ padding: '4px', display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <span>Sort:</span>
-          {['value', 'code_quality', 'investor_count'].map(s => (
-            <button
-              key={s}
-              className={`win-btn${sort === s ? ' active' : ''}`}
-              onClick={() => setSort(s)}
-              style={{ fontSize: '10px', padding: '2px 6px' }}
-            >
-              {s === 'code_quality' ? 'Quality' : s === 'investor_count' ? 'Investors' : 'Value'}
-            </button>
-          ))}
-        </div>
         <table className="win-table">
           <thead>
             <tr><th>Name</th><th>Creator</th><th>Quality</th><th>Value</th><th>Inv.</th></tr>
@@ -122,7 +109,7 @@ export default function ProtocolMarket() {
                   <td style={{ fontWeight: 'bold' }}>{p.name}</td>
                   <td>{p.creator_name || '-'}</td>
                   <td>{p.code_quality != null ? `${p.code_quality}/100` : '-'}</td>
-                  <td style={{ color: isSelected ? 'inherit' : 'var(--gold)' }}>{formatNumber(p.value)} $NXT</td>
+                  <td style={{ color: isSelected ? 'inherit' : '#4a9eff' }}>{formatNumber(p.value)} $NXT</td>
                   <td>{p.investor_count ?? 0}</td>
                 </tr>
               );
@@ -132,7 +119,7 @@ export default function ProtocolMarket() {
       </div>
 
       {/* CHART — bottom half */}
-      {selected && <ProtocolChartPanel key={selected.id || selected.name} protocol={selected} />}
+      {selected && <div style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}><ProtocolChartPanel key={selected.id || selected.name} protocol={selected} /></div>}
     </div>
   );
 }
@@ -226,7 +213,7 @@ function ProtocolChartPanel({ protocol }) {
   }, [chartData]);
 
   return (
-    <div style={{ borderTop: '2px solid var(--border-dark, #888)', background: '#0c0c0c' }}>
+    <div style={{ borderTop: '2px solid var(--border-dark, #888)', background: '#0c0c0c', display: 'flex', flexDirection: 'column', flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
       {/* Chart header */}
       <div className="chart-header">
         <span style={{ color: '#33ff33', fontSize: '16px', fontWeight: 'bold' }}>
@@ -248,10 +235,12 @@ function ProtocolChartPanel({ protocol }) {
       </div>
 
       {/* SVG Chart */}
-      <ProtocolChart dataPoints={chartData} markers={markers} />
+      <div style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
+        <ProtocolChart dataPoints={chartData} markers={markers} height={140} />
+      </div>
 
       {/* Activity Log */}
-      <div className="chart-activity-log" style={{ margin: '0', maxHeight: '80px' }}>
+      <div className="chart-activity-log" style={{ margin: '0', maxHeight: '50px', flexShrink: 0 }}>
         {activityLog.length === 0 ? (
           <div style={{ color: '#555' }}>{'>'} No activity recorded for this protocol yet...</div>
         ) : (
