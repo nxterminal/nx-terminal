@@ -193,7 +193,7 @@ def generate_dev_data(token_id, cur):
     work_ethic = rng.choice(WORK_ETHIC_POOL)
 
     # --- IPFS hash based on tokenId ---
-    ipfs_hash = f"{IMAGE_CID}/{token_id}.png"
+    ipfs_hash = f"{IMAGE_CID}/{token_id}.gif"
 
     # --- personality_seed (safe range for PostgreSQL INT) ---
     personality_seed = rng.randint(1, 2147483647)
