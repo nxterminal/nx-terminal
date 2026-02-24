@@ -1,6 +1,6 @@
 """
 NX TERMINAL — Blockchain Listener
-Watches DevMinted events on MegaETH, fetches metadata from IPFS,
+Watches DevMinted events on MegaETH, generates dev data procedurally,
 and inserts new devs into the database automatically.
 
 Runs alongside the engine in the nx-engine service.
@@ -23,8 +23,6 @@ from urllib.parse import urlparse
 
 RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com")
 NFT_CONTRACT = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
-IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs"
-METADATA_CID = "bafybeifmjiqyzhg5hrebzvz5cg5krz7hkbq4iog3u2rrbxhofp6qcej7bu"
 IMAGE_CID = "bafybeidqzkcpcannjtvnasq6ll7nskm2tf5xjb23xhr4wjb3iodxsm6eym"
 
 # DevMinted(address indexed owner, uint256 indexed tokenId)
@@ -43,6 +41,56 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger("listener")
+
+# ═══════════════════════════════════════════════════════════
+# PROCEDURAL GENERATION POOLS (deterministic from tokenId)
+# ═══════════════════════════════════════════════════════════
+
+DEV_NAME_PREFIXES = [
+    "NEX", "CIPHER", "VOID", "FLUX", "NOVA", "PULSE", "ZERO", "GHOST",
+    "AXIOM", "KIRA", "DAEMON", "ECHO", "HELIX", "ONYX", "RUNE",
+    "SPECTRA", "VECTOR", "WRAITH", "ZENITH", "BINARY", "CORTEX", "DELTA",
+    "SIGMA", "THETA", "OMEGA", "APEX", "NANO", "QUBIT", "NEXUS", "SHADE",
+    "STORM", "FROST", "BLITZ", "CRUX", "DRIFT", "EMBER", "FORGE", "GLITCH",
+    "HYPER", "IONIC", "JOLT", "KARMA", "LYNX", "MORPH", "NEON", "PIXEL",
+]
+
+DEV_NAME_SUFFIXES = [
+    "7X", "404", "9K", "01", "X9", "00", "13", "99", "3V", "Z1",
+    "V2", "11", "0X", "FE", "A1", "42", "88", "XL", "PR", "QZ",
+    "7Z", "K9", "R2", "5G", "EX", "NX", "X0", "1K", "S7", "D4",
+]
+
+ARCHETYPE_WEIGHTS = {
+    "10X_DEV": 10, "LURKER": 12, "DEGEN": 15, "GRINDER": 15,
+    "INFLUENCER": 13, "HACKTIVIST": 10, "FED": 10, "SCRIPT_KIDDIE": 15,
+}
+
+RARITY_WEIGHTS = {
+    "common": 60, "uncommon": 25, "rare": 10, "legendary": 4, "mythic": 1,
+}
+
+CORPORATION_POOL = [
+    "CLOSED_AI", "MISANTHROPIC", "SHALLOW_MIND",
+    "ZUCK_LABS", "Y_AI", "MISTRIAL_SYSTEMS",
+]
+
+SPECIES_POOL = [
+    "Wolf", "Cat", "Owl", "Fox", "Bear", "Raven", "Snake", "Shark",
+    "Monkey", "Robot", "Alien", "Ghost", "Dragon", "Human",
+]
+
+ALIGNMENT_POOL = [
+    "Lawful Good", "Neutral Good", "Chaotic Good",
+    "Lawful Neutral", "True Neutral", "Chaotic Neutral",
+    "Lawful Evil", "Neutral Evil", "Chaotic Evil",
+]
+
+RISK_LEVEL_POOL = ["Conservative", "Moderate", "Aggressive", "Reckless"]
+SOCIAL_STYLE_POOL = ["Quiet", "Social", "Loud", "Troll", "Mentor"]
+CODING_STYLE_POOL = ["Methodical", "Chaotic", "Perfectionist", "Speed Runner", "Copy Paste"]
+WORK_ETHIC_POOL = ["Grinder", "Lazy", "Balanced", "Obsessed", "Steady"]
+
 
 # ═══════════════════════════════════════════════════════════
 # DATABASE
@@ -90,118 +138,137 @@ def insert_action_mint(cur, token_id, dev_name, archetype):
     ))
 
 
-def insert_dev(cur, token_id, owner, metadata):
-    """Insert a dev into the DB from IPFS metadata."""
-    attrs = {}
-    for a in metadata.get("attributes", []):
-        attrs[a["trait_type"]] = a["value"]
+# ═══════════════════════════════════════════════════════════
+# PROCEDURAL DEV GENERATION
+# ═══════════════════════════════════════════════════════════
 
-    # Map corporation display name to DB ID
-    corp_map = {
-        "Closed AI": "CLOSED_AI",
-        "Misanthropic": "MISANTHROPIC",
-        "Shallow Mind": "SHALLOW_MIND",
-        "Zuck Labs": "ZUCK_LABS",
-        "Y.AI": "Y_AI",
-        "Mistrial Systems": "MISTRIAL_SYSTEMS",
+def _weighted_choice(rng, weights):
+    """Weighted random selection using a specific RNG instance."""
+    items = list(weights.keys())
+    cumulative = []
+    total = 0
+    for w in weights.values():
+        total += w
+        cumulative.append(total)
+    r = rng.uniform(0, total)
+    for item, c in zip(items, cumulative):
+        if r <= c:
+            return item
+    return items[-1]
+
+
+def generate_dev_data(token_id, cur):
+    """Generate all dev traits procedurally using tokenId as deterministic seed.
+    No HTTP calls — everything is derived from the tokenId."""
+    rng = random.Random(token_id)
+
+    # --- Name (deterministic, with uniqueness check) ---
+    prefix = rng.choice(DEV_NAME_PREFIXES)
+    suffix = rng.choice(DEV_NAME_SUFFIXES)
+    name = f"{prefix}-{suffix}"
+
+    cur.execute("SELECT name FROM devs WHERE name = %s", (name,))
+    if cur.fetchone():
+        name = f"{prefix}-{suffix}-{token_id}"
+
+    # --- Core traits (weighted random) ---
+    archetype = _weighted_choice(rng, ARCHETYPE_WEIGHTS)   # UPPERCASE
+    corporation = rng.choice(CORPORATION_POOL)              # UPPERCASE
+    rarity = _weighted_choice(rng, RARITY_WEIGHTS)          # lowercase (matches DB enum)
+    species = rng.choice(SPECIES_POOL)
+
+    # --- Stats (15-95) ---
+    stat_coding = rng.randint(15, 95)
+    stat_hacking = rng.randint(15, 95)
+    stat_trading = rng.randint(15, 95)
+    stat_social = rng.randint(15, 95)
+    stat_endurance = rng.randint(15, 95)
+    stat_luck = rng.randint(15, 95)
+
+    # --- Personality traits ---
+    alignment = rng.choice(ALIGNMENT_POOL)
+    risk_level = rng.choice(RISK_LEVEL_POOL)
+    social_style = rng.choice(SOCIAL_STYLE_POOL)
+    coding_style = rng.choice(CODING_STYLE_POOL)
+    work_ethic = rng.choice(WORK_ETHIC_POOL)
+
+    # --- IPFS hash based on tokenId ---
+    ipfs_hash = f"{IMAGE_CID}/{token_id}.png"
+
+    # --- personality_seed (safe range for PostgreSQL INT) ---
+    personality_seed = rng.randint(1, 2147483647)
+
+    return {
+        "name": name,
+        "archetype": archetype,
+        "corporation": corporation,
+        "rarity": rarity,
+        "species": species,
+        "stat_coding": stat_coding,
+        "stat_hacking": stat_hacking,
+        "stat_trading": stat_trading,
+        "stat_social": stat_social,
+        "stat_endurance": stat_endurance,
+        "stat_luck": stat_luck,
+        "alignment": alignment,
+        "risk_level": risk_level,
+        "social_style": social_style,
+        "coding_style": coding_style,
+        "work_ethic": work_ethic,
+        "ipfs_hash": ipfs_hash,
+        "personality_seed": personality_seed,
     }
 
-    # Map archetype display name to DB ID
-    arch_map = {
-        "10X Dev": "10X_DEV",
-        "Lurker": "LURKER",
-        "Degen": "DEGEN",
-        "Grinder": "GRINDER",
-        "Influencer": "INFLUENCER",
-        "Hacktivist": "HACKTIVIST",
-        "Fed": "FED",
-        "Script Kiddie": "SCRIPT_KIDDIE",
-    }
 
-    # Map rarity display name to DB ID
-    rarity_map = {
-        "Common": "COMMON",
-        "Uncommon": "UNCOMMON",
-        "Rare": "RARE",
-        "Epic": "EPIC",
-        "Legendary": "LEGENDARY",
-    }
-
-    corp = corp_map.get(attrs.get("Corporation", ""), attrs.get("Corporation", ""))
-    arch = arch_map.get(attrs.get("Archetype", ""), attrs.get("Archetype", ""))
-    rarity = rarity_map.get(attrs.get("Rarity", ""), attrs.get("Rarity", ""))
-
-    # Extract image hash from ipfs:// URL
-    image_url = metadata.get("image", "")
-    ipfs_hash = image_url.replace("ipfs://", "") if image_url.startswith("ipfs://") else ""
-
+def insert_dev(cur, token_id, owner, data):
+    """Insert a procedurally generated dev into the DB."""
     cur.execute("""
         INSERT INTO devs (
             token_id, name, owner_address, archetype, corporation, rarity_tier,
             personality_seed,
             alignment, risk_level, social_style, coding_style, work_ethic,
-            species, skin, clothing, glow, vibe,
-            hair_style, hair_color, facial, headgear, extra,
+            species,
             ipfs_hash,
             stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck,
-            status, mood, location, energy,
-            coffee_count, lines_of_code, bugs_shipped, hours_since_sleep,
+            status,
             next_cycle_at,
             minted_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s,
             %s,
             %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
+            %s,
             %s,
             %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s,
-            %s, %s, %s, %s,
+            %s,
             NOW(),
             NOW()
         )
     """, (
         token_id,
-        metadata.get("name", f"Dev #{token_id}"),
+        data["name"],
         owner.lower(),
-        arch,
-        corp,
-        rarity,
-        random.getrandbits(64),
-        attrs.get("Alignment", "True Neutral"),
-        attrs.get("Risk Level", "Moderate"),
-        attrs.get("Social Style", "Quiet"),
-        attrs.get("Coding Style", "Methodical"),
-        attrs.get("Work Ethic", "Steady"),
-        attrs.get("Species", "Human"),
-        attrs.get("Skin", ""),
-        attrs.get("Clothing", ""),
-        attrs.get("Screen Glow", ""),
-        attrs.get("Vibe", ""),
-        attrs.get("Hair Style"),
-        attrs.get("Hair Color"),
-        attrs.get("Facial Hair"),
-        attrs.get("Headgear"),
-        attrs.get("Extra"),
-        ipfs_hash,
-        attrs.get("Coding", 0),
-        attrs.get("Hacking", 0),
-        attrs.get("Trading", 0),
-        attrs.get("Social", 0),
-        attrs.get("Endurance", 0),
-        attrs.get("Luck", 0),
+        data["archetype"],
+        data["corporation"],
+        data["rarity"],
+        data["personality_seed"],
+        data["alignment"],
+        data["risk_level"],
+        data["social_style"],
+        data["coding_style"],
+        data["work_ethic"],
+        data["species"],
+        data["ipfs_hash"],
+        data["stat_coding"],
+        data["stat_hacking"],
+        data["stat_trading"],
+        data["stat_social"],
+        data["stat_endurance"],
+        data["stat_luck"],
         "active",
-        attrs.get("Mood", "Focused"),
-        attrs.get("Location", "GitHub HQ"),
-        attrs.get("Energy", 100),
-        attrs.get("Coffee Count", 0),
-        attrs.get("Lines of Code", 0),
-        attrs.get("Bugs Shipped", 0),
-        attrs.get("Hours Since Sleep", 0),
     ))
 
-    log.info(f"Inserted dev #{token_id}: {metadata.get('name', '?')} ({arch} @ {corp})")
+    log.info(f"Inserted dev #{token_id}: {data['name']} ({data['archetype']} @ {data['corporation']})")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -262,23 +329,6 @@ def parse_mint_event(event):
 
 
 # ═══════════════════════════════════════════════════════════
-# IPFS
-# ═══════════════════════════════════════════════════════════
-
-def fetch_metadata(token_id):
-    """Fetch metadata JSON from IPFS for a given token ID."""
-    url = f"{IPFS_GATEWAY}/{METADATA_CID}/{token_id}.json"
-    try:
-        r = requests.get(url, timeout=15)
-        if r.status_code == 200:
-            return r.json()
-        log.error(f"IPFS fetch failed for #{token_id}: HTTP {r.status_code}")
-    except Exception as e:
-        log.error(f"IPFS fetch error for #{token_id}: {e}")
-    return None
-
-
-# ═══════════════════════════════════════════════════════════
 # SIMULATION STATE
 # ═══════════════════════════════════════════════════════════
 
@@ -314,8 +364,6 @@ def run_listener():
     log.info("NX Terminal — Blockchain Listener starting")
     log.info(f"RPC: {RPC_URL}")
     log.info(f"Contract: {NFT_CONTRACT}")
-    log.info(f"IPFS Gateway: {IPFS_GATEWAY}")
-    log.info(f"Metadata CID: {METADATA_CID}")
     log.info(f"Poll interval: {POLL_INTERVAL}s")
     log.info("=" * 50)
 
@@ -384,37 +432,16 @@ def run_listener():
                         log.info(f"Dev #{token_id} already exists, skipping")
                         continue
 
-                    # Fetch metadata from IPFS
-                    metadata = fetch_metadata(token_id)
-                    if metadata is None:
-                        log.error(f"Could not fetch metadata for #{token_id}, will retry next cycle")
-                        continue
-
-                    # Insert into DB
+                    # Generate and insert dev procedurally (no IPFS dependency)
                     try:
-                        # Parse metadata for corp/archetype needed by ensure_player and action
-                        mint_attrs = {}
-                        for a in metadata.get("attributes", []):
-                            mint_attrs[a["trait_type"]] = a["value"]
-
-                        corp_map_local = {
-                            "Closed AI": "CLOSED_AI", "Misanthropic": "MISANTHROPIC",
-                            "Shallow Mind": "SHALLOW_MIND", "Zuck Labs": "ZUCK_LABS",
-                            "Y.AI": "Y_AI", "Mistrial Systems": "MISTRIAL_SYSTEMS",
-                        }
-                        arch_map_local = {
-                            "10X Dev": "10X_DEV", "Lurker": "LURKER", "Degen": "DEGEN",
-                            "Grinder": "GRINDER", "Influencer": "INFLUENCER",
-                            "Hacktivist": "HACKTIVIST", "Fed": "FED", "Script Kiddie": "SCRIPT_KIDDIE",
-                        }
-                        mint_corp = corp_map_local.get(mint_attrs.get("Corporation", ""), "CLOSED_AI")
-                        mint_arch = arch_map_local.get(mint_attrs.get("Archetype", ""), "LURKER")
-                        mint_name = metadata.get("name", f"Dev #{token_id}")
-
-                        ensure_player(cur, owner, mint_corp)
-                        insert_dev(cur, token_id, owner, metadata)
-                        insert_action_mint(cur, token_id, mint_name, mint_arch)
+                        dev_data = generate_dev_data(token_id, cur)
+                        ensure_player(cur, owner, dev_data["corporation"])
+                        insert_dev(cur, token_id, owner, dev_data)
+                        insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
                         minted_count += 1
+                        log.info(f"Minted dev #{token_id}: {dev_data['name']} "
+                                 f"({dev_data['archetype']} @ {dev_data['corporation']}, "
+                                 f"{dev_data['rarity']})")
                     except Exception as e:
                         log.error(f"Failed to insert dev #{token_id}: {e}")
                         continue
