@@ -53,6 +53,8 @@ app.add_middleware(
         "https://nxterminal.onrender.com",
         "https://nx-terminal.onrender.com",
         "https://nx-frontend-5cbf.onrender.com",
+        "https://nxterminal.xyz",
+        "https://www.nxterminal.xyz",
     ],
     allow_credentials=True,
     allow_methods=["*"],
