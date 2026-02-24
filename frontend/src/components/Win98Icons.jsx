@@ -363,6 +363,37 @@ function IconWallet({ size = 32 }) {
   );
 }
 
+function IconCorpWars({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="swordBlade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8e8e8" />
+          <stop offset="100%" stopColor="#a0a0a0" />
+        </linearGradient>
+        <linearGradient id="shieldBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#c62828" />
+          <stop offset="100%" stopColor="#7f0000" />
+        </linearGradient>
+      </defs>
+      {/* Left sword */}
+      <line x1="3" y1="3" x2="13" y2="13" stroke="url(#swordBlade)" strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="3" y1="3" x2="6.5" y2="3" stroke="#8d6e63" strokeWidth="1.8" />
+      <line x1="3" y1="3" x2="3" y2="6.5" stroke="#8d6e63" strokeWidth="1.8" />
+      {/* Right sword */}
+      <line x1="29" y1="3" x2="19" y2="13" stroke="url(#swordBlade)" strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="29" y1="3" x2="25.5" y2="3" stroke="#8d6e63" strokeWidth="1.8" />
+      <line x1="29" y1="3" x2="29" y2="6.5" stroke="#8d6e63" strokeWidth="1.8" />
+      {/* Shield */}
+      <path d="M16 7 L24 11 L24 19 Q24 26 16 29 Q8 26 8 19 L8 11 Z" fill="url(#shieldBody)" stroke="#4a0000" strokeWidth="0.7" />
+      <path d="M16 9 L22 12 L22 18.5 Q22 24 16 27 Q10 24 10 18.5 L10 12 Z" fill="none" stroke="#ffd700" strokeWidth="0.7" />
+      {/* Cross emblem */}
+      <line x1="16" y1="12" x2="16" y2="24" stroke="#ffd700" strokeWidth="1.4" />
+      <line x1="11" y1="17" x2="21" y2="17" stroke="#ffd700" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -379,6 +410,7 @@ export const ICON_MAP = {
   'notepad': IconNotepad,
   'recycle-bin': IconRecycleBin,
   'nxt-wallet': IconWallet,
+  'corp-wars': IconCorpWars,
 };
 
 export function Win98Icon({ id, size = 32 }) {
