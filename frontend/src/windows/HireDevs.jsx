@@ -6,6 +6,8 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
+const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeidqzkcpcannjtvnasq6ll7nskm2tf5xjb23xhr4wjb3iodxsm6eym';
+
 const DEPLOY_STEPS = [
   { text: 'Connecting to MegaETH mainnet...', duration: 800 },
   { text: 'Installing neural pathways...', duration: 800 },
@@ -35,7 +37,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
   const [deployStep, setDeployStep] = useState(-1);
   const [copyProgress, setCopyProgress] = useState(0);
   const [mintedIds, setMintedIds] = useState([]);
-  const [mintedDevs, setMintedDevs] = useState([]);
+  const [devData, setDevData] = useState({});
   const timerRef = useRef(null);
   const [transferSpeed] = useState(() => Math.round(14.4 + Math.random() * 42));
 
@@ -48,30 +50,61 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
     query: { enabled: !!address },
   });
 
+  // Set minted IDs from owned tokens
   useEffect(() => {
     if (ownedTokens && ownedTokens.length > 0) {
       const ids = ownedTokens.slice(-quantity).map(id => Number(id));
       setMintedIds(ids);
-
-      // Fetch full dev data for GIF display + dispatch events
-      Promise.all(
-        ids.map(tokenId =>
-          api.getDev(tokenId).catch(() => ({
-            token_id: tokenId,
-            name: `Dev #${tokenId}`,
-            corporation: 'UNKNOWN',
-            archetype: 'UNKNOWN',
-            species: 'Unknown',
-          }))
-        )
-      ).then(devs => {
-        setMintedDevs(devs);
-        devs.forEach(dev => {
-          window.dispatchEvent(new CustomEvent('nx-dev-hired', { detail: { dev } }));
-        });
-      });
     }
   }, [ownedTokens, quantity]);
+
+  // Retry fetching dev data from API (listener may not have inserted yet)
+  useEffect(() => {
+    if (mintedIds.length === 0) return;
+    let attempts = 0;
+    let cancelled = false;
+    let retryTimer;
+    const loaded = {};
+
+    const fetchDevs = async () => {
+      attempts++;
+      const pending = mintedIds.filter(id => !loaded[id]);
+      if (pending.length === 0) return;
+
+      const results = await Promise.allSettled(
+        pending.map(id => api.getDev(id).then(dev => ({ id, dev })))
+      );
+      if (cancelled) return;
+
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          loaded[r.value.id] = r.value.dev;
+          window.dispatchEvent(new CustomEvent('nx-dev-hired', { detail: { dev: r.value.dev } }));
+        }
+      }
+
+      if (Object.keys(loaded).length > 0) {
+        setDevData(prev => ({ ...prev, ...loaded }));
+      }
+
+      const allLoaded = mintedIds.every(id => loaded[id]);
+      if (!allLoaded && attempts < 5 && !cancelled) {
+        retryTimer = setTimeout(fetchDevs, 3000);
+      } else if (!allLoaded) {
+        // Dispatch fallback for any still missing
+        mintedIds.forEach(id => {
+          if (!loaded[id]) {
+            window.dispatchEvent(new CustomEvent('nx-dev-hired', {
+              detail: { dev: { token_id: id, name: `Dev #${id}`, corporation: 'UNKNOWN', archetype: 'UNKNOWN', species: 'Unknown' } },
+            }));
+          }
+        });
+      }
+    };
+
+    fetchDevs();
+    return () => { cancelled = true; clearTimeout(retryTimer); };
+  }, [mintedIds]);
 
   // ── Dial-up phase ──
   const DIAL_LINES = [
@@ -317,62 +350,55 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
           color: '#006400', marginBottom: '8px',
           textAlign: 'center',
         }}>
-          {quantity} developer{quantity > 1 ? 's' : ''} deployed to the Protocol Wars!
+          DEPLOYMENT COMPLETE
         </div>
 
-        {/* Show minted dev GIFs */}
-        {mintedDevs.length > 0 && (
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '8px',
-            justifyContent: 'center', marginBottom: '12px',
-            padding: '8px',
-            background: '#000',
-            border: '2px inset #808080',
-          }}>
-            {mintedDevs.map(dev => (
-              <div key={dev.token_id} style={{
-                textAlign: 'center',
-                padding: '4px',
-              }}>
-                <div style={{
-                  width: '96px', height: '96px',
-                  background: '#111',
-                  border: '1px solid #444',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', marginBottom: '4px',
-                }}>
-                  {dev.ipfs_hash ? (
-                    <img
-                      src={`${IPFS_GW}${dev.ipfs_hash}`}
-                      alt={dev.name}
-                      style={{
-                        width: '100%', height: '100%',
-                        objectFit: 'cover', imageRendering: 'pixelated',
-                      }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: '32px', color: '#555', fontFamily: 'monospace' }}>@</span>
-                  )}
-                </div>
-                <div style={{ fontSize: '10px', color: '#33ff33', fontWeight: 'bold', fontFamily: "'VT323', monospace" }}>
-                  {dev.name}
-                </div>
-                <div style={{ fontSize: '9px', color: '#888', fontFamily: "'VT323', monospace" }}>
-                  #{dev.token_id}
-                </div>
+        {mintedIds.length > 0 ? mintedIds.map(id => {
+          const dev = devData[id];
+          return (
+            <div key={id} className="win-panel" style={{
+              padding: '8px', marginBottom: '8px',
+              display: 'flex', gap: '10px', alignItems: 'center',
+            }}>
+              <img
+                src={`${IPFS_GIF_BASE}/${id}.gif`}
+                alt={`Dev #${id}`}
+                style={{
+                  width: '64px', height: '64px',
+                  imageRendering: 'pixelated',
+                  border: '1px solid #333',
+                  background: '#0a0a0a',
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                {dev ? (
+                  <>
+                    <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{dev.name}</div>
+                    <div style={{ fontSize: '10px', color: '#888' }}>
+                      {dev.corporation} | {dev.archetype} | {dev.species}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{
+                    fontSize: '12px', color: 'var(--terminal-amber)',
+                    fontFamily: "'VT323', monospace",
+                  }}>
+                    Deploying #{id} to corporation...
+                  </div>
+                )}
+                <button
+                  className="win-btn"
+                  onClick={() => openDevProfile?.(id)}
+                  style={{ fontSize: '10px', padding: '2px 10px', marginTop: '4px' }}
+                >
+                  View Profile
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {mintedIds.length > 0 && mintedDevs.length === 0 && (
-          <div style={{
-            padding: '8px', background: '#000', border: '2px inset #808080',
-            marginBottom: '12px', textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '10px', color: '#888', fontFamily: "'VT323', monospace" }}>
-              Token ID{mintedIds.length > 1 ? 's' : ''}: {mintedIds.map(id => `#${id}`).join(', ')}
             </div>
+          );
+        }) : (
+          <div style={{ fontSize: '11px', textAlign: 'center', marginBottom: '8px' }}>
+            {quantity} developer{quantity > 1 ? 's' : ''} deployed to the Protocol Wars
           </div>
         )}
 
