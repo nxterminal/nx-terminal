@@ -44,6 +44,7 @@ export default function WindowManager({
   maximizeWindow,
   moveWindow,
   openDevProfile,
+  openWindow,
   onBSOD,
 }) {
   return (
@@ -78,6 +79,7 @@ export default function WindowManager({
             <ContentComponent
               devId={w.devId}
               openDevProfile={openDevProfile}
+              openWindow={openWindow}
             />
           </Window>
         );

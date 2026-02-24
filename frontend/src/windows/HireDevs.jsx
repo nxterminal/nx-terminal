@@ -10,14 +10,28 @@ const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeidqzkcpcannjtvnas
 
 const DEPLOY_STEPS = [
   { text: 'Connecting to MegaETH mainnet...', duration: 800 },
-  { text: 'Downloading developer genome...', duration: 1000 },
   { text: 'Installing neural pathways...', duration: 800 },
   { text: 'Compiling personality matrix...', duration: 1200 },
   { text: 'Deploying to corporation...', duration: 1000 },
   { text: 'Developer deployed successfully!', duration: 0 },
 ];
 
-function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
+const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
+
+const RETRO_KEYFRAMES = `
+@keyframes nxFlyFile {
+  0% { transform: translateX(0px) translateY(0px); opacity: 1; }
+  50% { transform: translateX(30px) translateY(-8px); opacity: 0.7; }
+  90% { transform: translateX(58px) translateY(0px); opacity: 0.4; }
+  100% { transform: translateX(0px) translateY(0px); opacity: 1; }
+}
+@keyframes nxProgressStripe {
+  0% { background-position: 0 0; }
+  100% { background-position: 16px 0; }
+}
+`;
+
+function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, onReset }) {
   const [phase, setPhase] = useState('dialup'); // dialup | copying | deploying | done
   const [dialStep, setDialStep] = useState(0);
   const [deployStep, setDeployStep] = useState(-1);
@@ -25,6 +39,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
   const [mintedIds, setMintedIds] = useState([]);
   const [devData, setDevData] = useState({});
   const timerRef = useRef(null);
+  const [transferSpeed] = useState(() => Math.round(14.4 + Math.random() * 42));
 
   // Fetch token IDs owned by this wallet
   const { data: ownedTokens } = useReadContract({
@@ -110,20 +125,20 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
     return () => clearTimeout(timerRef.current);
   }, [phase, dialStep]);
 
-  // ── Copy phase ──
+  // ── Copy phase (retro download) ──
   useEffect(() => {
     if (phase !== 'copying') return;
     if (copyProgress >= 100) {
       timerRef.current = setTimeout(() => {
         setPhase('deploying');
         setDeployStep(0);
-      }, 400);
+      }, 600);
       return;
     }
-    const increment = Math.random() * 15 + 3;
+    const increment = Math.random() * 8 + 2;
     timerRef.current = setTimeout(
       () => setCopyProgress(p => Math.min(100, p + increment)),
-      150 + Math.random() * 200,
+      200 + Math.random() * 300,
     );
     return () => clearTimeout(timerRef.current);
   }, [phase, copyProgress]);
@@ -138,7 +153,6 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
     }
     const step = DEPLOY_STEPS[deployStep];
     if (step.duration === 0) {
-      // last step — stay
       timerRef.current = setTimeout(() => setPhase('done'), 800);
       return;
     }
@@ -149,27 +163,50 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
   // Cleanup
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  const termStyle = {
-    background: '#0a0a0a',
-    border: '1px solid #333',
-    padding: '10px 12px',
-    fontFamily: "'VT323', monospace",
-    fontSize: '13px',
-    color: '#33ff33',
-    lineHeight: 1.6,
-    minHeight: '120px',
+  const totalFileSize = 1024 * quantity;
+  const copiedKB = Math.round((copyProgress / 100) * totalFileSize);
+  const secsLeft = copyProgress < 100 ? Math.ceil((totalFileSize - copiedKB) / transferSpeed) : 0;
+  const minsLeft = Math.floor(secsLeft / 60);
+  const secsRem = secsLeft % 60;
+
+  const dialogBg = {
+    background: '#c0c0c0',
+    border: '2px outset #dfdfdf',
+    fontFamily: "'Tahoma', 'MS Sans Serif', Arial, sans-serif",
+    fontSize: '11px',
+    color: '#000',
+  };
+
+  const titleBar = {
+    background: 'linear-gradient(90deg, #000080, #1084d0)',
+    color: '#fff',
+    padding: '3px 6px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    fontFamily: "'Tahoma', 'MS Sans Serif', Arial, sans-serif",
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
   };
 
   // ── DIAL-UP ──
   if (phase === 'dialup') {
     return (
-      <div>
-        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px', textAlign: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Connecting to NX Terminal Corp.</span>
+      <div style={dialogBg}>
+        <style>{RETRO_KEYFRAMES}</style>
+        <div style={titleBar}>
+          <span style={{ fontSize: '10px' }}>[=]</span>
+          Connecting to NX Terminal Corp.
         </div>
-        <div style={termStyle}>
-          <div style={{ marginBottom: '6px', color: '#ffaa00' }}>
-            {'  '}[=PC=]---{'((☎))'}---[🌐]
+        <div style={{
+          padding: '12px', background: '#0a0a0a', margin: '8px',
+          border: '2px inset #808080',
+          fontFamily: "'VT323', 'Courier New', monospace",
+          fontSize: '13px', color: '#33ff33', lineHeight: 1.6,
+          minHeight: '100px',
+        }}>
+          <div style={{ marginBottom: '6px', color: '#ffaa00', textAlign: 'center' }}>
+            {'  '}[=PC=]---{'(('}{'\\u2706'}{'))'}---[NXT]
           </div>
           {DIAL_LINES.slice(0, dialStep).map((line, i) => (
             <div key={i}>{'>'} {line}</div>
@@ -180,24 +217,85 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
     );
   }
 
-  // ── COPYING FILES ──
+  // ── COPYING FILES — Retro Download Dialog ──
   if (phase === 'copying') {
-    const filled = Math.round(copyProgress / 5);
-    const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
     return (
-      <div>
-        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px' }}>📁→📂</span>
-            <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Copying developer files...</span>
-          </div>
+      <div style={dialogBg}>
+        <style>{RETRO_KEYFRAMES}</style>
+        <div style={titleBar}>
+          <span style={{ fontSize: '10px' }}>[=]</span>
+          Saving: developer_genome_v{quantity}.dat
         </div>
-        <div style={termStyle}>
-          <div>Copying genome_v{Math.floor(Math.random() * 9) + 1}.dat</div>
-          <div>Copying neural_net.bin</div>
-          <div>Copying personality.cfg</div>
-          <div style={{ marginTop: '8px' }}>
-            [{bar}] {Math.round(copyProgress)}%
+        <div style={{ padding: '12px 16px' }}>
+          {/* Flying file animation */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', marginBottom: '16px', height: '36px',
+          }}>
+            <span style={{ fontSize: '20px', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128196;</span>
+            <div style={{ position: 'relative', width: '70px', height: '24px', overflow: 'hidden' }}>
+              <span style={{
+                position: 'absolute', left: 0, top: '2px',
+                fontSize: '14px',
+                animation: 'nxFlyFile 0.8s ease-in-out infinite',
+              }}>&#128196;</span>
+            </div>
+            <span style={{ fontSize: '20px', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128194;</span>
+          </div>
+
+          {/* Saving from */}
+          <div style={{ marginBottom: '10px', lineHeight: 1.6 }}>
+            <div>
+              Saving: <span style={{ fontWeight: 'bold' }}>developer_genome_v{quantity}.dat</span> from
+            </div>
+            <div style={{ color: '#00008B', textDecoration: 'underline' }}>
+              nxterminal.corp/mint/deploy/{quantity}
+            </div>
+          </div>
+
+          {/* Transfer stats */}
+          <div style={{ marginBottom: '4px' }}>
+            Estimated time left: {minsLeft > 0 ? `${minsLeft} min ` : ''}{secsRem} sec
+            <span style={{ color: '#555' }}>
+              {' '}({copiedKB.toLocaleString()} KB of {totalFileSize.toLocaleString()} KB copied)
+            </span>
+          </div>
+
+          <div style={{ marginBottom: '4px' }}>
+            Download to: <span style={{ color: '#00008B' }}>C:\NX_TERMINAL\devs\</span>
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            Transfer rate: {transferSpeed} KB/Sec
+          </div>
+
+          {/* Progress bar — classic Windows blue */}
+          <div style={{
+            width: '100%', height: '18px',
+            background: '#fff', border: '2px inset #808080',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              width: `${Math.round(copyProgress)}%`,
+              height: '100%',
+              background: '#000080',
+              transition: 'width 0.2s linear',
+            }} />
+          </div>
+
+          {/* Close button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+            <div style={{
+              padding: '3px 24px',
+              background: '#c0c0c0',
+              border: '2px outset #dfdfdf',
+              fontSize: '11px',
+              fontFamily: "'Tahoma', sans-serif",
+              color: '#888',
+              cursor: 'default',
+            }}>
+              Cancel
+            </div>
           </div>
         </div>
       </div>
@@ -207,11 +305,19 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
   // ── DEPLOYING ──
   if (phase === 'deploying') {
     return (
-      <div>
-        <div className="win-raised" style={{ padding: '8px 12px', marginBottom: '8px', textAlign: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Deploying Developer{quantity > 1 ? 's' : ''}...</span>
+      <div style={dialogBg}>
+        <style>{RETRO_KEYFRAMES}</style>
+        <div style={titleBar}>
+          <span style={{ fontSize: '10px' }}>[=]</span>
+          Deploying Developer{quantity > 1 ? 's' : ''}...
         </div>
-        <div style={termStyle}>
+        <div style={{
+          padding: '12px', background: '#0a0a0a', margin: '8px',
+          border: '2px inset #808080',
+          fontFamily: "'VT323', 'Courier New', monospace",
+          fontSize: '13px', color: '#33ff33', lineHeight: 1.6,
+          minHeight: '100px',
+        }}>
           {DEPLOY_STEPS.slice(0, deployStep + 1).map((step, i) => (
             <div key={i} style={{
               color: i === DEPLOY_STEPS.length - 1 ? '#ffaa00' : '#33ff33',
@@ -227,17 +333,21 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
     );
   }
 
-  // ── DONE ──
+  // ── DONE — Show GIFs ──
   return (
-    <div>
-      <div className="win-raised" style={{
-        padding: '12px',
-        border: '2px solid var(--terminal-green)',
-        marginBottom: '8px',
+    <div style={dialogBg}>
+      <style>{RETRO_KEYFRAMES}</style>
+      <div style={{
+        ...titleBar,
+        background: 'linear-gradient(90deg, #006400, #00aa00)',
       }}>
+        <span style={{ fontSize: '10px' }}>[=]</span>
+        Deployment Complete
+      </div>
+      <div style={{ padding: '12px 16px' }}>
         <div style={{
-          fontWeight: 'bold', fontSize: '14px',
-          color: 'var(--terminal-green)', marginBottom: '8px',
+          fontWeight: 'bold', fontSize: '13px',
+          color: '#006400', marginBottom: '8px',
           textAlign: 'center',
         }}>
           DEPLOYMENT COMPLETE
@@ -293,12 +403,19 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, onReset }) {
         )}
 
         {txHash && (
-          <div style={{ fontSize: '10px', color: '#888', textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ fontSize: '10px', color: '#555', textAlign: 'center', marginBottom: '8px' }}>
             TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '8px' }}>
+          <button
+            className="win-btn"
+            onClick={() => openWindow?.('my-devs')}
+            style={{ padding: '4px 16px', fontWeight: 'bold' }}
+          >
+            View Developer{mintedIds.length > 1 ? 's' : ''}
+          </button>
           <button
             className="win-btn"
             onClick={onReset}
@@ -345,7 +462,7 @@ const QUESTIONS = [
   },
 ];
 
-export default function HireDevs({ onMint, openDevProfile }) {
+export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [quantity, setQuantity] = useState(1);
@@ -722,6 +839,7 @@ export default function HireDevs({ onMint, openDevProfile }) {
                   txHash={txHash}
                   address={address}
                   openDevProfile={openDevProfile}
+                  openWindow={openWindow}
                   onReset={handleAnimationReset}
                 />
               </div>
