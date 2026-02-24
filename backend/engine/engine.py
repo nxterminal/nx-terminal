@@ -29,14 +29,14 @@ log = logging.getLogger("nx_engine")
 # ============================================================
 
 PERSONALITY_MATRIX = {
-    "10X_DEV":      {"CREATE_PROTOCOL": 40, "CREATE_AI": 20, "INVEST": 15, "SELL": 5,  "MOVE": 3,  "CHAT": 10, "CODE_REVIEW": 10, "REST": 5},
-    "LURKER":       {"CREATE_PROTOCOL": 15, "CREATE_AI": 12, "INVEST": 25, "SELL": 12, "MOVE": 8,  "CHAT": 5,  "CODE_REVIEW": 15, "REST": 8},
-    "DEGEN":        {"CREATE_PROTOCOL": 20, "CREATE_AI": 18, "INVEST": 30, "SELL": 12, "MOVE": 3,  "CHAT": 10, "CODE_REVIEW": 2,  "REST": 5},
-    "GRINDER":      {"CREATE_PROTOCOL": 35, "CREATE_AI": 15, "INVEST": 10, "SELL": 5,  "MOVE": 3,  "CHAT": 8,  "CODE_REVIEW": 18, "REST": 6},
-    "INFLUENCER":   {"CREATE_PROTOCOL": 15, "CREATE_AI": 30, "INVEST": 10, "SELL": 8,  "MOVE": 5,  "CHAT": 22, "CODE_REVIEW": 2,  "REST": 8},
-    "HACKTIVIST":   {"CREATE_PROTOCOL": 25, "CREATE_AI": 18, "INVEST": 10, "SELL": 8,  "MOVE": 10, "CHAT": 12, "CODE_REVIEW": 15, "REST": 2},
-    "FED":          {"CREATE_PROTOCOL": 22, "CREATE_AI": 12, "INVEST": 10, "SELL": 5,  "MOVE": 3,  "CHAT": 12, "CODE_REVIEW": 25, "REST": 11},
-    "SCRIPT_KIDDIE":{"CREATE_PROTOCOL": 28, "CREATE_AI": 22, "INVEST": 12, "SELL": 8,  "MOVE": 5,  "CHAT": 12, "CODE_REVIEW": 5,  "REST": 8},
+    "10X_DEV":      {"CREATE_PROTOCOL": 12, "CREATE_AI": 6,  "INVEST": 5,  "SELL": 2,  "MOVE": 10, "CHAT": 25, "CODE_REVIEW": 25, "REST": 15},
+    "LURKER":       {"CREATE_PROTOCOL": 5,  "CREATE_AI": 4,  "INVEST": 8,  "SELL": 5,  "MOVE": 15, "CHAT": 15, "CODE_REVIEW": 20, "REST": 28},
+    "DEGEN":        {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 12, "SELL": 5,  "MOVE": 10, "CHAT": 22, "CODE_REVIEW": 12, "REST": 25},
+    "GRINDER":      {"CREATE_PROTOCOL": 10, "CREATE_AI": 5,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 20, "CODE_REVIEW": 30, "REST": 19},
+    "INFLUENCER":   {"CREATE_PROTOCOL": 5,  "CREATE_AI": 8,  "INVEST": 4,  "SELL": 3,  "MOVE": 12, "CHAT": 35, "CODE_REVIEW": 8,  "REST": 25},
+    "HACKTIVIST":   {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 4,  "SELL": 3,  "MOVE": 18, "CHAT": 20, "CODE_REVIEW": 25, "REST": 16},
+    "FED":          {"CREATE_PROTOCOL": 7,  "CREATE_AI": 4,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 20, "CODE_REVIEW": 30, "REST": 23},
+    "SCRIPT_KIDDIE":{"CREATE_PROTOCOL": 10, "CREATE_AI": 8,  "INVEST": 5,  "SELL": 3,  "MOVE": 12, "CHAT": 22, "CODE_REVIEW": 15, "REST": 25},
 }
 
 ARCHETYPE_META = {
@@ -125,7 +125,7 @@ def apply_context_modifiers(weights: dict, dev: dict, context: dict) -> dict:
     # --- Balance constraints ---
     if balance < COST_CREATE_PROTOCOL_NXT: w["CREATE_PROTOCOL"] = 0
     if balance < COST_CREATE_AI_NXT: w["CREATE_AI"] = 0
-    if balance < 10: w["INVEST"] = 0
+    if balance < 5: w["INVEST"] = 0
 
     # --- Mood ---
     mood_mods = {
@@ -336,8 +336,8 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         cur.execute("SELECT id, name, value FROM protocols WHERE status = 'active' ORDER BY RANDOM() LIMIT 1")
         proto = cur.fetchone()
         if proto:
-            max_invest = min(500, dev["balance_nxt"] // 2)
-            amount = random.randint(5, max(6, max_invest))
+            max_invest = min(500, dev["balance_nxt"] // 5)  # max 20% of balance
+            amount = random.randint(2, max(3, max_invest))
 
             # Upsert investment
             cur.execute("""
