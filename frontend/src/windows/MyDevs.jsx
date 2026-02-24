@@ -5,9 +5,9 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
-  'GRINDER': '#1a5cc8', 'INFLUENCER': '#880088', 'HACKTIVIST': '#006600',
-  'FED': '#996600', 'SCRIPT_KIDDIE': '#006677',
+  '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
+  'GRINDER': 'var(--blue-on-grey, #0d47a1)', 'INFLUENCER': 'var(--pink-on-grey, #660066)', 'HACKTIVIST': 'var(--green-on-grey, #005500)',
+  'FED': 'var(--amber-on-grey, #7a5500)', 'SCRIPT_KIDDIE': 'var(--cyan-on-grey, #005060)',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -19,7 +19,7 @@ function formatNumber(n) {
 
 function StatBar({ label, value, max = 100 }) {
   const pct = Math.max(0, Math.min(100, ((value || 0) / max) * 100));
-  const color = pct > 66 ? '#008800' : pct > 33 ? '#996600' : '#cc0000';
+  const color = pct > 66 ? 'var(--green-on-grey, #005500)' : pct > 33 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
       <span style={{ width: '24px', color: 'var(--text-muted, #999)', textTransform: 'uppercase', fontWeight: 'bold' }}>{label}</span>
@@ -168,7 +168,7 @@ function DevCard({ dev, onClick, address }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
-  const energyColor = energyPct > 60 ? '#008800' : energyPct > 30 ? '#996600' : '#cc0000';
+  const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
 
   return (
@@ -187,12 +187,12 @@ function DevCard({ dev, onClick, address }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {/* Row 1: Name + Archetype */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#fff' }}>{dev.name}</span>
+          <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>{dev.name}</span>
           <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
             [{dev.archetype}]
           </span>
           {dev.rarity_tier && dev.rarity_tier !== 'common' && (
-            <span style={{ fontSize: '9px', color: '#a08000', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '9px', color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold', textTransform: 'uppercase' }}>
               {dev.rarity_tier}
             </span>
           )}
@@ -225,12 +225,12 @@ function DevCard({ dev, onClick, address }) {
           <span style={{ color: energyColor, fontWeight: 'bold' }}>
             E:{dev.energy ?? 0}/{dev.max_energy ?? 10}
           </span>
-          <span style={{ color: '#a08000', fontWeight: 'bold' }}>
+          <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
             {formatNumber(dev.balance_nxt)} $NXT
           </span>
           <span>{dev.mood || '-'}</span>
           <span style={{
-            color: dev.status === 'active' ? '#008800' : dev.status === 'resting' ? '#996600' : '#cc0000',
+            color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
             textTransform: 'uppercase', fontWeight: 'bold',
           }}>
             {dev.status || 'active'}
@@ -329,7 +329,7 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[@]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: '#fff' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
             Connect wallet to see your devs
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
@@ -356,7 +356,7 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[+]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: '#fff' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
             No devs yet
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
