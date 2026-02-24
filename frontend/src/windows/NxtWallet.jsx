@@ -425,18 +425,7 @@ function ChartTab({ history, loading }) {
     });
   }, [history]);
 
-  if (loading) return <div className="loading">Loading chart...</div>;
-  if (!history || history.length === 0) return (
-    <div style={{
-      padding: '16px', textAlign: 'center',
-      fontFamily: "'VT323', monospace", fontSize: '14px',
-      color: 'var(--terminal-amber)', background: '#0a0a14',
-      height: '100%',
-    }}>
-      {'> No balance history yet. Snapshots are recorded daily.'}
-    </div>
-  );
-
+  const hasData = !loading && candles.length > 0;
   const { w, h } = dims;
   const firstVal = candles.length > 0 ? candles[0].open : 0;
   const lastVal = candles.length > 0 ? candles[candles.length - 1].close : 0;
@@ -475,7 +464,6 @@ function ChartTab({ history, loading }) {
     gridLines.push({ y: yPrice(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val) });
   }
   const labelInterval = Math.max(1, Math.ceil(candles.length / 7));
-
   const fmtPrice = (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Math.round(v);
 
   return (
@@ -488,27 +476,51 @@ function ChartTab({ history, loading }) {
         fontFamily: "'VT323', monospace", flexWrap: 'wrap',
       }}>
         <span style={{ color: '#666', fontSize: '13px' }}>$NXT</span>
-        <span style={{ color: '#e0e0e0', fontSize: '20px', fontWeight: 'bold' }}>
-          {formatNumber(hovered ? Math.round(hovered.close) : lastVal)}
-        </span>
-        <span style={{ color: trendColor, fontSize: '14px' }}>
-          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(changeAbs)} ({changePct}%)
-        </span>
-        {hovered && (
-          <span style={{ fontSize: '11px', color: '#555' }}>
-            O:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.open))}</span>{' '}
-            H:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.high))}</span>{' '}
-            L:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.low))}</span>{' '}
-            C:<span style={{ color: hovered.isUp ? '#00c853' : '#ef5350' }}>{formatNumber(Math.round(hovered.close))}</span>
+        {hasData ? (
+          <>
+            <span style={{ color: '#e0e0e0', fontSize: '20px', fontWeight: 'bold' }}>
+              {formatNumber(hovered ? Math.round(hovered.close) : lastVal)}
+            </span>
+            <span style={{ color: trendColor, fontSize: '14px' }}>
+              {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(changeAbs)} ({changePct}%)
+            </span>
+            {hovered && (
+              <span style={{ fontSize: '11px', color: '#555' }}>
+                O:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.open))}</span>{' '}
+                H:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.high))}</span>{' '}
+                L:<span style={{ color: '#aaa' }}>{formatNumber(Math.round(hovered.low))}</span>{' '}
+                C:<span style={{ color: hovered.isUp ? '#00c853' : '#ef5350' }}>{formatNumber(Math.round(hovered.close))}</span>
+              </span>
+            )}
+          </>
+        ) : (
+          <span style={{ color: '#444', fontSize: '14px' }}>
+            {loading ? 'Loading...' : 'Awaiting data'}
           </span>
         )}
         <div style={{ flex: 1 }} />
         <span style={{ color: '#444', fontSize: '12px' }}>30D</span>
       </div>
 
-      {/* Chart */}
-      <div ref={containerRef} style={{ flex: 1, minHeight: 0, cursor: 'crosshair' }}>
-        {w > 0 && h > 0 && candles.length > 0 && (
+      {/* Chart container — always rendered so ResizeObserver can measure it */}
+      <div ref={containerRef} style={{ flex: 1, minHeight: 0, cursor: hasData ? 'crosshair' : 'default' }}>
+        {loading ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: '100%', fontFamily: "'VT323', monospace", fontSize: '14px',
+            color: 'var(--terminal-amber)',
+          }}>
+            Loading chart...
+          </div>
+        ) : candles.length === 0 ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: '100%', fontFamily: "'VT323', monospace", fontSize: '14px',
+            color: 'var(--terminal-amber)',
+          }}>
+            {'> No balance history yet. Snapshots are recorded daily.'}
+          </div>
+        ) : w > 0 && h > 0 && (
           <svg width={w} height={h} style={{ display: 'block' }}
             onMouseLeave={() => setHoverIdx(null)}
           >
