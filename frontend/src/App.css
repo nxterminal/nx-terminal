@@ -432,19 +432,19 @@
 }
 .badge-10X_DEV { color: #cc0000; }
 .badge-LURKER { color: #555555; }
-.badge-DEGEN { color: #a08000; }
+.badge-DEGEN { color: var(--gold-on-grey, #a08000); }
 .badge-GRINDER { color: #1a5cc8; }
-.badge-INFLUENCER { color: #9900aa; }
-.badge-HACKTIVIST { color: #008800; }
-.badge-FED { color: #996600; }
-.badge-SCRIPT_KIDDIE { color: #007788; }
+.badge-INFLUENCER { color: var(--pink-on-grey, #880088); }
+.badge-HACKTIVIST { color: var(--green-on-grey, #006600); }
+.badge-FED { color: var(--amber-on-grey, #996600); }
+.badge-SCRIPT_KIDDIE { color: var(--cyan-on-grey, #006677); }
 
 /* ====== RARITY ====== */
 .rarity-common { color: #666666; }
-.rarity-uncommon { color: #008800; }
+.rarity-uncommon { color: var(--green-on-grey, #006600); }
 .rarity-rare { color: #1a5cc8; }
-.rarity-legendary { color: #a08000; }
-.rarity-mythic { color: #9900aa; }
+.rarity-legendary { color: var(--gold-on-grey, #a08000); }
+.rarity-mythic { color: var(--pink-on-grey, #880088); }
 
 /* ====== BOOT SCREEN — BIOS STYLE ====== */
 .boot-bios {

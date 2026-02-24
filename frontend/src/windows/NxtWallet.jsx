@@ -7,8 +7,8 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contr
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
 const RARITY_COLORS = {
-  common: '#666666', uncommon: '#008800', rare: '#1a5cc8',
-  legendary: '#a08000', mythic: '#9900aa',
+  common: '#666666', uncommon: '#006600', rare: '#1a5cc8',
+  legendary: '#a08000', mythic: '#880088',
 };
 
 const MOVEMENT_ICONS = {
@@ -23,6 +23,14 @@ const MOVEMENT_COLORS = {
   sell: '#33ff33',
   spend: '#ff4444',
   shop: '#ff4444',
+};
+
+// Colors safe for grey (win-panel) backgrounds
+const MOVEMENT_COLORS_GREY = {
+  salary: 'var(--green-on-grey)',
+  sell: 'var(--green-on-grey)',
+  spend: 'var(--red-on-grey)',
+  shop: 'var(--red-on-grey)',
 };
 
 function formatNumber(n) {
@@ -201,7 +209,7 @@ function ClaimSection({ wallet, tokenIds }) {
 }
 
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
+function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }) {
   if (loading) return <div className="loading">Loading wallet...</div>;
   if (!isConnected) return (
     <div style={{
@@ -253,14 +261,14 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
-          <div className="stat-value" style={{ color: '#cc0000' }}>
+          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>
             {formatNumber(summary.balance_claimed || 0)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Earned</div>
-          <div className="stat-value" style={{ color: '#007788' }}>
+          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>
             {formatNumber(summary.balance_total_earned)}
           </div>
           <div className="stat-label">$NXT</div>
@@ -318,8 +326,55 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
         </table>
       </div>
 
+      {/* ── Mini Balance Chart ── */}
+      <MiniBalanceChart history={history} />
+
       {/* ── Section 2: Claim $NXT (On-Chain) ── */}
       <ClaimSection wallet={wallet} tokenIds={tokenIds} />
+    </div>
+  );
+}
+
+// ── Mini Balance Chart (for Balance tab) ──────────────────
+function MiniBalanceChart({ history }) {
+  if (!history || history.length < 2) return null;
+
+  const data = history.map(s => ({
+    date: formatDate(s.snapshot_date),
+    balance: Number(s.balance_claimable),
+  }));
+
+  const firstVal = data[0]?.balance || 0;
+  const lastVal = data[data.length - 1]?.balance || 0;
+  const trend = lastVal >= firstVal ? 'up' : 'down';
+
+  return (
+    <div style={{ margin: '4px 8px', padding: '0' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '4px 8px',
+        fontFamily: "'VT323', monospace", fontSize: '13px',
+        background: 'var(--terminal-bg)',
+      }}>
+        <span style={{ color: 'var(--terminal-green)' }}>{'>'} Balance (30d)</span>
+        <span style={{ color: trend === 'up' ? 'var(--terminal-green)' : 'var(--terminal-red)' }}>
+          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
+        </span>
+      </div>
+      <div className="protocol-chart" style={{ height: '80px', padding: '0' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <XAxis dataKey="date" tick={false} stroke="#222" height={1} />
+            <YAxis tick={false} stroke="#222" width={1} />
+            <Line
+              type="monotone" dataKey="balance" name="balance"
+              stroke="#33ff33" strokeWidth={2} dot={false}
+              activeDot={{ r: 3, fill: '#33ff33' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -347,63 +402,99 @@ function ChartTab({ history, loading }) {
   const firstVal = data[0]?.balance || 0;
   const lastVal = data[data.length - 1]?.balance || 0;
   const trend = lastVal >= firstVal ? 'up' : 'down';
+  const changeAbs = Math.abs(lastVal - firstVal);
+  const changePct = firstVal > 0 ? ((lastVal - firstVal) / firstVal * 100).toFixed(1) : '0.0';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '8px' }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '8px', padding: '4px 8px',
-        fontFamily: "'VT323', monospace", fontSize: '14px',
-        background: 'var(--terminal-bg)',
-      }}>
-        <span style={{ color: 'var(--terminal-green)' }}>{'>'} Balance History (30 days)</span>
-        <span style={{ color: trend === 'up' ? 'var(--terminal-green)' : 'var(--terminal-red)' }}>
-          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))} $NXT
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: 'var(--terminal-bg)',
+    }}>
+      {/* Chart header - trading terminal style */}
+      <div className="chart-header" style={{ padding: '6px 12px', gap: '16px' }}>
+        <span style={{
+          color: '#33ff33', fontSize: '16px',
+          fontFamily: "'VT323', monospace", fontWeight: 'bold',
+        }}>
+          $NXT/BALANCE
+        </span>
+        <span style={{
+          color: 'var(--gold)', fontSize: '16px',
+          fontFamily: "'VT323', monospace",
+        }}>
+          {formatNumber(lastVal)}
+        </span>
+        <span style={{
+          color: trend === 'up' ? '#33ff33' : '#ff4444',
+          fontSize: '14px',
+          fontFamily: "'VT323', monospace",
+        }}>
+          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(changeAbs)} ({changePct}%)
         </span>
       </div>
 
-      <div className="win-panel" style={{ flex: 1, padding: '8px' }}>
+      {/* Main chart area - dark terminal */}
+      <div className="protocol-chart" style={{ flex: 1, minHeight: 0, border: 'none', borderTop: '1px solid #222', borderBottom: '1px solid #222' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+          <LineChart data={data} margin={{ top: 12, right: 16, bottom: 8, left: 16 }}>
+            <defs>
+              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#33ff33" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#33ff33" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="earnedGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffd700" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="#ffd700" stopOpacity={0.01} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
             <XAxis
-              dataKey="date" tick={{ fontSize: 10, fill: '#888' }}
-              stroke="#555"
+              dataKey="date"
+              tick={{ fontSize: 11, fill: '#555', fontFamily: 'VT323, monospace' }}
+              stroke="#222"
+              tickLine={{ stroke: '#333' }}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: '#888' }}
-              stroke="#555"
+              tick={{ fontSize: 11, fill: '#555', fontFamily: 'VT323, monospace' }}
+              stroke="#222"
+              tickLine={{ stroke: '#333' }}
               tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
             />
             <Tooltip
               contentStyle={{
-                background: '#1a1a1a', border: '1px solid #555',
-                fontFamily: "'VT323', monospace", fontSize: '13px',
-                color: '#fff',
+                background: '#0c0c0c', border: '1px solid #333',
+                fontFamily: "'VT323', monospace", fontSize: '14px',
+                color: '#33ff33', boxShadow: '0 0 8px rgba(51,255,51,0.2)',
               }}
+              labelStyle={{ color: '#555' }}
               formatter={(value, name) => [
                 `${formatNumber(value)} $NXT`,
                 name === 'balance' ? 'Balance' : 'Total Earned',
               ]}
             />
+            <ReferenceLine y={firstVal} stroke="#333" strokeDasharray="4 4" />
             <Line
               type="monotone" dataKey="balance" name="balance"
-              stroke="#ffd700" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: '#ffd700' }}
+              stroke="#33ff33" strokeWidth={2} dot={false}
+              activeDot={{ r: 4, fill: '#33ff33', stroke: '#0c0c0c', strokeWidth: 2 }}
             />
             <Line
               type="monotone" dataKey="earned" name="earned"
-              stroke="#33ff33" strokeWidth={1} dot={false}
+              stroke="#ffd700" strokeWidth={1} dot={false}
               strokeDasharray="4 2"
-              activeDot={{ r: 3, fill: '#33ff33' }}
+              activeDot={{ r: 3, fill: '#ffd700', stroke: '#0c0c0c', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '4px', fontSize: '10px' }}>
-        <span><span style={{ color: '#ffd700' }}>{'\u2501\u2501'}</span> Balance</span>
-        <span><span style={{ color: '#33ff33' }}>{'- -'}</span> Total Earned</span>
+      {/* Chart footer - trading terminal style */}
+      <div className="chart-footer" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <span><span style={{ color: '#33ff33' }}>{'\u2501\u2501'}</span> Balance</span>
+          <span><span style={{ color: '#ffd700' }}>{'- -'}</span> Total Earned</span>
+        </div>
+        <span style={{ color: '#444' }}>30d | Daily snapshots</span>
       </div>
     </div>
   );
@@ -496,7 +587,7 @@ function MovementsTab({ movements, loading }) {
           {movements.map((m, i) => (
             <tr key={i}>
               <td style={{
-                color: MOVEMENT_COLORS[m.type] || '#888',
+                color: MOVEMENT_COLORS_GREY[m.type] || '#888',
                 fontWeight: 'bold', textAlign: 'center', fontSize: '13px',
               }}>
                 {MOVEMENT_ICONS[m.type] || '?'}
@@ -508,7 +599,7 @@ function MovementsTab({ movements, loading }) {
                 {m.description}
               </td>
               <td style={{
-                color: m.amount >= 0 ? 'var(--terminal-green)' : 'var(--terminal-red)',
+                color: m.amount >= 0 ? 'var(--green-on-grey)' : 'var(--red-on-grey)',
                 fontWeight: 'bold',
               }}>
                 {m.amount >= 0 ? '+' : ''}{formatNumber(m.amount)} $NXT
@@ -650,6 +741,7 @@ export default function NxtWallet() {
             isConnected={isConnected}
             wallet={wallet}
             tokenIds={tokenIds}
+            history={history}
           />
         )}
         {tab === 'chart' && <ChartTab history={history} loading={loadingHistory} />}

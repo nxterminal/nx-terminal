@@ -4,13 +4,13 @@ import { useWallet } from '../hooks/useWallet';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
-  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
-  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
+  'GRINDER': '#1a5cc8', 'INFLUENCER': '#880088', 'HACKTIVIST': '#006600',
+  'FED': '#996600', 'SCRIPT_KIDDIE': '#006677',
 };
 
 const RARITY_COLORS = {
-  common: '#666666', uncommon: '#008800', rare: '#1a5cc8',
-  legendary: '#a08000', mythic: '#9900aa',
+  common: '#666666', uncommon: '#006600', rare: '#1a5cc8',
+  legendary: '#a08000', mythic: '#880088',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -28,7 +28,8 @@ function formatTime(dateStr) {
 
 function StatBar({ label, value, max = 100 }) {
   const pct = Math.max(0, Math.min(100, ((value || 0) / max) * 100));
-  const color = pct > 66 ? '#33ff33' : pct > 33 ? '#ffaa00' : '#ff4444';
+  const barColor = pct > 66 ? '#33ff33' : pct > 33 ? '#ffaa00' : '#ff4444';
+  const textColor = pct > 66 ? 'var(--green-on-grey)' : pct > 33 ? 'var(--amber-on-grey)' : 'var(--red-on-grey)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
       <span style={{ width: '60px', color: 'var(--text-muted, #aaa)', textTransform: 'capitalize' }}>{label}</span>
@@ -37,11 +38,11 @@ function StatBar({ label, value, max = 100 }) {
         border: '1px solid var(--border-dark, #444)',
       }}>
         <div style={{
-          width: `${pct}%`, height: '100%', background: color,
+          width: `${pct}%`, height: '100%', background: barColor,
           transition: 'width 0.3s',
         }} />
       </div>
-      <span style={{ width: '24px', textAlign: 'right', color, fontWeight: 'bold' }}>{value || 0}</span>
+      <span style={{ width: '24px', textAlign: 'right', color: textColor, fontWeight: 'bold' }}>{value || 0}</span>
     </div>
   );
 }
@@ -157,7 +158,7 @@ export default function DevProfile({ devId }) {
   const rarityColor = RARITY_COLORS[dev.rarity_tier] || '#c0c0c0';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
-  const energyColor = energyPct > 60 ? '#33ff33' : energyPct > 30 ? '#ffaa00' : '#ff4444';
+  const energyColor = energyPct > 60 ? 'var(--green-on-grey)' : energyPct > 30 ? 'var(--amber-on-grey)' : 'var(--red-on-grey)';
 
   const hasStats = dev.stat_coding != null || dev.stat_hacking != null;
   const hasTraits = dev.alignment || dev.risk_level || dev.social_style || dev.coding_style || dev.work_ethic;
@@ -265,7 +266,7 @@ export default function DevProfile({ devId }) {
         <div style={{ display: 'flex', gap: '4px', padding: '6px 6px 0' }}>
           {hasStats && (
             <div className="win-panel" style={{ flex: 1, padding: '6px 8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--terminal-cyan)' }}>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
                 STATS
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -281,7 +282,7 @@ export default function DevProfile({ devId }) {
 
           {hasTraits && (
             <div className="win-panel" style={{ flex: 1, padding: '6px 8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--terminal-cyan)' }}>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
                 PERSONALITY
               </div>
               <TraitRow label="Alignment" value={dev.alignment} />
