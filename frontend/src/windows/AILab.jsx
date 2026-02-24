@@ -39,12 +39,12 @@ export default function AILab() {
           {ais.map((ai, i) => (
             <tr key={ai.id || i}>
               <td style={{
-                color: i < 3 ? 'var(--gold)' : undefined,
+                color: i < 3 ? 'var(--gold-on-grey)' : undefined,
                 fontWeight: i < 3 ? 'bold' : undefined,
               }}>
                 {i + 1}
               </td>
-              <td style={{ fontWeight: 'bold', color: 'var(--terminal-magenta)' }}>
+              <td style={{ fontWeight: 'bold', color: '#9900aa' }}>
                 {ai.name}
               </td>
               <td style={{

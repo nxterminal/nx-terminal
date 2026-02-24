@@ -4,11 +4,11 @@ import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contract';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
 const RARITY_COLORS = {
-  common: '#c0c0c0', uncommon: '#33ff33', rare: '#4488ff',
-  legendary: '#ffd700', mythic: '#ff44ff',
+  common: '#666666', uncommon: '#008800', rare: '#1a5cc8',
+  legendary: '#a08000', mythic: '#9900aa',
 };
 
 const MOVEMENT_ICONS = {
@@ -246,21 +246,21 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Balance</div>
-          <div className="stat-value" style={{ color: 'var(--gold)' }}>
+          <div className="stat-value" style={{ color: 'var(--gold-on-grey)' }}>
             {formatNumber(summary.balance_claimable)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
-          <div className="stat-value" style={{ color: 'var(--terminal-red)' }}>
+          <div className="stat-value" style={{ color: '#cc0000' }}>
             {formatNumber(summary.balance_claimed || 0)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Earned</div>
-          <div className="stat-value" style={{ color: 'var(--terminal-cyan)' }}>
+          <div className="stat-value" style={{ color: '#007788' }}>
             {formatNumber(summary.balance_total_earned)}
           </div>
           <div className="stat-label">$NXT</div>
@@ -309,7 +309,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds }) {
                     {dev.rarity_tier}
                   </span>
                 </td>
-                <td style={{ color: 'var(--gold)' }}>{formatNumber(dev.balance_nxt)}</td>
+                <td style={{ color: 'var(--gold-on-grey)' }}>{formatNumber(dev.balance_nxt)}</td>
                 <td>{formatNumber(dev.total_earned)}</td>
                 <td>{dev.status}</td>
               </tr>
@@ -409,6 +409,60 @@ function ChartTab({ history, loading }) {
   );
 }
 
+// ── Movements Chart (bar chart) ──────────────────────────
+function MovementsChart({ movements }) {
+  if (!movements || movements.length < 2) return null;
+
+  // Group movements by day and sum income vs expense
+  const byDay = {};
+  movements.forEach(m => {
+    const day = m.timestamp ? new Date(m.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown';
+    if (!byDay[day]) byDay[day] = { date: day, income: 0, expense: 0 };
+    if (m.amount >= 0) byDay[day].income += m.amount;
+    else byDay[day].expense += m.amount; // negative
+  });
+  const data = Object.values(byDay).reverse(); // oldest first
+  if (data.length === 0) return null;
+
+  return (
+    <div style={{ height: '130px', padding: '4px 4px 0' }}>
+      <div style={{
+        fontFamily: "'VT323', monospace", fontSize: '13px',
+        color: 'var(--terminal-green)', padding: '2px 8px',
+        background: 'var(--terminal-bg)',
+      }}>
+        {'>'} Income / Expenses
+      </div>
+      <div className="win-panel" style={{ height: '100px', padding: '4px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 2, right: 8, bottom: 2, left: 8 }} stackOffset="sign">
+            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} stroke="#555" />
+            <YAxis tick={{ fontSize: 9, fill: '#888' }} stroke="#555" tickFormatter={v => v >= 1000 || v <= -1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <Tooltip
+              contentStyle={{
+                background: '#1a1a1a', border: '1px solid #555',
+                fontFamily: "'VT323', monospace", fontSize: '13px', color: '#fff',
+              }}
+              formatter={(value, name) => [
+                `${value >= 0 ? '+' : ''}${formatNumber(value)} $NXT`,
+                name === 'income' ? 'Income' : 'Expenses',
+              ]}
+            />
+            <ReferenceLine y={0} stroke="#555" />
+            <Bar dataKey="income" fill="#33ff33" stackId="stack" />
+            <Bar dataKey="expense" fill="#ff4444" stackId="stack" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '10px', padding: '2px 0' }}>
+        <span><span style={{ color: '#33ff33' }}>{'\u2588'}</span> Income</span>
+        <span><span style={{ color: '#ff4444' }}>{'\u2588'}</span> Expenses</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Movements Tab ─────────────────────────────────────────
 function MovementsTab({ movements, loading }) {
   if (loading) return <div className="loading">Loading movements...</div>;
@@ -424,7 +478,9 @@ function MovementsTab({ movements, loading }) {
   );
 
   return (
-    <div className="win-panel" style={{ height: '100%', overflow: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <MovementsChart movements={movements} />
+      <div className="win-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
       <table className="win-table">
         <thead>
           <tr>
@@ -467,6 +523,7 @@ function MovementsTab({ movements, loading }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

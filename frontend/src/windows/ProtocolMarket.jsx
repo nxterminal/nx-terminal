@@ -90,8 +90,8 @@ export default function ProtocolMarket() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* TABLE — top half */}
-      <div style={{ flex: '0 0 auto' }}>
+      {/* TABLE — top half, scrollable */}
+      <div style={{ flex: '0 1 auto', overflow: 'auto', maxHeight: selected ? '40%' : '100%', minHeight: '60px' }}>
         <table className="win-table">
           <thead>
             <tr><th>Name</th><th>Creator</th><th>Quality</th><th>Value</th><th>Inv.</th></tr>

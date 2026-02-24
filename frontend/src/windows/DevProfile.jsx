@@ -3,14 +3,14 @@ import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#ff4444', 'LURKER': '#9a9aff', 'DEGEN': '#ffd700',
-  'GRINDER': '#4488ff', 'INFLUENCER': '#ff44ff', 'HACKTIVIST': '#33ff33',
-  'FED': '#ffaa00', 'SCRIPT_KIDDIE': '#00ffff',
+  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
+  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
+  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
 };
 
 const RARITY_COLORS = {
-  common: '#c0c0c0', uncommon: '#33ff33', rare: '#4488ff',
-  legendary: '#ffd700', mythic: '#ff44ff',
+  common: '#666666', uncommon: '#008800', rare: '#1a5cc8',
+  legendary: '#a08000', mythic: '#9900aa',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -298,7 +298,7 @@ export default function DevProfile({ devId }) {
       <div className="stats-grid" style={{ padding: '4px 6px' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Earned</div>
-          <div className="stat-value" style={{ color: 'var(--gold)', fontSize: '12px' }}>
+          <div className="stat-value" style={{ color: 'var(--gold-on-grey)', fontSize: '12px' }}>
             {formatNumber(dev.total_earned)}
           </div>
         </div>

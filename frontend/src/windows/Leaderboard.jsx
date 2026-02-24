@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#ff4444', 'LURKER': '#808080', 'DEGEN': '#ffd700',
-  'GRINDER': '#4488ff', 'INFLUENCER': '#ff44ff', 'HACKTIVIST': '#33ff33',
-  'FED': '#ffaa00', 'SCRIPT_KIDDIE': '#00ffff',
+  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
+  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
+  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
 };
 
 function formatNumber(n) {
@@ -88,7 +88,7 @@ export default function Leaderboard({ openDevProfile }) {
               <tbody>
                 {corpData.map((c, i) => (
                   <tr key={i}>
-                    <td style={{ color: i < 3 ? 'var(--gold)' : undefined, fontWeight: i < 3 ? 'bold' : undefined }}>{i + 1}</td>
+                    <td style={{ color: i < 3 ? 'var(--gold-on-grey)' : undefined, fontWeight: i < 3 ? 'bold' : undefined }}>{i + 1}</td>
                     <td>{c.corporation || c.name}</td>
                     <td>{c.total_devs || c.dev_count}</td>
                     <td>{formatNumber(c.total_balance)} $NXT</td>
@@ -111,7 +111,7 @@ export default function Leaderboard({ openDevProfile }) {
                   className="clickable"
                   onClick={() => openDevProfile?.(dev.token_id || dev.id)}
                 >
-                  <td style={{ color: i < 3 ? 'var(--gold)' : undefined, fontWeight: i < 3 ? 'bold' : undefined }}>
+                  <td style={{ color: i < 3 ? 'var(--gold-on-grey)' : undefined, fontWeight: i < 3 ? 'bold' : undefined }}>
                     {dev.rank_balance || dev.rank_reputation || i + 1}
                   </td>
                   <td>{dev.name}</td>

@@ -430,21 +430,21 @@
   font-weight: bold;
   font-family: 'Tahoma', sans-serif;
 }
-.badge-10X_DEV { color: #ff4444; }
-.badge-LURKER { color: #808080; }
-.badge-DEGEN { color: #ffd700; }
-.badge-GRINDER { color: #4488ff; }
-.badge-INFLUENCER { color: #ff44ff; }
-.badge-HACKTIVIST { color: #33ff33; }
-.badge-FED { color: #ffaa00; }
-.badge-SCRIPT_KIDDIE { color: #00ffff; }
+.badge-10X_DEV { color: #cc0000; }
+.badge-LURKER { color: #555555; }
+.badge-DEGEN { color: #a08000; }
+.badge-GRINDER { color: #1a5cc8; }
+.badge-INFLUENCER { color: #9900aa; }
+.badge-HACKTIVIST { color: #008800; }
+.badge-FED { color: #996600; }
+.badge-SCRIPT_KIDDIE { color: #007788; }
 
 /* ====== RARITY ====== */
-.rarity-common { color: #c0c0c0; }
-.rarity-uncommon { color: #33ff33; }
-.rarity-rare { color: #4488ff; }
-.rarity-legendary { color: #ffd700; }
-.rarity-mythic { color: #ff44ff; }
+.rarity-common { color: #666666; }
+.rarity-uncommon { color: #008800; }
+.rarity-rare { color: #1a5cc8; }
+.rarity-legendary { color: #a08000; }
+.rarity-mythic { color: #9900aa; }
 
 /* ====== BOOT SCREEN — BIOS STYLE ====== */
 .boot-bios {
