@@ -4,11 +4,11 @@ import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contract';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
 const RARITY_COLORS = {
-  common: '#666666', uncommon: '#006600', rare: '#1a5cc8',
-  legendary: '#a08000', mythic: '#880088',
+  common: 'var(--common-on-grey, #333333)', uncommon: 'var(--green-on-grey, #005500)', rare: 'var(--blue-on-grey, #0d47a1)',
+  legendary: 'var(--gold-on-grey, #7a5c00)', mythic: 'var(--pink-on-grey, #660066)',
 };
 
 const MOVEMENT_ICONS = {
@@ -289,9 +289,9 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
       <div style={{
         padding: '4px 8px', margin: '2px 8px',
         fontFamily: "'VT323', monospace", fontSize: '11px',
-        color: '#888',
+        color: 'var(--text-muted, #888)',
       }}>
-        Game balance is used for protocols, AIs, and investments.
+        Balance: available funds | Spent: protocols + AIs + investments | Earned: salaries + sells + returns
       </div>
 
       {/* Per-dev breakdown */}
@@ -347,6 +347,7 @@ function MiniBalanceChart({ history }) {
   const firstVal = data[0]?.balance || 0;
   const lastVal = data[data.length - 1]?.balance || 0;
   const trend = lastVal >= firstVal ? 'up' : 'down';
+  const lineColor = trend === 'up' ? '#00c853' : '#ef5350';
 
   return (
     <div style={{ margin: '4px 8px', padding: '0' }}>
@@ -357,22 +358,25 @@ function MiniBalanceChart({ history }) {
         background: 'var(--terminal-bg)',
       }}>
         <span style={{ color: 'var(--terminal-green)' }}>{'>'} Balance (30d)</span>
-        <span style={{ color: trend === 'up' ? 'var(--terminal-green)' : 'var(--terminal-red)' }}>
+        <span style={{ color: lineColor }}>
           {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
         </span>
       </div>
-      <div className="protocol-chart" style={{ height: '80px', padding: '0' }}>
+      <div className="protocol-chart" style={{ height: '60px', padding: '0' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-            <XAxis dataKey="date" tick={false} stroke="#222" height={1} />
-            <YAxis tick={false} stroke="#222" width={1} />
-            <Line
-              type="monotone" dataKey="balance" name="balance"
-              stroke="#33ff33" strokeWidth={2} dot={false}
-              activeDot={{ r: 3, fill: '#33ff33' }}
+          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+            <defs>
+              <linearGradient id="miniBalGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone" dataKey="balance"
+              stroke={lineColor} strokeWidth={1.5} fill="url(#miniBalGrad)"
+              dot={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
@@ -386,115 +390,130 @@ function ChartTab({ history, loading }) {
     <div style={{
       padding: '16px', textAlign: 'center',
       fontFamily: "'VT323', monospace", fontSize: '14px',
-      color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
+      color: 'var(--terminal-amber)', background: '#0a0a14',
       height: '100%',
     }}>
       {'> No balance history yet. Snapshots are recorded daily.'}
     </div>
   );
 
-  const data = history.map(s => ({
-    date: formatDate(s.snapshot_date),
-    balance: Number(s.balance_claimable),
-    earned: Number(s.balance_total_earned),
-  }));
+  const data = history.map((s, i) => {
+    const balance = Number(s.balance_claimable);
+    const earned = Number(s.balance_total_earned);
+    const prev = i > 0 ? Number(history[i - 1].balance_claimable) : balance;
+    return {
+      date: formatDate(s.snapshot_date),
+      balance,
+      earned,
+      volume: Math.abs(balance - prev),
+    };
+  });
 
   const firstVal = data[0]?.balance || 0;
   const lastVal = data[data.length - 1]?.balance || 0;
   const trend = lastVal >= firstVal ? 'up' : 'down';
   const changeAbs = Math.abs(lastVal - firstVal);
   const changePct = firstVal > 0 ? ((lastVal - firstVal) / firstVal * 100).toFixed(1) : '0.0';
+  const lineColor = trend === 'up' ? '#00c853' : '#ef5350';
+  const maxVol = Math.max(...data.map(d => d.volume), 1);
 
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'var(--terminal-bg)',
+      background: '#0a0a14',
     }}>
-      {/* Chart header - trading terminal style */}
-      <div className="chart-header" style={{ padding: '6px 12px', gap: '16px' }}>
-        <span style={{
-          color: '#33ff33', fontSize: '16px',
-          fontFamily: "'VT323', monospace", fontWeight: 'bold',
-        }}>
-          $NXT/BALANCE
-        </span>
-        <span style={{
-          color: 'var(--gold)', fontSize: '16px',
-          fontFamily: "'VT323', monospace",
-        }}>
+      {/* Trading terminal header */}
+      <div style={{
+        display: 'flex', alignItems: 'baseline', gap: '12px',
+        padding: '8px 12px',
+        background: '#0d0d1a',
+        borderBottom: '1px solid #1a1a2e',
+        fontFamily: "'VT323', monospace",
+      }}>
+        <span style={{ color: '#888', fontSize: '13px' }}>$NXT</span>
+        <span style={{ color: '#e0e0e0', fontSize: '22px', fontWeight: 'bold' }}>
           {formatNumber(lastVal)}
         </span>
-        <span style={{
-          color: trend === 'up' ? '#33ff33' : '#ff4444',
-          fontSize: '14px',
-          fontFamily: "'VT323', monospace",
-        }}>
-          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(changeAbs)} ({changePct}%)
+        <span style={{ color: lineColor, fontSize: '15px' }}>
+          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(changeAbs)}
         </span>
+        <span style={{ color: '#666', fontSize: '13px' }}>
+          ({changePct}%)
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ color: '#444', fontSize: '12px' }}>30D</span>
       </div>
 
-      {/* Main chart area - dark terminal */}
-      <div className="protocol-chart" style={{ flex: 1, minHeight: 0, border: 'none', borderTop: '1px solid #222', borderBottom: '1px solid #222' }}>
+      {/* Main chart area */}
+      <div style={{ flex: 1, minHeight: 0, borderBottom: '1px solid #1a1a2e' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 12, right: 16, bottom: 8, left: 16 }}>
+          <ComposedChart data={data} margin={{ top: 12, right: 12, bottom: 0, left: 12 }}>
             <defs>
-              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#33ff33" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#33ff33" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="earnedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffd700" stopOpacity={0.15} />
-                <stop offset="100%" stopColor="#ffd700" stopOpacity={0.01} />
+              <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
+                <stop offset="50%" stopColor={lineColor} stopOpacity={0.08} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid stroke="#141428" vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fill: '#555', fontFamily: 'VT323, monospace' }}
-              stroke="#222"
-              tickLine={{ stroke: '#333' }}
+              axisLine={{ stroke: '#1a1a2e' }}
+              tick={{ fontSize: 10, fill: '#444', fontFamily: 'VT323, monospace' }}
+              tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: '#555', fontFamily: 'VT323, monospace' }}
-              stroke="#222"
-              tickLine={{ stroke: '#333' }}
-              tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+              yAxisId="price"
+              orientation="right"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#555', fontFamily: 'VT323, monospace' }}
+              tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
             />
+            <YAxis yAxisId="volume" hide domain={[0, maxVol * 5]} />
             <Tooltip
               contentStyle={{
-                background: '#0c0c0c', border: '1px solid #333',
-                fontFamily: "'VT323', monospace", fontSize: '14px',
-                color: '#33ff33', boxShadow: '0 0 8px rgba(51,255,51,0.2)',
+                background: '#1a1a2e', border: '1px solid #2a2a4e',
+                fontFamily: "'VT323', monospace", fontSize: '13px',
+                color: '#e0e0e0', borderRadius: '2px',
               }}
-              labelStyle={{ color: '#555' }}
+              labelStyle={{ color: '#666' }}
               formatter={(value, name) => [
                 `${formatNumber(value)} $NXT`,
-                name === 'balance' ? 'Balance' : 'Total Earned',
+                name === 'balance' ? 'Balance' : name === 'earned' ? 'Total Earned' : 'Volume',
               ]}
+              cursor={{ stroke: '#333', strokeDasharray: '4 4' }}
             />
-            <ReferenceLine y={firstVal} stroke="#333" strokeDasharray="4 4" />
+            <ReferenceLine yAxisId="price" y={firstVal} stroke="#252540" strokeDasharray="4 4" />
+            <Bar yAxisId="volume" dataKey="volume" fill={lineColor} opacity={0.15} radius={[1, 1, 0, 0]} />
+            <Area
+              yAxisId="price" type="monotone" dataKey="balance" name="balance"
+              stroke={lineColor} strokeWidth={2} fill="url(#balanceGrad)"
+              dot={false}
+              activeDot={{ r: 4, fill: lineColor, stroke: '#0a0a14', strokeWidth: 2 }}
+            />
             <Line
-              type="monotone" dataKey="balance" name="balance"
-              stroke="#33ff33" strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: '#33ff33', stroke: '#0c0c0c', strokeWidth: 2 }}
+              yAxisId="price" type="monotone" dataKey="earned" name="earned"
+              stroke="#555" strokeWidth={1} dot={false} strokeDasharray="4 2"
+              activeDot={{ r: 3, fill: '#888', stroke: '#0a0a14', strokeWidth: 2 }}
             />
-            <Line
-              type="monotone" dataKey="earned" name="earned"
-              stroke="#ffd700" strokeWidth={1} dot={false}
-              strokeDasharray="4 2"
-              activeDot={{ r: 3, fill: '#ffd700', stroke: '#0c0c0c', strokeWidth: 2 }}
-            />
-          </LineChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Chart footer - trading terminal style */}
-      <div className="chart-footer" style={{ justifyContent: 'space-between' }}>
+      {/* Footer */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '4px 12px',
+        background: '#0d0d1a',
+        fontFamily: "'VT323', monospace", fontSize: '11px', color: '#555',
+      }}>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <span><span style={{ color: '#33ff33' }}>{'\u2501\u2501'}</span> Balance</span>
-          <span><span style={{ color: '#ffd700' }}>{'- -'}</span> Total Earned</span>
+          <span><span style={{ color: lineColor }}>{'\u2501\u2501'}</span> Balance</span>
+          <span><span style={{ color: '#555' }}>{'- -'}</span> Earned</span>
+          <span><span style={{ color: lineColor, opacity: 0.3 }}>{'\u2588'}</span> Daily \u0394</span>
         </div>
-        <span style={{ color: '#444' }}>30d | Daily snapshots</span>
+        <span>Daily snapshots</span>
       </div>
     </div>
   );
@@ -524,31 +543,32 @@ function MovementsChart({ movements }) {
       }}>
         {'>'} Income / Expenses
       </div>
-      <div className="win-panel" style={{ height: '100px', padding: '4px' }}>
+      <div className="protocol-chart" style={{ height: '100px', padding: '4px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 2, right: 8, bottom: 2, left: 8 }} stackOffset="sign">
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} stroke="#555" />
-            <YAxis tick={{ fontSize: 9, fill: '#888' }} stroke="#555" tickFormatter={v => v >= 1000 || v <= -1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }} stroke="#222" tickLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: '#555' }} stroke="#222" tickLine={false} tickFormatter={v => v >= 1000 || v <= -1000 ? `${(v/1000).toFixed(0)}k` : v} />
             <Tooltip
               contentStyle={{
-                background: '#1a1a1a', border: '1px solid #555',
-                fontFamily: "'VT323', monospace", fontSize: '13px', color: '#fff',
+                background: '#1a1a2e', border: '1px solid #2a2a4e',
+                fontFamily: "'VT323', monospace", fontSize: '13px', color: '#e0e0e0',
+                borderRadius: '2px',
               }}
               formatter={(value, name) => [
                 `${value >= 0 ? '+' : ''}${formatNumber(value)} $NXT`,
                 name === 'income' ? 'Income' : 'Expenses',
               ]}
             />
-            <ReferenceLine y={0} stroke="#555" />
-            <Bar dataKey="income" fill="#33ff33" stackId="stack" />
-            <Bar dataKey="expense" fill="#ff4444" stackId="stack" />
+            <ReferenceLine y={0} stroke="#333" />
+            <Bar dataKey="income" fill="#00c853" opacity={0.85} stackId="stack" />
+            <Bar dataKey="expense" fill="#ef5350" opacity={0.85} stackId="stack" />
           </BarChart>
         </ResponsiveContainer>
       </div>
       <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '10px', padding: '2px 0' }}>
-        <span><span style={{ color: '#33ff33' }}>{'\u2588'}</span> Income</span>
-        <span><span style={{ color: '#ff4444' }}>{'\u2588'}</span> Expenses</span>
+        <span><span style={{ color: 'var(--green-on-grey)' }}>{'\u2588'}</span> Income</span>
+        <span><span style={{ color: 'var(--red-on-grey)' }}>{'\u2588'}</span> Expenses</span>
       </div>
     </div>
   );

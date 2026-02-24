@@ -3,14 +3,14 @@ import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
-  'GRINDER': '#1a5cc8', 'INFLUENCER': '#880088', 'HACKTIVIST': '#006600',
-  'FED': '#996600', 'SCRIPT_KIDDIE': '#006677',
+  '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
+  'GRINDER': 'var(--blue-on-grey, #0d47a1)', 'INFLUENCER': 'var(--pink-on-grey, #660066)', 'HACKTIVIST': 'var(--green-on-grey, #005500)',
+  'FED': 'var(--amber-on-grey, #7a5500)', 'SCRIPT_KIDDIE': 'var(--cyan-on-grey, #005060)',
 };
 
 const RARITY_COLORS = {
-  common: '#666666', uncommon: '#006600', rare: '#1a5cc8',
-  legendary: '#a08000', mythic: '#880088',
+  common: 'var(--common-on-grey, #333333)', uncommon: 'var(--green-on-grey, #005500)', rare: 'var(--blue-on-grey, #0d47a1)',
+  legendary: 'var(--gold-on-grey, #7a5c00)', mythic: 'var(--pink-on-grey, #660066)',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -212,7 +212,7 @@ export default function DevProfile({ devId }) {
         {/* Name + meta */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>{dev.name}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--text-primary)' }}>{dev.name}</span>
             <span style={{ color: arcColor, fontWeight: 'bold', fontSize: '11px' }}>
               [{dev.archetype}]
             </span>
@@ -231,7 +231,7 @@ export default function DevProfile({ devId }) {
             <span style={{ color: energyColor }}>
               Energy: {dev.energy ?? 0}/{dev.max_energy ?? 10}
             </span>
-            <span style={{ color: 'var(--gold, #ffd700)' }}>
+            <span style={{ color: 'var(--gold-on-grey)' }}>
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
             <span style={{ color: 'var(--text-secondary, #aaa)' }}>Rep: {formatNumber(dev.reputation)}</span>
@@ -305,31 +305,31 @@ export default function DevProfile({ devId }) {
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Spent</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
             {formatNumber(dev.total_spent)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Coffee</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
             {dev.coffee_count || 0}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Lines</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
             {formatNumber(dev.lines_of_code)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Bugs</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--terminal-red)' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--red-on-grey)' }}>
             {dev.bugs_shipped || 0}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">No Sleep</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: '#fff' }}>
+          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
             {dev.hours_since_sleep || 0}h
           </div>
         </div>

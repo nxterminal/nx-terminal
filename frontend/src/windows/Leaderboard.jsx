@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
-  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
-  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
+  '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
+  'GRINDER': 'var(--blue-on-grey, #0d47a1)', 'INFLUENCER': 'var(--pink-on-grey, #660066)', 'HACKTIVIST': 'var(--green-on-grey, #005500)',
+  'FED': 'var(--amber-on-grey, #7a5500)', 'SCRIPT_KIDDIE': 'var(--cyan-on-grey, #005060)',
 };
 
 function formatNumber(n) {

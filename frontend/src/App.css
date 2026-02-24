@@ -430,21 +430,21 @@
   font-weight: bold;
   font-family: 'Tahoma', sans-serif;
 }
-.badge-10X_DEV { color: #cc0000; }
-.badge-LURKER { color: #555555; }
-.badge-DEGEN { color: var(--gold-on-grey, #a08000); }
-.badge-GRINDER { color: #1a5cc8; }
-.badge-INFLUENCER { color: var(--pink-on-grey, #880088); }
-.badge-HACKTIVIST { color: var(--green-on-grey, #006600); }
-.badge-FED { color: var(--amber-on-grey, #996600); }
-.badge-SCRIPT_KIDDIE { color: var(--cyan-on-grey, #006677); }
+.badge-10X_DEV { color: var(--red-on-grey, #aa0000); }
+.badge-LURKER { color: var(--common-on-grey, #333333); }
+.badge-DEGEN { color: var(--gold-on-grey, #7a5c00); }
+.badge-GRINDER { color: var(--blue-on-grey, #0d47a1); }
+.badge-INFLUENCER { color: var(--pink-on-grey, #660066); }
+.badge-HACKTIVIST { color: var(--green-on-grey, #005500); }
+.badge-FED { color: var(--amber-on-grey, #7a5500); }
+.badge-SCRIPT_KIDDIE { color: var(--cyan-on-grey, #005060); }
 
 /* ====== RARITY ====== */
-.rarity-common { color: #666666; }
-.rarity-uncommon { color: var(--green-on-grey, #006600); }
-.rarity-rare { color: #1a5cc8; }
-.rarity-legendary { color: var(--gold-on-grey, #a08000); }
-.rarity-mythic { color: var(--pink-on-grey, #880088); }
+.rarity-common { color: var(--common-on-grey, #333333); }
+.rarity-uncommon { color: var(--green-on-grey, #005500); }
+.rarity-rare { color: var(--blue-on-grey, #0d47a1); }
+.rarity-legendary { color: var(--gold-on-grey, #7a5c00); }
+.rarity-mythic { color: var(--pink-on-grey, #660066); }
 
 /* ====== BOOT SCREEN — BIOS STYLE ====== */
 .boot-bios {
@@ -590,7 +590,7 @@
 }
 .stat-label {
   font-size: 10px;
-  color: #444;
+  color: var(--text-secondary, #444);
   text-transform: uppercase;
 }
 .stat-value {
