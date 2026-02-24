@@ -176,6 +176,7 @@ export default function Desktop() {
         maximizeWindow={maximizeWindow}
         moveWindow={moveWindow}
         openDevProfile={openDevProfile}
+        openWindow={openWindowWithBSOD}
       />
 
       <NXAssistant />
