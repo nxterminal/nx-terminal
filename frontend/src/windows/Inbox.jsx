@@ -212,6 +212,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   });
   const [selectedId, setSelectedId] = useState(null);
   const [activeGroup, setActiveGroup] = useState('All');
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const addEmail = useCallback((email) => {
     setEmails(prev => {
@@ -338,6 +339,46 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     ? emails
     : emails.filter(e => getSenderGroup(e.from) === activeGroup);
 
+  const toggleSelect = (emailId, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(emailId)) next.delete(emailId);
+      else next.add(emailId);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = filteredEmails.every(e => selectedIds.has(e.id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredEmails.map(e => e.id)));
+    }
+  };
+
+  const handleMarkSelectedRead = () => {
+    if (selectedIds.size === 0) return;
+    const updated = emails.map(e =>
+      selectedIds.has(e.id) ? { ...e, read: true } : e
+    );
+    setEmails(updated);
+    saveEmails(updated);
+    // Mark backend notifications as read
+    emails.forEach(e => {
+      if (selectedIds.has(e.id) && !e.read && e.notifId) {
+        api.markNotificationRead(e.notifId).catch(() => {});
+      }
+    });
+    setSelectedIds(new Set());
+  };
+
+  const selectedUnreadCount = [...selectedIds].filter(id => {
+    const e = emails.find(em => em.id === id);
+    return e && !e.read;
+  }).length;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
@@ -353,7 +394,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
         <span style={{ fontWeight: 'bold' }}>NX Mail</span>
         <span style={{ color: '#666' }}>|</span>
         <span>{unreadCount} unread</span>
-        {selectedEmail && (
+        {selectedEmail ? (
           <>
             <span style={{ color: '#666' }}>|</span>
             <button
@@ -363,6 +404,30 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             >
               Back to Inbox
             </button>
+          </>
+        ) : (
+          <>
+            {selectedIds.size > 0 && (
+              <>
+                <span style={{ color: '#666' }}>|</span>
+                <span style={{ fontWeight: 'bold' }}>{selectedIds.size} selected</span>
+                <button
+                  className="win-btn"
+                  onClick={handleMarkSelectedRead}
+                  disabled={selectedUnreadCount === 0}
+                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                >
+                  Mark as Read ({selectedUnreadCount})
+                </button>
+                <button
+                  className="win-btn"
+                  onClick={() => setSelectedIds(new Set())}
+                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                >
+                  Clear
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
@@ -405,6 +470,14 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
           <table className="win-table" style={{ width: '100%' }}>
             <thead>
               <tr>
+                <th style={{ width: '24px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={filteredEmails.length > 0 && filteredEmails.every(e => selectedIds.has(e.id))}
+                    onChange={handleSelectAll}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </th>
                 <th style={{ width: '20px' }}></th>
                 <th>From</th>
                 <th>Subject</th>
@@ -414,7 +487,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             <tbody>
               {filteredEmails.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '16px', color: '#888', fontStyle: 'italic' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: '#888', fontStyle: 'italic' }}>
                     No messages in this group
                   </td>
                 </tr>
@@ -423,8 +496,21 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                   key={email.id}
                   className="clickable"
                   onClick={() => handleSelect(email)}
-                  style={{ fontWeight: email.read ? 'normal' : 'bold' }}
+                  style={{
+                    fontWeight: email.read ? 'normal' : 'bold',
+                    background: selectedIds.has(email.id) ? 'var(--selection)' : undefined,
+                    color: selectedIds.has(email.id) ? 'var(--selection-text)' : undefined,
+                  }}
                 >
+                  <td style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(email.id)}
+                      onChange={(e) => toggleSelect(email.id, e)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </td>
                   <td style={{ textAlign: 'center' }}>
                     {email.read ? '-' : '>'}
                   </td>

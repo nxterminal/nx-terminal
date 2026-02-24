@@ -18,6 +18,11 @@
   --terminal-magenta: #ff44ff;
   --gold: #ffd700;
   --gold-on-grey: #a08000;
+  --green-on-grey: #006600;
+  --cyan-on-grey: #006677;
+  --pink-on-grey: #880088;
+  --amber-on-grey: #996600;
+  --red-on-grey: #cc0000;
   --text-primary: #000000;
   --text-secondary: #444444;
   --text-muted: #666666;
@@ -41,6 +46,11 @@
   --terminal-magenta: #ff44ff;
   --gold: #ffd700;
   --gold-on-grey: #ffd700;
+  --green-on-grey: #33ff33;
+  --cyan-on-grey: #00cccc;
+  --pink-on-grey: #dd44dd;
+  --amber-on-grey: #ffaa00;
+  --red-on-grey: #ff4444;
   --text-primary: #e0e0e0;
   --text-secondary: #b0b0b0;
   --text-muted: #808080;
@@ -102,6 +112,11 @@
   --terminal-magenta: #ff00ff;
   --gold: #ffff00;
   --gold-on-grey: #ffff00;
+  --green-on-grey: #00ff00;
+  --cyan-on-grey: #00ffff;
+  --pink-on-grey: #ff00ff;
+  --amber-on-grey: #ffff00;
+  --red-on-grey: #ff0000;
   --text-primary: #ffffff;
   --text-secondary: #ffffff;
   --text-muted: #ffff00;

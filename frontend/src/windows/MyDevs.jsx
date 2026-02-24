@@ -6,8 +6,8 @@ import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
-  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
-  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
+  'GRINDER': '#1a5cc8', 'INFLUENCER': '#880088', 'HACKTIVIST': '#006600',
+  'FED': '#996600', 'SCRIPT_KIDDIE': '#006677',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -247,7 +247,7 @@ function DevCard({ dev, onClick, address }) {
           {dev.bugs_shipped > 0 && <span>bugs:{dev.bugs_shipped}</span>}
           {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
           {dev.last_action_type && (
-            <span style={{ color: 'var(--terminal-cyan, #00ffff)' }}>
+            <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
               [{dev.last_action_type.replace(/_/g, ' ')}]
             </span>
           )}

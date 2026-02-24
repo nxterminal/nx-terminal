@@ -106,7 +106,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             {done ? (
-              <div style={{ fontSize: '11px', color: 'var(--terminal-green)', fontWeight: 'bold' }}>
+              <div style={{ fontSize: '11px', color: 'var(--green-on-grey)', fontWeight: 'bold' }}>
                 Connection established! Developer deployed.
               </div>
             ) : (

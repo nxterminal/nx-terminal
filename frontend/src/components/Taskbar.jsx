@@ -145,7 +145,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         onClick={handleWalletClick}
         disabled={isConnecting}
         title={isConnected ? `${address} (click to disconnect)` : 'Connect Wallet'}
-        style={isConnected ? { color: 'var(--terminal-green)' } : undefined}
+        style={isConnected ? { color: 'var(--green-on-grey)' } : undefined}
       >
         {isConnected ? displayAddress : isConnecting ? 'Connecting...' : 'Connect'}
       </button>
