@@ -191,6 +191,17 @@ function saveEmails(emails) {
   localStorage.setItem('nx-inbox-emails', JSON.stringify(toSave));
 }
 
+// Extract sender group from email.from field
+function getSenderGroup(from) {
+  if (!from) return 'Other';
+  const name = from.split('<')[0].trim();
+  if (name === 'NX Terminal System') return 'NX Terminal System';
+  if (name === 'NX System') return 'NX System';
+  if (name === 'HR Department') return 'HR Department';
+  if (name === 'IT Department') return 'IT Department';
+  return 'Other';
+}
+
 export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const [emails, setEmails] = useState(() => {
     const saved = loadSavedEmails();
@@ -200,6 +211,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     return [{ ...WELCOME_EMAIL, read: readIds.includes(WELCOME_EMAIL.id) }];
   });
   const [selectedId, setSelectedId] = useState(null);
+  const [activeGroup, setActiveGroup] = useState('All');
 
   const addEmail = useCallback((email) => {
     setEmails(prev => {
@@ -314,8 +326,21 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
 
   const selectedEmail = emails.find(e => e.id === selectedId);
 
+  // Compute available groups from emails
+  const groups = ['All'];
+  const groupSet = new Set();
+  emails.forEach(e => {
+    const g = getSenderGroup(e.from);
+    if (!groupSet.has(g)) { groupSet.add(g); groups.push(g); }
+  });
+
+  const filteredEmails = activeGroup === 'All'
+    ? emails
+    : emails.filter(e => getSenderGroup(e.from) === activeGroup);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Toolbar */}
       <div style={{
         padding: '4px 8px',
         background: 'var(--win-bg)',
@@ -342,6 +367,39 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
         )}
       </div>
 
+      {/* Group filter tabs */}
+      {!selectedEmail && (
+        <div style={{
+          display: 'flex', gap: '0', padding: '0 4px',
+          borderBottom: '1px solid var(--border-dark)',
+          background: 'var(--win-bg)', flexWrap: 'wrap',
+        }}>
+          {groups.map(g => (
+            <button
+              key={g}
+              onClick={() => setActiveGroup(g)}
+              style={{
+                padding: '2px 8px',
+                fontSize: '10px',
+                fontFamily: "'Tahoma', sans-serif",
+                cursor: 'pointer',
+                border: 'none',
+                borderBottom: activeGroup === g ? '2px solid var(--selection)' : '2px solid transparent',
+                background: activeGroup === g ? 'var(--win-bg)' : 'transparent',
+                fontWeight: activeGroup === g ? 'bold' : 'normal',
+                color: activeGroup === g ? 'var(--text-primary, #000)' : 'var(--text-muted, #666)',
+              }}
+            >
+              {g}
+              {g !== 'All' && (() => {
+                const count = emails.filter(e => getSenderGroup(e.from) === g && !e.read).length;
+                return count > 0 ? ` (${count})` : '';
+              })()}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!selectedEmail ? (
         <div style={{ flex: 1, overflow: 'auto' }}>
           <table className="win-table" style={{ width: '100%' }}>
@@ -354,7 +412,13 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
               </tr>
             </thead>
             <tbody>
-              {emails.map(email => (
+              {filteredEmails.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '16px', color: '#888', fontStyle: 'italic' }}>
+                    No messages in this group
+                  </td>
+                </tr>
+              ) : filteredEmails.map(email => (
                 <tr
                   key={email.id}
                   className="clickable"

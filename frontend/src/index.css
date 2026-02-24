@@ -17,6 +17,7 @@
   --terminal-cyan: #00ffff;
   --terminal-magenta: #ff44ff;
   --gold: #ffd700;
+  --gold-on-grey: #a08000;
   --text-primary: #000000;
   --text-secondary: #444444;
   --text-muted: #666666;
@@ -39,6 +40,7 @@
   --terminal-cyan: #00ffff;
   --terminal-magenta: #ff44ff;
   --gold: #ffd700;
+  --gold-on-grey: #ffd700;
   --text-primary: #e0e0e0;
   --text-secondary: #b0b0b0;
   --text-muted: #808080;
@@ -99,6 +101,7 @@
   --terminal-cyan: #00ffff;
   --terminal-magenta: #ff00ff;
   --gold: #ffff00;
+  --gold-on-grey: #ffff00;
   --text-primary: #ffffff;
   --text-secondary: #ffffff;
   --text-muted: #ffff00;

@@ -5,9 +5,9 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
-  '10X_DEV': '#ff4444', 'LURKER': '#9a9aff', 'DEGEN': '#ffd700',
-  'GRINDER': '#4488ff', 'INFLUENCER': '#ff44ff', 'HACKTIVIST': '#33ff33',
-  'FED': '#ffaa00', 'SCRIPT_KIDDIE': '#00ffff',
+  '10X_DEV': '#cc0000', 'LURKER': '#555555', 'DEGEN': '#a08000',
+  'GRINDER': '#1a5cc8', 'INFLUENCER': '#9900aa', 'HACKTIVIST': '#008800',
+  'FED': '#996600', 'SCRIPT_KIDDIE': '#007788',
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
@@ -19,7 +19,7 @@ function formatNumber(n) {
 
 function StatBar({ label, value, max = 100 }) {
   const pct = Math.max(0, Math.min(100, ((value || 0) / max) * 100));
-  const color = pct > 66 ? '#33ff33' : pct > 33 ? '#ffaa00' : '#ff4444';
+  const color = pct > 66 ? '#008800' : pct > 33 ? '#996600' : '#cc0000';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
       <span style={{ width: '24px', color: 'var(--text-muted, #999)', textTransform: 'uppercase', fontWeight: 'bold' }}>{label}</span>
@@ -168,7 +168,7 @@ function DevCard({ dev, onClick, address }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
-  const energyColor = energyPct > 60 ? '#33ff33' : energyPct > 30 ? '#ffaa00' : '#ff4444';
+  const energyColor = energyPct > 60 ? '#008800' : energyPct > 30 ? '#996600' : '#cc0000';
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
 
   return (
@@ -192,7 +192,7 @@ function DevCard({ dev, onClick, address }) {
             [{dev.archetype}]
           </span>
           {dev.rarity_tier && dev.rarity_tier !== 'common' && (
-            <span style={{ fontSize: '9px', color: '#ffd700', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '9px', color: '#a08000', fontWeight: 'bold', textTransform: 'uppercase' }}>
               {dev.rarity_tier}
             </span>
           )}
@@ -225,12 +225,12 @@ function DevCard({ dev, onClick, address }) {
           <span style={{ color: energyColor, fontWeight: 'bold' }}>
             E:{dev.energy ?? 0}/{dev.max_energy ?? 10}
           </span>
-          <span style={{ color: 'var(--gold, #ffd700)', fontWeight: 'bold' }}>
+          <span style={{ color: '#a08000', fontWeight: 'bold' }}>
             {formatNumber(dev.balance_nxt)} $NXT
           </span>
           <span>{dev.mood || '-'}</span>
           <span style={{
-            color: dev.status === 'active' ? '#33ff33' : dev.status === 'resting' ? '#ffaa00' : '#ff4444',
+            color: dev.status === 'active' ? '#008800' : dev.status === 'resting' ? '#996600' : '#cc0000',
             textTransform: 'uppercase', fontWeight: 'bold',
           }}>
             {dev.status || 'active'}
