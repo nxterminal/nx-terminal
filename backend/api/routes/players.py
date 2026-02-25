@@ -150,19 +150,12 @@ _STARTING_BALANCE = {
 
 
 def _reconstruct_balance_history(addr: str, days: int):
-    """Rebuild daily balance history from current state + movements.
+    """Rebuild daily balance history by walking FORWARD from first mint.
 
-    Works backwards from today's known balance, subtracting each day's
-    net change (salary income + mint bonuses + spend/sell/claim deltas)
-    to recover previous balances.
+    Starting from balance=0 on the day before the first dev was minted,
+    accumulates daily salary income, starting-balance bonuses on mint
+    days, and spend/sell/claim/shop deltas to produce a natural curve.
     """
-    # Current total balance across all devs
-    row = fetch_one(
-        "SELECT COALESCE(SUM(balance_nxt), 0) AS total FROM devs WHERE owner_address = %s",
-        (addr,)
-    )
-    current_balance = row["total"] if row else 0
-
     # Dev mint dates + rarity (for starting-balance bonus on mint day)
     devs = fetch_all(
         "SELECT minted_at::date AS mint_date, rarity_tier FROM devs WHERE owner_address = %s",
@@ -172,7 +165,10 @@ def _reconstruct_balance_history(addr: str, days: int):
         return []
 
     today = date.today()
-    start_date = today - timedelta(days=days)
+    first_mint = min(d["mint_date"] for d in devs)
+    # Start one day before first mint (balance = 0) so the chart shows
+    # the jump on mint day.  Never go further back than `days` though.
+    history_start = max(first_mint - timedelta(days=1), today - timedelta(days=days))
 
     # ── Aggregate daily non-salary balance deltas ────────────
     daily_delta = {}
@@ -196,7 +192,7 @@ def _reconstruct_balance_history(addr: str, days: int):
               AND action_type IN ('CREATE_PROTOCOL','CREATE_AI','INVEST','SELL')
               AND created_at >= %s
             GROUP BY created_at::date
-        """, (*dev_ids, start_date))
+        """, (*dev_ids, history_start))
         for r in rows:
             daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
 
@@ -206,7 +202,7 @@ def _reconstruct_balance_history(addr: str, days: int):
         FROM claim_history
         WHERE player_address = %s AND claimed_at >= %s
         GROUP BY claimed_at::date
-    """, (addr, start_date))
+    """, (addr, history_start))
     for r in rows:
         daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
 
@@ -216,45 +212,40 @@ def _reconstruct_balance_history(addr: str, days: int):
         FROM shop_purchases
         WHERE player_address = %s AND purchased_at >= %s
         GROUP BY purchased_at::date
-    """, (addr, start_date))
+    """, (addr, history_start))
     for r in rows:
         daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
 
-    # ── Walk backwards from today ────────────────────────────
-    balances = []
-    bal = current_balance
+    # ── Walk FORWARD from history_start ──────────────────────
+    bal = 0
+    total_days = (today - history_start).days
+    result = []
 
-    for offset in range(days + 1):
-        day = today - timedelta(days=offset)
-        balances.append({"date": str(day), "balance": max(0, int(bal))})
+    for offset in range(total_days + 1):
+        day = history_start + timedelta(days=offset)
 
-        # Net change that happened on *this* day (salary + mint bonus + movements)
-        active_devs = sum(1 for d in devs if d["mint_date"] <= day)
-        salary = active_devs * _SALARY_PER_DAY
+        # Starting balance for devs minted on this day
         mint_bonus = sum(
             _STARTING_BALANCE.get(d["rarity_tier"], 2000)
             for d in devs if d["mint_date"] == day
         )
+
+        # Salary: count devs active on this day (minted on or before)
+        active_devs = sum(1 for d in devs if d["mint_date"] <= day)
+        salary = active_devs * _SALARY_PER_DAY
+
+        # Non-salary movements (spends negative, sells positive)
         delta = daily_delta.get(day, 0)
 
-        bal = bal - salary - mint_bonus - delta
-
-    balances.reverse()  # chronological order
-
-    # Trim leading days before first dev was minted (all zeros)
-    first_mint = min(d["mint_date"] for d in devs)
-    start_str = str(max(first_mint - timedelta(days=1), start_date))
-    balances = [b for b in balances if b["date"] >= start_str]
-
-    return [
-        {
-            "snapshot_date": b["date"],
-            "balance_claimable": b["balance"],
+        bal = bal + mint_bonus + salary + delta
+        result.append({
+            "snapshot_date": str(day),
+            "balance_claimable": max(0, int(bal)),
             "balance_claimed": 0,
             "balance_total_earned": 0,
-        }
-        for b in balances
-    ]
+        })
+
+    return result
 
 
 @router.get("/{wallet}/movements")
