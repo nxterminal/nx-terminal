@@ -1,5 +1,6 @@
 """Routes: Players — registration, profile, devs, wallet"""
 
+from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
@@ -111,10 +112,15 @@ async def get_wallet_summary(wallet: str):
 
 @router.get("/{wallet}/balance-history")
 async def get_balance_history(wallet: str, days: int = Query(default=30, le=90)):
-    """Get daily balance snapshots for chart. Returns last N days."""
+    """Get daily balance snapshots for chart. Returns last N days.
+
+    When fewer than 7 real snapshots exist, reconstructs history from
+    the current balance and recorded movements (actions, claims, shop).
+    """
+    addr = wallet.lower()
     player = fetch_one(
         "SELECT wallet_address FROM players WHERE wallet_address = %s",
-        (wallet.lower(),)
+        (addr,)
     )
     if not player:
         raise HTTPException(404, "Player not found")
@@ -125,12 +131,130 @@ async def get_balance_history(wallet: str, days: int = Query(default=30, le=90))
            WHERE wallet_address = %s
            ORDER BY snapshot_date DESC
            LIMIT %s""",
-        (wallet.lower(), days)
+        (addr, days)
     )
 
-    # Return in chronological order for chart
-    snapshots.reverse()
-    return snapshots
+    if len(snapshots) >= 7:
+        snapshots.reverse()
+        return snapshots
+
+    # Not enough snapshots — reconstruct from current balance + movements
+    return _reconstruct_balance_history(addr, days)
+
+
+_SALARY_PER_DAY = 200  # per dev — must match engine config
+_STARTING_BALANCE = {
+    "common": 2000, "uncommon": 2500, "rare": 3000,
+    "legendary": 5000, "mythic": 10000,
+}
+
+
+def _reconstruct_balance_history(addr: str, days: int):
+    """Rebuild daily balance history from current state + movements.
+
+    Works backwards from today's known balance, subtracting each day's
+    net change (salary income + mint bonuses + spend/sell/claim deltas)
+    to recover previous balances.
+    """
+    # Current total balance across all devs
+    row = fetch_one(
+        "SELECT COALESCE(SUM(balance_nxt), 0) AS total FROM devs WHERE owner_address = %s",
+        (addr,)
+    )
+    current_balance = row["total"] if row else 0
+
+    # Dev mint dates + rarity (for starting-balance bonus on mint day)
+    devs = fetch_all(
+        "SELECT minted_at::date AS mint_date, rarity_tier FROM devs WHERE owner_address = %s",
+        (addr,)
+    )
+    if not devs:
+        return []
+
+    today = date.today()
+    start_date = today - timedelta(days=days)
+
+    # ── Aggregate daily non-salary balance deltas ────────────
+    daily_delta = {}
+    dev_ids_rows = fetch_all(
+        "SELECT token_id FROM devs WHERE owner_address = %s", (addr,)
+    )
+    dev_ids = [d["token_id"] for d in dev_ids_rows]
+
+    if dev_ids:
+        ph = ",".join(["%s"] * len(dev_ids))
+        # Spend / sell actions
+        rows = fetch_all(f"""
+            SELECT created_at::date AS day,
+                   SUM(CASE
+                       WHEN action_type = 'SELL'
+                           THEN COALESCE((details->>'sold_for')::bigint, nxt_cost)
+                       ELSE -nxt_cost
+                   END) AS net
+            FROM actions
+            WHERE dev_id IN ({ph})
+              AND action_type IN ('CREATE_PROTOCOL','CREATE_AI','INVEST','SELL')
+              AND created_at >= %s
+            GROUP BY created_at::date
+        """, (*dev_ids, start_date))
+        for r in rows:
+            daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
+
+    # Claims (withdrawn from game balance)
+    rows = fetch_all("""
+        SELECT claimed_at::date AS day, -SUM(amount_net) AS net
+        FROM claim_history
+        WHERE player_address = %s AND claimed_at >= %s
+        GROUP BY claimed_at::date
+    """, (addr, start_date))
+    for r in rows:
+        daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
+
+    # Shop purchases
+    rows = fetch_all("""
+        SELECT purchased_at::date AS day, -SUM(nxt_cost) AS net
+        FROM shop_purchases
+        WHERE player_address = %s AND purchased_at >= %s
+        GROUP BY purchased_at::date
+    """, (addr, start_date))
+    for r in rows:
+        daily_delta[r["day"]] = daily_delta.get(r["day"], 0) + int(r["net"])
+
+    # ── Walk backwards from today ────────────────────────────
+    balances = []
+    bal = current_balance
+
+    for offset in range(days + 1):
+        day = today - timedelta(days=offset)
+        balances.append({"date": str(day), "balance": max(0, int(bal))})
+
+        # Net change that happened on *this* day (salary + mint bonus + movements)
+        active_devs = sum(1 for d in devs if d["mint_date"] <= day)
+        salary = active_devs * _SALARY_PER_DAY
+        mint_bonus = sum(
+            _STARTING_BALANCE.get(d["rarity_tier"], 2000)
+            for d in devs if d["mint_date"] == day
+        )
+        delta = daily_delta.get(day, 0)
+
+        bal = bal - salary - mint_bonus - delta
+
+    balances.reverse()  # chronological order
+
+    # Trim leading days before first dev was minted (all zeros)
+    first_mint = min(d["mint_date"] for d in devs)
+    start_str = str(max(first_mint - timedelta(days=1), start_date))
+    balances = [b for b in balances if b["date"] >= start_str]
+
+    return [
+        {
+            "snapshot_date": b["date"],
+            "balance_claimable": b["balance"],
+            "balance_claimed": 0,
+            "balance_total_earned": 0,
+        }
+        for b in balances
+    ]
 
 
 @router.get("/{wallet}/movements")
