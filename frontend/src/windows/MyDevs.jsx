@@ -262,11 +262,168 @@ function DevCard({ dev, onClick, address }) {
   );
 }
 
+// Dev action notification types shown in Activity tab
+const DEV_ACTION_NOTIF_TYPES = ['protocol_created', 'ai_created', 'invest', 'sell', 'code_review'];
+
+const ACTION_ICONS = {
+  protocol_created: '[P]',
+  ai_created: '[AI]',
+  invest: '[$$]',
+  sell: '[$$]',
+  code_review: '[CR]',
+  prompt_response: '[>]',
+};
+
+const ACTION_COLORS = {
+  protocol_created: 'var(--terminal-green, #33ff33)',
+  ai_created: 'var(--terminal-cyan, #00ffff)',
+  invest: 'var(--gold, #ffd700)',
+  sell: 'var(--gold, #ffd700)',
+  code_review: 'var(--terminal-amber, #ffaa00)',
+  prompt_response: 'var(--terminal-green, #33ff33)',
+};
+
+function formatActivityTime(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function ActivityTab({ walletAddress, devs }) {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterDev, setFilterDev] = useState('all');
+
+  useEffect(() => {
+    if (!walletAddress) { setLoading(false); return; }
+
+    const fetchActivities = () => {
+      api.getNotifications(walletAddress)
+        .then(notifs => {
+          if (!Array.isArray(notifs)) { setActivities([]); return; }
+          const devActions = notifs.filter(n => DEV_ACTION_NOTIF_TYPES.includes(n.type));
+          setActivities(devActions);
+        })
+        .catch(() => setActivities([]))
+        .finally(() => setLoading(false));
+    };
+
+    fetchActivities();
+    const interval = setInterval(fetchActivities, 30000);
+    return () => clearInterval(interval);
+  }, [walletAddress]);
+
+  if (loading) return <div className="loading">Loading activity...</div>;
+
+  const filtered = filterDev === 'all'
+    ? activities
+    : activities.filter(a => a.dev_id === Number(filterDev));
+
+  // Build dev name map
+  const devNameMap = {};
+  (devs || []).forEach(d => { devNameMap[d.token_id] = d.name; });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Filter bar */}
+      <div style={{
+        padding: '4px 8px',
+        borderBottom: '1px solid var(--border-dark)',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        fontSize: '11px',
+      }}>
+        <span style={{ fontWeight: 'bold', color: 'var(--text-muted, #888)' }}>Filter:</span>
+        <select
+          value={filterDev}
+          onChange={(e) => setFilterDev(e.target.value)}
+          style={{
+            fontSize: '11px', padding: '2px 4px',
+            background: 'var(--bg-primary, #fff)',
+            border: '1px solid var(--border-dark, #808080)',
+          }}
+        >
+          <option value="all">All Devs ({activities.length})</option>
+          {(devs || []).map(d => {
+            const count = activities.filter(a => a.dev_id === d.token_id).length;
+            return (
+              <option key={d.token_id} value={d.token_id}>
+                {d.name || `Dev #${d.token_id}`} ({count})
+              </option>
+            );
+          })}
+        </select>
+        <span style={{ color: 'var(--text-muted, #888)', marginLeft: 'auto' }}>
+          {filtered.length} action{filtered.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Activity list */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {filtered.length === 0 ? (
+          <div style={{
+            padding: '24px', textAlign: 'center',
+            fontFamily: "'VT323', monospace", fontSize: '14px',
+            color: 'var(--terminal-amber)',
+          }}>
+            {'>'} No dev actions recorded yet.
+          </div>
+        ) : (
+          <div className="terminal" style={{ padding: '4px 8px' }}>
+            {filtered.map((a, i) => {
+              const icon = ACTION_ICONS[a.type] || '[?]';
+              const color = ACTION_COLORS[a.type] || '#888';
+              const devName = devNameMap[a.dev_id] || (a.dev_id ? `Dev #${a.dev_id}` : '');
+              return (
+                <div key={a.id || i} style={{
+                  padding: '4px 0',
+                  borderBottom: '1px solid var(--border-dark, #222)',
+                  fontSize: '12px',
+                  lineHeight: 1.4,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: '13px', flexShrink: 0 }}>
+                      {icon}
+                    </span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '11px' }}>
+                      {a.title}
+                    </span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted, #666)', fontSize: '10px', flexShrink: 0 }}>
+                      {formatActivityTime(a.created_at)}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: '10px', color: 'var(--text-secondary, #999)',
+                    marginTop: '2px', paddingLeft: '30px',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {devName && (
+                      <span style={{ color: 'var(--cyan-on-grey, #006677)', fontWeight: 'bold' }}>
+                        {devName}:{' '}
+                      </span>
+                    )}
+                    {a.body ? a.body.slice(0, 200) : ''}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MyDevs({ openDevProfile }) {
   const { address, isConnected, connect, displayAddress } = useWallet();
+  const [tab, setTab] = useState('devs');
   const [devs, setDevs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [activityCount, setActivityCount] = useState(0);
 
   const { data: ownedTokens, isLoading: tokensLoading } = useReadContract({
     address: NXDEVNFT_ADDRESS,
@@ -305,6 +462,18 @@ export default function MyDevs({ openDevProfile }) {
       .catch(() => setFetchError('Failed to load developer data'))
       .finally(() => setLoading(false));
   }, [ownedTokens]);
+
+  // Fetch activity count for badge
+  useEffect(() => {
+    if (!address) return;
+    api.getNotifications(address)
+      .then(notifs => {
+        if (!Array.isArray(notifs)) return;
+        const unread = notifs.filter(n => DEV_ACTION_NOTIF_TYPES.includes(n.type) && !n.read).length;
+        setActivityCount(unread);
+      })
+      .catch(() => {});
+  }, [address]);
 
   const isLoadingAny = tokensLoading || loading;
 
@@ -374,6 +543,16 @@ export default function MyDevs({ openDevProfile }) {
         <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
       </div>
 
+      {/* Tabs */}
+      <div className="win-tabs">
+        <button className={`win-tab${tab === 'devs' ? ' active' : ''}`} onClick={() => setTab('devs')}>
+          Devs
+        </button>
+        <button className={`win-tab${tab === 'activity' ? ' active' : ''}`} onClick={() => setTab('activity')}>
+          Activity{activityCount > 0 ? ` (${activityCount})` : ''}
+        </button>
+      </div>
+
       {fetchError && (
         <div style={{
           padding: '8px 12px',
@@ -387,18 +566,25 @@ export default function MyDevs({ openDevProfile }) {
         </div>
       )}
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '4px' }}>
-        {isLoadingAny ? (
-          <div className="loading">Loading devs...</div>
-        ) : (
-          devs.map((dev) => (
-            <DevCard
-              key={dev.token_id}
-              dev={dev}
-              address={address}
-              onClick={() => openDevProfile?.(dev.token_id)}
-            />
-          ))
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {tab === 'devs' && (
+          <div style={{ height: '100%', overflow: 'auto', padding: '4px' }}>
+            {isLoadingAny ? (
+              <div className="loading">Loading devs...</div>
+            ) : (
+              devs.map((dev) => (
+                <DevCard
+                  key={dev.token_id}
+                  dev={dev}
+                  address={address}
+                  onClick={() => openDevProfile?.(dev.token_id)}
+                />
+              ))
+            )}
+          </div>
+        )}
+        {tab === 'activity' && (
+          <ActivityTab walletAddress={address} devs={devs} />
         )}
       </div>
     </div>

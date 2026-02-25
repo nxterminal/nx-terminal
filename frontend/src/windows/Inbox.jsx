@@ -223,7 +223,11 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     });
   }, []);
 
+  // Dev action notification types — these go to My Devs > Activity, not Inbox
+  const DEV_ACTION_NOTIF_TYPES = ['protocol_created', 'ai_created', 'invest', 'sell', 'code_review'];
+
   // Fetch real notifications from API and merge into inbox
+  // Excludes dev action notifications (those are shown in My Devs > Activity)
   useEffect(() => {
     const walletAddress = walletProp || window.ethereum?.selectedAddress;
     if (!walletAddress) return;
@@ -231,18 +235,20 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
       api.getNotifications(walletAddress)
         .then(notifs => {
           if (!Array.isArray(notifs) || notifs.length === 0) return;
-          notifs.forEach(n => {
-            const email = {
-              id: `notif-${n.id}`,
-              from: `NX System <${n.type}@nxterminal.corp>`,
-              subject: n.title,
-              date: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              read: n.read,
-              body: n.body,
-              notifId: n.id,
-            };
-            addEmail(email);
-          });
+          notifs
+            .filter(n => !DEV_ACTION_NOTIF_TYPES.includes(n.type))
+            .forEach(n => {
+              const email = {
+                id: `notif-${n.id}`,
+                from: `NX System <${n.type}@nxterminal.corp>`,
+                subject: n.title,
+                date: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                read: n.read,
+                body: n.body,
+                notifId: n.id,
+              };
+              addEmail(email);
+            });
         })
         .catch(() => {});
     };
