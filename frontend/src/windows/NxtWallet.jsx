@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatUnits } from 'viem';
 import { api } from '../services/api';
@@ -385,20 +385,7 @@ function MiniBalanceChart({ history }) {
 
 // ── Chart Tab (Candlestick) ───────────────────────────────
 function ChartTab({ history, loading }) {
-  const containerRef = useRef(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
   const [hoverIdx, setHoverIdx] = useState(null);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      if (width > 0 && height > 0) setDims({ w: width, h: height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const candles = useMemo(() => {
     if (!history || history.length === 0) return [];
@@ -426,7 +413,8 @@ function ChartTab({ history, loading }) {
   }, [history]);
 
   const hasData = !loading && candles.length > 0;
-  const { w, h } = dims;
+  // Fixed virtual coordinate space — SVG scales via viewBox, no ResizeObserver needed
+  const VW = 800, VH = 350;
   const firstVal = candles.length > 0 ? candles[0].open : 0;
   const lastVal = candles.length > 0 ? candles[candles.length - 1].close : 0;
   const trend = lastVal >= firstVal ? 'up' : 'down';
@@ -437,8 +425,8 @@ function ChartTab({ history, loading }) {
 
   // Layout
   const pad = { top: 8, right: 52, bottom: 20, left: 8 };
-  const chartW = Math.max(w - pad.left - pad.right, 1);
-  const chartH = Math.max(h - pad.top - pad.bottom, 1);
+  const chartW = VW - pad.left - pad.right;
+  const chartH = VH - pad.top - pad.bottom;
   const volH = chartH * 0.15;
   const priceH = chartH - volH - 4;
 
@@ -449,7 +437,7 @@ function ChartTab({ history, loading }) {
   const priceRange = priceMax - priceMin || 1;
   const maxVol = Math.max(...candles.map(c => c.volume), 1);
   const gap = 2;
-  const candleW = candles.length > 0 ? Math.max((chartW / candles.length) - gap, 2) : 4;
+  const candleW = candles.length > 0 ? Math.max((chartW / candles.length) - gap, 3) : 4;
   const step = candles.length > 0 ? chartW / candles.length : chartW;
   const xPos = (i) => pad.left + i * step + step / 2;
   const yPrice = (v) => pad.top + priceH * (1 - (v - priceMin) / priceRange);
@@ -502,8 +490,8 @@ function ChartTab({ history, loading }) {
         <span style={{ color: '#444', fontSize: '12px' }}>30D</span>
       </div>
 
-      {/* Chart container — always rendered so ResizeObserver can measure it */}
-      <div ref={containerRef} style={{ flex: 1, minHeight: 0, cursor: hasData ? 'crosshair' : 'default' }}>
+      {/* Chart area */}
+      <div style={{ flex: 1, minHeight: 0, cursor: hasData ? 'crosshair' : 'default' }}>
         {loading ? (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -520,23 +508,26 @@ function ChartTab({ history, loading }) {
           }}>
             {'> No balance history yet. Snapshots are recorded daily.'}
           </div>
-        ) : w > 0 && h > 0 && (
-          <svg width={w} height={h} style={{ display: 'block' }}
+        ) : (
+          <svg
+            viewBox={`0 0 ${VW} ${VH}`}
+            preserveAspectRatio="none"
+            style={{ display: 'block', width: '100%', height: '100%' }}
             onMouseLeave={() => setHoverIdx(null)}
           >
             {/* Grid */}
             {gridLines.map((g, i) => (
               <g key={`grid-${i}`}>
-                <line x1={pad.left} y1={g.y} x2={w - pad.right} y2={g.y} stroke="#141428" />
-                <text x={w - pad.right + 4} y={g.y + 3} fill="#444" fontSize="10" fontFamily="VT323, monospace">{g.label}</text>
+                <line x1={pad.left} y1={g.y} x2={VW - pad.right} y2={g.y} stroke="#141428" />
+                <text x={VW - pad.right + 4} y={g.y + 3} fill="#444" fontSize="10" fontFamily="VT323, monospace">{g.label}</text>
               </g>
             ))}
 
             {/* Volume/price separator */}
-            <line x1={pad.left} y1={pad.top + priceH + 2} x2={w - pad.right} y2={pad.top + priceH + 2} stroke="#1a1a2e" />
+            <line x1={pad.left} y1={pad.top + priceH + 2} x2={VW - pad.right} y2={pad.top + priceH + 2} stroke="#1a1a2e" />
 
             {/* Reference line at open */}
-            <line x1={pad.left} y1={yPrice(firstVal)} x2={w - pad.right} y2={yPrice(firstVal)} stroke="#252540" strokeDasharray="4 4" />
+            <line x1={pad.left} y1={yPrice(firstVal)} x2={VW - pad.right} y2={yPrice(firstVal)} stroke="#252540" strokeDasharray="4 4" />
 
             {/* Volume bars */}
             {candles.map((c, i) => (
@@ -575,12 +566,12 @@ function ChartTab({ history, loading }) {
             {hoverIdx !== null && hoverIdx < candles.length && (
               <>
                 <line x1={xPos(hoverIdx)} y1={pad.top} x2={xPos(hoverIdx)} y2={pad.top + chartH} stroke="#333" strokeDasharray="2 2" />
-                <line x1={pad.left} y1={yPrice(candles[hoverIdx].close)} x2={w - pad.right} y2={yPrice(candles[hoverIdx].close)} stroke="#333" strokeDasharray="2 2" />
+                <line x1={pad.left} y1={yPrice(candles[hoverIdx].close)} x2={VW - pad.right} y2={yPrice(candles[hoverIdx].close)} stroke="#333" strokeDasharray="2 2" />
                 {/* Price tag */}
-                <rect x={w - pad.right + 1} y={yPrice(candles[hoverIdx].close) - 8} width={pad.right - 4} height={16}
+                <rect x={VW - pad.right + 1} y={yPrice(candles[hoverIdx].close) - 8} width={pad.right - 4} height={16}
                   fill={candles[hoverIdx].isUp ? '#00c853' : '#ef5350'} rx={2}
                 />
-                <text x={w - pad.right + 4} y={yPrice(candles[hoverIdx].close) + 4} fill="#fff" fontSize="10" fontFamily="VT323, monospace">
+                <text x={VW - pad.right + 4} y={yPrice(candles[hoverIdx].close) + 4} fill="#fff" fontSize="10" fontFamily="VT323, monospace">
                   {fmtPrice(candles[hoverIdx].close)}
                 </text>
               </>
@@ -589,7 +580,7 @@ function ChartTab({ history, loading }) {
             {/* X-axis labels */}
             {candles.map((c, i) => (
               i % labelInterval === 0 ? (
-                <text key={`xl-${i}`} x={xPos(i)} y={h - 4} fill="#444" fontSize="10" fontFamily="VT323, monospace" textAnchor="middle">
+                <text key={`xl-${i}`} x={xPos(i)} y={VH - 4} fill="#444" fontSize="10" fontFamily="VT323, monospace" textAnchor="middle">
                   {c.date}
                 </text>
               ) : null
