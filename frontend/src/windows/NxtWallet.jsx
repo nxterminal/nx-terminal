@@ -4,7 +4,6 @@ import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contract';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 const RARITY_COLORS = {
   common: 'var(--common-on-grey, #333333)', uncommon: 'var(--green-on-grey, #005500)', rare: 'var(--blue-on-grey, #0d47a1)',
@@ -328,7 +327,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
   );
 }
 
-// ── Mini Balance Chart (for Balance tab) ──────────────────
+// ── Mini Balance Chart (for Balance tab) — Native SVG ─────
 function MiniBalanceChart({ history, summary }) {
   let rawData = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
@@ -356,6 +355,41 @@ function MiniBalanceChart({ history, summary }) {
   const trend = lastVal >= firstVal ? 'up' : 'down';
   const lineColor = trend === 'up' ? '#00c853' : '#ef5350';
 
+  const W = 600, H = 120;
+  const PAD = { top: 8, right: 8, bottom: 18, left: 45 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const yValues = data.map(d => d.balance);
+  const rawMin = Math.min(...yValues);
+  const rawMax = Math.max(...yValues);
+  // Ensure at least 5% visual range so flat data doesn't collapse
+  const yPadding = rawMax === rawMin ? Math.max(rawMax * 0.1, 100) : (rawMax - rawMin) * 0.1;
+  const yMin = rawMin - yPadding;
+  const yMax = rawMax + yPadding;
+  const yRange = yMax - yMin || 1;
+
+  const scaleX = (i) => PAD.left + (i / (data.length - 1)) * chartW;
+  const scaleY = (val) => PAD.top + chartH - ((val - yMin) / yRange) * chartH;
+
+  const linePath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i).toFixed(1)},${scaleY(d.balance).toFixed(1)}`)
+    .join(' ');
+
+  const fillPath = linePath +
+    ` L${scaleX(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)}` +
+    ` L${scaleX(0).toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
+
+  // Grid lines (3 horizontal)
+  const gridLines = [];
+  for (let i = 0; i <= 3; i++) {
+    const val = yMin + (yRange * i) / 3;
+    gridLines.push({ y: scaleY(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toLocaleString() });
+  }
+
+  // X-axis labels (max 6)
+  const labelInterval = Math.max(1, Math.ceil(data.length / 6));
+
   return (
     <div style={{ margin: '4px 8px', padding: '0' }}>
       <div style={{
@@ -369,39 +403,61 @@ function MiniBalanceChart({ history, summary }) {
           {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
         </span>
       </div>
-      <div className="protocol-chart" style={{ height: '60px', padding: '0' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-            <defs>
-              <linearGradient id="miniBalGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone" dataKey="balance"
-              stroke={lineColor} strokeWidth={1.5} fill="url(#miniBalGrad)"
-              dot={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id="miniBalGradSvg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lineColor} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+
+          {gridLines.map((g, i) => (
+            <g key={i}>
+              <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className="chart-grid-line" />
+              <text x={PAD.left - 4} y={g.y + 3} fill="#555" fontSize="10" fontFamily="VT323, monospace" textAnchor="end">
+                {g.label}
+              </text>
+            </g>
+          ))}
+
+          <path d={fillPath} fill="url(#miniBalGradSvg)" className="chart-fill" />
+          <path d={linePath} fill="none" stroke={lineColor} strokeWidth={1.5} />
+
+          {data.map((d, i) => (
+            i % labelInterval === 0 ? (
+              <text key={i} x={scaleX(i)} y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle">
+                {d.date}
+              </text>
+            ) : null
+          ))}
+        </svg>
       </div>
     </div>
   );
 }
 
-// ── Movements Chart (intraday from movements) ────────────
+// ── Movements Chart (intraday — today only) ───────────────
 function MovementsChart({ movements, summary }) {
-  // Build intraday balance data from individual movements.
-  // Walk backwards from current balance: each movement is a point.
+  // Build intraday balance data from today's movements only.
   if (!movements || movements.length === 0 || !summary) return null;
 
   const currentBal = Number(summary.balance_claimable) || 0;
+  const now = new Date();
+  const todayStr = now.toDateString();
 
-  // movements are newest-first; build balance at each point in reverse
-  const points = [{ time: new Date(), balance: currentBal }];
+  // Filter to only today's movements
+  const todayMovements = movements.filter(m => {
+    const ts = new Date(m.timestamp);
+    return ts.toDateString() === todayStr;
+  });
+
+  if (todayMovements.length === 0) return null;
+
+  // Walk backwards from current balance using today's movements
+  const points = [{ time: now, balance: currentBal }];
   let bal = currentBal;
-  for (const m of movements) {
+  for (const m of todayMovements) {
     bal -= (Number(m.amount) || 0); // reverse the movement
     points.push({ time: new Date(m.timestamp), balance: Math.max(0, bal) });
   }
@@ -409,13 +465,8 @@ function MovementsChart({ movements, summary }) {
 
   if (points.length < 2) return null;
 
-  // Format time label (HH:MM or "Mon DD" if different day)
   const fmtLabel = (d) => {
-    const now = new Date();
-    if (d.toDateString() === now.toDateString()) {
-      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const data = points.map(p => ({ label: fmtLabel(p.time), balance: p.balance }));
@@ -431,8 +482,11 @@ function MovementsChart({ movements, summary }) {
   const chartH = H - PAD.top - PAD.bottom;
 
   const yValues = data.map(d => d.balance);
-  const yMin = Math.min(...yValues) * 0.95;
-  const yMax = Math.max(...yValues) * 1.05;
+  const rawYMin = Math.min(...yValues);
+  const rawYMax = Math.max(...yValues);
+  const yPadding = rawYMax === rawYMin ? Math.max(rawYMax * 0.1, 100) : (rawYMax - rawYMin) * 0.1;
+  const yMin = rawYMin - yPadding;
+  const yMax = rawYMax + yPadding;
   const yRange = yMax - yMin || 1;
 
   const scaleX = (i) => PAD.left + (i / (data.length - 1)) * chartW;
