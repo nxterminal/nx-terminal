@@ -390,55 +390,63 @@ function MiniBalanceChart({ history, summary }) {
   );
 }
 
-// ── Movements Chart (ProtocolChart-style SVG) ────────────
-function MovementsChart({ history, summary }) {
-  // Build data from snapshots, falling back to current balance if < 2 points
-  let rawData = (history || []).map(s => ({
-    date: formatDate(s.snapshot_date),
-    balance: Number(s.balance_claimable),
-  }));
+// ── Movements Chart (intraday from movements) ────────────
+function MovementsChart({ movements, summary }) {
+  // Build intraday balance data from individual movements.
+  // Walk backwards from current balance: each movement is a point.
+  if (!movements || movements.length === 0 || !summary) return null;
 
-  if (rawData.length < 2 && summary) {
-    const today = formatDate(new Date().toISOString().slice(0, 10));
-    const bal = Number(summary.balance_claimable) || 0;
-    if (rawData.length === 1) {
-      rawData = rawData[0].date === today
-        ? [{ date: 'Yesterday', balance: rawData[0].balance }, rawData[0]]
-        : [rawData[0], { date: today, balance: bal }];
-    } else {
-      rawData = [{ date: 'Yesterday', balance: bal }, { date: today, balance: bal }];
-    }
+  const currentBal = Number(summary.balance_claimable) || 0;
+
+  // movements are newest-first; build balance at each point in reverse
+  const points = [{ time: new Date(), balance: currentBal }];
+  let bal = currentBal;
+  for (const m of movements) {
+    bal -= (Number(m.amount) || 0); // reverse the movement
+    points.push({ time: new Date(m.timestamp), balance: Math.max(0, bal) });
   }
+  points.reverse(); // chronological
 
-  if (rawData.length < 2) return null;
+  if (points.length < 2) return null;
 
-  const data = rawData;
+  // Format time label (HH:MM or "Mon DD" if different day)
+  const fmtLabel = (d) => {
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const data = points.map(p => ({ label: fmtLabel(p.time), balance: p.balance }));
 
   const firstVal = data[0].balance;
   const lastVal = data[data.length - 1].balance;
   const trend = lastVal >= firstVal ? 'up' : 'down';
   const trendColor = trend === 'up' ? '#33ff33' : '#ff4444';
 
-  // Same pattern as ProtocolChart: fixed viewBox + fixed height in px
   const W = 600, H = 140;
   const PAD = { top: 10, right: 10, bottom: 20, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
 
   const yValues = data.map(d => d.balance);
-  const yMin = Math.min(...yValues) * 0.9;
-  const yMax = Math.max(...yValues) * 1.1;
+  const yMin = Math.min(...yValues) * 0.95;
+  const yMax = Math.max(...yValues) * 1.05;
   const yRange = yMax - yMin || 1;
 
   const scaleX = (i) => PAD.left + (i / (data.length - 1)) * chartW;
   const scaleY = (val) => PAD.top + chartH - ((val - yMin) / yRange) * chartH;
 
-  // Build balance line path
-  const linePath = data
-    .map((d, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i).toFixed(1)},${scaleY(d.balance).toFixed(1)}`)
-    .join(' ');
+  // Stepped line path (horizontal then vertical — shows discrete transactions)
+  let linePath = `M${scaleX(0).toFixed(1)},${scaleY(data[0].balance).toFixed(1)}`;
+  for (let i = 1; i < data.length; i++) {
+    // horizontal to new X at old Y, then vertical to new Y
+    linePath += ` L${scaleX(i).toFixed(1)},${scaleY(data[i - 1].balance).toFixed(1)}`;
+    linePath += ` L${scaleX(i).toFixed(1)},${scaleY(data[i].balance).toFixed(1)}`;
+  }
 
-  // Fill path (close to bottom)
+  // Fill path
   const fillPath = linePath +
     ` L${scaleX(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)}` +
     ` L${scaleX(0).toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
@@ -450,24 +458,24 @@ function MovementsChart({ history, summary }) {
     gridLines.push({ y: scaleY(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toLocaleString() });
   }
 
-  // Volume bars from balance deltas (green up, red down)
-  const volumeBars = data.slice(1).map((d, i) => {
-    const delta = Math.abs(d.balance - data[i].balance);
+  // Volume bars
+  const volumeBars = [];
+  for (let i = 1; i < data.length; i++) {
+    const delta = Math.abs(data[i].balance - data[i - 1].balance);
     const maxDelta = yRange * 0.3 || 1;
     const barH = Math.max(2, (delta / maxDelta) * (chartH * 0.25));
-    const isUp = d.balance >= data[i].balance;
-    return {
-      x: scaleX(i + 1) - (chartW / data.length) * 0.4,
+    const isUp = data[i].balance >= data[i - 1].balance;
+    volumeBars.push({
+      x: scaleX(i) - (chartW / data.length) * 0.4,
       y: PAD.top + chartH - barH,
       width: Math.max(2, (chartW / data.length) * 0.6),
       height: barH,
       isUp,
-    };
-  });
+    });
+  }
 
-  // X-axis labels
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
-  const gradientId = `balGrad-${trend}`;
+  const gradientId = `movGrad-${trend}`;
 
   return (
     <div style={{ padding: '4px 4px 0' }}>
@@ -479,7 +487,7 @@ function MovementsChart({ history, summary }) {
         <span style={{ color: trendColor, fontSize: '13px' }}>
           {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
         </span>
-        <span style={{ color: '#555', fontSize: '11px' }}>30D</span>
+        <span style={{ color: '#555', fontSize: '11px' }}>TODAY</span>
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
         <svg
@@ -495,7 +503,6 @@ function MovementsChart({ history, summary }) {
             </linearGradient>
           </defs>
 
-          {/* Grid lines */}
           {gridLines.map((g, i) => (
             <g key={i}>
               <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className="chart-grid-line" />
@@ -505,7 +512,6 @@ function MovementsChart({ history, summary }) {
             </g>
           ))}
 
-          {/* Volume bars */}
           {volumeBars.map((bar, i) => (
             <rect key={i}
               x={bar.x} y={bar.y} width={bar.width} height={bar.height}
@@ -513,17 +519,13 @@ function MovementsChart({ history, summary }) {
             />
           ))}
 
-          {/* Fill under line */}
           <path d={fillPath} fill={`url(#${gradientId})`} className="chart-fill" />
-
-          {/* Balance line */}
           <path d={linePath} fill="none" stroke={trendColor} strokeWidth={2} />
 
-          {/* X-axis labels */}
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
               <text key={i} x={scaleX(i)} y={H - 4} fill="#555" fontSize="10" fontFamily="VT323, monospace" textAnchor="middle">
-                {d.date}
+                {d.label}
               </text>
             ) : null
           ))}
@@ -549,7 +551,7 @@ function MovementsTab({ movements, history, summary, loading }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <MovementsChart history={history} summary={summary} />
+      <MovementsChart movements={movements} summary={summary} />
       <div className="win-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
       <table className="win-table">
         <thead>
