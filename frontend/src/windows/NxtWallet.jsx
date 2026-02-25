@@ -320,7 +320,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
       </div>
 
       {/* ── Mini Balance Chart ── */}
-      <MiniBalanceChart history={history} />
+      <MiniBalanceChart history={history} summary={summary} />
 
       {/* ── Section 2: Claim $NXT (On-Chain) ── */}
       <ClaimSection wallet={wallet} tokenIds={tokenIds} />
@@ -329,13 +329,27 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
 }
 
 // ── Mini Balance Chart (for Balance tab) ──────────────────
-function MiniBalanceChart({ history }) {
-  if (!history || history.length < 2) return null;
-
-  const data = history.map(s => ({
+function MiniBalanceChart({ history, summary }) {
+  let rawData = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
     balance: Number(s.balance_claimable),
   }));
+
+  if (rawData.length < 2 && summary) {
+    const today = formatDate(new Date().toISOString().slice(0, 10));
+    const bal = Number(summary.balance_claimable) || 0;
+    if (rawData.length === 1) {
+      rawData = rawData[0].date === today
+        ? [{ date: 'Yesterday', balance: rawData[0].balance }, rawData[0]]
+        : [rawData[0], { date: today, balance: bal }];
+    } else {
+      rawData = [{ date: 'Yesterday', balance: bal }, { date: today, balance: bal }];
+    }
+  }
+
+  if (rawData.length < 2) return null;
+
+  const data = rawData;
 
   const firstVal = data[0]?.balance || 0;
   const lastVal = data[data.length - 1]?.balance || 0;
@@ -377,13 +391,28 @@ function MiniBalanceChart({ history }) {
 }
 
 // ── Movements Chart (ProtocolChart-style SVG) ────────────
-function MovementsChart({ history }) {
-  if (!history || history.length < 2) return null;
-
-  const data = history.map(s => ({
+function MovementsChart({ history, summary }) {
+  // Build data from snapshots, falling back to current balance if < 2 points
+  let rawData = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
     balance: Number(s.balance_claimable),
   }));
+
+  if (rawData.length < 2 && summary) {
+    const today = formatDate(new Date().toISOString().slice(0, 10));
+    const bal = Number(summary.balance_claimable) || 0;
+    if (rawData.length === 1) {
+      rawData = rawData[0].date === today
+        ? [{ date: 'Yesterday', balance: rawData[0].balance }, rawData[0]]
+        : [rawData[0], { date: today, balance: bal }];
+    } else {
+      rawData = [{ date: 'Yesterday', balance: bal }, { date: today, balance: bal }];
+    }
+  }
+
+  if (rawData.length < 2) return null;
+
+  const data = rawData;
 
   const firstVal = data[0].balance;
   const lastVal = data[data.length - 1].balance;
@@ -505,7 +534,7 @@ function MovementsChart({ history }) {
 }
 
 // ── Movements Tab ─────────────────────────────────────────
-function MovementsTab({ movements, history, loading }) {
+function MovementsTab({ movements, history, summary, loading }) {
   if (loading) return <div className="loading">Loading movements...</div>;
   if (!movements || movements.length === 0) return (
     <div style={{
@@ -520,7 +549,7 @@ function MovementsTab({ movements, history, loading }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <MovementsChart history={history} />
+      <MovementsChart history={history} summary={summary} />
       <div className="win-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
       <table className="win-table">
         <thead>
@@ -693,7 +722,7 @@ export default function NxtWallet() {
             history={history}
           />
         )}
-        {tab === 'movements' && <MovementsTab movements={movements} history={history} loading={loadingMovements} />}
+        {tab === 'movements' && <MovementsTab movements={movements} history={history} summary={summary} loading={loadingMovements} />}
       </div>
 
       {/* Status bar */}
