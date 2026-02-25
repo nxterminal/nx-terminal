@@ -93,14 +93,16 @@ async def get_wallet_summary(wallet: str):
     )
 
     total_claimable = sum(d["balance_nxt"] for d in devs)
+    total_spent = sum(d["total_spent"] for d in devs)
+    total_earned = sum(d["total_earned"] for d in devs)
     total_devs = len(devs)
     salary_per_day = total_devs * 200  # net amount player receives
 
     return {
         "wallet_address": player["wallet_address"],
         "balance_claimable": total_claimable,
-        "balance_claimed": player["balance_claimed"],
-        "balance_total_earned": player["balance_total_earned"],
+        "balance_claimed": total_spent,
+        "balance_total_earned": total_earned,
         "total_devs": total_devs,
         "salary_per_day": salary_per_day,
         "devs": devs,

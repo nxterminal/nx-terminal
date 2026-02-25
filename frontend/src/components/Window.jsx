@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 export default function Window({
   id,
@@ -18,6 +18,18 @@ export default function Window({
   statusBar,
 }) {
   const dragRef = useRef(null);
+  const dragListenersRef = useRef(null);
+
+  // Cleanup drag listeners if component unmounts mid-drag
+  useEffect(() => {
+    return () => {
+      if (dragListenersRef.current) {
+        document.removeEventListener('mousemove', dragListenersRef.current.move);
+        document.removeEventListener('mouseup', dragListenersRef.current.up);
+        dragListenersRef.current = null;
+      }
+    };
+  }, []);
 
   const handleMouseDown = useCallback((e) => {
     if (maximized) return;
@@ -35,10 +47,12 @@ export default function Window({
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      dragListenersRef.current = null;
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    dragListenersRef.current = { move: handleMouseMove, up: handleMouseUp };
   }, [position, maximized, onFocus, onMove]);
 
   if (minimized) return null;

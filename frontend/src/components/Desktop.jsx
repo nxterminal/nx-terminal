@@ -115,13 +115,19 @@ export default function Desktop() {
     return () => window.removeEventListener('nx-screensaver-changed', handleChange);
   }, []);
 
+  // Use refs so the idle listener doesn't need to be re-added on state changes
+  const ssTimeoutRef = useRef(ssTimeout);
+  const showScreensaverRef = useRef(showScreensaver);
+  useEffect(() => { ssTimeoutRef.current = ssTimeout; }, [ssTimeout]);
+  useEffect(() => { showScreensaverRef.current = showScreensaver; }, [showScreensaver]);
+
   const resetIdleTimer = useCallback(() => {
-    if (showScreensaver) return;
+    if (showScreensaverRef.current) return;
     clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       setShowScreensaver(true);
-    }, ssTimeout);
-  }, [showScreensaver, ssTimeout]);
+    }, ssTimeoutRef.current);
+  }, []);
 
   useEffect(() => {
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
@@ -183,7 +189,7 @@ export default function Desktop() {
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
-      {showScreensaver && <Screensaver onDismiss={() => setShowScreensaver(false)} />}
+      {showScreensaver && <Screensaver onDismiss={() => { setShowScreensaver(false); showScreensaverRef.current = false; resetIdleTimer(); }} />}
 
       <Taskbar
         windows={windows}
