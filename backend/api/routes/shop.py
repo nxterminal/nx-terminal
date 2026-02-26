@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.rate_limit import shop_limiter
 
 router = APIRouter()
 
@@ -65,6 +66,9 @@ class PurchaseRequest(BaseModel):
 @router.post("/buy")
 async def buy_item(req: PurchaseRequest):
     """Buy a shop item for your dev. Cost deducted from dev's $NXT balance."""
+    # Rate limit: 1 purchase per wallet per 5s
+    shop_limiter.check(f"wallet:{req.player_address.lower()}")
+
     item = SHOP_ITEMS.get(req.item_id)
     if not item:
         raise HTTPException(404, "Item not found")

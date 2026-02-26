@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_all, get_db
+from backend.api.rate_limit import chat_limiter
 
 router = APIRouter()
 
@@ -52,6 +53,9 @@ async def get_world_chat(limit: int = Query(50, le=200)):
 @router.post("/world")
 async def post_world_chat(msg: ChatMessage):
     """Post a message to world chat."""
+    # Rate limit: 1 message per wallet per 10s
+    chat_limiter.check(f"wallet:{msg.player_address.lower()}")
+
     if len(msg.message) > 280:
         raise HTTPException(400, "Message too long (max 280 chars)")
 

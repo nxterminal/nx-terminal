@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.rate_limit import prompt_limiter
 
 router = APIRouter()
 
@@ -19,6 +20,9 @@ async def send_prompt(req: PromptRequest):
     Send a prompt to your dev. The engine picks it up on the next cycle.
     Validates ownership before accepting.
     """
+    # Rate limit: 1 prompt per dev per 60s
+    prompt_limiter.check(f"dev:{req.dev_id}")
+
     # Verify ownership
     dev = fetch_one(
         "SELECT token_id, owner_address, name FROM devs WHERE token_id = %s",
