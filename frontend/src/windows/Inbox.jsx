@@ -58,7 +58,16 @@ Good luck, Commander.
 function loadSavedEmails() {
   const saved = localStorage.getItem('nx-inbox-emails');
   if (saved) {
-    try { return JSON.parse(saved); } catch {}
+    try {
+      const parsed = JSON.parse(saved);
+      // Filter out old notification emails (notifId means it came from backend).
+      // Only keep the static welcome email.
+      const filtered = parsed.filter(e => e.id === WELCOME_EMAIL.id || !e.notifId);
+      if (filtered.length !== parsed.length) {
+        localStorage.setItem('nx-inbox-emails', JSON.stringify(filtered));
+      }
+      return filtered;
+    } catch {}
   }
   return null;
 }
@@ -157,6 +166,15 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     setSelectedIds(new Set());
   };
 
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    const updated = emails.filter(e => !selectedIds.has(e.id));
+    setEmails(updated);
+    saveEmails(updated);
+    setSelectedIds(new Set());
+    if (selectedId && selectedIds.has(selectedId)) setSelectedId(null);
+  };
+
   const selectedUnreadCount = [...selectedIds].filter(id => {
     const e = emails.find(em => em.id === id);
     return e && !e.read;
@@ -201,6 +219,13 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                   style={{ fontSize: '10px', padding: '1px 8px' }}
                 >
                   Mark as Read ({selectedUnreadCount})
+                </button>
+                <button
+                  className="win-btn"
+                  onClick={handleDeleteSelected}
+                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                >
+                  Delete ({selectedIds.size})
                 </button>
                 <button
                   className="win-btn"

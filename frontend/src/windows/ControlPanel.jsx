@@ -28,7 +28,7 @@ const TIMEOUT_OPTIONS = [
   { value: 900000, label: '15 minutes' },
 ];
 
-const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
+const AGENT_LIST = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Genius', 'F1'];
 const AGENT_CDN = 'https://cdn.jsdelivr.net/gh/smore-inc/clippy.js@master/agents';
 
 // Frame sizes for each agent sprite sheet (width x height of a single frame)
@@ -38,7 +38,6 @@ const AGENT_FRAME = {
   Rover: [128, 100],
   Links: [124, 110],
   Peedy: [124, 113],
-  Bonzi: [200, 160],
   Genius: [124, 93],
   F1: [124, 93],
 };
