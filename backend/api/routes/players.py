@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 
 router = APIRouter()
 
@@ -18,6 +18,9 @@ class RegisterRequest(BaseModel):
 @router.post("/register")
 async def register_player(req: RegisterRequest):
     """Register a new player after quiz. Called before first mint."""
+    # Validate wallet format
+    addr = validate_wallet(req.wallet_address)
+
     valid_corps = ["CLOSED_AI", "MISANTHROPIC", "SHALLOW_MIND", "ZUCK_LABS", "Y_AI", "MISTRIAL_SYSTEMS"]
     if req.corporation not in valid_corps:
         raise HTTPException(400, f"Invalid corporation. Must be one of: {valid_corps}")
@@ -25,7 +28,7 @@ async def register_player(req: RegisterRequest):
     # Check if already registered
     existing = fetch_one(
         "SELECT wallet_address FROM players WHERE wallet_address = %s",
-        (req.wallet_address.lower(),)
+        (addr,)
     )
     if existing:
         raise HTTPException(409, "Player already registered")
@@ -35,7 +38,7 @@ async def register_player(req: RegisterRequest):
             cur.execute(
                 """INSERT INTO players (wallet_address, display_name, corporation)
                    VALUES (%s, %s, %s) RETURNING wallet_address, corporation, created_at""",
-                (req.wallet_address.lower(), req.display_name, req.corporation)
+                (addr, req.display_name, req.corporation)
             )
             result = cur.fetchone()
 

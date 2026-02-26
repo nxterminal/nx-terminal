@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 from backend.api.rate_limit import prompt_limiter
 
 router = APIRouter()
@@ -20,6 +20,9 @@ async def send_prompt(req: PromptRequest):
     Send a prompt to your dev. The engine picks it up on the next cycle.
     Validates ownership before accepting.
     """
+    # Validate wallet format
+    addr = validate_wallet(req.player_address)
+
     # Rate limit: 1 prompt per dev per 60s
     prompt_limiter.check(f"dev:{req.dev_id}")
 
@@ -30,7 +33,7 @@ async def send_prompt(req: PromptRequest):
     )
     if not dev:
         raise HTTPException(404, "Dev not found")
-    if dev["owner_address"].lower() != req.player_address.lower():
+    if dev["owner_address"].lower() != addr:
         raise HTTPException(403, "You don't own this dev")
 
     # Check for pending prompts (max 1 at a time)
@@ -47,7 +50,7 @@ async def send_prompt(req: PromptRequest):
             cur.execute(
                 """INSERT INTO player_prompts (player_address, dev_id, prompt_text)
                    VALUES (%s, %s, %s) RETURNING id, created_at""",
-                (req.player_address.lower(), req.dev_id, req.prompt_text[:500])
+                (addr, req.dev_id, req.prompt_text[:500])
             )
             result = cur.fetchone()
 

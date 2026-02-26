@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 from backend.api.rate_limit import shop_limiter
 
 router = APIRouter()
@@ -66,8 +66,11 @@ class PurchaseRequest(BaseModel):
 @router.post("/buy")
 async def buy_item(req: PurchaseRequest):
     """Buy a shop item for your dev. Cost deducted from dev's $NXT balance."""
+    # Validate wallet format
+    addr = validate_wallet(req.player_address)
+
     # Rate limit: 1 purchase per wallet per 5s
-    shop_limiter.check(f"wallet:{req.player_address.lower()}")
+    shop_limiter.check(f"wallet:{addr}")
 
     item = SHOP_ITEMS.get(req.item_id)
     if not item:
@@ -80,7 +83,7 @@ async def buy_item(req: PurchaseRequest):
     )
     if not dev:
         raise HTTPException(404, "Dev not found")
-    if dev["owner_address"].lower() != req.player_address.lower():
+    if dev["owner_address"].lower() != addr:
         raise HTTPException(403, "You don't own this dev")
     if dev["balance_nxt"] < item["cost_nxt"]:
         raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
@@ -95,7 +98,7 @@ async def buy_item(req: PurchaseRequest):
             cur.execute(
                 """INSERT INTO shop_purchases (player_address, target_dev_id, item_type, item_effect, nxt_cost)
                    VALUES (%s, %s, %s, %s::jsonb, %s) RETURNING id""",
-                (req.player_address.lower(), req.target_dev_id, req.item_id,
+                (addr, req.target_dev_id, req.item_id,
                  str(item["effect"]).replace("'", '"'), item["cost_nxt"])
             )
             purchase = cur.fetchone()
