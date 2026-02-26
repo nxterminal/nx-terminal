@@ -99,11 +99,11 @@ WORK_ETHIC_POOL = ["Grinder", "Lazy", "Balanced", "Obsessed", "Steady"]
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 
-def get_db():
+def get_db(autocommit=False):
     parsed = urlparse(DATABASE_URL)
     sslmode = "require" if "render.com" in (parsed.hostname or "") else "prefer"
     conn = psycopg2.connect(DATABASE_URL, sslmode=sslmode)
-    conn.autocommit = True
+    conn.autocommit = autocommit
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(f"SET search_path TO {DB_SCHEMA}")
     return conn, cur
@@ -367,38 +367,39 @@ def run_listener():
     log.info(f"Poll interval: {POLL_INTERVAL}s")
     log.info("=" * 50)
 
-    # Get starting block
-    conn, cur = get_db()
-
-    # Check if we have a saved last_block
-    cur.execute("SELECT value FROM simulation_state WHERE key = 'listener_last_block'")
-    row = cur.fetchone()
-    if row and row["value"]:
+    # Get starting block (with retry loop instead of recursion)
+    last_block = None
+    while last_block is None:
+        conn, cur = get_db(autocommit=True)
         try:
-            last_block = json.loads(row["value"])
-        except (json.JSONDecodeError, TypeError):
-            last_block = None
-    else:
-        last_block = None
+            # Check if we have a saved last_block
+            cur.execute("SELECT value FROM simulation_state WHERE key = 'listener_last_block'")
+            row = cur.fetchone()
+            if row and row["value"]:
+                try:
+                    last_block = json.loads(row["value"])
+                except (json.JSONDecodeError, TypeError):
+                    last_block = None
+            else:
+                last_block = None
 
-    if last_block is None:
-        # Start from current block (won't catch past mints)
-        last_block = get_latest_block()
-        if last_block is None:
-            log.error("Cannot get latest block from RPC. Retrying in 10s...")
+            if last_block is None:
+                # Start from current block (won't catch past mints)
+                last_block = get_latest_block()
+                if last_block is None:
+                    log.error("Cannot get latest block from RPC. Retrying in 10s...")
+                    time.sleep(10)
+                    continue
+
+                # Save initial block
+                cur.execute(
+                    "INSERT INTO simulation_state (key, value) VALUES ('listener_last_block', %s) "
+                    "ON CONFLICT (key) DO UPDATE SET value = %s",
+                    (json.dumps(last_block), json.dumps(last_block))
+                )
+                log.info(f"Starting from block {last_block}")
+        finally:
             conn.close()
-            time.sleep(10)
-            return run_listener()
-
-        # Save initial block
-        cur.execute(
-            "INSERT INTO simulation_state (key, value) VALUES ('listener_last_block', %s) "
-            "ON CONFLICT (key) DO UPDATE SET value = %s",
-            (json.dumps(last_block), json.dumps(last_block))
-        )
-        log.info(f"Starting from block {last_block}")
-
-    conn.close()
 
     log.info(f"Listening from block {last_block}")
 
@@ -421,48 +422,54 @@ def run_listener():
 
             if events:
                 conn, cur = get_db()
-                minted_count = 0
+                try:
+                    minted_count = 0
 
-                for event in events:
-                    owner, token_id = parse_mint_event(event)
-                    if owner is None or token_id is None:
-                        continue
+                    for event in events:
+                        owner, token_id = parse_mint_event(event)
+                        if owner is None or token_id is None:
+                            continue
 
-                    if dev_exists(cur, token_id):
-                        log.info(f"Dev #{token_id} already exists, skipping")
-                        continue
+                        if dev_exists(cur, token_id):
+                            log.info(f"Dev #{token_id} already exists, skipping")
+                            continue
 
-                    # Generate and insert dev procedurally (no IPFS dependency)
-                    try:
-                        dev_data = generate_dev_data(token_id, cur)
-                        ensure_player(cur, owner, dev_data["corporation"])
-                        insert_dev(cur, token_id, owner, dev_data)
-                        insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
-                        minted_count += 1
-                        log.info(f"Minted dev #{token_id}: {dev_data['name']} "
-                                 f"({dev_data['archetype']} @ {dev_data['corporation']}, "
-                                 f"{dev_data['rarity']})")
-                    except Exception as e:
-                        log.error(f"Failed to insert dev #{token_id}: {e}")
-                        continue
+                        # Generate and insert dev procedurally (no IPFS dependency)
+                        try:
+                            dev_data = generate_dev_data(token_id, cur)
+                            ensure_player(cur, owner, dev_data["corporation"])
+                            insert_dev(cur, token_id, owner, dev_data)
+                            insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
+                            conn.commit()
+                            minted_count += 1
+                            log.info(f"Minted dev #{token_id}: {dev_data['name']} "
+                                     f"({dev_data['archetype']} @ {dev_data['corporation']}, "
+                                     f"{dev_data['rarity']})")
+                        except Exception as e:
+                            conn.rollback()
+                            log.error(f"Failed to insert dev #{token_id}: {e}")
+                            continue
 
-                if minted_count > 0:
-                    # Update simulation state
-                    cur.execute("SELECT COUNT(*) as total FROM devs")
-                    total = cur.fetchone()["total"]
-                    update_simulation_state(cur, total)
-                    log.info(f"Processed {minted_count} new mints. Total devs: {total}")
-
-                conn.close()
+                    if minted_count > 0:
+                        # Update simulation state
+                        cur.execute("SELECT COUNT(*) as total FROM devs")
+                        total = cur.fetchone()["total"]
+                        update_simulation_state(cur, total)
+                        conn.commit()
+                        log.info(f"Processed {minted_count} new mints. Total devs: {total}")
+                finally:
+                    conn.close()
 
             # Update last processed block
             last_block = to_block
-            conn2, cur2 = get_db()
-            cur2.execute(
-                "UPDATE simulation_state SET value = %s WHERE key = 'listener_last_block'",
-                (json.dumps(last_block),)
-            )
-            conn2.close()
+            conn2, cur2 = get_db(autocommit=True)
+            try:
+                cur2.execute(
+                    "UPDATE simulation_state SET value = %s WHERE key = 'listener_last_block'",
+                    (json.dumps(last_block),)
+                )
+            finally:
+                conn2.close()
 
         except Exception as e:
             log.error(f"Listener error: {e}")

@@ -102,7 +102,8 @@ async def get_wallet_summary(wallet: str):
     return {
         "wallet_address": player["wallet_address"],
         "balance_claimable": total_claimable,
-        "balance_claimed": total_spent,
+        "balance_claimed": player["balance_claimed"] or 0,
+        "total_spent": total_spent,
         "balance_total_earned": total_earned,
         "total_devs": total_devs,
         "salary_per_day": salary_per_day,

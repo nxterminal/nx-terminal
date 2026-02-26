@@ -15,6 +15,7 @@ const MOVEMENT_ICONS = {
   sell: '+',
   spend: '-',
   shop: '-',
+  claim: '-',
 };
 
 // Colors safe for grey (win-panel) backgrounds
@@ -23,6 +24,7 @@ const MOVEMENT_COLORS_GREY = {
   sell: 'var(--green-on-grey)',
   spend: 'var(--red-on-grey)',
   shop: 'var(--red-on-grey)',
+  claim: 'var(--red-on-grey)',
 };
 
 function formatNumber(n) {
@@ -254,7 +256,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
           <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>
-            {formatNumber(summary.balance_claimed || 0)}
+            {formatNumber(summary.total_spent || summary.balance_claimed || 0)}
           </div>
           <div className="stat-label">$NXT</div>
         </div>
