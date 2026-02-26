@@ -76,21 +76,23 @@ async def buy_item(req: PurchaseRequest):
     if not item:
         raise HTTPException(404, "Item not found")
 
-    # Verify ownership
-    dev = fetch_one(
-        "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id = %s",
-        (req.target_dev_id,)
-    )
-    if not dev:
-        raise HTTPException(404, "Dev not found")
-    if dev["owner_address"].lower() != addr:
-        raise HTTPException(403, "You don't own this dev")
-    if dev["balance_nxt"] < item["cost_nxt"]:
-        raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
-
-    # Deduct cost and record purchase
+    # All checks and mutations inside one transaction with row lock
     with get_db() as conn:
         with conn.cursor() as cur:
+            # Lock the dev row to prevent concurrent balance manipulation
+            cur.execute(
+                "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id = %s FOR UPDATE",
+                (req.target_dev_id,)
+            )
+            dev = cur.fetchone()
+            if not dev:
+                raise HTTPException(404, "Dev not found")
+            if dev["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own this dev")
+            if dev["balance_nxt"] < item["cost_nxt"]:
+                raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
+
+            # Deduct cost
             cur.execute(
                 "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s WHERE token_id = %s",
                 (item["cost_nxt"], item["cost_nxt"], req.target_dev_id)
