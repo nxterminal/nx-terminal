@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
+from backend.api.rate_limit import shop_limiter
 
 router = APIRouter()
 
@@ -65,25 +66,33 @@ class PurchaseRequest(BaseModel):
 @router.post("/buy")
 async def buy_item(req: PurchaseRequest):
     """Buy a shop item for your dev. Cost deducted from dev's $NXT balance."""
+    # Validate wallet format
+    addr = validate_wallet(req.player_address)
+
+    # Rate limit: 1 purchase per wallet per 5s
+    shop_limiter.check(f"wallet:{addr}")
+
     item = SHOP_ITEMS.get(req.item_id)
     if not item:
         raise HTTPException(404, "Item not found")
 
-    # Verify ownership
-    dev = fetch_one(
-        "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id = %s",
-        (req.target_dev_id,)
-    )
-    if not dev:
-        raise HTTPException(404, "Dev not found")
-    if dev["owner_address"].lower() != req.player_address.lower():
-        raise HTTPException(403, "You don't own this dev")
-    if dev["balance_nxt"] < item["cost_nxt"]:
-        raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
-
-    # Deduct cost and record purchase
+    # All checks and mutations inside one transaction with row lock
     with get_db() as conn:
         with conn.cursor() as cur:
+            # Lock the dev row to prevent concurrent balance manipulation
+            cur.execute(
+                "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id = %s FOR UPDATE",
+                (req.target_dev_id,)
+            )
+            dev = cur.fetchone()
+            if not dev:
+                raise HTTPException(404, "Dev not found")
+            if dev["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own this dev")
+            if dev["balance_nxt"] < item["cost_nxt"]:
+                raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
+
+            # Deduct cost
             cur.execute(
                 "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s WHERE token_id = %s",
                 (item["cost_nxt"], item["cost_nxt"], req.target_dev_id)
@@ -91,7 +100,7 @@ async def buy_item(req: PurchaseRequest):
             cur.execute(
                 """INSERT INTO shop_purchases (player_address, target_dev_id, item_type, item_effect, nxt_cost)
                    VALUES (%s, %s, %s, %s::jsonb, %s) RETURNING id""",
-                (req.player_address.lower(), req.target_dev_id, req.item_id,
+                (addr, req.target_dev_id, req.item_id,
                  str(item["effect"]).replace("'", '"'), item["cost_nxt"])
             )
             purchase = cur.fetchone()

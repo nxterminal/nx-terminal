@@ -3,6 +3,7 @@ NX TERMINAL — Shared dependencies (DB pool, Redis, broadcast)
 """
 
 import os
+import re
 import json
 import logging
 from urllib.parse import urlparse
@@ -163,6 +164,21 @@ def execute(query, params=None):
 # ============================================================
 
 ws_clients = set()
+
+
+# ============================================================
+# WALLET VALIDATION
+# ============================================================
+
+_WALLET_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+
+
+def validate_wallet(addr: str) -> str:
+    """Validate Ethereum address format and return lowercased. Raises HTTPException on bad input."""
+    from fastapi import HTTPException
+    if not addr or not _WALLET_RE.match(addr):
+        raise HTTPException(400, "Invalid wallet address format (expected 0x + 40 hex chars)")
+    return addr.lower()
 
 
 async def broadcast(event_type, data):

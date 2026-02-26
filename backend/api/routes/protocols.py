@@ -15,24 +15,24 @@ async def list_protocols(
     sort: str = Query("value", pattern="^(value|investors|recent|quality)$"),
 ):
     """List protocols from the market."""
-    sort_map = {
+    SORT_MAP = {
         "value": "p.value DESC",
         "investors": "p.investor_count DESC",
         "recent": "p.created_at DESC",
         "quality": "p.code_quality DESC",
     }
-    order = sort_map.get(sort, "p.value DESC")
+    order = SORT_MAP[sort]  # safe — FastAPI regex guarantees key exists
 
     return fetch_all(
-        f"""SELECT p.id, p.name, p.description, p.code_quality, p.value,
-                   p.investor_count, p.total_invested, p.status,
-                   d.name as creator_name, d.archetype as creator_archetype,
-                   p.created_at
-            FROM protocols p
-            JOIN devs d ON d.token_id = p.creator_dev_id
-            WHERE p.status = %s
-            ORDER BY {order}
-            LIMIT %s OFFSET %s""",
+        "SELECT p.id, p.name, p.description, p.code_quality, p.value,"
+        "       p.investor_count, p.total_invested, p.status,"
+        "       d.name as creator_name, d.archetype as creator_archetype,"
+        "       p.created_at"
+        " FROM protocols p"
+        " JOIN devs d ON d.token_id = p.creator_dev_id"
+        " WHERE p.status = %s"
+        " ORDER BY " + order +
+        " LIMIT %s OFFSET %s",
         (status, limit, offset)
     )
 

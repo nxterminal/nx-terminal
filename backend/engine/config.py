@@ -2,6 +2,7 @@
 NX TERMINAL: PROTOCOL WARS — Configuration
 """
 
+import math
 import os
 
 # ============================================================
@@ -41,7 +42,7 @@ CYCLE_OWNER_OFFLINE = 3600       # 60 min — owner offline >24h
 # ============================================================
 SALARY_PER_DAY = 200             # $NXT the player RECEIVES clean per dev per day
 SALARY_INTERVAL_HOURS = 1        # Pay every hour (more frequent = more dynamic game)
-SALARY_PER_INTERVAL = SALARY_PER_DAY // (24 // SALARY_INTERVAL_HOURS)  # ~8 $NXT per hour
+SALARY_PER_INTERVAL = math.ceil(SALARY_PER_DAY / (24 / SALARY_INTERVAL_HOURS))  # 9 $NXT per hour (216/day, rounds up to avoid loss)
 
 CLAIM_FEE_BPS = 1000             # 10% — mirrors on-chain constant, reference only
 

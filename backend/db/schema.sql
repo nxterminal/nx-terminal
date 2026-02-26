@@ -94,6 +94,32 @@ CREATE TABLE devs (
     special_effect      VARCHAR(20),
     ipfs_hash           VARCHAR(66),
 
+    -- Personality traits (set at mint by listener)
+    alignment           VARCHAR(20),
+    risk_level          VARCHAR(20),
+    social_style        VARCHAR(20),
+    coding_style        VARCHAR(20),
+    work_ethic          VARCHAR(20),
+
+    -- Base stats (set at mint, 15-95 range)
+    stat_coding         SMALLINT NOT NULL DEFAULT 50,
+    stat_hacking        SMALLINT NOT NULL DEFAULT 50,
+    stat_trading        SMALLINT NOT NULL DEFAULT 50,
+    stat_social         SMALLINT NOT NULL DEFAULT 50,
+    stat_endurance      SMALLINT NOT NULL DEFAULT 50,
+    stat_luck           SMALLINT NOT NULL DEFAULT 50,
+
+    -- Visual traits (for NFT metadata)
+    skin                VARCHAR(30),
+    clothing            VARCHAR(30),
+    vibe                VARCHAR(30),
+    glow                VARCHAR(30),
+    hair_style          VARCHAR(30),
+    hair_color          VARCHAR(30),
+    facial              VARCHAR(30),
+    headgear            VARCHAR(30),
+    extra               VARCHAR(30),
+
     -- Estado dinámico (cambia cada ciclo)
     energy              SMALLINT NOT NULL DEFAULT 10 CHECK (energy >= 0 AND energy <= 15),
     max_energy          SMALLINT NOT NULL DEFAULT 10,
@@ -103,9 +129,19 @@ CREATE TABLE devs (
     reputation          INTEGER NOT NULL DEFAULT 50,
     status              dev_status_enum NOT NULL DEFAULT 'active',
 
+    -- Flavor counters (updated by engine)
+    day                 INTEGER NOT NULL DEFAULT 1,
+    coffee_count        INTEGER NOT NULL DEFAULT 0,
+    lines_of_code       INTEGER NOT NULL DEFAULT 0,
+    bugs_shipped        INTEGER NOT NULL DEFAULT 0,
+    hours_since_sleep   INTEGER NOT NULL DEFAULT 0,
+
     -- Stats acumulados
     protocols_created   INTEGER NOT NULL DEFAULT 0,
+    protocols_failed    INTEGER NOT NULL DEFAULT 0,
     ais_created         INTEGER NOT NULL DEFAULT 0,
+    devs_burned         INTEGER NOT NULL DEFAULT 0,
+    biggest_win         TEXT,
     total_earned        BIGINT NOT NULL DEFAULT 0,
     total_spent         BIGINT NOT NULL DEFAULT 0,
     total_invested      BIGINT NOT NULL DEFAULT 0,

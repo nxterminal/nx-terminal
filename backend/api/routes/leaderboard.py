@@ -12,20 +12,23 @@ async def get_leaderboard(
     limit: int = Query(50, le=200),
 ):
     """Get leaderboard. Uses materialized view for speed."""
-    order = "rank_balance" if sort == "balance" else "rank_reputation"
+    VIEW_ORDER = {"balance": "rank_balance", "reputation": "rank_reputation"}
+    FALLBACK_ORDER = {"balance": "balance_nxt DESC", "reputation": "reputation DESC"}
+    order = VIEW_ORDER[sort]          # safe — FastAPI regex guarantees key exists
+    fallback = FALLBACK_ORDER[sort]
+
     try:
         return fetch_all(
-            f"SELECT * FROM leaderboard ORDER BY {order} ASC LIMIT %s",
+            "SELECT * FROM leaderboard ORDER BY " + order + " ASC LIMIT %s",
             (limit,)
         )
     except Exception:
         # Fallback if materialized view not refreshed yet
-        order_col = "balance_nxt DESC" if sort == "balance" else "reputation DESC"
         return fetch_all(
-            f"""SELECT token_id, name, archetype, corporation, owner_address,
-                       balance_nxt, reputation, protocols_created, ais_created, rarity_tier
-                FROM devs WHERE status = 'active'
-                ORDER BY {order_col} LIMIT %s""",
+            "SELECT token_id, name, archetype, corporation, owner_address,"
+            "       balance_nxt, reputation, protocols_created, ais_created, rarity_tier"
+            " FROM devs WHERE status = 'active'"
+            " ORDER BY " + fallback + " LIMIT %s",
             (limit,)
         )
 

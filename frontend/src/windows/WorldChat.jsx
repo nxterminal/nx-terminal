@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
 
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
@@ -7,16 +8,10 @@ function formatTime(dateStr) {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function formatAddress(addr) {
-  if (!addr) return '';
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
 export default function WorldChat() {
+  const { address, isConnected, isConnecting, connect, displayAddress } = useWallet();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [connecting, setConnecting] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -52,37 +47,11 @@ export default function WorldChat() {
     }
   }, [messages]);
 
-  const connectWallet = async () => {
-    if (walletAddress) return;
-    if (!window.ethereum) {
-      setError('No wallet detected. Install MetaMask or a compatible wallet extension.');
-      setTimeout(() => setError(null), 5000);
-      return;
-    }
-    setConnecting(true);
-    setError(null);
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-      }
-    } catch (err) {
-      if (err.code === 4001) {
-        setError('Connection rejected by user.');
-      } else {
-        setError('Failed to connect wallet.');
-      }
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setConnecting(false);
-    }
-  };
-
   const sendMessage = async () => {
-    if (!walletAddress || !inputValue.trim() || sending) return;
+    if (!address || !inputValue.trim() || sending) return;
     setSending(true);
     try {
-      await api.postWorldChat(walletAddress, formatAddress(walletAddress), inputValue.trim());
+      await api.postWorldChat(address, displayAddress, inputValue.trim());
       setInputValue('');
       const d = await api.getWorldChat();
       const msgs = Array.isArray(d) ? d : d.messages || [];
@@ -115,20 +84,20 @@ export default function WorldChat() {
         gap: '8px',
         borderBottom: '1px solid var(--border-dark)',
       }}>
-        {walletAddress ? (
+        {isConnected ? (
           <span style={{ color: 'var(--terminal-green)' }}>
-            Connected: {formatAddress(walletAddress)}
+            Connected: {displayAddress}
           </span>
         ) : (
           <>
             <span>[!] Wallet not connected -- Chat is read-only</span>
             <button
               className="win-btn"
-              onClick={connectWallet}
-              disabled={connecting}
+              onClick={connect}
+              disabled={isConnecting}
               style={{ fontSize: '10px', padding: '2px 8px' }}
             >
-              {connecting ? 'Connecting...' : 'Connect Wallet'}
+              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
             </button>
           </>
         )}
@@ -155,7 +124,7 @@ export default function WorldChat() {
           <div style={{ color: 'var(--terminal-amber)' }}>Loading world chat...</div>
         ) : messages.length === 0 ? (
           <div style={{ color: 'var(--terminal-amber)', padding: '8px' }}>
-            No messages yet. {walletAddress ? 'Be the first to say something.' : 'Connect your wallet to start chatting.'}
+            No messages yet. {isConnected ? 'Be the first to say something.' : 'Connect your wallet to start chatting.'}
           </div>
         ) : (
           messages.map((msg, i) => (
@@ -183,8 +152,8 @@ export default function WorldChat() {
       }}>
         <input
           type="text"
-          placeholder={walletAddress ? 'Type a message...' : 'Connect wallet to chat...'}
-          disabled={!walletAddress || sending}
+          placeholder={isConnected ? 'Type a message...' : 'Connect wallet to chat...'}
+          disabled={!isConnected || sending}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -196,13 +165,13 @@ export default function WorldChat() {
             fontSize: '11px',
             border: 'none',
             boxShadow: 'inset -1px -1px 0 var(--border-light), inset 1px 1px 0 var(--border-dark)',
-            cursor: walletAddress ? 'text' : 'not-allowed',
+            cursor: isConnected ? 'text' : 'not-allowed',
           }}
         />
         <button
           className="win-btn"
           onClick={sendMessage}
-          disabled={!walletAddress || !inputValue.trim() || sending}
+          disabled={!isConnected || !inputValue.trim() || sending}
           style={{ fontSize: '10px' }}
         >
           {sending ? 'Sending...' : 'Send'}

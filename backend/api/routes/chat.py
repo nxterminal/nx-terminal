@@ -3,7 +3,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from backend.api.deps import fetch_all, get_db
+from backend.api.deps import fetch_all, get_db, validate_wallet
+from backend.api.rate_limit import chat_limiter
 
 router = APIRouter()
 
@@ -52,6 +53,12 @@ async def get_world_chat(limit: int = Query(50, le=200)):
 @router.post("/world")
 async def post_world_chat(msg: ChatMessage):
     """Post a message to world chat."""
+    # Validate wallet format
+    addr = validate_wallet(msg.player_address)
+
+    # Rate limit: 1 message per wallet per 10s
+    chat_limiter.check(f"wallet:{addr}")
+
     if len(msg.message) > 280:
         raise HTTPException(400, "Message too long (max 280 chars)")
 
@@ -60,7 +67,7 @@ async def post_world_chat(msg: ChatMessage):
             cur.execute(
                 """INSERT INTO world_chat (player_address, display_name, message)
                    VALUES (%s, %s, %s) RETURNING id, created_at""",
-                (msg.player_address.lower(), msg.display_name[:30], msg.message[:280])
+                (addr, msg.display_name[:30], msg.message[:280])
             )
             result = cur.fetchone()
 
