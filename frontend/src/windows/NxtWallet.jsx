@@ -320,8 +320,8 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         </table>
       </div>
 
-      {/* ── Mini Balance Chart ── */}
-      <MiniBalanceChart history={history} summary={summary} />
+      {/* ── Balance Bar Chart ── */}
+      <BalanceBarChart history={history} summary={summary} />
 
       {/* ── Section 2: Claim $NXT (On-Chain) ── */}
       <ClaimSection wallet={wallet} tokenIds={tokenIds} />
@@ -329,33 +329,23 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
   );
 }
 
-// ── Mini Balance Chart (for Balance tab) — Native SVG ─────
-function MiniBalanceChart({ history, summary }) {
-  let rawData = (history || []).map(s => ({
+// ── Balance Bar Chart (for Balance tab) — Native SVG ─────
+function BalanceBarChart({ history, summary }) {
+  const data = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
     balance: Number(s.balance_claimable),
   }));
 
-  if (rawData.length < 2 && summary) {
-    const today = formatDate(new Date().toISOString().slice(0, 10));
-    const bal = Number(summary.balance_claimable) || 0;
-    if (rawData.length === 1) {
-      rawData = rawData[0].date === today
-        ? [{ date: 'Yesterday', balance: rawData[0].balance }, rawData[0]]
-        : [rawData[0], { date: today, balance: bal }];
-    } else {
-      rawData = [{ date: 'Yesterday', balance: bal }, { date: today, balance: bal }];
-    }
+  // Need at least 1 data point
+  if (data.length === 0 && summary) {
+    data.push({ date: formatDate(new Date().toISOString().slice(0, 10)), balance: Number(summary.balance_claimable) || 0 });
   }
+  if (data.length === 0) return null;
 
-  if (rawData.length < 2) return null;
-
-  const data = rawData;
-
-  const firstVal = data[0]?.balance || 0;
-  const lastVal = data[data.length - 1]?.balance || 0;
+  const firstVal = data[0].balance;
+  const lastVal = data[data.length - 1].balance;
   const trend = lastVal >= firstVal ? 'up' : 'down';
-  const lineColor = trend === 'up' ? '#00c853' : '#ef5350';
+  const barColor = trend === 'up' ? '#00c853' : '#ef5350';
 
   const W = 600, H = 120;
   const PAD = { top: 8, right: 8, bottom: 18, left: 45 };
@@ -363,24 +353,15 @@ function MiniBalanceChart({ history, summary }) {
   const chartH = H - PAD.top - PAD.bottom;
 
   const yValues = data.map(d => d.balance);
-  const rawMin = Math.min(...yValues);
-  const rawMax = Math.max(...yValues);
-  // Ensure at least 5% visual range so flat data doesn't collapse
-  const yPadding = rawMax === rawMin ? Math.max(rawMax * 0.1, 100) : (rawMax - rawMin) * 0.1;
-  const yMin = rawMin - yPadding;
-  const yMax = rawMax + yPadding;
+  const yMax = Math.max(...yValues) || 1;
+  const yMin = 0;
   const yRange = yMax - yMin || 1;
 
-  const scaleX = (i) => PAD.left + (i / (data.length - 1)) * chartW;
+  const barGap = 1;
+  const barWidth = Math.max(2, (chartW / data.length) - barGap);
+
   const scaleY = (val) => PAD.top + chartH - ((val - yMin) / yRange) * chartH;
-
-  const linePath = data
-    .map((d, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i).toFixed(1)},${scaleY(d.balance).toFixed(1)}`)
-    .join(' ');
-
-  const fillPath = linePath +
-    ` L${scaleX(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)}` +
-    ` L${scaleX(0).toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
+  const baselineY = PAD.top + chartH;
 
   // Grid lines (3 horizontal)
   const gridLines = [];
@@ -389,7 +370,6 @@ function MiniBalanceChart({ history, summary }) {
     gridLines.push({ y: scaleY(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toLocaleString() });
   }
 
-  // X-axis labels (max 6)
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
 
   return (
@@ -401,19 +381,12 @@ function MiniBalanceChart({ history, summary }) {
         background: 'var(--terminal-bg)',
       }}>
         <span style={{ color: 'var(--terminal-green)' }}>{'>'} Balance (30d)</span>
-        <span style={{ color: lineColor }}>
+        <span style={{ color: barColor }}>
           {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
         </span>
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          <defs>
-            <linearGradient id="miniBalGradSvg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={lineColor} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-
           {gridLines.map((g, i) => (
             <g key={i}>
               <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className="chart-grid-line" />
@@ -423,12 +396,26 @@ function MiniBalanceChart({ history, summary }) {
             </g>
           ))}
 
-          <path d={fillPath} fill="url(#miniBalGradSvg)" className="chart-fill" />
-          <path d={linePath} fill="none" stroke={lineColor} strokeWidth={1.5} />
+          {data.map((d, i) => {
+            const x = PAD.left + (i / data.length) * chartW + barGap / 2;
+            const barH = Math.max(1, ((d.balance - yMin) / yRange) * chartH);
+            const opacity = 0.5 + 0.5 * (i / (data.length - 1 || 1));
+            return (
+              <rect key={i}
+                x={x} y={baselineY - barH}
+                width={barWidth} height={barH}
+                fill={barColor} opacity={opacity}
+                rx={1}
+              />
+            );
+          })}
 
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
-              <text key={i} x={scaleX(i)} y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle">
+              <text key={i}
+                x={PAD.left + (i / data.length) * chartW + barWidth / 2}
+                y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle"
+              >
                 {d.date}
               </text>
             ) : null
@@ -439,148 +426,98 @@ function MiniBalanceChart({ history, summary }) {
   );
 }
 
-// ── Movements Chart (intraday — today only) ───────────────
+// ── Movements Bar Chart (income/expense bars) ───────────────
 function MovementsChart({ movements, summary }) {
-  // Build intraday balance data from today's movements only.
   if (!movements || movements.length === 0 || !summary) return null;
 
-  const currentBal = Number(summary.balance_claimable) || 0;
   const now = new Date();
   const todayStr = now.toDateString();
 
-  // Filter to only today's movements
-  const todayMovements = movements.filter(m => {
-    const ts = new Date(m.timestamp);
-    return ts.toDateString() === todayStr;
-  });
+  // Filter to today's movements, reversed to chronological
+  const todayMovements = movements
+    .filter(m => new Date(m.timestamp).toDateString() === todayStr)
+    .reverse();
 
   if (todayMovements.length === 0) return null;
 
-  // Walk backwards from current balance using today's movements
-  const points = [{ time: now, balance: currentBal }];
-  let bal = currentBal;
-  for (const m of todayMovements) {
-    bal -= (Number(m.amount) || 0); // reverse the movement
-    points.push({ time: new Date(m.timestamp), balance: Math.max(0, bal) });
-  }
-  points.reverse(); // chronological
+  const data = todayMovements.map(m => ({
+    label: new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    amount: Number(m.amount) || 0,
+    type: m.type,
+  }));
 
-  if (points.length < 2) return null;
+  const totalIn = data.filter(d => d.amount > 0).reduce((s, d) => s + d.amount, 0);
+  const totalOut = data.filter(d => d.amount < 0).reduce((s, d) => s + Math.abs(d.amount), 0);
 
-  const fmtLabel = (d) => {
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const data = points.map(p => ({ label: fmtLabel(p.time), balance: p.balance }));
-
-  const firstVal = data[0].balance;
-  const lastVal = data[data.length - 1].balance;
-  const trend = lastVal >= firstVal ? 'up' : 'down';
-  const trendColor = trend === 'up' ? '#33ff33' : '#ff4444';
-
-  const W = 600, H = 140;
-  const PAD = { top: 10, right: 10, bottom: 20, left: 50 };
+  const W = 600, H = 130;
+  const PAD = { top: 8, right: 8, bottom: 18, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
 
-  const yValues = data.map(d => d.balance);
-  const rawYMin = Math.min(...yValues);
-  const rawYMax = Math.max(...yValues);
-  const yPadding = rawYMax === rawYMin ? Math.max(rawYMax * 0.1, 100) : (rawYMax - rawYMin) * 0.1;
-  const yMin = rawYMin - yPadding;
-  const yMax = rawYMax + yPadding;
-  const yRange = yMax - yMin || 1;
+  const absValues = data.map(d => Math.abs(d.amount));
+  const maxAbs = Math.max(...absValues) || 1;
+  const halfH = chartH / 2;
+  const midY = PAD.top + halfH;
 
-  const scaleX = (i) => PAD.left + (i / (data.length - 1)) * chartW;
-  const scaleY = (val) => PAD.top + chartH - ((val - yMin) / yRange) * chartH;
-
-  // Stepped line path (horizontal then vertical — shows discrete transactions)
-  let linePath = `M${scaleX(0).toFixed(1)},${scaleY(data[0].balance).toFixed(1)}`;
-  for (let i = 1; i < data.length; i++) {
-    // horizontal to new X at old Y, then vertical to new Y
-    linePath += ` L${scaleX(i).toFixed(1)},${scaleY(data[i - 1].balance).toFixed(1)}`;
-    linePath += ` L${scaleX(i).toFixed(1)},${scaleY(data[i].balance).toFixed(1)}`;
-  }
-
-  // Fill path
-  const fillPath = linePath +
-    ` L${scaleX(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)}` +
-    ` L${scaleX(0).toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
-
-  // Grid lines (4 horizontal)
-  const gridLines = [];
-  for (let i = 0; i <= 4; i++) {
-    const val = yMin + (yRange * i) / 4;
-    gridLines.push({ y: scaleY(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toLocaleString() });
-  }
-
-  // Volume bars
-  const volumeBars = [];
-  for (let i = 1; i < data.length; i++) {
-    const delta = Math.abs(data[i].balance - data[i - 1].balance);
-    const maxDelta = yRange * 0.3 || 1;
-    const barH = Math.max(2, (delta / maxDelta) * (chartH * 0.25));
-    const isUp = data[i].balance >= data[i - 1].balance;
-    volumeBars.push({
-      x: scaleX(i) - (chartW / data.length) * 0.4,
-      y: PAD.top + chartH - barH,
-      width: Math.max(2, (chartW / data.length) * 0.6),
-      height: barH,
-      isUp,
-    });
-  }
+  const barGap = 2;
+  const barWidth = Math.max(4, (chartW / data.length) - barGap);
 
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
-  const gradientId = `movGrad-${trend}`;
 
   return (
     <div style={{ padding: '4px 4px 0' }}>
-      <div className="chart-header">
-        <span style={{ color: '#888', fontSize: '13px' }}>$NXT Balance</span>
-        <span style={{ color: '#e0e0e0', fontSize: '16px', fontWeight: 'bold' }}>
-          {formatNumber(lastVal)}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '4px 8px',
+        fontFamily: "'VT323', monospace", fontSize: '13px',
+      }}>
+        <span style={{ color: '#888' }}>Today's Activity</span>
+        <span>
+          <span style={{ color: '#00c853' }}>{'\u25B2'} +{formatNumber(totalIn)}</span>
+          {' '}
+          <span style={{ color: '#ef5350' }}>{'\u25BC'} -{formatNumber(totalOut)}</span>
         </span>
-        <span style={{ color: trendColor, fontSize: '13px' }}>
-          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
-        </span>
-        <span style={{ color: '#555', fontSize: '11px' }}>TODAY</span>
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          width="100%"
-          height={H}
-          style={{ display: 'block' }}
-        >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={trendColor} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={trendColor} stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
+          {/* Center line (zero axis) */}
+          <line x1={PAD.left} y1={midY} x2={W - PAD.right} y2={midY} stroke="#555" strokeWidth={0.5} />
 
-          {gridLines.map((g, i) => (
-            <g key={i}>
-              <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className="chart-grid-line" />
-              <text x={PAD.left - 4} y={g.y + 3} fill="#555" fontSize="10" fontFamily="VT323, monospace" textAnchor="end">
-                {g.label}
-              </text>
-            </g>
-          ))}
+          {/* Grid labels */}
+          <text x={PAD.left - 4} y={PAD.top + 4} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            +{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
+          </text>
+          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            0
+          </text>
+          <text x={PAD.left - 4} y={PAD.top + chartH + 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            -{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
+          </text>
 
-          {volumeBars.map((bar, i) => (
-            <rect key={i}
-              x={bar.x} y={bar.y} width={bar.width} height={bar.height}
-              fill={bar.isUp ? '#1a3a1a' : '#3a1a1a'} opacity={0.5}
-            />
-          ))}
+          {/* Bars */}
+          {data.map((d, i) => {
+            const x = PAD.left + (i / data.length) * chartW + barGap / 2;
+            const isPositive = d.amount >= 0;
+            const barH = Math.max(2, (Math.abs(d.amount) / maxAbs) * halfH);
+            const y = isPositive ? midY - barH : midY;
+            const fill = isPositive ? '#00c853' : '#ef5350';
+            return (
+              <rect key={i}
+                x={x} y={y}
+                width={barWidth} height={barH}
+                fill={fill} opacity={0.75}
+                rx={1}
+              />
+            );
+          })}
 
-          <path d={fillPath} fill={`url(#${gradientId})`} className="chart-fill" />
-          <path d={linePath} fill="none" stroke={trendColor} strokeWidth={2} />
-
+          {/* X-axis labels */}
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
-              <text key={i} x={scaleX(i)} y={H - 4} fill="#555" fontSize="10" fontFamily="VT323, monospace" textAnchor="middle">
+              <text key={i}
+                x={PAD.left + (i / data.length) * chartW + barWidth / 2}
+                y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle"
+              >
                 {d.label}
               </text>
             ) : null

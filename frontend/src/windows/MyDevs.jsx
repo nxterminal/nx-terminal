@@ -379,29 +379,29 @@ function ActivityTab({ walletAddress, devs }) {
               const devName = devNameMap[a.dev_id] || (a.dev_id ? `Dev #${a.dev_id}` : '');
               return (
                 <div key={a.id || i} style={{
-                  padding: '4px 0',
-                  borderBottom: '1px solid var(--border-dark, #222)',
-                  fontSize: '12px',
-                  lineHeight: 1.4,
+                  padding: '5px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  lineHeight: 1.5,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: '13px', flexShrink: 0 }}>
+                    <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: '15px', flexShrink: 0 }}>
                       {icon}
                     </span>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '11px' }}>
+                    <span style={{ fontWeight: 'bold', color: '#e0e0e0', fontSize: '13px', fontFamily: "'VT323', monospace" }}>
                       {a.title}
                     </span>
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted, #666)', fontSize: '10px', flexShrink: 0 }}>
+                    <span style={{ marginLeft: 'auto', color: '#999', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
                       {formatActivityTime(a.created_at)}
                     </span>
                   </div>
                   <div style={{
-                    fontSize: '10px', color: 'var(--text-secondary, #999)',
+                    fontSize: '12px', color: '#bbb',
                     marginTop: '2px', paddingLeft: '30px',
                     whiteSpace: 'pre-wrap',
+                    fontFamily: "'VT323', monospace",
                   }}>
                     {devName && (
-                      <span style={{ color: 'var(--cyan-on-grey, #006677)', fontWeight: 'bold' }}>
+                      <span style={{ color: 'var(--terminal-cyan, #00ffff)', fontWeight: 'bold' }}>
                         {devName}:{' '}
                       </span>
                     )}
