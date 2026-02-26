@@ -36,26 +36,26 @@ async def list_devs(
 
     where = " AND ".join(conditions)
 
-    sort_map = {
+    SORT_MAP = {
         "balance": "balance_nxt DESC",
         "reputation": "reputation DESC",
         "protocols": "protocols_created DESC",
         "recent": "minted_at DESC",
     }
-    order = sort_map.get(sort, "balance_nxt DESC")
+    order = SORT_MAP[sort]  # safe — FastAPI regex guarantees key exists
 
     params.extend([limit, offset])
     rows = fetch_all(
-        f"""SELECT token_id, name, archetype, corporation, rarity_tier,
-                   owner_address, energy, max_energy, mood, location,
-                   balance_nxt, reputation, status,
-                   protocols_created, ais_created,
-                   last_action_type, last_action_detail, last_action_at,
-                   last_message, minted_at
-            FROM devs
-            WHERE {where}
-            ORDER BY {order}
-            LIMIT %s OFFSET %s""",
+        "SELECT token_id, name, archetype, corporation, rarity_tier,"
+        "       owner_address, energy, max_energy, mood, location,"
+        "       balance_nxt, reputation, status,"
+        "       protocols_created, ais_created,"
+        "       last_action_type, last_action_detail, last_action_at,"
+        "       last_message, minted_at"
+        " FROM devs"
+        " WHERE " + where +
+        " ORDER BY " + order +
+        " LIMIT %s OFFSET %s",
         params
     )
     return rows
