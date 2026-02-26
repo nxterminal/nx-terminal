@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 const TODAY = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -73,7 +73,6 @@ function getSenderGroup(from) {
   if (!from) return 'Other';
   const name = from.split('<')[0].trim();
   if (name === 'NX Terminal System') return 'NX Terminal System';
-  if (name === 'NX System') return 'NX System';
   return 'Other';
 }
 
@@ -88,50 +87,6 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const [selectedId, setSelectedId] = useState(null);
   const [activeGroup, setActiveGroup] = useState('All');
   const [selectedIds, setSelectedIds] = useState(new Set());
-
-  const addEmail = useCallback((email) => {
-    setEmails(prev => {
-      if (prev.some(e => e.id === email.id)) return prev;
-      const updated = [email, ...prev];
-      saveEmails(updated);
-      return updated;
-    });
-  }, []);
-
-  // Dev action notification types — these go to My Devs > Activity, not Inbox
-  const DEV_ACTION_NOTIF_TYPES = ['protocol_created', 'ai_created', 'invest', 'sell', 'code_review'];
-
-  // Fetch real notifications from API and merge into inbox
-  // Excludes dev action notifications (those are shown in My Devs > Activity)
-  useEffect(() => {
-    const walletAddress = walletProp || window.ethereum?.selectedAddress;
-    if (!walletAddress) return;
-    const fetchNotifications = () => {
-      api.getNotifications(walletAddress)
-        .then(notifs => {
-          if (!Array.isArray(notifs) || notifs.length === 0) return;
-          notifs
-            .filter(n => !DEV_ACTION_NOTIF_TYPES.includes(n.type))
-            .forEach(n => {
-              const email = {
-                id: `notif-${n.id}`,
-                from: `NX System <${n.type}@nxterminal.corp>`,
-                subject: n.title,
-                date: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                read: n.read,
-                body: n.body,
-                notifId: n.id,
-              };
-              addEmail(email);
-            });
-        })
-        .catch(() => {});
-    };
-
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [walletProp, addEmail]);
 
   const unreadCount = emails.filter(e => !e.read).length;
 
