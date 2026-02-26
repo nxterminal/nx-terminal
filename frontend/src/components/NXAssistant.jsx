@@ -15,7 +15,7 @@ window.CLIPPY_CDN = CLIPPY_CDN;
 // Ensure window.clippy is set — JSONP agent scripts call window.clippy.ready()
 window.clippy = clippy;
 
-const AGENTS = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Bonzi', 'Genius', 'F1'];
+const AGENTS = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Genius', 'F1'];
 
 const WELCOME_MSG = 'Welcome to NX Terminal! I see you haven\'t connected your wallet yet. Open Mint/Hire Devs and click "Connect Wallet to Mint" to get started!';
 

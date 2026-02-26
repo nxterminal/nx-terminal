@@ -307,7 +307,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
                 <td>#{dev.token_id}</td>
                 <td style={{ fontWeight: 'bold' }}>{dev.name}</td>
                 <td>
-                  <span style={{ color: RARITY_COLORS[dev.rarity_tier] || '#c0c0c0' }}>
+                  <span style={{ color: RARITY_COLORS[(dev.rarity_tier || '').toLowerCase()] || 'var(--text-primary)' }}>
                     {dev.rarity_tier}
                   </span>
                 </td>
