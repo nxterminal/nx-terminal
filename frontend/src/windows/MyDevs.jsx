@@ -387,7 +387,7 @@ function ActivityTab({ walletAddress, devs }) {
                     <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: '15px', flexShrink: 0 }}>
                       {icon}
                     </span>
-                    <span style={{ fontWeight: 'bold', color: '#e0e0e0', fontSize: '13px', fontFamily: "'VT323', monospace" }}>
+                    <span style={{ fontWeight: 'bold', color, fontSize: '13px', fontFamily: "'VT323', monospace" }}>
                       {a.title}
                     </span>
                     <span style={{ marginLeft: 'auto', color: '#999', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>

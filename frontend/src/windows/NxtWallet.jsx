@@ -329,47 +329,43 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
   );
 }
 
-// ── Balance Bar Chart (for Balance tab) — Native SVG ─────
+// ── Balance Delta Chart (daily change — same style as Movements) ─────
 function BalanceBarChart({ history, summary }) {
-  const data = (history || []).map(s => ({
+  const raw = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
     balance: Number(s.balance_claimable),
   }));
 
-  // Need at least 1 data point
-  if (data.length === 0 && summary) {
-    data.push({ date: formatDate(new Date().toISOString().slice(0, 10)), balance: Number(summary.balance_claimable) || 0 });
+  if (raw.length === 0 && summary) {
+    raw.push({ date: formatDate(new Date().toISOString().slice(0, 10)), balance: Number(summary.balance_claimable) || 0 });
+  }
+  if (raw.length < 2) return null;
+
+  // Compute daily deltas
+  const data = [];
+  for (let i = 1; i < raw.length; i++) {
+    data.push({
+      date: raw[i].date,
+      delta: raw[i].balance - raw[i - 1].balance,
+    });
   }
   if (data.length === 0) return null;
 
-  const firstVal = data[0].balance;
-  const lastVal = data[data.length - 1].balance;
-  const trend = lastVal >= firstVal ? 'up' : 'down';
-  const barColor = trend === 'up' ? '#00c853' : '#ef5350';
+  const totalUp = data.filter(d => d.delta > 0).reduce((s, d) => s + d.delta, 0);
+  const totalDown = data.filter(d => d.delta < 0).reduce((s, d) => s + Math.abs(d.delta), 0);
 
   const W = 600, H = 120;
-  const PAD = { top: 8, right: 8, bottom: 18, left: 45 };
+  const PAD = { top: 8, right: 8, bottom: 18, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
 
-  const yValues = data.map(d => d.balance);
-  const yMax = Math.max(...yValues) || 1;
-  const yMin = 0;
-  const yRange = yMax - yMin || 1;
+  const absValues = data.map(d => Math.abs(d.delta));
+  const maxAbs = Math.max(...absValues) || 1;
+  const halfH = chartH / 2;
+  const midY = PAD.top + halfH;
 
   const barGap = 1;
   const barWidth = Math.max(2, (chartW / data.length) - barGap);
-
-  const scaleY = (val) => PAD.top + chartH - ((val - yMin) / yRange) * chartH;
-  const baselineY = PAD.top + chartH;
-
-  // Grid lines (3 horizontal)
-  const gridLines = [];
-  for (let i = 0; i <= 3; i++) {
-    const val = yMin + (yRange * i) / 3;
-    gridLines.push({ y: scaleY(val), label: val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toLocaleString() });
-  }
-
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
 
   return (
@@ -380,36 +376,47 @@ function BalanceBarChart({ history, summary }) {
         fontFamily: "'VT323', monospace", fontSize: '13px',
         background: 'var(--terminal-bg)',
       }}>
-        <span style={{ color: 'var(--terminal-green)' }}>{'>'} Balance (30d)</span>
-        <span style={{ color: barColor }}>
-          {trend === 'up' ? '\u25B2' : '\u25BC'} {formatNumber(Math.abs(lastVal - firstVal))}
+        <span style={{ color: 'var(--terminal-green)' }}>{'>'} Daily Change (30d)</span>
+        <span>
+          <span style={{ color: '#00c853' }}>{'\u25B2'} +{formatNumber(totalUp)}</span>
+          {' '}
+          <span style={{ color: '#ef5350' }}>{'\u25BC'} -{formatNumber(totalDown)}</span>
         </span>
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          {gridLines.map((g, i) => (
-            <g key={i}>
-              <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className="chart-grid-line" />
-              <text x={PAD.left - 4} y={g.y + 3} fill="#555" fontSize="10" fontFamily="VT323, monospace" textAnchor="end">
-                {g.label}
-              </text>
-            </g>
-          ))}
+          {/* Center line (zero axis) */}
+          <line x1={PAD.left} y1={midY} x2={W - PAD.right} y2={midY} stroke="#555" strokeWidth={0.5} />
 
+          {/* Grid labels */}
+          <text x={PAD.left - 4} y={PAD.top + 4} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            +{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
+          </text>
+          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            0
+          </text>
+          <text x={PAD.left - 4} y={PAD.top + chartH + 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
+            -{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
+          </text>
+
+          {/* Bars */}
           {data.map((d, i) => {
             const x = PAD.left + (i / data.length) * chartW + barGap / 2;
-            const barH = Math.max(1, ((d.balance - yMin) / yRange) * chartH);
-            const opacity = 0.5 + 0.5 * (i / (data.length - 1 || 1));
+            const isPositive = d.delta >= 0;
+            const barH = Math.max(2, (Math.abs(d.delta) / maxAbs) * halfH);
+            const y = isPositive ? midY - barH : midY;
+            const fill = isPositive ? '#00c853' : '#ef5350';
             return (
               <rect key={i}
-                x={x} y={baselineY - barH}
+                x={x} y={y}
                 width={barWidth} height={barH}
-                fill={barColor} opacity={opacity}
+                fill={fill} opacity={0.75}
                 rx={1}
               />
             );
           })}
 
+          {/* X-axis labels */}
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
               <text key={i}
