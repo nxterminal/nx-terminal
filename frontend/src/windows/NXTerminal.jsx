@@ -3,7 +3,7 @@ import { useReadContract } from 'wagmi';
 import { SIMULATION_CONFIG } from '../config/gameConfig';
 import {
   NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS,
-  TREASURY_ADDRESS, EXPLORER_BASE,
+  EXPLORER_BASE,
 } from '../services/contract';
 
 const EXPLORER_ADDR = (addr) => `${EXPLORER_BASE}/address/${addr}`;
@@ -144,6 +144,48 @@ function Lore() {
   );
 }
 
+function Links() {
+  const linkStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    marginBottom: '8px',
+    border: '1px solid var(--border-dark)',
+    background: 'rgba(0,0,0,0.3)',
+    cursor: 'pointer',
+  };
+  const linkText = { color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '14px' };
+  const labelStyle = { color: 'var(--terminal-green)', fontSize: '13px', minWidth: '70px' };
+
+  return (
+    <div className="terminal" style={{ height: '100%', overflow: 'auto', padding: '12px' }}>
+      <div style={{ color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '12px' }}>
+        {'> OFFICIAL LINKS'}
+      </div>
+
+      <a href="https://x.com/nxterminal" target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, textDecoration: 'none' }}>
+        <span style={labelStyle}>X / Twitter</span>
+        <span style={linkText}>x.com/nxterminal</span>
+      </a>
+
+      <a href="https://discord.gg/Z5BBUQ3hcj" target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, textDecoration: 'none' }}>
+        <span style={labelStyle}>Discord</span>
+        <span style={linkText}>discord.gg/Z5BBUQ3hcj</span>
+      </a>
+
+      <a href="https://nxterminal.xyz" target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, textDecoration: 'none' }}>
+        <span style={labelStyle}>Web</span>
+        <span style={linkText}>nxterminal.xyz</span>
+      </a>
+
+      <div style={{ color: '#808080', marginTop: '16px', fontSize: '11px', textAlign: 'center' }}>
+        NX Terminal Corp. (C) 1998. Connect with us.
+      </div>
+    </div>
+  );
+}
+
 function ExplorerLink({ address, label }) {
   return (
     <a
@@ -203,15 +245,6 @@ function Contracts() {
         <ExplorerLink address={NXT_TOKEN_ADDRESS} />
       </div>
 
-      {/* Treasury */}
-      <div style={section}>
-        <div style={{ ...line, color: 'var(--terminal-amber)', fontWeight: 'bold' }}>
-          Treasury
-        </div>
-        <div style={line}><span style={label}>Address: </span><span style={addr}>{TREASURY_ADDRESS}</span></div>
-        <ExplorerLink address={TREASURY_ADDRESS} />
-      </div>
-
       {/* Tokenomics */}
       <div style={divider}>
         {'TOKENOMICS'}<br />
@@ -249,12 +282,14 @@ export default function NXTerminal() {
         <button className={`win-tab${tab === 'handbook' ? ' active' : ''}`} onClick={() => setTab('handbook')}>Employee Handbook</button>
         <button className={`win-tab${tab === 'lore' ? ' active' : ''}`} onClick={() => setTab('lore')}>Lore</button>
         <button className={`win-tab${tab === 'contracts' ? ' active' : ''}`} onClick={() => setTab('contracts')}>Contracts</button>
+        <button className={`win-tab${tab === 'links' ? ' active' : ''}`} onClick={() => setTab('links')}>Links</button>
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'system' && <SystemInfo />}
         {tab === 'handbook' && <Handbook />}
         {tab === 'lore' && <Lore />}
         {tab === 'contracts' && <Contracts />}
+        {tab === 'links' && <Links />}
       </div>
     </div>
   );
