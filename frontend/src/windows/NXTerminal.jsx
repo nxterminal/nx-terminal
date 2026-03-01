@@ -281,14 +281,13 @@ export default function NXTerminal() {
         <button className={`win-tab${tab === 'system' ? ' active' : ''}`} onClick={() => setTab('system')}>System Info</button>
         <button className={`win-tab${tab === 'handbook' ? ' active' : ''}`} onClick={() => setTab('handbook')}>Employee Handbook</button>
         <button className={`win-tab${tab === 'lore' ? ' active' : ''}`} onClick={() => setTab('lore')}>Lore</button>
-        <button className={`win-tab${tab === 'contracts' ? ' active' : ''}`} onClick={() => setTab('contracts')}>Contracts</button>
+        {/* Contracts tab disabled — pending network migration */}
         <button className={`win-tab${tab === 'links' ? ' active' : ''}`} onClick={() => setTab('links')}>Links</button>
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'system' && <SystemInfo />}
         {tab === 'handbook' && <Handbook />}
         {tab === 'lore' && <Lore />}
-        {tab === 'contracts' && <Contracts />}
         {tab === 'links' && <Links />}
       </div>
     </div>
