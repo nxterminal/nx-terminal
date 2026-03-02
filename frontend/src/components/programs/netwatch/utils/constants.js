@@ -1,12 +1,15 @@
-// ═══ PHAROS TESTNET CONFIGURATION ═══
+// ═══ PHAROS ATLANTIC TESTNET CONFIGURATION ═══
+// ZAN RPC (https://zan.top) can be used as fallback — set VITE_ZAN_RPC_URL env var
+const ZAN_RPC_URL = typeof import.meta !== "undefined" && import.meta.env?.VITE_ZAN_RPC_URL;
+
 export const PHAROS_CONFIG = {
-  RPC_URL: "https://testnet.dplabs-internal.com",
-  RPC_FALLBACK: "https://devnet.dplabs-internal.com",
-  CHAIN_ID: 688688,
+  RPC_URL: "https://atlantic.dplabs-internal.com",
+  RPC_FALLBACK: ZAN_RPC_URL || "https://testnet.dplabs-internal.com",
+  CHAIN_ID: 688689,
   POLL_INTERVAL: 3000,
   MAX_TX_DISPLAY: 15,
   TPS_HISTORY_LENGTH: 40,
-  EXPLORER_URL: "https://testnet.pharosscan.xyz",
+  EXPLORER_URL: "https://atlantic.pharosscan.xyz",
 };
 
 // ═══ PHAROS MAINNET (placeholder — coming after mainnet launch) ═══
@@ -98,7 +101,7 @@ export const BOOT_MESSAGES = [
   { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#888", delay: 200 },
   { text: "", color: "", delay: 400 },
   { text: "Initializing secure connection...", color: "#00ff41", delay: 500 },
-  { text: "Connecting to PHAROS NETWORK [testnet]...", color: "#00ff41", delay: 900 },
+  { text: "Connecting to PHAROS NETWORK [atlantic testnet]...", color: "#00ff41", delay: 900 },
   { text: "RPC endpoint: " + PHAROS_CONFIG.RPC_URL, color: "#888", delay: 1200 },
   { text: "Handshake complete. Chain ID: " + PHAROS_CONFIG.CHAIN_ID, color: "#888", delay: 1600 },
   { text: "", color: "", delay: 1800 },
