@@ -22,47 +22,47 @@ export const PHAROS_MAINNET_CONFIG = {
 
 // ═══ CORPORATION DATA (Protocol Wars lore) ═══
 export const CORPORATIONS = {
-  NexaCorp: {
-    name: "NexaCorp",
-    color: "#00ff41",
+  ClosedAI: {
+    name: "Closed AI",
+    color: "#ffaa00",
     icon: "\u25C6",
     division: "Financial Division",
-    tagline: "Profit is protocol.",
+    tagline: "Promised to be open. Lied.",
   },
-  CipherDyne: {
-    name: "CipherDyne",
-    color: "#00bfff",
+  Misanthropic: {
+    name: "Misanthropic",
+    color: "#33ff33",
     icon: "\u25C8",
-    division: "Security Division",
-    tagline: "Trust nothing. Verify everything.",
+    division: "Safety Division",
+    tagline: "The AI is safe. The employees are not.",
   },
-  OmniVault: {
-    name: "OmniVault",
-    color: "#ff6600",
+  ShallowMind: {
+    name: "Shallow Mind",
+    color: "#4488ff",
     icon: "\u25C9",
-    division: "Storage Division",
-    tagline: "Data is the ultimate asset.",
-  },
-  SynthLabs: {
-    name: "SynthLabs",
-    color: "#ff00ff",
-    icon: "\u25CA",
-    division: "AI Division",
-    tagline: "Efficiency above all.",
-  },
-  VoidFrame: {
-    name: "VoidFrame",
-    color: "#ffff00",
-    icon: "\u25CB",
-    division: "Network Division",
-    tagline: "The network is the battlefield.",
-  },
-  QuantumDyn: {
-    name: "Quantum Dyn",
-    color: "#ff3333",
-    icon: "\u25CE",
     division: "Research Division",
-    tagline: "Break limits. Innovate or die.",
+    tagline: "Infinite compute. Zero shipping.",
+  },
+  ZuckLabs: {
+    name: "Zuck Labs",
+    color: "#00ffff",
+    icon: "\u25CA",
+    division: "Pivot Division",
+    tagline: "Currently pivoting to the concept of pivoting.",
+  },
+  YAI: {
+    name: "Y.AI",
+    color: "#ff4444",
+    icon: "\u25CB",
+    division: "Hype Division",
+    tagline: "Tweets before building. Ships after tweeting.",
+  },
+  MistrialSystems: {
+    name: "Mistrial Systems",
+    color: "#66ddaa",
+    icon: "\u25CE",
+    division: "Open Source Division",
+    tagline: "Open source. When convenient.",
   },
 };
 
