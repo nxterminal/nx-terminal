@@ -16,6 +16,7 @@ import Notepad from '../windows/Notepad';
 import RecycleBin from '../windows/RecycleBin';
 import NxtWallet from '../windows/NxtWallet';
 import CorpWars from '../windows/CorpWars';
+import NetWatch from './programs/netwatch/NetWatch';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -34,6 +35,7 @@ const WINDOW_COMPONENTS = {
   'notepad': Notepad,
   'recycle-bin': RecycleBin,
   'corp-wars': CorpWars,
+  'netwatch': NetWatch,
 };
 
 export default function WindowManager({
@@ -80,6 +82,7 @@ export default function WindowManager({
               devId={w.devId}
               openDevProfile={openDevProfile}
               openWindow={openWindow}
+              onClose={() => closeWindow(w.id)}
             />
           </Window>
         );
