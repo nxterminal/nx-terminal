@@ -56,7 +56,7 @@ export default function NetworkVitals({ data }) {
   return (
     <div className="nw-panel nw-vitals" style={{ padding: '8px 10px', fontFamily: '"IBM Plex Mono", "Courier New", monospace', fontSize: '12px', color: '#00ff41', background: '#000', height: '100%', overflow: 'hidden' }}>
       <div style={{ color: '#888', fontSize: '9px', marginBottom: '8px', letterSpacing: '1px' }}>
-        {'\u2550'.repeat(3)} NETWORK VITALS {'\u2550'.repeat(3)} PHAROS TESTNET {'\u2550'.repeat(3)} CHAIN 688688
+        {'\u2550'.repeat(3)} NETWORK VITALS {'\u2550'.repeat(3)} PHAROS ATLANTIC TESTNET {'\u2550'.repeat(3)} CHAIN 688689
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr', rowGap: '5px', columnGap: '8px', alignItems: 'center' }}>

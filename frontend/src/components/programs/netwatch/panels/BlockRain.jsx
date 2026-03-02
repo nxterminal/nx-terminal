@@ -110,13 +110,24 @@ export default function BlockRain({ blockNumber }) {
         ctx.font = 'bold 13px "VT323", "Courier New", monospace';
         ctx.textAlign = 'center';
 
+        // Semi-transparent background behind text for legibility
+        const textMetrics = ctx.measureText(blockTextRef.current);
+        const bgPadX = 10;
+        const bgPadY = 4;
+        const bgX = w / 2 - textMetrics.width / 2 - bgPadX;
+        const bgY = h - 16 - 10 - bgPadY;
+        const bgW = textMetrics.width + bgPadX * 2;
+        const bgH = 14 + bgPadY * 2;
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.75 * blockTextAlphaRef.current})`;
+        ctx.fillRect(bgX, bgY, bgW, bgH);
+
         const pulse = Math.sin(Date.now() / 100) * 0.5 + 0.5;
         const g = 255;
         const b = Math.round(65 * (1 - pulse) + 255 * pulse);
 
         ctx.fillStyle = `rgba(0, ${g}, ${b}, ${blockTextAlphaRef.current})`;
         ctx.shadowColor = VISUAL.CYAN;
-        ctx.shadowBlur = 10 * blockTextAlphaRef.current;
+        ctx.shadowBlur = 3;
         ctx.fillText(blockTextRef.current, w / 2, h - 16);
         ctx.restore();
 
