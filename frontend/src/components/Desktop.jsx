@@ -23,7 +23,7 @@ const DESKTOP_ICONS = [
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'netwatch', icon: '', label: 'NETWATCH.exe' },
+  { id: 'netwatch', icon: '', label: 'NETWATCH' },
 ];
 
 function getWallpaperStyle() {

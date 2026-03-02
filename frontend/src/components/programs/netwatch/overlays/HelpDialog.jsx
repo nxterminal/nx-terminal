@@ -59,8 +59,9 @@ mainnet mint. Features include:
   with full input data and event logs
 
 \u25C6 Corp Leaderboard \u2014 Real Protocol Wars
-  corporation rankings based on on-chain
-  activity from NX Terminal devs
+  corporation rankings (Closed AI, Misanthropic,
+  Shallow Mind, Zuck Labs, Y.AI, Mistrial Systems)
+  based on on-chain activity from NX Terminal devs
 
 \u25C6 Export Tools \u2014 Download data as CSV
   (with retro "SAVING TO FLOPPY..." animation)
@@ -98,12 +99,12 @@ ${'═'.repeat(45)}
 CORPORATIONS
 ${'═'.repeat(45)}
 
-\u25C6 NexaCorp      Financial Division
-\u25C8 CipherDyne    Security Division
-\u25C9 OmniVault     Storage Division
-\u25CA SynthLabs     AI Division
-\u25CB VoidFrame     Network Division
-\u25CE Quantum Dyn   Research Division`,
+\u25C6 Closed AI       "We promised to be open. Then we got funding."
+\u25C8 Misanthropic    "Safe AI. We hate everyone equally."
+\u25C9 Shallow Mind    "Infinite compute. Zero products."
+\u25CA Zuck Labs       "We'll pivot to whatever is trending."
+\u25CB Y.AI            "Tweets before building."
+\u25CE Mistrial Systems "Open source. When convenient."`,
 };
 
 const LEGEND_COLORS = {
