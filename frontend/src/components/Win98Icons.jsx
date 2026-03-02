@@ -394,6 +394,44 @@ function IconCorpWars({ size = 32 }) {
   );
 }
 
+function IconNetwatch({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="nwMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <radialGradient id="nwRadar" cx="50%" cy="55%" r="50%">
+          <stop offset="0%" stopColor="#003300" />
+          <stop offset="100%" stopColor="#001a00" />
+        </radialGradient>
+      </defs>
+      {/* Monitor body */}
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#nwMonGrad)" stroke="#666" strokeWidth="0.8" />
+      {/* Screen */}
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#nwRadar)" />
+      {/* Radar sweep lines */}
+      <circle cx="16" cy="12" r="3" fill="none" stroke="#00ff41" strokeWidth="0.4" opacity="0.4" />
+      <circle cx="16" cy="12" r="6" fill="none" stroke="#00ff41" strokeWidth="0.3" opacity="0.3" />
+      {/* Radar sweep arm */}
+      <line x1="16" y1="12" x2="22" y2="7" stroke="#00ff41" strokeWidth="0.8" opacity="0.8" />
+      {/* Blips */}
+      <circle cx="12" cy="9" r="0.8" fill="#00ff41" opacity="0.9" />
+      <circle cx="19" cy="14" r="0.6" fill="#00ff41" opacity="0.6" />
+      <circle cx="10" cy="13" r="0.5" fill="#00ff41" opacity="0.5" />
+      {/* Grid lines */}
+      <line x1="16" y1="4" x2="16" y2="19" stroke="#00ff41" strokeWidth="0.2" opacity="0.2" />
+      <line x1="5" y1="12" x2="27" y2="12" stroke="#00ff41" strokeWidth="0.2" opacity="0.2" />
+      {/* Power LED */}
+      <circle cx="16" cy="20.5" r="0.7" fill="#00ff41" />
+      {/* Stand */}
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#nwMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#nwMonGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -411,6 +449,7 @@ export const ICON_MAP = {
   'recycle-bin': IconRecycleBin,
   'nxt-wallet': IconWallet,
   'corp-wars': IconCorpWars,
+  'netwatch': IconNetwatch,
 };
 
 export function Win98Icon({ id, size = 32 }) {
