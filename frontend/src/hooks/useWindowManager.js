@@ -19,6 +19,7 @@ const WINDOW_DEFAULTS = {
   'notepad': { title: 'Notepad', icon: 'N', width: 500, height: 420, x: 160, y: 65 },
   'recycle-bin': { title: 'Recycle Bin', icon: 'x', width: 560, height: 400, x: 170, y: 70 },
   'corp-wars': { title: 'Corporation Wars', icon: '\u2694', width: 720, height: 550, x: 160, y: 50 },
+  'netwatch': { title: 'NETWATCH.exe', icon: '\uD83D\uDCE1', width: 900, height: 550, x: 80, y: 35 },
 };
 
 export function useWindowManager() {

@@ -1,0 +1,127 @@
+// ═══ PHAROS TESTNET CONFIGURATION ═══
+export const PHAROS_CONFIG = {
+  RPC_URL: "https://testnet.dplabs-internal.com",
+  RPC_FALLBACK: "https://devnet.dplabs-internal.com",
+  CHAIN_ID: 688688,
+  POLL_INTERVAL: 3000,
+  MAX_TX_DISPLAY: 15,
+  TPS_HISTORY_LENGTH: 40,
+  EXPLORER_URL: "https://testnet.pharosscan.xyz",
+};
+
+// ═══ PHAROS MAINNET (placeholder — coming after mainnet launch) ═══
+export const PHAROS_MAINNET_CONFIG = {
+  RPC_URL: "https://mainnet.pharos.network/rpc",
+  CHAIN_ID: 688688,
+  POLL_INTERVAL: 2000,
+  EXPLORER_URL: "https://pharosscan.xyz",
+};
+
+// ═══ CORPORATION DATA (Protocol Wars lore) ═══
+export const CORPORATIONS = {
+  NexaCorp: {
+    name: "NexaCorp",
+    color: "#00ff41",
+    icon: "\u25C6",
+    division: "Financial Division",
+    tagline: "Profit is protocol.",
+  },
+  CipherDyne: {
+    name: "CipherDyne",
+    color: "#00bfff",
+    icon: "\u25C8",
+    division: "Security Division",
+    tagline: "Trust nothing. Verify everything.",
+  },
+  OmniVault: {
+    name: "OmniVault",
+    color: "#ff6600",
+    icon: "\u25C9",
+    division: "Storage Division",
+    tagline: "Data is the ultimate asset.",
+  },
+  SynthLabs: {
+    name: "SynthLabs",
+    color: "#ff00ff",
+    icon: "\u25CA",
+    division: "AI Division",
+    tagline: "Efficiency above all.",
+  },
+  VoidFrame: {
+    name: "VoidFrame",
+    color: "#ffff00",
+    icon: "\u25CB",
+    division: "Network Division",
+    tagline: "The network is the battlefield.",
+  },
+  QuantumDyn: {
+    name: "Quantum Dyn",
+    color: "#ff3333",
+    icon: "\u25CE",
+    division: "Research Division",
+    tagline: "Break limits. Innovate or die.",
+  },
+};
+
+// ═══ TRANSACTION TYPE INFERENCE ═══
+export const TX_METHOD_SIGNATURES = {
+  "0xa9059cbb": { name: "Transfer", color: "#00ff41" },
+  "0x095ea7b3": { name: "Approve", color: "#888888" },
+  "0x23b872dd": { name: "TransferFrom", color: "#33ff99" },
+  "0x38ed1739": { name: "Swap", color: "#ffff00" },
+  "0x7ff36ab5": { name: "SwapETH", color: "#ffff00" },
+  "0x18160ddd": { name: "Supply", color: "#00bfff" },
+  "0x40c10f19": { name: "Mint", color: "#ff00ff" },
+  "0x42966c68": { name: "Burn", color: "#ff3333" },
+  "0xa694fc3a": { name: "Stake", color: "#ff6600" },
+  "0x2e1a7d4d": { name: "Withdraw", color: "#ffff00" },
+  "0x3593564c": { name: "Execute", color: "#00bfff" },
+  "0x": { name: "Transfer", color: "#00ff41" },
+  default: { name: "Contract", color: "#aaaaaa" },
+};
+
+// ═══ VISUAL CONFIGURATION ═══
+export const VISUAL = {
+  RAIN_CHARS: "0123456789ABCDEFabcdef{}[]<>:;/\\|=+*&^%$#@!~\u03A3\u03A9\u03C0\u0394",
+  RAIN_FONT_SIZE: 13,
+  GREEN: "#00ff41",
+  CYAN: "#00ffff",
+  YELLOW: "#ffff00",
+  RED: "#ff3333",
+  DIM: "#555555",
+  MUTED: "#888888",
+};
+
+// ═══ BOOT SEQUENCE MESSAGES ═══
+export const BOOT_MESSAGES = [
+  { text: "NETWATCH v1.0 \u2014 Protocol Surveillance Division", color: "#00bfff", delay: 0 },
+  { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#888", delay: 200 },
+  { text: "", color: "", delay: 400 },
+  { text: "Initializing secure connection...", color: "#00ff41", delay: 500 },
+  { text: "Connecting to PHAROS NETWORK [testnet]...", color: "#00ff41", delay: 900 },
+  { text: "RPC endpoint: " + PHAROS_CONFIG.RPC_URL, color: "#888", delay: 1200 },
+  { text: "Handshake complete. Chain ID: " + PHAROS_CONFIG.CHAIN_ID, color: "#888", delay: 1600 },
+  { text: "", color: "", delay: 1800 },
+  { text: "Loading surveillance modules...", color: "#00ff41", delay: 2000 },
+  { text: "  [OK] Block monitor", color: "#aaa", delay: 2200 },
+  { text: "  [OK] Transaction analyzer", color: "#aaa", delay: 2400 },
+  { text: "  [OK] Network vitals", color: "#aaa", delay: 2600 },
+  { text: "  [OK] Corp activity tracker", color: "#aaa", delay: 2800 },
+  { text: "  [OK] CRT display driver", color: "#aaa", delay: 3000 },
+  { text: "", color: "", delay: 3200 },
+  { text: "All systems operational.", color: "#00ff41", delay: 3400 },
+  { text: "CLEARANCE LEVEL: OBSERVER", color: "#ffff00", delay: 3700 },
+  { text: "", color: "", delay: 3900 },
+  { text: "WARNING: This is BETA software connected to testnet.", color: "#ff6600", delay: 4100 },
+  { text: "Full version available for NX Terminal holders.", color: "#888", delay: 4400 },
+  { text: "", color: "", delay: 4600 },
+  { text: "Starting surveillance feed...", color: "#fff", delay: 4800 },
+];
+
+// ═══ ALERT TYPES (placeholder for full version) ═══
+export const ALERT_TYPES = {
+  TPS_THRESHOLD: "TPS_THRESHOLD",
+  GAS_BELOW: "GAS_BELOW",
+  WHALE_TX: "WHALE_TX",
+  NEW_CONTRACT: "NEW_CONTRACT",
+};
