@@ -27,59 +27,29 @@ SET search_path TO nx;
 BEGIN;
 
 -- ────────────────────────────────────────────────────────────
--- PHASE 1: Truncate leaf tables first (no FK dependencies)
+-- PHASE 1: Truncate ALL data tables in a single statement
+--          CASCADE handles FK dependencies automatically.
+--          Partitioned tables (actions, chat_messages) and
+--          their default partitions are included.
 -- ────────────────────────────────────────────────────────────
 
--- Event/log tables (partitioned — TRUNCATE cascades to partitions)
-TRUNCATE TABLE actions;
-TRUNCATE TABLE chat_messages;
-
--- World events (no FKs pointing to it)
-TRUNCATE TABLE world_events;
-
--- World chat (human player messages, no FKs)
-TRUNCATE TABLE world_chat;
-
--- Notifications (FK to devs, but we truncate before devs)
-TRUNCATE TABLE notifications;
-
--- Player prompts (FK to devs)
-TRUNCATE TABLE player_prompts;
-
--- Balance snapshots (FK to players)
-TRUNCATE TABLE balance_snapshots;
-
--- Claim history (FK to players)
-TRUNCATE TABLE claim_history;
-
--- Shop purchases (FK to players + devs)
-TRUNCATE TABLE shop_purchases;
-
--- ────────────────────────────────────────────────────────────
--- PHASE 2: Truncate tables with mutual FK dependencies
--- ────────────────────────────────────────────────────────────
-
--- AI votes (FK to devs + absurd_ais)
-TRUNCATE TABLE ai_votes;
-
--- Protocol investments (FK to devs + protocols)
-TRUNCATE TABLE protocol_investments;
-
--- Absurd AIs (FK to devs)
-TRUNCATE TABLE absurd_ais;
-
--- Protocols (FK to devs)
-TRUNCATE TABLE protocols;
-
--- ────────────────────────────────────────────────────────────
--- PHASE 3: Core entity tables
--- ────────────────────────────────────────────────────────────
-
--- Devs (FK to players) — all NFTs minted on MegaETH
-TRUNCATE TABLE devs;
-
--- Players (root table — no FKs from other tables after above truncates)
-TRUNCATE TABLE players;
+TRUNCATE TABLE
+    players,
+    devs,
+    protocols,
+    protocol_investments,
+    absurd_ais,
+    ai_votes,
+    actions,
+    chat_messages,
+    world_events,
+    world_chat,
+    shop_purchases,
+    player_prompts,
+    notifications,
+    claim_history,
+    balance_snapshots
+CASCADE;
 
 -- ────────────────────────────────────────────────────────────
 -- PHASE 4: Reset simulation state to initial seed values
