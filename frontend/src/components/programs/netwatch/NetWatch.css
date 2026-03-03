@@ -200,6 +200,38 @@
   overflow: hidden;
 }
 
+/* ═══ Tooltips ═══ */
+.nw-tooltip {
+  position: absolute;
+  background: #ffffe1;
+  border: 1px solid #000;
+  padding: 4px 8px;
+  font-family: "Tahoma", "MS Sans Serif", sans-serif;
+  font-size: 11px;
+  color: #000;
+  max-width: 280px;
+  line-height: 1.4;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 1px 1px 0 #808080;
+  white-space: normal;
+  top: 100%;
+  left: 8px;
+  margin-top: 2px;
+}
+
+/* ═══ Live dot blink ═══ */
+@keyframes nw-dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.nw-live-dot {
+  animation: nw-dot-blink 1.5s step-end infinite;
+  color: #00ff41;
+  font-size: 9px;
+}
+
 @media (max-width: 700px) {
   .nw-main-grid {
     flex-direction: column !important;

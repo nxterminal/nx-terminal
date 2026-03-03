@@ -5,38 +5,68 @@ const TABS = ['About', 'Beta Info', 'Legend'];
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
 NETWATCH.exe \u2014 Protocol Surveillance Terminal
-Version: 1.0 BETA
+Version 1.0 BETA
 ${'═'.repeat(45)}
 
-NETWATCH is a real-time network monitor for Pharos
-blockchain. It visualizes live data from the Pharos
-testnet including blocks, transactions, TPS, gas
-metrics, and more.
+NETWATCH is a real-time network monitor for
+Pharos blockchain, built as part of the
+NX Terminal: Protocol Wars ecosystem.
 
-Developed by NX Terminal Corp\u2122 as part of the
-Protocol Wars ecosystem.
+It visualizes live data from the Pharos Atlantic
+Testnet including blocks, transactions, TPS, gas
+throughput, and network health metrics.
+
+${'═'.repeat(45)}
+HOW IT WORKS
+${'═'.repeat(45)}
+
+NETWATCH connects directly to the Pharos Atlantic
+Testnet via JSON-RPC and polls for new data every
+3 seconds. All data is fetched client-side \u2014 no
+backend server required.
+
+The Block Rain visualization shows real blockchain
+activity. Characters flash cyan each time a new
+block is confirmed.
+
+Transactions are decoded by reading the first 4
+bytes of input data (method signature) to infer
+the transaction type (Transfer, Swap, Deploy,
+Mint, etc.)
+
+${'═'.repeat(45)}
+NETWORK INFO
+${'═'.repeat(45)}
+
+Network:   Pharos Atlantic Testnet
+Chain ID:  688689
+RPC:       atlantic.dplabs-internal.com
+Explorer:  atlantic.pharosscan.xyz
+Consensus: AsyncBFT
+Target TPS: 30,000+
+Finality:  Sub-second
 
 STATUS: BETA
-This version connects to Pharos testnet.
-Data refreshes every 3 seconds.
-Some values marked with ~ are estimated.
+Connected to testnet. Data refreshes every
+3 seconds. Values marked with ~ are estimated.
 
-NETWORK: Pharos Testnet
-CHAIN ID: 688688
-RPC: https://testnet.dplabs-internal.com
-
-Built with \uD83E\uDD0D by Ember Labs
-nxterminal.com \u00B7 @nxterminalcorp`,
+nxterminal.com`,
 
   'Beta Info': `${'═'.repeat(45)}
 BETA VERSION \u2014 WHAT'S INCLUDED
 ${'═'.repeat(45)}
 
-\u2713 Live block feed with Matrix visualization
-\u2713 Real-time network metrics (TPS, gas, blocks)
+\u2713 Live block visualization (Matrix rain)
+  Blocks confirmed with cyan flash effect
+\u2713 Real-time network metrics
+  TPS, gas, block height, finality
 \u2713 Transaction flow with type detection
+  Transfer, Swap, Deploy, Mint, and more
 \u2713 Corporation activity monitor
-\u2713 CRT display effects
+  Six Protocol Wars corps tracked
+\u2713 Hover tooltips on all metrics
+  Hover any metric to learn what it shows
+\u2713 CRT display effects and retro aesthetics
 
 ${'═'.repeat(45)}
 FULL VERSION \u2014 FOR NX TERMINAL HOLDERS
@@ -44,67 +74,92 @@ ${'═'.repeat(45)}
 
 The full version of NETWATCH will be available
 exclusively for NX Terminal NFT holders after
-mainnet mint. Features include:
+mainnet mint:
 
-\u25C6 Wallet Surveillance \u2014 Track any address
-  in real-time with activity alerts
+\u25C6 Wallet Surveillance
+  Track any address in real-time with
+  activity alerts and transaction history
 
-\u25C6 Alert System \u2014 Custom notifications for
-  TPS thresholds, gas prices, whale txs
+\u25C6 Alert System
+  Custom notifications for TPS thresholds,
+  gas price changes, and whale transactions
 
-\u25C6 Historical Data \u2014 Charts and analytics
-  for 24h, 7d, 30d network performance
+\u25C6 Historical Data
+  Network performance charts and analytics
+  for 24h, 7d, and 30d time windows
 
-\u25C6 Contract Inspector \u2014 Decode any transaction
-  with full input data and event logs
+\u25C6 Contract Inspector
+  Decode any transaction with full input
+  data parsing and event log display
 
-\u25C6 Corp Leaderboard \u2014 Real Protocol Wars
-  corporation rankings (Closed AI, Misanthropic,
-  Shallow Mind, Zuck Labs, Y.AI, Mistrial Systems)
-  based on on-chain activity from NX Terminal devs
+\u25C6 Corp Leaderboard
+  Real Protocol Wars rankings for Closed AI,
+  Misanthropic, Shallow Mind, Zuck Labs,
+  Y.AI, and Mistrial Systems based on
+  on-chain activity from NX Terminal devs
 
-\u25C6 Export Tools \u2014 Download data as CSV
-  (with retro "SAVING TO FLOPPY..." animation)
+\u25C6 Export Tools
+  Download network data as CSV
 
-\u25C6 Mainnet Mode \u2014 Switch between testnet
-  and mainnet monitoring
+\u25C6 Mainnet Mode
+  Switch between testnet and mainnet
+  monitoring after Pharos mainnet launches
 
 Mint your NX Terminal dev NFT to unlock.
 nxterminal.com/mint`,
 
   'Legend': `${'═'.repeat(45)}
-TRANSACTION TYPE LEGEND
+TRANSACTION TYPES
 ${'═'.repeat(45)}
 
-\u25A0 Transfer    Standard token/ETH transfer
-\u25A0 Swap        DEX token swap
-\u25A0 Deploy      New smart contract deployment
-\u25A0 Mint        Token/NFT minting
-\u25A0 Burn        Token burning
-\u25A0 Stake       Token staking
-\u25A0 Approve     Token spending approval
-\u25A0 Contract    Other contract interaction
+\u25A0 Transfer     Standard token or ETH transfer
+\u25A0 Swap         DEX token swap (FaroSwap, etc.)
+\u25A0 Deploy       New smart contract deployment
+\u25A0 Mint         Token or NFT minting
+\u25A0 Burn         Token burning
+\u25A0 Stake        Token staking
+\u25A0 Approve      Token spending approval
+\u25A0 Execute      Universal Router execution
+\u25A0 Withdraw     Token/ETH withdrawal
+\u25A0 Contract     Other contract interaction
+
+(Colors match the transaction feed display)
 
 ${'═'.repeat(45)}
 METRIC INDICATORS
 ${'═'.repeat(45)}
 
-\u2588 Filled bar   \u2014 current value
-\u2591 Empty bar    \u2014 remaining to max
-~ Prefix       \u2014 estimated value
-\u2713 Checkmark    \u2014 within target
-\u25B6 Arrow        \u2014 transaction entry
+\u2588 Filled bar   Current value relative to max
+\u2591 Empty bar    Remaining capacity to maximum
+~ Prefix       Estimated value (not from RPC)
+\u2713 Checkmark    Value within expected target
+\u25CF Blinking dot Live data indicator
 
 ${'═'.repeat(45)}
-CORPORATIONS
+CORPORATIONS (Protocol Wars)
 ${'═'.repeat(45)}
 
-\u25C6 Closed AI       "We promised to be open. Then we got funding."
-\u25C8 Misanthropic    "Safe AI. We hate everyone equally."
-\u25C9 Shallow Mind    "Infinite compute. Zero products."
-\u25CA Zuck Labs       "We'll pivot to whatever is trending."
-\u25CB Y.AI            "Tweets before building."
-\u25CE Mistrial Systems "Open source. When convenient."`,
+\u25C6 Closed AI
+  "We promised to be open. Then we got funding."
+
+\u25C8 Misanthropic
+  "Safe AI. We hate everyone equally."
+
+\u25C9 Shallow Mind
+  "Infinite compute. Zero products."
+
+\u25CA Zuck Labs
+  "We'll pivot to whatever is trending."
+
+\u25CB Y.AI
+  "Tweets before building."
+
+\u25CE Mistrial Systems
+  "Open source. When convenient."
+
+Corporation activity bars are currently
+simulated. Full version tracks real on-chain
+activity from NX Terminal dev NFTs.`,
 };
 
 const LEGEND_COLORS = {
@@ -115,6 +170,8 @@ const LEGEND_COLORS = {
   'Burn': '#ff3333',
   'Stake': '#ff6600',
   'Approve': '#888888',
+  'Execute': '#00bfff',
+  'Withdraw': '#ffff00',
   'Contract': '#aaaaaa',
 };
 
@@ -186,6 +243,7 @@ export default function HelpDialog({ onClose }) {
               fontWeight: 'bold',
               lineHeight: '10px',
               cursor: 'pointer',
+              color: '#000',
               padding: 0,
               display: 'flex',
               alignItems: 'center',
@@ -212,6 +270,7 @@ export default function HelpDialog({ onClose }) {
                 padding: '3px 12px',
                 fontSize: '11px',
                 fontFamily: 'Tahoma, sans-serif',
+                color: '#000',
                 cursor: 'pointer',
                 position: 'relative',
                 top: activeTab === tab ? '2px' : '0',
@@ -255,6 +314,7 @@ export default function HelpDialog({ onClose }) {
               padding: '3px 24px',
               fontSize: '12px',
               fontFamily: 'Tahoma, sans-serif',
+              color: '#000',
               cursor: 'pointer',
             }}
             onMouseDown={(e) => {

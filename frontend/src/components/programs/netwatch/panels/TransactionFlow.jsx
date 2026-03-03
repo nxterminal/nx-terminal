@@ -23,8 +23,12 @@ export default function TransactionFlow({ transactions }) {
 
   return (
     <div className="nw-panel nw-tx-flow" style={{ padding: '8px 10px', fontFamily: '"IBM Plex Mono", "Courier New", monospace', fontSize: '11px', color: '#00ff41', background: '#000', height: '100%', overflow: 'hidden' }}>
-      <div style={{ color: '#888', fontSize: '9px', marginBottom: '6px', letterSpacing: '1px' }}>
-        {'\u2550'.repeat(3)} TRANSACTION FLOW {'\u2550'.repeat(3)} LIVE FEED
+      <div style={{ fontSize: '9px', marginBottom: '6px', letterSpacing: '1px' }}>
+        <span style={{ color: '#333' }}>{'\u2550'.repeat(3)} </span>
+        <span style={{ color: '#00bfff', textShadow: '0 0 6px rgba(0,191,255,0.5)' }}>TRANSACTION FLOW</span>
+        <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
+        <span className="nw-live-dot">{'\u25CF'}</span>
+        <span style={{ color: '#00ff41' }}> LIVE FEED</span>
       </div>
 
       <div style={{ overflow: 'hidden' }}>
