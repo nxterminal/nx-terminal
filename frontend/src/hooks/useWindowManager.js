@@ -20,7 +20,7 @@ const WINDOW_DEFAULTS = {
   'recycle-bin': { title: 'Recycle Bin', icon: 'x', width: 560, height: 400, x: 170, y: 70 },
   'corp-wars': { title: 'Corporation Wars', icon: '\u2694', width: 720, height: 550, x: 160, y: 50 },
   'netwatch': { title: 'NETWATCH.exe', icon: '', width: 900, height: 550, x: 80, y: 35 },
-  'pharos-sdk': { title: 'PHAROS_SDK.exe', icon: '', width: 880, height: 580, x: 120, y: 50 },
+  'pharos-sdk': { title: 'PHAROS_SDK.exe', icon: '', width: 880, height: 700, x: 120, y: 30 },
 };
 
 export function useWindowManager() {

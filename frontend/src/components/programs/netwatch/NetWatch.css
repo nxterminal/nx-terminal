@@ -71,6 +71,7 @@
 .nw-menubar {
   display: flex;
   background: #c0c0c0;
+  color: #000;
   border-bottom: 1px solid #808080;
   padding: 0;
   flex-shrink: 0;
@@ -106,6 +107,7 @@
   top: 100%;
   left: 0;
   background: #c0c0c0;
+  color: #000;
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
@@ -147,6 +149,7 @@
   justify-content: space-between;
   align-items: center;
   background: #c0c0c0;
+  color: #000;
   border-top: 2px solid;
   border-color: #808080 #dfdfdf #dfdfdf #808080;
   padding: 2px 8px;
