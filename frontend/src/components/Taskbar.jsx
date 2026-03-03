@@ -15,8 +15,11 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
   useEffect(() => {
     const fetchCycle = () => {
       api.getSimulationState()
-        .then(data => setCycle(data.current_cycle || data.cycle || '?'))
-        .catch(() => {});
+        .then(data => {
+          const val = data.current_cycle || data.cycle;
+          setCycle(val != null ? val : null);
+        })
+        .catch(() => setCycle(null));
     };
     fetchCycle();
     const id = setInterval(fetchCycle, 30000);
@@ -194,7 +197,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         <div className="taskbar-clock">
           <div style={{ fontSize: '10px', lineHeight: 1.1, textAlign: 'center' }}>
             <div>{timeStr}</div>
-            <div style={{ fontSize: '9px', color: '#666' }}>Cycle: {cycle ?? '...'}</div>
+            {cycle != null && <div style={{ fontSize: '9px', color: '#666' }}>Cycle: {cycle}</div>}
           </div>
         </div>
       </div>

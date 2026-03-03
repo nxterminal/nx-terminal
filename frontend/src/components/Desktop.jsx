@@ -56,6 +56,10 @@ function getWallpaperOverlay() {
 }
 
 function getInitialUnreadCount() {
+  const saved = localStorage.getItem('nx-inbox-emails');
+  if (saved) {
+    try { return JSON.parse(saved).filter(e => !e.read).length; } catch {}
+  }
   const readIds = JSON.parse(localStorage.getItem('nx-inbox-read') || '[]');
   return readIds.includes('welcome-1') ? 0 : 1;
 }
