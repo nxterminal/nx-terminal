@@ -153,7 +153,7 @@ export default function HelpDialog({ onClose }) {
                   : '#dfdfdf #808080 #808080 #dfdfdf',
                 borderBottom: activeTab === tab ? 'none' : undefined,
                 padding: '3px 12px', fontSize: '11px', fontFamily: 'Tahoma, sans-serif',
-                cursor: 'pointer', position: 'relative',
+                color: '#000', cursor: 'pointer', position: 'relative',
                 top: activeTab === tab ? '2px' : '0',
                 marginBottom: activeTab === tab ? '-2px' : '0',
               }}
@@ -185,7 +185,7 @@ export default function HelpDialog({ onClose }) {
             style={{
               background: '#c0c0c0', border: '2px solid',
               borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-              padding: '3px 24px', fontSize: '12px', fontFamily: 'Tahoma, sans-serif', cursor: 'pointer',
+              padding: '3px 24px', fontSize: '12px', fontFamily: 'Tahoma, sans-serif', color: '#000', cursor: 'pointer',
             }}
             onMouseDown={(e) => { e.currentTarget.style.borderColor = '#808080 #dfdfdf #dfdfdf #808080'; }}
             onMouseUp={(e) => { e.currentTarget.style.borderColor = '#dfdfdf #808080 #808080 #dfdfdf'; }}
