@@ -12,16 +12,12 @@ export default function BootSequence({ onComplete }) {
       return;
     }
 
-    const timers = BOOT_MESSAGES.map((msg) => {
-      return setTimeout(() => {
-        setLines((prev) => [...prev, msg]);
-      }, msg.delay);
-    });
+    const timers = BOOT_MESSAGES.map((msg) =>
+      setTimeout(() => setLines((prev) => [...prev, msg]), msg.delay)
+    );
 
     const lastDelay = BOOT_MESSAGES[BOOT_MESSAGES.length - 1].delay;
-    timers.push(setTimeout(() => {
-      setDone(true);
-    }, lastDelay + 600));
+    timers.push(setTimeout(() => setDone(true), lastDelay + 600));
 
     timersRef.current = timers;
     return () => timers.forEach(clearTimeout);
@@ -39,18 +35,7 @@ export default function BootSequence({ onComplete }) {
   };
 
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      background: '#000',
-      zIndex: 100,
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '16px 20px',
-      fontFamily: '"Courier New", monospace',
-      fontSize: '13px',
-      overflow: 'auto',
-    }}>
+    <div className="ps-boot-content">
       <div style={{ flex: 1 }}>
         {lines.map((msg, i) => (
           <div key={i} style={{ color: msg.color || '#aaa', lineHeight: '1.5' }}>
@@ -58,32 +43,15 @@ export default function BootSequence({ onComplete }) {
           </div>
         ))}
         {done && (
-          <button
-            onClick={handleEnter}
-            style={{
-              marginTop: '8px',
-              background: 'none',
-              border: '1px solid #00ff41',
-              color: '#00ff41',
-              fontFamily: '"Courier New", monospace',
-              fontSize: '13px',
-              padding: '6px 16px',
-              cursor: 'pointer',
-            }}
-          >
-            {'\u25B6'} ENTER TRAINING
-          </button>
+          <div style={{ marginTop: '12px' }}>
+            <button className="ps-wiz-btn" onClick={handleEnter}>
+              {'\u25B6'} Enter Training
+            </button>
+          </div>
         )}
       </div>
       {!done && (
-        <div style={{ textAlign: 'right' }}>
-          <span
-            onClick={handleSkip}
-            style={{ color: '#555', cursor: 'pointer', fontSize: '11px' }}
-          >
-            [SKIP]
-          </span>
-        </div>
+        <div className="ps-boot-skip" onClick={handleSkip}>[SKIP]</div>
       )}
     </div>
   );

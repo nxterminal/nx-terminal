@@ -1,8 +1,9 @@
-export default function CodeEditor({ codeLines, answers, onAnswerChange, errors, showHints, onToggleHint }) {
+export default function CodeEditor({ codeLines, answers, onAnswerChange, errors, showHints, onToggleHint, filledCount, totalBlanks }) {
   return (
     <div className="ps-editor">
       <div className="ps-editor-header">
         <span>CODE EDITOR</span>
+        <span>{filledCount}/{totalBlanks} blanks filled</span>
       </div>
       <div className="ps-editor-body">
         {codeLines.map((line) => {

@@ -1,84 +1,107 @@
+import { useState } from 'react';
 import { CORPORATIONS, DIFFICULTIES } from '../data/constants';
 import TRACK_1 from '../data/missions-track1';
 import TRACK_2 from '../data/missions-track2';
-import ProgressBar from '../components/ProgressBar';
 
-export default function MissionSelect({ completedMissions, xp, onSelectMission }) {
-  const totalMissions = TRACK_1.missions.length + TRACK_2.missions.length;
+export default function MissionSelect({ completedMissions, onSelectMission }) {
+  const [showTrack2, setShowTrack2] = useState(false);
 
   const getMissionState = (mission, index, track) => {
-    if (track.locked) return 'mint-locked';
+    if (track.locked) return 'locked';
     if (completedMissions.includes(mission.id)) return 'completed';
-    // First mission is always available; otherwise previous must be completed
     if (index === 0) return 'available';
     if (completedMissions.includes(track.missions[index - 1].id)) return 'available';
     return 'locked';
   };
 
-  const renderTrack = (track) => {
-    const isLocked = track.locked;
-    return (
-      <div key={track.id} className="ps-track-section">
-        <div className="ps-section-header">
-          {'\u2550'.repeat(3)} TRACK {track.id === 'basic_training' ? '1' : '2'}: {track.name.toUpperCase()} {'\u2550'.repeat(3)}
-          {isLocked && <span style={{ color: '#ff6600', marginLeft: '8px' }}>{'\uD83D\uDD12'} REQUIRES MINT</span>}
-          {!isLocked && (
-            <span style={{ color: '#888', marginLeft: '8px' }}>
-              {completedMissions.filter(id => track.missions.some(m => m.id === id)).length === track.missions.length
-                ? 'COMPLETE'
-                : 'IN PROGRESS'}
-            </span>
-          )}
-        </div>
-        <div className="ps-mission-list">
-          {track.missions.map((mission, i) => {
-            const state = getMissionState(mission, i, track);
-            const corp = CORPORATIONS[mission.corp];
-            const diff = DIFFICULTIES[mission.difficulty];
-            return (
-              <div
-                key={mission.id}
-                className={`ps-mission-entry ${state}`}
-                onClick={() => {
-                  if (state === 'completed' || state === 'available') {
-                    onSelectMission(mission);
-                  }
-                }}
-              >
-                <span className="ps-mission-status">
-                  {state === 'completed' && <span style={{ color: '#00ff41' }}>{'\u2713'}</span>}
-                  {state === 'available' && <span style={{ color: '#ffff00' }}>{'\u25B6'}</span>}
-                  {state === 'locked' && <span style={{ color: '#555' }}>{'\u25FB'}</span>}
-                  {state === 'mint-locked' && <span style={{ color: '#444' }}>{'\uD83D\uDD12'}</span>}
-                </span>
-                <span className="ps-mission-num">
-                  #{String(mission.number).padStart(2, '0')}
-                </span>
-                <span className="ps-mission-corp-icon" style={{ color: corp?.color || '#888' }}>
-                  {corp?.icon || '\u25C6'}
-                </span>
-                <span className="ps-mission-name">{mission.title}</span>
-                <span className="ps-mission-sub">{mission.subtitle}</span>
+  return (
+    <div>
+      <div className="ps-select-welcome">Welcome to PHAROS_SDK Training</div>
+      <div className="ps-select-desc">
+        Complete missions to learn blockchain development on Pharos Network.
+        Each mission is guided by one of the six Protocol Wars corporations.
+      </div>
+
+      {/* Track 1 */}
+      <div className="ps-track-label">
+        {'\u2550\u2550\u2550'} TRACK 1: BASIC TRAINING {'\u2550\u2550\u2550'}
+      </div>
+
+      <div className="ps-mission-list-panel">
+        {TRACK_1.missions.map((mission, i) => {
+          const state = getMissionState(mission, i, TRACK_1);
+          const corp = CORPORATIONS[mission.corp];
+          const diff = DIFFICULTIES[mission.difficulty];
+          return (
+            <div
+              key={mission.id}
+              className={`ps-mission-row ${state}`}
+              onClick={() => {
+                if (state === 'completed' || state === 'available') onSelectMission(mission);
+              }}
+            >
+              <span className="ps-mission-row-status">
+                {state === 'completed' && <span style={{ color: '#008800' }}>{'\u2713'}</span>}
+                {state === 'available' && <span style={{ color: '#000080' }}>{'\u25B6'}</span>}
+                {state === 'locked' && <span style={{ color: '#aaa' }}>{'\u25CB'}</span>}
+              </span>
+              <span className="ps-mission-row-num">
+                {String(mission.number).padStart(2, '0')}
+              </span>
+              <span className="ps-mission-row-corp" style={{ color: corp?.color || '#888' }}>
+                {corp?.icon || '\u25C6'}
+              </span>
+              <span className="ps-mission-row-info">
+                <span className="ps-mission-row-title">{mission.title}</span>
+                <span className="ps-mission-row-sub">{mission.subtitle}</span>
+              </span>
+              <span className="ps-mission-row-right">
+                <span className="ps-mission-row-xp">{mission.xp}xp</span>
                 {diff && (
-                  <span className="ps-mission-diff-mini" style={{ color: diff.color }}>
+                  <span className="ps-mission-row-diff" style={{ color: diff.color }}>
                     {'\u2588'.repeat(diff.bars)}{'\u2591'.repeat(4 - diff.bars)}
                   </span>
                 )}
-              </div>
-            );
-          })}
-        </div>
+                {state === 'available' && (
+                  <button
+                    className="ps-start-btn"
+                    onClick={(e) => { e.stopPropagation(); onSelectMission(mission); }}
+                  >
+                    START
+                  </button>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
-    );
-  };
 
-  return (
-    <div className="ps-mission-select">
-      <div className="ps-progress-wrapper">
-        <ProgressBar xp={xp} completedCount={completedMissions.length} totalCount={totalMissions} />
+      {/* Track 2 */}
+      <div className="ps-track-label">
+        {'\u2550\u2550\u2550'} TRACK 2: CORPORATE WARFARE {'\u2550\u2550\u2550'} <span style={{ color: '#cc6600' }}>{'\uD83D\uDD12'} REQUIRES MINT</span>
       </div>
-      {renderTrack(TRACK_1)}
-      {renderTrack(TRACK_2)}
+
+      <div className="ps-track2-box">
+        <div>
+          10 advanced missions covering DeFi, security, and Pharos architecture.
+          Available for NX Terminal NFT holders after mint.
+        </div>
+        <span
+          className="ps-track2-toggle"
+          onClick={() => setShowTrack2(!showTrack2)}
+        >
+          {showTrack2 ? 'Hide locked missions \u25B4' : 'View locked missions \u25BE'}
+        </span>
+        {showTrack2 && (
+          <div className="ps-track2-locked-list">
+            {TRACK_2.missions.map((m) => (
+              <div key={m.id} className="ps-track2-locked-item">
+                {'\uD83D\uDD12'} #{String(m.number).padStart(2, '0')} {m.title} {'\u2014'} {m.subtitle}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
