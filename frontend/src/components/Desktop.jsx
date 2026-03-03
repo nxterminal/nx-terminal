@@ -24,6 +24,7 @@ const DESKTOP_ICONS = [
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
   { id: 'netwatch', icon: '', label: 'NETWATCH' },
+  { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
 ];
 
 function getWallpaperStyle() {
