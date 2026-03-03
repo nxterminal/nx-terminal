@@ -432,6 +432,46 @@ function IconNetwatch({ size = 32 }) {
   );
 }
 
+function IconPharosSDK({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="psMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <linearGradient id="psScreenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0d1117" />
+          <stop offset="100%" stopColor="#060a10" />
+        </linearGradient>
+      </defs>
+      {/* Monitor body */}
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#psMonGrad)" stroke="#666" strokeWidth="0.8" />
+      {/* Screen */}
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#psScreenGrad)" />
+      {/* Code lines */}
+      <rect x="7" y="6" width="10" height="1.2" rx="0.3" fill="#00bfff" opacity="0.8" />
+      <rect x="9" y="8.5" width="14" height="1.2" rx="0.3" fill="#e6edf3" opacity="0.5" />
+      <rect x="9" y="11" width="8" height="1.2" rx="0.3" fill="#ffff00" opacity="0.7" />
+      <rect x="9" y="13.5" width="12" height="1.2" rx="0.3" fill="#e6edf3" opacity="0.5" />
+      <rect x="7" y="16" width="6" height="1.2" rx="0.3" fill="#00ff41" opacity="0.6" />
+      {/* Line numbers */}
+      <rect x="5.5" y="6" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="8.5" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="11" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="13.5" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="16" width="1" height="1.2" fill="#444" opacity="0.6" />
+      {/* Cursor blink */}
+      <rect x="18" y="11" width="1" height="1.5" fill="#ffff00" opacity="0.9" />
+      {/* Power LED */}
+      <circle cx="16" cy="20.5" r="0.7" fill="#00bfff" />
+      {/* Stand */}
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#psMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#psMonGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -450,6 +490,7 @@ export const ICON_MAP = {
   'nxt-wallet': IconWallet,
   'corp-wars': IconCorpWars,
   'netwatch': IconNetwatch,
+  'pharos-sdk': IconPharosSDK,
 };
 
 export function Win98Icon({ id, size = 32 }) {

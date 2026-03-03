@@ -1,0 +1,725 @@
+/* ═══ PHAROS_SDK — MAIN CONTAINER ═══ */
+.ps-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  background: #c0c0c0;
+  font-family: "Courier New", "Lucida Console", monospace;
+}
+
+/* ═══ MENU BAR ═══ */
+.ps-menubar {
+  display: flex;
+  background: #c0c0c0;
+  border-bottom: 1px solid #808080;
+  padding: 1px 2px;
+  flex-shrink: 0;
+}
+
+.ps-menu-item {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-family: Tahoma, sans-serif;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+
+.ps-menu-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.ps-menu-item.disabled {
+  color: #888;
+  cursor: default;
+}
+
+.ps-menu-item.disabled:hover {
+  background: transparent;
+  color: #888;
+}
+
+.ps-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  z-index: 50;
+  min-width: 160px;
+}
+
+.ps-dropdown-item {
+  padding: 4px 20px;
+  font-size: 11px;
+  font-family: Tahoma, sans-serif;
+  color: #000;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ps-dropdown-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.ps-dropdown-sep {
+  height: 1px;
+  background: #808080;
+  margin: 2px 4px;
+}
+
+/* ═══ MAIN CONTENT AREA ═══ */
+.ps-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #000;
+  color: #00ff41;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+/* ═══ STATUS BAR ═══ */
+.ps-statusbar {
+  display: flex;
+  justify-content: space-between;
+  background: #c0c0c0;
+  border-top: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.ps-statusbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ps-statusbar-right {
+  color: #666;
+  font-size: 10px;
+}
+
+/* ═══ RANK ═══ */
+.ps-rank {
+  font-weight: bold;
+  text-shadow: none;
+}
+
+/* ═══ PROGRESS BAR (in MissionSelect) ═══ */
+.ps-progress-wrapper {
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
+  background: rgba(0, 191, 255, 0.03);
+}
+
+.ps-progress-bar {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.ps-progress-sep {
+  color: #555;
+}
+
+/* ═══ MISSION SELECT ═══ */
+.ps-mission-select {
+  padding: 0;
+}
+
+.ps-track-section {
+  margin-bottom: 4px;
+}
+
+.ps-section-header {
+  font-size: 11px;
+  color: #00bfff;
+  padding: 8px 12px 4px;
+  border-bottom: 1px solid #222;
+  text-shadow: 0 0 5px #00bfff;
+}
+
+.ps-mission-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-mission-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  border-bottom: 1px solid #111;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ps-mission-entry:hover {
+  background: rgba(0, 191, 255, 0.08);
+}
+
+.ps-mission-entry.completed {
+  border-left: 2px solid rgba(0, 255, 65, 0.3);
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.ps-mission-entry.available {
+  border-left: 2px solid rgba(255, 255, 0, 0.3);
+  color: #fff;
+}
+
+.ps-mission-entry.locked {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ps-mission-entry.locked:hover {
+  background: transparent;
+}
+
+.ps-mission-entry.mint-locked {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.ps-mission-entry.mint-locked:hover {
+  background: transparent;
+}
+
+.ps-mission-status {
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ps-mission-num {
+  color: #555;
+  width: 30px;
+  flex-shrink: 0;
+}
+
+.ps-mission-corp-icon {
+  flex-shrink: 0;
+}
+
+.ps-mission-name {
+  color: inherit;
+  min-width: 120px;
+  font-weight: bold;
+}
+
+.ps-mission-sub {
+  color: #666;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ps-mission-diff-mini {
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+/* ═══ MISSION HEADER ═══ */
+.ps-mission-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ps-mission-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.ps-mission-title {
+  font-size: 16px;
+  color: #fff;
+  font-weight: bold;
+  margin: 4px 0;
+  text-shadow: 0 0 8px rgba(255,255,255,0.2);
+}
+
+.ps-mission-corp-line {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.ps-mission-diff {
+  font-size: 11px;
+}
+
+.ps-back-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.ps-back-btn:hover {
+  border-color: #aaa;
+  color: #fff;
+}
+
+/* ═══ BRIEFING ═══ */
+.ps-briefing {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.6;
+  white-space: pre-line;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
+  max-height: 140px;
+  overflow: auto;
+}
+
+/* ═══ QUIZ ═══ */
+.ps-quiz-mission {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ps-quiz-content {
+  flex: 1;
+  padding: 12px;
+  overflow: auto;
+}
+
+.ps-quiz-question {
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.ps-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.ps-quiz-option {
+  padding: 8px 12px;
+  border: 1px solid #333;
+  border-left: 3px solid #333;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.ps-quiz-option:hover {
+  background: rgba(0, 191, 255, 0.08);
+  border-left-color: #00bfff;
+}
+
+.ps-quiz-option.correct {
+  border-color: #00ff41;
+  border-left-color: #00ff41;
+  background: rgba(0, 255, 65, 0.12);
+  color: #00ff41;
+}
+
+.ps-quiz-option.wrong {
+  border-color: #ff3333;
+  border-left-color: #ff3333;
+  background: rgba(255, 0, 0, 0.12);
+  color: #ff3333;
+}
+
+.ps-quiz-letter {
+  color: #00bfff;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.ps-quiz-explanation {
+  padding: 8px 12px;
+  border: 1px solid #222;
+  background: rgba(0, 191, 255, 0.05);
+  font-size: 11px;
+  color: #aaa;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.ps-quiz-dots {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 4px;
+}
+
+/* ═══ CODE MISSION ═══ */
+.ps-code-mission {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ps-code-mission-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ═══ CODE EDITOR ═══ */
+.ps-editor {
+  background: #0d1117;
+  border: 1px solid #333;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-editor-header {
+  background: #161b22;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: #555;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.ps-editor-body {
+  overflow: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.ps-code-line {
+  display: flex;
+  align-items: center;
+  line-height: 22px;
+  padding: 0 8px 0 0;
+}
+
+.ps-code-line.editable {
+  background: rgba(255, 255, 0, 0.03);
+  border-left: 2px solid rgba(255, 255, 0, 0.27);
+}
+
+.ps-code-line.editable.error {
+  border-left-color: #ff3333;
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.ps-line-num {
+  width: 32px;
+  text-align: right;
+  padding-right: 8px;
+  color: #444;
+  user-select: none;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.ps-code-text {
+  color: #e6edf3;
+  font-size: 12px;
+  white-space: pre;
+}
+
+.ps-code-input {
+  background: rgba(255, 255, 0, 0.08);
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 0, 0.33);
+  color: #ffff00;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 0 4px;
+  outline: none;
+  line-height: 20px;
+}
+
+.ps-code-input:focus {
+  border-bottom-color: #ffff00;
+  background: rgba(255, 255, 0, 0.12);
+}
+
+.ps-code-input-error {
+  border-bottom-color: #ff3333;
+  color: #ff6666;
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.ps-code-input::placeholder {
+  color: rgba(255, 255, 0, 0.3);
+}
+
+.ps-hint-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #555;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ps-hint-btn:hover {
+  border-color: #ffff00;
+  color: #ffff00;
+}
+
+.ps-hint {
+  padding: 4px 12px 4px 42px;
+  border-top: 1px solid #1a1a1a;
+  font-size: 11px;
+  background: rgba(255, 255, 0, 0.02);
+}
+
+.ps-hint-label {
+  color: #ffff00;
+}
+
+.ps-hint-text {
+  color: #aaa;
+}
+
+/* ═══ COMPILER OUTPUT BAR ═══ */
+.ps-compiler-output-bar {
+  padding: 6px 12px;
+  border-top: 1px solid #222;
+  background: #0a0a0a;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.ps-compile-btn-row {
+  padding: 6px 12px;
+  text-align: right;
+  background: #0a0a0a;
+  border-top: 1px solid #111;
+  flex-shrink: 0;
+}
+
+.ps-compile-btn {
+  background: #222;
+  border: 1px solid #444;
+  color: #555;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 4px 16px;
+  cursor: default;
+}
+
+.ps-compile-btn.active {
+  border-color: #00ff41;
+  color: #00ff41;
+  cursor: pointer;
+}
+
+.ps-compile-btn.active:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+/* ═══ COMPILING OVERLAY ═══ */
+.ps-compiling-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  font-family: "Courier New", monospace;
+}
+
+/* ═══ RESULT SCREEN ═══ */
+.ps-result-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
+.ps-result-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.ps-result-icon.success {
+  color: #00ff41;
+  text-shadow: 0 0 20px #00ff41, 0 0 40px #00ff41;
+}
+
+.ps-result-icon.fail {
+  color: #ff3333;
+  text-shadow: 0 0 20px #ff3333;
+}
+
+.ps-result-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.ps-result-xp {
+  font-size: 16px;
+  color: #ffff00;
+  margin-bottom: 16px;
+}
+
+.ps-result-message {
+  font-size: 12px;
+  color: #aaa;
+  white-space: pre-line;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  max-width: 400px;
+}
+
+.ps-result-details {
+  font-size: 12px;
+  color: #ff6666;
+  margin-bottom: 8px;
+}
+
+.ps-result-retry-msg {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.ps-result-btn {
+  background: none;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  padding: 6px 20px;
+  cursor: pointer;
+}
+
+.ps-result-btn.success {
+  border: 1px solid #00ff41;
+  color: #00ff41;
+}
+
+.ps-result-btn.success:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.ps-result-btn.fail {
+  border: 1px solid #ff3333;
+  color: #ff3333;
+}
+
+.ps-result-btn.fail:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+/* ═══ CONFIRM DIALOG ═══ */
+.ps-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.ps-confirm-dialog {
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  padding: 0;
+  width: 300px;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.ps-confirm-title {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+}
+
+.ps-confirm-msg {
+  padding: 16px 12px;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  color: #000;
+}
+
+.ps-confirm-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 12px 12px;
+}
+
+.ps-confirm-btn {
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  padding: 3px 16px;
+  font-size: 12px;
+  font-family: Tahoma, sans-serif;
+  cursor: pointer;
+}
+
+.ps-confirm-btn:active {
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 700px) {
+  .ps-mission-entry {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  .ps-code-line {
+    font-size: 11px;
+  }
+
+  .ps-mission-sub {
+    display: none;
+  }
+
+  .ps-briefing {
+    max-height: 100px;
+  }
+}
