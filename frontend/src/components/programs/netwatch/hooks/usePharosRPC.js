@@ -104,8 +104,9 @@ export function usePharosRPC() {
       };
 
       let tps = 0;
-      if (prevBlockRef.current > 0 && prevTimestampRef.current > 0) {
-        const timeDiff = blockData.timestamp - prevTimestampRef.current;
+      const prevTimestamp = prevTimestampRef.current;
+      if (prevBlockRef.current > 0 && prevTimestamp > 0) {
+        const timeDiff = blockData.timestamp - prevTimestamp;
         if (timeDiff > 0) {
           tps = Math.round(blockData.transactionCount / timeDiff);
         }
@@ -122,9 +123,11 @@ export function usePharosRPC() {
       const gasPrice = hexToNumber(gasPriceHex) / 1e9;
       const gasUsed = hexToNumber(blockData.gasUsed) / 1e9;
 
-      const finality = blockData.timestamp > 0
-        ? Math.max(0.3, Math.min(2.0, (Date.now() / 1000 - blockData.timestamp)))
-        : 0.5;
+      // Finality: time between consecutive blocks (not fetch latency)
+      let finality = 0.5;
+      if (prevTimestamp > 0 && blockData.timestamp > prevTimestamp) {
+        finality = Math.max(0.1, Math.min(5.0, blockData.timestamp - prevTimestamp));
+      }
 
       const newTxs = (block.transactions || [])
         .slice(0, 10)
