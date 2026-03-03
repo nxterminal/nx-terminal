@@ -1,33 +1,44 @@
-import { CORPORATIONS } from '../data/constants';
+import { CORPORATIONS, RANKS } from '../data/constants';
 
-export default function CompilerOutput({ mission, passed, details, onContinue, onRetry }) {
+export default function CompilerOutput({ mission, passed, details, xp, prevXp }) {
   const corp = CORPORATIONS[mission.corp];
+
+  // Check for rank up
+  const prevRank = [...RANKS].reverse().find(r => (prevXp || 0) >= r.xpRequired) || RANKS[0];
+  const newRank = [...RANKS].reverse().find(r => xp >= r.xpRequired) || RANKS[0];
+  const didRankUp = passed && newRank.name !== prevRank.name;
 
   if (passed) {
     return (
       <div className="ps-result-screen">
-        <div className="ps-result-icon success">{'\u2713'}</div>
-        <div className="ps-result-title" style={{ color: '#00ff41' }}>
-          {'\u2550'.repeat(3)} MISSION COMPLETE {'\u2550'.repeat(3)}
+        <div className="ps-result-badge">
+          <div className="ps-result-badge-icon success">{'\u2713'}</div>
+          <div className="ps-result-badge-title">MISSION COMPLETE</div>
+          <div className="ps-result-badge-xp">+{mission.xp} XP</div>
+          <div className="ps-result-badge-corp" style={{ color: corp.color }}>
+            {corp.icon} {corp.name}
+          </div>
         </div>
-        <div className="ps-result-xp">
-          +{mission.xp} XP {'\u2014'}{' '}
-          <span style={{ color: corp.color }}>{corp.name}</span>
-        </div>
-        <div className="ps-result-message">{mission.completionMessage}</div>
-        <button className="ps-result-btn success" onClick={onContinue}>
-          {'\u25B6'} CONTINUE
-        </button>
+
+        <div className="ps-result-message-panel">{mission.completionMessage}</div>
+
+        {didRankUp && (
+          <div className="ps-result-rank-up">
+            NEW RANK UNLOCKED:{' '}
+            <span style={{ color: newRank.color }}>{newRank.name}</span>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="ps-result-screen">
-      <div className="ps-result-icon fail">{'\u2717'}</div>
-      <div className="ps-result-title" style={{ color: '#ff3333' }}>
-        {'\u2550'.repeat(3)} MISSION FAILED {'\u2550'.repeat(3)}
+      <div className="ps-result-badge">
+        <div className="ps-result-badge-icon fail">{'\u2717'}</div>
+        <div className="ps-result-badge-title">COMPILATION FAILED</div>
       </div>
+
       <div className="ps-result-details">
         {details.correctCount !== undefined ? (
           <span>
@@ -40,9 +51,6 @@ export default function CompilerOutput({ mission, passed, details, onContinue, o
         ) : null}
       </div>
       <div className="ps-result-retry-msg">Fix your answers and try again.</div>
-      <button className="ps-result-btn fail" onClick={onRetry}>
-        {'\u25B6'} RETRY
-      </button>
     </div>
   );
 }
