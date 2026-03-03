@@ -1,13 +1,12 @@
 """
 NX TERMINAL: Claimable Balance Sync (Backend -> On-Chain)
 
-This module syncs each dev's claimable $NXT balance to the NXDevNFT contract
+This module syncs each dev's claimable $NXT balance to the NXDevNFT v8 contract
 so players can claim on-chain via claimNXT(tokenIds[]).
 
 FLOW:
   1. Query all active devs with unclaimed salary (balance_nxt > 0, not yet synced)
-  2. For each dev: calculate gross amount = net / 0.9 (to compensate 10% on-chain fee)
-     e.g. 200 NXT net -> 222.22 NXT gross -> player receives 200 after 10% fee
+  2. For each dev: convert balance_nxt to wei (no fee inflation — v8 has no claim fee)
   3. Call batchSetClaimable(tokenIds[], amounts[]) on the NXDevNFT contract
      IN BATCHES of BATCH_SIZE to avoid gas limits
   4. Mark synced devs in DB so they aren't double-synced
@@ -16,7 +15,7 @@ REQUIREMENTS:
   - BACKEND_SIGNER_PRIVATE_KEY env var (EOA with SIGNER_ROLE on NXDevNFT)
   - web3.py >= 7.0 (pip install web3)
   - The signer address must have SIGNER_ROLE granted by contract owner
-  - MegaETH RPC: https://mainnet.megaeth.com/rpc
+  - Pharos Atlantic RPC: https://atlantic.dplabs-internal.com
 
 SAFETY:
   - This script does NOT execute transactions by default
@@ -31,22 +30,20 @@ USAGE:
 
 import os
 import logging
-from decimal import Decimal
 
 from .config import (
     DATABASE_URL,
     SALARY_PER_DAY,
-    CLAIM_FEE_BPS,
     CLAIMABLE_AMOUNT_WEI_PER_DAY,
 )
 
 logger = logging.getLogger(__name__)
 
-# -- Contract addresses ------------------------------------------------
-NXDEVNFT_ADDRESS = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
+# -- Contract addresses (Pharos Atlantic Testnet) --------------------------
+NXDEVNFT_ADDRESS = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
 NXT_TOKEN_ADDRESS = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47"
-MEGAETH_RPC = "https://mainnet.megaeth.com/rpc"
-MEGAETH_CHAIN_ID = 4326
+PHAROS_RPC = "https://atlantic.dplabs-internal.com"
+PHAROS_CHAIN_ID = 688689
 
 # -- Env config --------------------------------------------------------
 SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")
@@ -78,23 +75,6 @@ BATCH_SET_CLAIMABLE_ABI = [
 ]
 
 
-def calculate_gross_wei(net_amount: int) -> int:
-    """
-    Calculate the gross amount in wei that must be set on-chain so the player
-    receives `net_amount` after the 10% claim fee.
-
-    Formula: gross = net / (1 - fee_rate)
-             gross = net / (1 - 1000/10000)
-             gross = net / 0.9
-
-    Example: net=200 -> gross=222.222... (in token units, 18 decimals)
-    """
-    fee_rate = Decimal(CLAIM_FEE_BPS) / Decimal(10000)  # 0.10
-    multiplier = Decimal(1) / (Decimal(1) - fee_rate)     # 1.1111...
-    gross = Decimal(net_amount) * multiplier
-    return int(gross)
-
-
 def get_pending_claims(db_conn):
     """
     Query devs that have unsynchronized claimable balance.
@@ -118,27 +98,26 @@ def build_sync_batch(pending_devs):
     """
     Build arrays of (tokenIds, amounts_wei) for batchSetClaimable.
 
-    Each dev's balance_nxt is the NET amount the player should receive.
-    We inflate it to gross so the on-chain 10% fee leaves them with net.
+    NXDevNFT v8 has no claim fee — the amount set on-chain is exactly
+    what the player receives. No gross/net inflation needed.
     """
     token_ids = []
     amounts_wei = []
 
     for dev in pending_devs:
-        net_nxt = dev["balance_nxt"]
-        if net_nxt <= 0:
+        balance_nxt = dev["balance_nxt"]
+        if balance_nxt <= 0:
             continue
 
-        # Convert token units to wei (18 decimals)
-        net_wei = net_nxt * (10 ** 18)
-        gross_wei = calculate_gross_wei(net_wei)
+        # Convert token units to wei (18 decimals) — 1:1, no fee adjustment
+        amount_wei = balance_nxt * (10 ** 18)
 
         token_ids.append(dev["token_id"])
-        amounts_wei.append(gross_wei)
+        amounts_wei.append(amount_wei)
 
         logger.info(
-            "Dev #%d: net=%d NXT, gross_wei=%d",
-            dev["token_id"], net_nxt, gross_wei,
+            "Dev #%d: %d NXT (%d wei)",
+            dev["token_id"], balance_nxt, amount_wei,
         )
 
     return token_ids, amounts_wei
@@ -168,7 +147,7 @@ def _send_batch(w3, contract, account, batch_ids, batch_amounts, nonce):
     ).build_transaction({
         "from": account.address,
         "nonce": nonce,
-        "chainId": MEGAETH_CHAIN_ID,
+        "chainId": PHAROS_CHAIN_ID,
         "gas": 500_000 + (len(batch_ids) * 30_000),
     })
 
@@ -228,12 +207,11 @@ def sync_claimable_balances():
         db_conn.close()
         return
 
-    total_gross_nxt = sum(a // (10 ** 18) for a in amounts_wei)
+    total_nxt = sum(a // (10 ** 18) for a in amounts_wei)
     logger.info(
-        "Total: %d devs, ~%d NXT gross (~%d NXT net after 10%% fee)",
+        "Total: %d devs, %d NXT to sync on-chain",
         len(token_ids),
-        total_gross_nxt,
-        sum(d["balance_nxt"] for d in pending if d["balance_nxt"] > 0),
+        total_nxt,
     )
 
     # -- 4. Submit to contract in batches ------------------------------
@@ -249,9 +227,9 @@ def sync_claimable_balances():
     try:
         from web3 import Web3
 
-        w3 = Web3(Web3.HTTPProvider(MEGAETH_RPC))
+        w3 = Web3(Web3.HTTPProvider(PHAROS_RPC))
         if not w3.is_connected():
-            logger.error("Cannot connect to MegaETH RPC.")
+            logger.error("Cannot connect to Pharos RPC.")
             db_conn.close()
             return
 

@@ -78,10 +78,8 @@ async def get_claim_history(wallet: str):
 async def get_wallet_summary(wallet: str):
     """Get wallet summary: balances + per-dev breakdown.
 
-    IMPORTANT: balance_claimable here is the NET amount (what the player sees).
-    The on-chain claimableBalance is inflated by ~11.11% to compensate for
-    the 10% contract fee. Frontend must use previewClaim().net, never
-    claimableBalance directly.
+    balance_claimable is the amount the player sees and will receive on-chain.
+    NXDevNFT v8 has no claim fee — on-chain claimableBalance = exact payout.
     """
     player = fetch_one(
         "SELECT wallet_address, balance_claimable, balance_claimed, balance_total_earned FROM players WHERE wallet_address = %s",
@@ -316,7 +314,7 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
 
     # Claims
     claims = fetch_all(
-        """SELECT amount_gross, fee_amount, amount_net, tx_hash, claimed_at
+        """SELECT amount_net, tx_hash, claimed_at
            FROM claim_history
            WHERE player_address = %s
            ORDER BY claimed_at DESC
@@ -329,7 +327,7 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
             "amount": -(c["amount_net"]),
             "dev_id": None,
             "dev_name": None,
-            "description": f"Claimed {c['amount_net']} $NXT (fee: {c['fee_amount']})",
+            "description": f"Claimed {c['amount_net']} $NXT",
             "timestamp": c["claimed_at"],
             "tx_hash": c.get("tx_hash"),
         })

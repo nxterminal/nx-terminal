@@ -228,9 +228,9 @@ function Contracts() {
           NXDevNFT (Employee Badges)
         </div>
         <div style={line}><span style={label}>Address: </span><span style={addr}>{NXDEVNFT_ADDRESS}</span></div>
-        <div style={line}><span style={label}>Network: </span><span style={val}>MegaETH (4326)</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>Pharos Atlantic (688689)</span></div>
         <div style={line}><span style={label}>Supply:  </span><span style={val}>{minted} / 35,000 minted</span></div>
-        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0025 ETH</span></div>
+        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0001 PHRS</span></div>
         <ExplorerLink address={NXDEVNFT_ADDRESS} />
       </div>
 
@@ -240,7 +240,7 @@ function Contracts() {
           $NXT Token (Protocol Wars Currency)
         </div>
         <div style={line}><span style={label}>Address: </span><span style={addr}>{NXT_TOKEN_ADDRESS}</span></div>
-        <div style={line}><span style={label}>Network: </span><span style={val}>MegaETH (4326)</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>Pharos Atlantic (688689)</span></div>
         <div style={line}><span style={label}>Total Supply: </span><span style={val}>1,000,000,000 NXT</span></div>
         <ExplorerLink address={NXT_TOKEN_ADDRESS} />
       </div>
@@ -267,7 +267,7 @@ function Contracts() {
       </div>
 
       <div style={{ color: '#808080', marginTop: '16px', fontSize: '11px', textAlign: 'center' }}>
-        NX Terminal Corp. (C) 1998. All contracts verified on MegaETH.
+        NX Terminal Corp. (C) 1998. All contracts verified on Pharos.
       </div>
     </div>
   );
@@ -281,13 +281,14 @@ export default function NXTerminal() {
         <button className={`win-tab${tab === 'system' ? ' active' : ''}`} onClick={() => setTab('system')}>System Info</button>
         <button className={`win-tab${tab === 'handbook' ? ' active' : ''}`} onClick={() => setTab('handbook')}>Employee Handbook</button>
         <button className={`win-tab${tab === 'lore' ? ' active' : ''}`} onClick={() => setTab('lore')}>Lore</button>
-        {/* Contracts tab disabled — pending network migration */}
+        <button className={`win-tab${tab === 'contracts' ? ' active' : ''}`} onClick={() => setTab('contracts')}>Contracts</button>
         <button className={`win-tab${tab === 'links' ? ' active' : ''}`} onClick={() => setTab('links')}>Links</button>
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'system' && <SystemInfo />}
         {tab === 'handbook' && <Handbook />}
         {tab === 'lore' && <Lore />}
+        {tab === 'contracts' && <Contracts />}
         {tab === 'links' && <Links />}
       </div>
     </div>

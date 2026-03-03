@@ -21,7 +21,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 # SIMULATION
 # ============================================================
 MAX_DEVS = 35_000
-MINT_PRICE_ETH = 0.0011
+MINT_PRICE_PHRS = 0.0001
 MAX_PER_WALLET = 20
 
 # Scheduling
@@ -44,13 +44,10 @@ SALARY_PER_DAY = 200             # $NXT the player RECEIVES clean per dev per da
 SALARY_INTERVAL_HOURS = 1        # Pay every hour (more frequent = more dynamic game)
 SALARY_PER_INTERVAL = math.ceil(SALARY_PER_DAY / (24 / SALARY_INTERVAL_HOURS))  # 9 $NXT per hour (216/day, rounds up to avoid loss)
 
-CLAIM_FEE_BPS = 1000             # 10% — mirrors on-chain constant, reference only
-
-# On-chain claimable amounts (compensate for 10% fee so player nets 200/day)
-# Formula: SALARY_PER_DAY / (1 - fee%) = 200 / 0.9 = 222.222...
-# In wei (18 decimals): 222222222222222222222
-CLAIMABLE_AMOUNT_WEI_PER_DAY = 222222222222222222222
-CLAIMABLE_PER_INTERVAL_WEI = 111111111111111111111  # half per 12h interval
+# On-chain claimable amounts (v8: no claim fee, player receives 100%)
+# 200 NXT/day = 200 * 10^18 wei
+CLAIMABLE_AMOUNT_WEI_PER_DAY = 200_000_000_000_000_000_000
+CLAIMABLE_PER_INTERVAL_WEI = 100_000_000_000_000_000_000  # half per 12h interval
 
 # Action costs
 COST_CREATE_PROTOCOL_NXT = 15
