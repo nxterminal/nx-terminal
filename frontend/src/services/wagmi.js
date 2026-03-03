@@ -1,23 +1,23 @@
 import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// MegaETH Mainnet — not in viem's default chains
-export const megaeth = {
-  id: 4326,
-  name: 'MegaETH',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+// Pharos Atlantic Testnet — not in viem's default chains
+export const pharos = {
+  id: 688689,
+  name: 'Pharos Atlantic Testnet',
+  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://mainnet.megaeth.com/rpc'] },
+    default: { http: ['https://atlantic.dplabs-internal.com'] },
   },
   blockExplorers: {
-    default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },
+    default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' },
   },
 };
 
 export const wagmiConfig = createConfig({
-  chains: [megaeth],
+  chains: [pharos],
   connectors: [injected()],
   transports: {
-    [megaeth.id]: http('https://mainnet.megaeth.com/rpc'),
+    [pharos.id]: http('https://atlantic.dplabs-internal.com'),
   },
 });

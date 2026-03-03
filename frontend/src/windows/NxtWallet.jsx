@@ -65,7 +65,7 @@ function ClaimSection({ wallet, tokenIds }) {
     query: { enabled: !!wallet },
   });
 
-  // Read previewClaim to get gross/fee/net
+  // Read previewClaim to get total claimable amount (v8: no fee)
   const { data: preview, refetch: refetchPreview } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
@@ -89,9 +89,10 @@ function ClaimSection({ wallet, tokenIds }) {
     }
   }, [isConfirmed, refetchPreview]);
 
-  const netWei = preview ? preview[2] : BigInt(0);
-  const netDisplay = formatNxt(netWei);
-  const hasClaimable = netWei > BigInt(0);
+  // v8: previewClaim returns single total (no fee deduction)
+  const totalWei = preview != null ? BigInt(preview) : BigInt(0);
+  const claimDisplay = formatNxt(totalWei);
+  const hasClaimable = totalWei > BigInt(0);
 
   const handleClaim = () => {
     resetTx();
@@ -150,7 +151,7 @@ function ClaimSection({ wallet, tokenIds }) {
           fontFamily: "'VT323', monospace", fontSize: '16px',
           color: 'var(--gold)', padding: '4px 0',
         }}>
-          Claimable: {netDisplay} $NXT
+          Claimable: {claimDisplay} $NXT
         </div>
       )}
 
@@ -166,7 +167,7 @@ function ClaimSection({ wallet, tokenIds }) {
             color: claimDisabled ? undefined : 'var(--win-text)',
           }}
         >
-          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? netDisplay : '0'} $NXT`}
+          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? claimDisplay : '0'} $NXT`}
         </button>
 
         {/* TX status */}
@@ -186,7 +187,7 @@ function ClaimSection({ wallet, tokenIds }) {
 
         {isConfirmed && (
           <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-green)' }}>
-            Successfully claimed {netDisplay} $NXT!{' '}
+            Successfully claimed {claimDisplay} $NXT!{' '}
             <a
               href={`${EXPLORER_BASE}/tx/${txHash}`}
               target="_blank"

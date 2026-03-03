@@ -9,7 +9,7 @@ import { api } from '../services/api';
 const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeidqzkcpcannjtvnasq6ll7nskm2tf5xjb23xhr4wjb3iodxsm6eym';
 
 const DEPLOY_STEPS = [
-  { text: 'Connecting to MegaETH mainnet...', duration: 800 },
+  { text: 'Connecting to Pharos Network...', duration: 800 },
   { text: 'Installing neural pathways...', duration: 800 },
   { text: 'Compiling personality matrix...', duration: 1200 },
   { text: 'Deploying to corporation...', duration: 1000 },
@@ -786,7 +786,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   ) : (
                     <>
                       Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>
-                        {priceDisplay} ETH x {quantity} = {totalCostDisplay} ETH
+                        {priceDisplay} PHRS x {quantity} = {totalCostDisplay} PHRS
                       </span>
                     </>
                   )}
