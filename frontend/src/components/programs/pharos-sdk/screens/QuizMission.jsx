@@ -1,37 +1,38 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import MissionHeader from '../components/MissionHeader';
 
 export default function QuizMission({ mission, onComplete }) {
   const [currentQ, setCurrentQ] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [answers, setAnswers] = useState({});
   const [correctCount, setCorrectCount] = useState(0);
-  const [showExplanation, setShowExplanation] = useState(false);
-  const advanceTimerRef = useRef(null);
   const questions = mission.questions;
   const q = questions[currentQ];
 
-  const handleSelect = useCallback((idx) => {
-    if (selected !== null) return;
-    setSelected(idx);
-    setShowExplanation(true);
-    const isCorrect = idx === q.correct;
-    const newCorrectCount = isCorrect ? correctCount + 1 : correctCount;
-    if (isCorrect) setCorrectCount(newCorrectCount);
+  const selected = answers[currentQ] ?? null;
+  const showExplanation = selected !== null;
 
-    advanceTimerRef.current = setTimeout(() => {
-      if (currentQ < questions.length - 1) {
-        setCurrentQ(currentQ + 1);
-        setSelected(null);
-        setShowExplanation(false);
-      } else {
-        const passed = newCorrectCount / questions.length >= 0.66;
-        onComplete(passed, {
-          correctCount: newCorrectCount,
-          totalQuestions: questions.length,
-        });
-      }
-    }, 2000);
-  }, [selected, q, correctCount, currentQ, questions, onComplete]);
+  const handleSelect = useCallback((idx) => {
+    if (answers[currentQ] !== undefined) return;
+    setAnswers(prev => ({ ...prev, [currentQ]: idx }));
+    if (idx === q.correct) setCorrectCount(prev => prev + 1);
+  }, [answers, currentQ, q]);
+
+  const handleNext = useCallback(() => {
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      const finalCorrect = correctCount;
+      const passed = finalCorrect / questions.length >= 0.66;
+      onComplete(passed, {
+        correctCount: finalCorrect,
+        totalQuestions: questions.length,
+      });
+    }
+  }, [currentQ, questions, correctCount, onComplete]);
+
+  const handlePrev = useCallback(() => {
+    if (currentQ > 0) setCurrentQ(currentQ - 1);
+  }, [currentQ]);
 
   const isCorrectAnswer = selected !== null && selected === q.correct;
 
@@ -81,11 +82,29 @@ export default function QuizMission({ mission, onComplete }) {
         </div>
       )}
 
+      {/* Navigation buttons */}
+      <div className="ps-quiz-nav">
+        <button
+          className="ps-wiz-btn"
+          onClick={handlePrev}
+          disabled={currentQ === 0}
+        >
+          {'\u25C0'} Previous
+        </button>
+        <button
+          className="ps-wiz-btn"
+          onClick={handleNext}
+          disabled={selected === null}
+        >
+          {currentQ < questions.length - 1 ? 'Next \u25B6' : 'Finish \u25B6'}
+        </button>
+      </div>
+
       {/* Progress dots */}
       <div className="ps-quiz-dots">
         {questions.map((_, i) => (
-          <span key={i} style={{ color: i < currentQ ? '#008800' : i === currentQ ? '#000' : '#aaa' }}>
-            {i < currentQ ? '\u25CF' : i === currentQ ? '\u25C9' : '\u25CB'}{' '}
+          <span key={i} style={{ color: answers[i] !== undefined ? '#008800' : i === currentQ ? '#000' : '#aaa' }}>
+            {answers[i] !== undefined ? '\u25CF' : i === currentQ ? '\u25C9' : '\u25CB'}{' '}
           </span>
         ))}
       </div>

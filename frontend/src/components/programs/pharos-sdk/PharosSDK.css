@@ -222,6 +222,7 @@
   padding: 3px 16px;
   font-size: 11px;
   font-family: Tahoma, sans-serif;
+  color: #000;
   cursor: pointer;
   min-width: 75px;
   text-align: center;
@@ -412,6 +413,7 @@
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   font-size: 10px;
   font-family: Tahoma, sans-serif;
+  color: #000;
   padding: 1px 8px;
   cursor: pointer;
 }
@@ -629,6 +631,13 @@
   border-color: #aa0000 #dd8888 #dd8888 #aa0000;
   background: #fff0f0;
   color: #440000;
+}
+
+.ps-quiz-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  margin-bottom: 6px;
 }
 
 .ps-quiz-dots {
@@ -947,6 +956,7 @@
   padding: 3px 16px;
   font-size: 12px;
   font-family: Tahoma, sans-serif;
+  color: #000;
   cursor: pointer;
 }
 
