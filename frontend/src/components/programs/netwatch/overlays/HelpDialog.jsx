@@ -44,7 +44,7 @@ RPC:       atlantic.dplabs-internal.com
 Explorer:  atlantic.pharosscan.xyz
 Consensus: AsyncBFT
 Target TPS: 30,000+
-Finality:  Sub-second
+Block Time: Sub-second (~0.5-0.8s)
 
 STATUS: BETA
 Connected to testnet. Data refreshes every
@@ -62,8 +62,6 @@ ${'═'.repeat(45)}
   TPS, gas, block height, finality
 \u2713 Transaction flow with type detection
   Transfer, Swap, Deploy, Mint, and more
-\u2713 Corporation activity monitor
-  Six Protocol Wars corps tracked
 \u2713 Hover tooltips on all metrics
   Hover any metric to learn what it shows
 \u2713 CRT display effects and retro aesthetics
@@ -133,33 +131,7 @@ ${'═'.repeat(45)}
 \u2591 Empty bar    Remaining capacity to maximum
 ~ Prefix       Estimated value (not from RPC)
 \u2713 Checkmark    Value within expected target
-\u25CF Blinking dot Live data indicator
-
-${'═'.repeat(45)}
-CORPORATIONS (Protocol Wars)
-${'═'.repeat(45)}
-
-\u25C6 Closed AI
-  "We promised to be open. Then we got funding."
-
-\u25C8 Misanthropic
-  "Safe AI. We hate everyone equally."
-
-\u25C9 Shallow Mind
-  "Infinite compute. Zero products."
-
-\u25CA Zuck Labs
-  "We'll pivot to whatever is trending."
-
-\u25CB Y.AI
-  "Tweets before building."
-
-\u25CE Mistrial Systems
-  "Open source. When convenient."
-
-Corporation activity bars are currently
-simulated. Full version tracks real on-chain
-activity from NX Terminal dev NFTs.`,
+\u25CF Blinking dot Live data indicator`,
 };
 
 const LEGEND_COLORS = {
