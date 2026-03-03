@@ -16,6 +16,13 @@ function formatNumber(n) {
   return n.toLocaleString();
 }
 
+function formatTotalTx(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toString();
+}
+
 function buildSparkline(data) {
   if (!data || data.length === 0) return '';
   const max = Math.max(...data, 1);
@@ -26,17 +33,17 @@ function buildSparkline(data) {
 }
 
 const METRIC_TOOLTIPS = {
-  tps: 'Transactions Per Second \u2014 Number of transactions the network is processing per second. Pharos targets 30,000+ TPS. Calculated from the latest block.',
+  tps: 'Transactions Per Second \u2014 Rolling average TPS calculated over the last 10 blocks. Pharos targets 30,000+ TPS.',
   gas: 'Gas Throughput \u2014 Amount of computational gas used per second, measured in Gigagas (Ggas). Pharos targets 2 Ggas/s. Higher values mean more complex transactions.',
   blk: 'Block Height \u2014 The current block number on Pharos Atlantic Testnet. Each block contains a batch of confirmed transactions.',
-  fin: 'Finality Time \u2014 How long until a transaction is irreversibly confirmed. Pharos targets sub-second finality (~0.5s). Green = within target, yellow = slower than expected.',
+  blockTime: 'Block Time \u2014 Average time between consecutive blocks. Pharos targets sub-second block time (~0.5\u20130.8s). Green means within target.',
   val: 'Active Validators \u2014 Estimated number of validators securing the network. Marked with ~ because this is estimated from block data, not directly reported by the RPC.',
-  pnd: 'Pending Transactions \u2014 Estimated number of transactions waiting to be included in the next block. Marked with ~ because this value is estimated.',
-  sparkline: 'TPS History (last 60 seconds) \u2014 Each bar represents the TPS measured at one polling interval (every 3 seconds). Taller bars = more transactions.',
+  totalTx: 'Total Transactions \u2014 Cumulative number of transactions processed on Pharos Atlantic Testnet since genesis.',
+  sparkline: 'TPS History (last 60 seconds) \u2014 Each bar represents the rolling average TPS at one polling interval (every 3 seconds). Taller bars = more transactions.',
 };
 
 const rowStyle = { display: 'flex', alignItems: 'center', gap: '8px' };
-const labelStyle = { color: '#888', fontSize: '10px', width: '36px', flexShrink: 0 };
+const labelStyle = { color: '#888', fontSize: '10px', width: '56px', flexShrink: 0 };
 
 export default function NetworkVitals({ data }) {
   const [flashFields, setFlashFields] = useState({});
@@ -48,8 +55,8 @@ export default function NetworkVitals({ data }) {
       if (data.blockNumber !== prevRef.current.blockNumber) flashes.blockNumber = true;
       if (data.tps !== prevRef.current.tps) flashes.tps = true;
       if (data.gasUsed !== prevRef.current.gasUsed) flashes.gasUsed = true;
-      if (data.finality !== prevRef.current.finality) flashes.finality = true;
-      if (data.pendingTx !== prevRef.current.pendingTx) flashes.pendingTx = true;
+      if (data.blockTime !== prevRef.current.blockTime) flashes.blockTime = true;
+      if (data.totalTx !== prevRef.current.totalTx) flashes.totalTx = true;
       if (data.validatorCount !== prevRef.current.validatorCount) flashes.validatorCount = true;
     }
     prevRef.current = { ...data };
@@ -59,13 +66,21 @@ export default function NetworkVitals({ data }) {
       const timer = setTimeout(() => setFlashFields({}), 300);
       return () => clearTimeout(timer);
     }
-  }, [data.blockNumber, data.tps, data.gasUsed, data.finality, data.pendingTx, data.validatorCount]);
+  }, [data.blockNumber, data.tps, data.gasUsed, data.blockTime, data.totalTx, data.validatorCount]);
 
-  const tpsBar = buildBar(data.tps, 50000);
+  // Dynamic TPS bar scale
+  const tpsBarMax = data.tps > 1000 ? 50000 :
+                    data.tps > 100 ? 1000 :
+                    data.tps > 10 ? 100 : 50;
+  const tpsBar = buildBar(data.tps, tpsBarMax);
   const gasBar = buildBar(data.gasUsed, 2.5);
   const sparkline = buildSparkline(data.tpsHistory);
 
   const fc = (field) => flashFields[field] ? 'nw-flash' : '';
+
+  // Block time color thresholds
+  const blockTimeColor = data.blockTime < 1.0 ? '#00ff41' :
+                          data.blockTime < 2.0 ? '#ffff00' : '#ff3333';
 
   return (
     <div className="nw-panel nw-vitals" style={{ padding: '8px 10px', fontFamily: '"IBM Plex Mono", "Courier New", monospace', fontSize: '12px', color: '#00ff41', background: '#000', height: '100%', overflow: 'hidden' }}>
@@ -87,7 +102,7 @@ export default function NetworkVitals({ data }) {
             <span className={fc('tps')}>
               <span style={{ color: '#00ff41' }}>{tpsBar.filled}</span>
               <span style={{ color: '#333' }}>{tpsBar.empty}</span>
-              <span style={{ color: '#00ff41', marginLeft: '6px' }}>{formatNumber(data.tps)}</span>
+              <span style={{ color: '#00ff41', marginLeft: '6px' }}>{data.tps.toFixed(2)}</span>
             </span>
           </div>
         </Tooltip>
@@ -112,11 +127,11 @@ export default function NetworkVitals({ data }) {
           </div>
         </Tooltip>
 
-        <Tooltip text={METRIC_TOOLTIPS.fin}>
+        <Tooltip text={METRIC_TOOLTIPS.blockTime}>
           <div style={rowStyle}>
-            <span style={labelStyle}>FIN</span>
-            <span className={fc('finality')} style={{ color: data.finality <= 0.5 ? '#00ff41' : '#ffff00' }}>
-              {data.finality.toFixed(2)}s {data.finality <= 0.5 ? '\u2713' : ''}
+            <span style={labelStyle}>BLK TIME</span>
+            <span className={fc('blockTime')} style={{ color: blockTimeColor }}>
+              {data.blockTime.toFixed(2)}s {data.blockTime > 0 && data.blockTime < 1.0 ? '\u2713' : ''}
             </span>
           </div>
         </Tooltip>
@@ -130,11 +145,11 @@ export default function NetworkVitals({ data }) {
           </div>
         </Tooltip>
 
-        <Tooltip text={METRIC_TOOLTIPS.pnd}>
+        <Tooltip text={METRIC_TOOLTIPS.totalTx}>
           <div style={rowStyle}>
-            <span style={labelStyle}>PND</span>
-            <span className={fc('pendingTx')} style={{ color: '#ff6600' }}>
-              ~{formatNumber(data.pendingTx)} tx
+            <span style={labelStyle}>TOTAL TX</span>
+            <span className={fc('totalTx')} style={{ color: '#00ff41' }}>
+              {formatTotalTx(data.totalTx)}
             </span>
           </div>
         </Tooltip>

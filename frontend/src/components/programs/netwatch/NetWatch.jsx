@@ -4,7 +4,7 @@ import { usePharosRPC } from './hooks/usePharosRPC';
 import BlockRain from './panels/BlockRain';
 import NetworkVitals from './panels/NetworkVitals';
 import TransactionFlow from './panels/TransactionFlow';
-import CorpActivityBar from './panels/CorpActivityBar';
+
 import BootSequence from './overlays/BootSequence';
 import HelpDialog from './overlays/HelpDialog';
 
@@ -219,7 +219,7 @@ export default function NetWatch({ onClose }) {
           {showScanlines && <div className="nw-scanlines" />}
         </div>
 
-        <CorpActivityBar tick={rpc.blockNumber} />
+
       </div>
 
       {/* Status bar */}

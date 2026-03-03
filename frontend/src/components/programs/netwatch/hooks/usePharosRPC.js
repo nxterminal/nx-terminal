@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PHAROS_CONFIG } from "../utils/constants";
 
+// ═══ Known data point for Total TX estimation (Option B) ═══
+const KNOWN_BLOCK = 14942707;
+const KNOWN_TX_COUNT = 621738176;
+const AVG_TX_PER_BLOCK = 41.6;
+
 async function rpcCall(method, params = []) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -55,14 +60,19 @@ function hexToNumber(hex) {
   return parseInt(hex, 16);
 }
 
+function estimateTotalTx(blockNum) {
+  if (blockNum <= KNOWN_BLOCK) return KNOWN_TX_COUNT;
+  return Math.round(KNOWN_TX_COUNT + (blockNum - KNOWN_BLOCK) * AVG_TX_PER_BLOCK);
+}
+
 export function usePharosRPC() {
   const [state, setState] = useState({
     blockNumber: 0,
     tps: 0,
     gasUsed: 0,
     gasPrice: 0,
-    finality: 0,
-    pendingTx: 0,
+    blockTime: 0,
+    totalTx: 0,
     validatorCount: 0,
     tpsHistory: [],
     transactions: [],
@@ -73,11 +83,11 @@ export function usePharosRPC() {
     lastUpdated: 0,
   });
 
-  const prevBlockRef = useRef(0);
-  const prevTimestampRef = useRef(0);
+  const recentBlocksRef = useRef([]); // [{ timestamp, txCount }]
   const tpsHistoryRef = useRef([]);
   const txCacheRef = useRef([]);
   const pausedRef = useRef(false);
+  const prevBlockNumRef = useRef(0);
 
   const fetchData = useCallback(async () => {
     if (pausedRef.current) return;
@@ -85,6 +95,11 @@ export function usePharosRPC() {
     try {
       const blockHex = await rpcCall("eth_blockNumber");
       const blockNum = hexToNumber(blockHex);
+
+      // Skip if same block
+      if (blockNum === prevBlockNumRef.current && prevBlockNumRef.current > 0) {
+        return;
+      }
 
       const block = await rpcCall("eth_getBlockByNumber", [blockHex, true]);
 
@@ -103,31 +118,59 @@ export function usePharosRPC() {
         miner: block.miner || "0x0",
       };
 
+      prevBlockNumRef.current = blockNum;
+
+      // ═══ Rolling block history (last 10 blocks) ═══
+      recentBlocksRef.current.push({
+        timestamp: blockData.timestamp,
+        txCount: blockData.transactionCount,
+      });
+      if (recentBlocksRef.current.length > 10) {
+        recentBlocksRef.current = recentBlocksRef.current.slice(-10);
+      }
+
+      const blocks = recentBlocksRef.current;
+
+      // ═══ TPS: rolling average over stored blocks ═══
       let tps = 0;
-      const prevTimestamp = prevTimestampRef.current;
-      if (prevBlockRef.current > 0 && prevTimestamp > 0) {
-        const timeDiff = blockData.timestamp - prevTimestamp;
+      if (blocks.length >= 2) {
+        const oldest = blocks[0];
+        const newest = blocks[blocks.length - 1];
+        const timeDiff = newest.timestamp - oldest.timestamp;
+        const totalTxInWindow = blocks.slice(1).reduce((sum, b) => sum + b.txCount, 0);
         if (timeDiff > 0) {
-          tps = Math.round(blockData.transactionCount / timeDiff);
+          tps = totalTxInWindow / timeDiff;
         }
       }
-      prevBlockRef.current = blockNum;
-      prevTimestampRef.current = blockData.timestamp;
 
       tpsHistoryRef.current = [
         ...tpsHistoryRef.current.slice(-(PHAROS_CONFIG.TPS_HISTORY_LENGTH - 1)),
         tps,
       ];
 
+      // ═══ Block Time: average of consecutive block diffs ═══
+      let blockTime = 0;
+      if (blocks.length >= 2) {
+        let totalTime = 0;
+        let count = 0;
+        for (let i = 1; i < blocks.length; i++) {
+          const diff = blocks[i].timestamp - blocks[i - 1].timestamp;
+          if (diff > 0) {
+            totalTime += diff;
+            count++;
+          }
+        }
+        if (count > 0) {
+          blockTime = totalTime / count;
+        }
+      }
+
       const gasPriceHex = await rpcCall("eth_gasPrice");
       const gasPrice = hexToNumber(gasPriceHex) / 1e9;
       const gasUsed = hexToNumber(blockData.gasUsed) / 1e9;
 
-      // Finality: time between consecutive blocks (not fetch latency)
-      let finality = 0.5;
-      if (prevTimestamp > 0 && blockData.timestamp > prevTimestamp) {
-        finality = Math.max(0.1, Math.min(5.0, blockData.timestamp - prevTimestamp));
-      }
+      // ═══ Total TX: estimate from known data point ═══
+      const totalTx = estimateTotalTx(blockNum);
 
       const newTxs = (block.transactions || [])
         .slice(0, 10)
@@ -149,11 +192,11 @@ export function usePharosRPC() {
 
       setState({
         blockNumber: blockNum,
-        tps,
+        tps: parseFloat(tps.toFixed(2)),
         gasUsed,
         gasPrice,
-        finality: parseFloat(finality.toFixed(2)),
-        pendingTx: Math.round(Math.random() * 300 + 100),
+        blockTime: parseFloat(blockTime.toFixed(2)),
+        totalTx,
         validatorCount: 120 + Math.round(Math.random() * 20),
         tpsHistory: [...tpsHistoryRef.current],
         transactions: txCacheRef.current,
