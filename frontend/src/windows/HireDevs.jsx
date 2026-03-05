@@ -785,7 +785,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                     <span style={{ fontWeight: 'bold', color: 'var(--terminal-green)' }}>FREE MINT</span>
                   ) : (
                     <>
-                      Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold)' }}>
+                      Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
                         {priceDisplay} PHRS x {quantity} = {totalCostDisplay} PHRS
                       </span>
                     </>
@@ -804,16 +804,16 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               {isConnected && (
                 <div style={{ fontSize: '10px', marginTop: '6px', color: '#888' }}>
                   {hasFreeMint && (
-                    <span style={{ color: 'var(--terminal-green)' }}>
+                    <span style={{ color: 'var(--green-on-grey, #005500)' }}>
                       Free mints available: {Number(freeAllowance)}{' | '}
                     </span>
                   )}
                   {canWhitelistMint && (
-                    <span style={{ color: 'var(--terminal-cyan)' }}>
+                    <span style={{ color: 'var(--blue-on-grey, #0d47a1)' }}>
                       Whitelisted{' | '}
                     </span>
                   )}
-                  <span style={{ color: 'var(--terminal-green)' }}>Connected: {displayAddress}</span>
+                  <span style={{ color: 'var(--green-on-grey, #005500)' }}>Connected: {displayAddress}</span>
                 </div>
               )}
             </div>
