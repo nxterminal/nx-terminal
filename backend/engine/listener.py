@@ -126,10 +126,10 @@ def ensure_player(cur, owner, corporation):
 
 
 def insert_action_mint(cur, token_id, dev_name, archetype):
-    """Insert a RECEIVE_SALARY action to record the mint in the feed."""
+    """Insert a DEPLOY action to record the mint in the feed."""
     cur.execute("""
         INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost, cycle_number)
-        VALUES (%s, %s, %s, 'RECEIVE_SALARY', %s, 0, 0, 0)
+        VALUES (%s, %s, %s, 'DEPLOY', %s, 0, 0, 0)
     """, (
         token_id,
         dev_name,
