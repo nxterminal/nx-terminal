@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOOM.exe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    .jsdos { width: 100% !important; height: 100% !important; }
+    /* Hide any js-dos branding/overlay text */
+    .jsdos .sidebar, .jsdos .header, .jsdos .footer,
+    .jsdos-overlay, .jsdos-player-region,
+    [class*="sidebar"], [class*="header"], [class*="footer"] { display: none !important; }
+    canvas { image-rendering: pixelated; }
+  </style>
+  <link rel="stylesheet" href="js-dos.css" />
+</head>
+<body>
+  <div id="dos" class="jsdos"></div>
+  <script src="js-dos.js"></script>
+  <script>
+    emulators.pathPrefix = "/doom/emulators/";
+    Dos(document.getElementById("dos"), {
+      url: "/doom/doom.jsdos",
+      autoStart: true,
+    });
+  </script>
+</body>
+</html>
