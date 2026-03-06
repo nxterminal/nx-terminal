@@ -260,6 +260,10 @@ function formatBackendAction(item) {
       return `${name} grabbed coffee #${d.count || '???'}. Heart rate: concerning. ${d.message || ''}`;
     case 'SALARY':
       return `${name} received ${d.amount || 200} $NXT salary. Another day, another digital dollar.`;
+    case 'RECEIVE_SALARY':
+      return `${name} received ${d.amount || '???'} $NXT salary. The grind continues.`;
+    case 'DEPLOY':
+      return `${name} has been hired and deployed to the simulation. ${d.message || 'Welcome to the machine.'}`;
     default: {
       // Fallback: extract any message from details
       const msg = d.message || d.event || d.name || (typeof item.details === 'string' ? item.details : JSON.stringify(d));

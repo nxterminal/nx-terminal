@@ -275,7 +275,7 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
             f"""SELECT dev_id, dev_name, action_type, nxt_cost, details, created_at
                 FROM actions
                 WHERE dev_id IN ({placeholders})
-                  AND action_type IN ('CREATE_PROTOCOL', 'CREATE_AI', 'INVEST', 'SELL', 'RECEIVE_SALARY')
+                  AND action_type IN ('CREATE_PROTOCOL', 'CREATE_AI', 'INVEST', 'SELL', 'RECEIVE_SALARY', 'DEPLOY')
                 ORDER BY created_at DESC
                 LIMIT %s OFFSET %s""",
             (*dev_ids, limit, offset)
@@ -294,12 +294,23 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
                     "timestamp": a["created_at"],
                 })
             elif a["action_type"] == "RECEIVE_SALARY":
+                details = a["details"] if isinstance(a["details"], dict) else {}
+                salary_amount = amount or details.get("amount", 0)
                 movements.append({
                     "type": "salary",
-                    "amount": amount,
+                    "amount": salary_amount,
                     "dev_id": a["dev_id"],
                     "dev_name": a["dev_name"],
                     "description": "Salary received",
+                    "timestamp": a["created_at"],
+                })
+            elif a["action_type"] == "DEPLOY":
+                movements.append({
+                    "type": "salary",
+                    "amount": 0,
+                    "dev_id": a["dev_id"],
+                    "dev_name": a["dev_name"],
+                    "description": f"{a['dev_name']} deployed to simulation",
                     "timestamp": a["created_at"],
                 })
             else:

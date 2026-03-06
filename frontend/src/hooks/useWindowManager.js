@@ -21,6 +21,7 @@ const WINDOW_DEFAULTS = {
   'corp-wars': { title: 'Corporation Wars', icon: '\u2694', width: 720, height: 550, x: 160, y: 50 },
   'netwatch': { title: 'NETWATCH.exe', icon: '', width: 900, height: 550, x: 80, y: 35 },
   'pharos-sdk': { title: 'PHAROS_SDK.exe', icon: '', width: 880, height: 700, x: 120, y: 30 },
+  'doom': { title: 'DOOM.exe', icon: '', width: 700, height: 520, x: 100, y: 40 },
 };
 
 export function useWindowManager() {

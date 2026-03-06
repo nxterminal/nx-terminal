@@ -733,11 +733,11 @@ def run_scheduler_tick(conn) -> int:
 # ============================================================
 
 def pay_salaries(conn):
-    """Pay salary to all active devs. Run every 12 hours.
+    """Pay salary to all active devs. Run every hour.
 
-    balance_nxt in DB tracks the player-visible amount (100 per interval).
-    The on-chain sync uses CLAIMABLE_PER_INTERVAL_WEI (111.11... NXT in wei)
-    so that after the 10% contract fee, the player nets exactly 100 NXT.
+    balance_nxt in DB tracks the player-visible amount per interval.
+    The on-chain sync uses CLAIMABLE_PER_INTERVAL_WEI so that after the
+    contract fee, the player nets exactly the right amount.
     """
     cur = get_cursor(conn)
     cur.execute("""
@@ -756,6 +756,21 @@ def pay_salaries(conn):
     """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
 
     count = cur.rowcount
+
+    # Batch INSERT salary actions so they appear in feed & wallet movements
+    cur.execute("""
+        INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+        SELECT token_id, name, archetype, 'RECEIVE_SALARY',
+               jsonb_build_object(
+                   'event', 'salary',
+                   'amount', %s,
+                   'message', name || ' received salary'
+               ),
+               0, %s
+        FROM devs
+        WHERE status = 'active'
+    """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
+
     conn.commit()
     log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen")
     return count
