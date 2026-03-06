@@ -10,6 +10,7 @@ const LOADING_LINES = [
   '> Initializing DOSBox emulation...',
   '> Loading WAD files...',
   '> Mounting C:\\DOOM\\...',
+  '> Configuring keyboard-only input...',
   '> Executing DOOM.EXE...',
 ];
 
@@ -102,37 +103,65 @@ export default function Doom({ openWindow, onClose }) {
     iframeRef.current?.focus();
   }, []);
 
-  // ── INTRO SCREEN ──
+  // ── INTRO SCREEN (Win98 dialog style) ──
   if (phase === 'intro') {
     return (
       <div className="doom-intro">
-        <div className="doom-intro-header">
-          {'>'} DOOM.exe — CLASSIFIED RECREATIONAL SOFTWARE
-        </div>
-        <div className="doom-intro-body">
-          <p className="doom-intro-warning">
-            {'\u26A0'} RESTRICTED ACCESS — DEV CLEARANCE REQUIRED
-          </p>
-          <p>
-            This program requires <strong>Dev NFT clearance</strong> to launch.<br />
-            You must have at least <strong>1 NX Dev NFT</strong> minted to access
-            this classified recreational software.
-          </p>
-          <p className="doom-intro-hint">
-            {">"} Don't have a Dev? Mint one from the Mint/Hire Devs program on your desktop.
-          </p>
-          <div className="doom-intro-ascii">
-{`    ╔═══════════════════════════╗
-    ║   DOOM — SHAREWARE v1.9   ║
-    ║   Episode 1: Knee-Deep    ║
-    ║      in the Dead          ║
-    ╚═══════════════════════════╝`}
+        {/* Icon + Title area */}
+        <div className="doom-intro-top">
+          <div className="doom-intro-icon-area">
+            <div className="doom-intro-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect x="2" y="2" width="28" height="28" rx="2" fill="#8B0000"/>
+                <text x="16" y="22" textAnchor="middle" fill="#ff4400" fontFamily="'VT323', monospace" fontSize="18" fontWeight="bold">DM</text>
+              </svg>
+            </div>
+          </div>
+          <div className="doom-intro-title-area">
+            <div className="doom-intro-title">DOOM.exe — Recreational Software</div>
+            <div className="doom-intro-subtitle">NX Terminal Entertainment Division</div>
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="doom-intro-divider" />
+
+        {/* Message panel */}
+        <div className="doom-intro-panel">
+          <div className="doom-intro-panel-inner">
+            <p className="doom-intro-lore">
+              <strong>ATTENTION — Dev Break Protocol</strong>
+            </p>
+            <p>
+              The NX Terminal recognizes that developers require periodic cognitive
+              decompression. This classified recreational module has been provisioned
+              for registered Devs who need to blow off some steam.
+            </p>
+            <p>
+              DOOM (Shareware v1.9 — Episode 1: Knee-Deep in the Dead) is available
+              as an authorized break activity for your team.
+            </p>
+            <p className="doom-intro-req">
+              <strong>Requirements:</strong>
+            </p>
+            <ul className="doom-intro-list">
+              <li>You must have at least <strong>1 NX Dev NFT</strong> minted</li>
+              <li>Use <strong>Mint/Hire Devs</strong> on your desktop to register a Dev</li>
+              <li>Keyboard controls only — mouse input is disabled</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Security classification bar */}
+        <div className="doom-intro-clearance">
+          Security Clearance: <strong>DEV ACCESS REQUIRED</strong>
+        </div>
+
+        {/* Bottom buttons */}
         <div className="doom-intro-buttons">
-          <button className="win-btn doom-launch-btn" onClick={handleLaunch}>LAUNCH DOOM</button>
-          <button className="win-btn" onClick={() => openWindow('hire-devs')}>MINT A DEV</button>
-          <button className="win-btn" onClick={onClose}>CLOSE</button>
+          <button className="win-btn doom-launch-btn" onClick={handleLaunch}>Launch DOOM</button>
+          <button className="win-btn" onClick={() => openWindow('hire-devs')}>Mint a Dev</button>
+          <button className="win-btn" onClick={onClose}>Close</button>
         </div>
       </div>
     );
