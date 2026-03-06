@@ -25,6 +25,7 @@ const DESKTOP_ICONS = [
   { id: 'control-panel', icon: '::', label: 'Settings' },
   { id: 'netwatch', icon: '', label: 'NETWATCH' },
   { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
+  { id: 'doom', icon: '', label: 'DOOM.exe' },
 ];
 
 function getWallpaperStyle() {

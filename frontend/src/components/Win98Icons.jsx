@@ -472,6 +472,44 @@ function IconPharosSDK({ size = 32 }) {
   );
 }
 
+function IconDoom({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="doomBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8B0000" />
+          <stop offset="100%" stopColor="#3a0000" />
+        </linearGradient>
+        <linearGradient id="doomSkull" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8e0d0" />
+          <stop offset="100%" stopColor="#b8a890" />
+        </linearGradient>
+      </defs>
+      {/* Background */}
+      <rect x="1" y="1" width="30" height="30" rx="2" fill="url(#doomBg)" stroke="#ff4400" strokeWidth="0.8" />
+      {/* Skull shape */}
+      <ellipse cx="16" cy="13" rx="8" ry="7" fill="url(#doomSkull)" />
+      {/* Eye sockets */}
+      <ellipse cx="12.5" cy="12" rx="2.5" ry="2.8" fill="#3a0000" />
+      <ellipse cx="19.5" cy="12" rx="2.5" ry="2.8" fill="#3a0000" />
+      {/* Glowing eyes */}
+      <ellipse cx="12.5" cy="12" rx="1.2" ry="1.5" fill="#ff2200" opacity="0.9" />
+      <ellipse cx="19.5" cy="12" rx="1.2" ry="1.5" fill="#ff2200" opacity="0.9" />
+      {/* Nose */}
+      <path d="M15 15.5 L16 14.5 L17 15.5" fill="#3a0000" />
+      {/* Jaw / teeth */}
+      <rect x="10" y="17" width="12" height="4" rx="0.5" fill="url(#doomSkull)" stroke="#8a7a6a" strokeWidth="0.3" />
+      <line x1="12" y1="17" x2="12" y2="21" stroke="#3a0000" strokeWidth="0.5" />
+      <line x1="14" y1="17" x2="14" y2="21" stroke="#3a0000" strokeWidth="0.5" />
+      <line x1="16" y1="17" x2="16" y2="21" stroke="#3a0000" strokeWidth="0.5" />
+      <line x1="18" y1="17" x2="18" y2="21" stroke="#3a0000" strokeWidth="0.5" />
+      <line x1="20" y1="17" x2="20" y2="21" stroke="#3a0000" strokeWidth="0.5" />
+      {/* DOOM text */}
+      <text x="16" y="28.5" textAnchor="middle" fontSize="4.5" fill="#ff4400" fontWeight="bold" fontFamily="monospace">DOOM</text>
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -491,6 +529,7 @@ export const ICON_MAP = {
   'corp-wars': IconCorpWars,
   'netwatch': IconNetwatch,
   'pharos-sdk': IconPharosSDK,
+  'doom': IconDoom,
 };
 
 export function Win98Icon({ id, size = 32 }) {
