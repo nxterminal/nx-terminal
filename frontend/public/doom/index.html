@@ -18,12 +18,16 @@
 </head>
 <body>
   <div id="dos" class="jsdos"></div>
+  <script src="emulators/emulators.js"></script>
   <script src="js-dos.js"></script>
   <script>
     emulators.pathPrefix = "/doom/emulators/";
     Dos(document.getElementById("dos"), {
       url: "/doom/doom.jsdos",
+      pathPrefix: "/doom/emulators/",
       autoStart: true,
+      noCloud: true,
+      noNetworking: true,
     });
   </script>
 </body>
