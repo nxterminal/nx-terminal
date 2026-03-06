@@ -13,46 +13,49 @@ const LOADING_LINES = [
   '> Executing DOOM.EXE...',
 ];
 
-const JSDOS_URL = 'https://js-dos.com/games/doom.exe.html';
+// Self-hosted js-dos player (no external CDN, no branding)
+const JSDOS_URL = '/doom/index.html';
 
-// ── States: connect | denied | loading | playing | error ──
+// ── States: intro → connect | denied | loading | playing | error ──
 export default function Doom({ openWindow, onClose }) {
   const { address, isConnected, connect } = useWallet();
-  const [phase, setPhase] = useState('init'); // init → connect | denied | loading | playing | error
+  const [phase, setPhase] = useState('intro');
   const [loadingLine, setLoadingLine] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [iframeError, setIframeError] = useState(false);
   const iframeRef = useRef(null);
 
-  // NFT balance check
+  // NFT balance check — only enabled after user clicks LAUNCH
+  const [checkNFT, setCheckNFT] = useState(false);
   const { data: balance, isLoading: balanceLoading, isError: balanceError } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
-    query: { enabled: !!address && isConnected },
+    query: { enabled: checkNFT && !!address && isConnected },
   });
 
   const hasNFT = balance !== undefined && Number(balance) > 0;
 
-  // Determine phase based on wallet/NFT state
-  useEffect(() => {
+  // Handle LAUNCH button
+  const handleLaunch = useCallback(() => {
     if (!isConnected) {
       setPhase('connect');
       return;
     }
-    if (balanceLoading) {
-      setPhase('init');
-      return;
-    }
-    if (balanceError) {
-      setPhase('error');
-      return;
-    }
+    setCheckNFT(true);
+    setPhase('checking');
+  }, [isConnected]);
+
+  // React to NFT check results
+  useEffect(() => {
+    if (phase !== 'checking') return;
+    if (balanceLoading) return;
+    if (balanceError) { setPhase('error'); return; }
     if (balance !== undefined) {
       setPhase(hasNFT ? 'loading' : 'denied');
     }
-  }, [isConnected, balance, balanceLoading, balanceError, hasNFT]);
+  }, [phase, balance, balanceLoading, balanceError, hasNFT]);
 
   // Loading animation
   useEffect(() => {
@@ -62,28 +65,19 @@ export default function Doom({ openWindow, onClose }) {
 
     const lineInterval = setInterval(() => {
       setLoadingLine(prev => {
-        if (prev >= LOADING_LINES.length - 1) {
-          clearInterval(lineInterval);
-          return prev;
-        }
+        if (prev >= LOADING_LINES.length - 1) { clearInterval(lineInterval); return prev; }
         return prev + 1;
       });
     }, 500);
 
     const progressInterval = setInterval(() => {
       setLoadingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
+        if (prev >= 100) { clearInterval(progressInterval); return 100; }
         return prev + 3 + Math.floor(Math.random() * 5);
       });
     }, 150);
 
-    return () => {
-      clearInterval(lineInterval);
-      clearInterval(progressInterval);
-    };
+    return () => { clearInterval(lineInterval); clearInterval(progressInterval); };
   }, [phase]);
 
   // Transition to playing when loading complete
@@ -94,14 +88,55 @@ export default function Doom({ openWindow, onClose }) {
     }
   }, [phase, loadingProgress]);
 
+  // ── Heartbeat: prevent screensaver while playing ──
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const heartbeat = setInterval(() => {
+      window.dispatchEvent(new Event('mousemove'));
+    }, 10000);
+    return () => clearInterval(heartbeat);
+  }, [phase]);
+
   const focusIframe = useCallback(() => {
     try { iframeRef.current?.contentWindow?.focus(); } catch {}
     iframeRef.current?.focus();
   }, []);
 
-  const handleIframeError = () => {
-    setIframeError(true);
-  };
+  // ── INTRO SCREEN ──
+  if (phase === 'intro') {
+    return (
+      <div className="doom-intro">
+        <div className="doom-intro-header">
+          {'>'} DOOM.exe — CLASSIFIED RECREATIONAL SOFTWARE
+        </div>
+        <div className="doom-intro-body">
+          <p className="doom-intro-warning">
+            {'\u26A0'} RESTRICTED ACCESS — DEV CLEARANCE REQUIRED
+          </p>
+          <p>
+            This program requires <strong>Dev NFT clearance</strong> to launch.<br />
+            You must have at least <strong>1 NX Dev NFT</strong> minted to access
+            this classified recreational software.
+          </p>
+          <p className="doom-intro-hint">
+            {">"} Don't have a Dev? Mint one from the Mint/Hire Devs program on your desktop.
+          </p>
+          <div className="doom-intro-ascii">
+{`    ╔═══════════════════════════╗
+    ║   DOOM — SHAREWARE v1.9   ║
+    ║   Episode 1: Knee-Deep    ║
+    ║      in the Dead          ║
+    ╚═══════════════════════════╝`}
+          </div>
+        </div>
+        <div className="doom-intro-buttons">
+          <button className="win-btn doom-launch-btn" onClick={handleLaunch}>LAUNCH DOOM</button>
+          <button className="win-btn" onClick={() => openWindow('hire-devs')}>MINT A DEV</button>
+          <button className="win-btn" onClick={onClose}>CLOSE</button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Connect Wallet Dialog ──
   if (phase === 'connect') {
@@ -123,8 +158,8 @@ export default function Doom({ openWindow, onClose }) {
             </p>
           </div>
           <div className="doom-dialog-buttons">
-            <button className="win-btn" onClick={connect}>CONNECT</button>
-            <button className="win-btn" onClick={onClose}>CANCEL</button>
+            <button className="win-btn" onClick={() => { connect(); setPhase('intro'); }}>CONNECT</button>
+            <button className="win-btn" onClick={() => setPhase('intro')}>BACK</button>
           </div>
         </div>
       </div>
@@ -152,7 +187,7 @@ export default function Doom({ openWindow, onClose }) {
           </div>
           <div className="doom-dialog-buttons">
             <button className="win-btn" onClick={() => openWindow('hire-devs')}>MINT NOW</button>
-            <button className="win-btn" onClick={onClose}>CLOSE</button>
+            <button className="win-btn" onClick={() => setPhase('intro')}>BACK</button>
           </div>
         </div>
       </div>
@@ -171,7 +206,7 @@ export default function Doom({ openWindow, onClose }) {
           <div className="doom-dialog-body">
             <p className="doom-dialog-error">
               <strong>[!] FATAL:</strong> {iframeError
-                ? 'DOSBox emulation failed to load. CDN may be unavailable.'
+                ? 'DOSBox emulation failed to load.'
                 : 'Could not verify NFT balance. Network error.'}
             </p>
             <p className="doom-dialog-meta">
@@ -182,7 +217,7 @@ export default function Doom({ openWindow, onClose }) {
           <div className="doom-dialog-buttons">
             <button className="win-btn" onClick={() => {
               setIframeError(false);
-              setPhase(hasNFT ? 'loading' : 'init');
+              setPhase(hasNFT ? 'loading' : 'intro');
             }}>RETRY</button>
             <button className="win-btn" onClick={onClose}>CLOSE</button>
           </div>
@@ -191,8 +226,8 @@ export default function Doom({ openWindow, onClose }) {
     );
   }
 
-  // ── Loading Screen ──
-  if (phase === 'loading' || phase === 'init') {
+  // ── Checking / Loading Screen ──
+  if (phase === 'loading' || phase === 'checking') {
     const clampedProgress = Math.min(loadingProgress, 100);
     const barFilled = Math.round(clampedProgress / 4);
     const barEmpty = 25 - barFilled;
@@ -201,16 +236,22 @@ export default function Doom({ openWindow, onClose }) {
     return (
       <div className="doom-loading">
         <div className="doom-loading-text">
-          {LOADING_LINES.slice(0, loadingLine + 1).map((line, i) => (
-            <div key={i} className="doom-loading-line">
-              {line}
-              {i === loadingLine && <span className="doom-cursor">_</span>}
-            </div>
-          ))}
+          {phase === 'checking' ? (
+            <div className="doom-loading-line">{"> Verifying Dev clearance..."}<span className="doom-cursor">_</span></div>
+          ) : (
+            LOADING_LINES.slice(0, loadingLine + 1).map((line, i) => (
+              <div key={i} className="doom-loading-line">
+                {line}
+                {i === loadingLine && <span className="doom-cursor">_</span>}
+              </div>
+            ))
+          )}
         </div>
-        <div className="doom-progress">
-          {progressBar} {clampedProgress}%
-        </div>
+        {phase === 'loading' && (
+          <div className="doom-progress">
+            {progressBar} {clampedProgress}%
+          </div>
+        )}
         <div className="doom-classified">
           {'\u26A0'} CLASSIFIED RECREATIONAL SOFTWARE<br />
           Authorized personnel only
@@ -228,8 +269,7 @@ export default function Doom({ openWindow, onClose }) {
         className="doom-iframe"
         allowFullScreen
         title="DOOM.exe"
-        onError={handleIframeError}
-        sandbox="allow-scripts allow-same-origin allow-popups"
+        onError={() => setIframeError(true)}
       />
       <div className="doom-controls-bar">
         <span>[Arrows: Move]</span>

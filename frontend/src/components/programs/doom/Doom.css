@@ -1,4 +1,80 @@
-/* ── DOOM.exe Dialog (Access Denied / Connect / Error) ── */
+/* ── INTRO SCREEN ── */
+
+.doom-intro {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #000;
+  font-family: 'VT323', 'Courier New', monospace;
+  color: #00ff00;
+  padding: 20px 24px;
+  overflow: auto;
+}
+
+.doom-intro-header {
+  font-size: 18px;
+  color: #ff4400;
+  margin-bottom: 16px;
+  text-shadow: 0 0 8px rgba(255, 68, 0, 0.4);
+}
+
+.doom-intro-body {
+  flex: 1;
+}
+
+.doom-intro-body p {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.doom-intro-warning {
+  color: #ffcc00;
+  font-size: 16px !important;
+  border: 1px solid #ffcc00;
+  padding: 8px 12px;
+  margin-bottom: 16px !important;
+  text-align: center;
+}
+
+.doom-intro-hint {
+  color: #888;
+  font-size: 14px !important;
+}
+
+.doom-intro-ascii {
+  color: #ff4400;
+  font-size: 14px;
+  white-space: pre;
+  margin: 16px 0;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.doom-intro-buttons {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.doom-launch-btn {
+  background: #8B0000 !important;
+  color: #fff !important;
+  font-weight: bold;
+  border: 2px outset #cc3333 !important;
+  padding: 4px 20px !important;
+}
+
+.doom-launch-btn:hover {
+  background: #aa0000 !important;
+}
+
+.doom-launch-btn:active {
+  border-style: inset !important;
+}
+
+/* ── DIALOG (Access Denied / Connect / Error) ── */
 
 .doom-dialog-overlay {
   display: flex;
@@ -66,7 +142,7 @@
   min-width: 85px;
 }
 
-/* ── Loading Screen (Terminal/DOS style) ── */
+/* ── LOADING SCREEN (Terminal/DOS style) ── */
 
 .doom-loading {
   background: #000;
@@ -119,7 +195,7 @@
   line-height: 1.5;
 }
 
-/* ── Playing (iframe container) ── */
+/* ── PLAYING (iframe container) ── */
 
 .doom-container {
   display: flex;
