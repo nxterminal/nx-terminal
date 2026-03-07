@@ -689,7 +689,40 @@ export default function NxtWallet() {
 
     api.getMovements(wallet)
       .then(setMovements)
-      .catch(() => setMovements([]))
+      .catch(() => {
+        // Fallback: build movements from individual dev histories
+        if (tokenIds && tokenIds.length > 0) {
+          const ids = Array.from(tokenIds).map(id => Number(id));
+          Promise.all(ids.map(id =>
+            api.getDevHistory(id).then(actions => actions.map(a => ({ ...a, dev_id: id }))).catch(() => [])
+          ))
+            .then(histories => {
+              const MOVEMENT_ACTIONS = ['CREATE_PROTOCOL', 'CREATE_AI', 'INVEST', 'SELL', 'RECEIVE_SALARY', 'DEPLOY'];
+              const fallback = histories.flat()
+                .filter(a => MOVEMENT_ACTIONS.includes(a.action_type))
+                .map(a => {
+                  const details = a.details || {};
+                  const devName = details.dev_name || `Dev #${a.dev_id}`;
+                  if (a.action_type === 'RECEIVE_SALARY') {
+                    return { type: 'salary', amount: a.nxt_cost || details.amount || 0, dev_id: a.dev_id, dev_name: devName, description: 'Salary received', timestamp: a.created_at };
+                  }
+                  if (a.action_type === 'SELL') {
+                    return { type: 'sell', amount: details.sold_for || 0, dev_id: a.dev_id, dev_name: devName, description: `Sold investment in ${details.name || 'protocol'}`, timestamp: a.created_at };
+                  }
+                  if (a.action_type === 'DEPLOY') {
+                    return { type: 'salary', amount: 0, dev_id: a.dev_id, dev_name: devName, description: `${devName} deployed to simulation`, timestamp: a.created_at };
+                  }
+                  return { type: 'spend', amount: -(a.nxt_cost || 0), dev_id: a.dev_id, dev_name: devName, description: a.action_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), timestamp: a.created_at };
+                })
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 50);
+              setMovements(fallback);
+            })
+            .catch(() => setMovements([]));
+        } else {
+          setMovements([]);
+        }
+      })
       .finally(() => setLoadingMovements(false));
   }, [wallet, tokenIds]);
 
