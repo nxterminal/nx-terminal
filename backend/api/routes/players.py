@@ -252,18 +252,18 @@ def _reconstruct_balance_history(addr: str, days: int):
 
 @router.get("/{wallet}/movements")
 async def get_movements(wallet: str, limit: int = Query(default=50, le=200), offset: int = 0):
-    """Get unified movement log: salaries, actions, claims, shop purchases."""
-    player = fetch_one(
-        "SELECT wallet_address FROM players WHERE wallet_address = %s",
-        (wallet.lower(),)
-    )
-    if not player:
-        raise HTTPException(404, "Player not found")
+    """Get unified movement log: salaries, actions, claims, shop purchases.
 
-    # Get dev token_ids for this wallet
+    Does NOT require a players row — works as long as devs exist for this wallet.
+    This allows movements to show even when the player record hasn't been created
+    yet (e.g. wallet-summary uses a fallback that reads devs directly).
+    """
+    wallet_lower = wallet.lower()
+
+    # Get dev token_ids for this wallet (no player lookup needed)
     dev_rows = fetch_all(
         "SELECT token_id FROM devs WHERE owner_address = %s",
-        (wallet.lower(),)
+        (wallet_lower,)
     )
     dev_ids = [d["token_id"] for d in dev_rows]
 
@@ -330,7 +330,7 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
            WHERE player_address = %s
            ORDER BY claimed_at DESC
            LIMIT %s OFFSET %s""",
-        (wallet.lower(), limit, offset)
+        (wallet_lower, limit, offset)
     )
     for c in claims:
         movements.append({
@@ -350,7 +350,7 @@ async def get_movements(wallet: str, limit: int = Query(default=50, le=200), off
            WHERE player_address = %s
            ORDER BY purchased_at DESC
            LIMIT %s OFFSET %s""",
-        (wallet.lower(), limit, offset)
+        (wallet_lower, limit, offset)
     )
     for s in shop:
         movements.append({
