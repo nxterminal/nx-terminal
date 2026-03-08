@@ -1,0 +1,271 @@
+/* ═══════════════════════════════════════════════════════
+   NADWATCH.exe — Styles
+   All classes prefixed with ndw-
+   Purple/green bicolor palette for Monad
+   ═══════════════════════════════════════════════════════ */
+
+.ndw-scanlines {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ndw-flash {
+  animation: ndw-flash 0.3s ease-out;
+}
+
+@keyframes ndw-flash {
+  0% { color: #7B2FBE; text-shadow: 0 0 8px #7B2FBE; }
+  100% { color: inherit; text-shadow: none; }
+}
+
+.ndw-tx-enter {
+  animation: ndw-tx-in 0.15s ease-out;
+}
+
+@keyframes ndw-tx-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ndw-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #7B2FBE;
+  animation: ndw-blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes ndw-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.ndw-panel {
+  border: 2px solid;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  background: #0a0a0a;
+  font-family: "Courier New", "Lucida Console", "Consolas", monospace;
+  font-size: 12px;
+  color: #30FF60;
+  position: relative;
+  overflow: hidden;
+}
+
+.ndw-offline-text {
+  color: #ff3333;
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 0 0 10px #ff3333;
+  animation: ndw-blink 1.5s step-end infinite;
+}
+
+.ndw-menubar {
+  display: flex;
+  background: #c0c0c0;
+  color: #000;
+  border-bottom: 1px solid #808080;
+  padding: 0;
+  flex-shrink: 0;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 12px;
+  position: relative;
+}
+
+.ndw-menu-item {
+  padding: 3px 10px;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+
+.ndw-menu-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.ndw-menu-item.ndw-disabled {
+  color: #808080;
+  cursor: default;
+}
+
+.ndw-menu-item.ndw-disabled:hover {
+  background: transparent;
+  color: #808080;
+}
+
+.ndw-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #c0c0c0;
+  color: #000;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  z-index: 50;
+  min-width: 180px;
+}
+
+.ndw-dropdown-item {
+  padding: 4px 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.ndw-dropdown-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.ndw-dropdown-item.ndw-disabled {
+  color: #808080;
+  cursor: default;
+}
+
+.ndw-dropdown-item.ndw-disabled:hover {
+  background: transparent;
+  color: #808080;
+}
+
+.ndw-dropdown-separator {
+  height: 1px;
+  background: #808080;
+  margin: 2px 4px;
+  border-bottom: 1px solid #dfdfdf;
+}
+
+.ndw-statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #c0c0c0;
+  color: #000;
+  border-top: 2px solid;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  padding: 2px 8px;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 11px;
+  flex-shrink: 0;
+  min-height: 20px;
+}
+
+.ndw-statusbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ndw-statusbar-right {
+  color: #555;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.ndw-main-grid {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ndw-rain-col {
+  width: 38%;
+  min-width: 0;
+  position: relative;
+}
+
+.ndw-data-col {
+  width: 62%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ndw-vitals-row {
+  flex: 0 0 45%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ndw-txflow-row {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ndw-bottom-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══ Tooltips ═══ */
+.ndw-tooltip {
+  position: absolute;
+  background: #ffffe1;
+  border: 1px solid #000;
+  padding: 4px 8px;
+  font-family: "Tahoma", "MS Sans Serif", sans-serif;
+  font-size: 11px;
+  color: #000;
+  max-width: 280px;
+  line-height: 1.4;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 1px 1px 0 #808080;
+  white-space: normal;
+  top: 100%;
+  left: 8px;
+  margin-top: 2px;
+}
+
+/* ═══ Live dot blink ═══ */
+@keyframes ndw-dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.ndw-live-dot {
+  animation: ndw-dot-blink 1.5s step-end infinite;
+  color: #30FF60;
+  font-size: 9px;
+}
+
+/* ═══ Pulse animation for values ═══ */
+@keyframes ndw-pulse {
+  0% { text-shadow: 0 0 4px #7B2FBE; }
+  50% { text-shadow: 0 0 12px #7B2FBE; }
+  100% { text-shadow: 0 0 4px #7B2FBE; }
+}
+
+.ndw-pulse {
+  animation: ndw-pulse 1s ease-in-out;
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 700px) {
+  .ndw-main-grid {
+    flex-direction: column !important;
+  }
+
+  .ndw-rain-col {
+    width: 100% !important;
+    height: 200px !important;
+    flex-shrink: 0;
+  }
+
+  .ndw-data-col {
+    width: 100% !important;
+  }
+}
