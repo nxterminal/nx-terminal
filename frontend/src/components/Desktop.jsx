@@ -27,6 +27,7 @@ const DESKTOP_ICONS = [
   { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
   { id: 'nadwatch', icon: '👁️', label: 'NADWATCH' },
   { id: 'parallax', icon: '⚡', label: 'PARALLAX' },
+  { id: 'monad-sdk', icon: '⚡', label: 'MONAD SDK' },
 ];
 
 function getWallpaperStyle() {

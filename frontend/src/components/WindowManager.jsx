@@ -20,6 +20,7 @@ import NetWatch from './programs/netwatch/NetWatch';
 import PharosSDK from './programs/pharos-sdk/PharosSDK';
 import NadWatch from './programs/nadwatch/NadWatch';
 import Parallax from './programs/parallax/Parallax';
+import MonadSDK from './programs/monad-sdk/MonadSDK';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -42,6 +43,7 @@ const WINDOW_COMPONENTS = {
   'pharos-sdk': PharosSDK,
   'nadwatch': NadWatch,
   'parallax': Parallax,
+  'monad-sdk': MonadSDK,
 };
 
 export default function WindowManager({
