@@ -26,6 +26,7 @@ const DESKTOP_ICONS = [
   { id: 'netwatch', icon: '', label: 'NETWATCH' },
   { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
   { id: 'nadwatch', icon: '👁️', label: 'NADWATCH' },
+  { id: 'parallax', icon: '⚡', label: 'PARALLAX' },
 ];
 
 function getWallpaperStyle() {
