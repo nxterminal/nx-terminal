@@ -18,6 +18,7 @@ import NxtWallet from '../windows/NxtWallet';
 import CorpWars from '../windows/CorpWars';
 import NetWatch from './programs/netwatch/NetWatch';
 import PharosSDK from './programs/pharos-sdk/PharosSDK';
+import NadWatch from './programs/nadwatch/NadWatch';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -38,6 +39,7 @@ const WINDOW_COMPONENTS = {
   'corp-wars': CorpWars,
   'netwatch': NetWatch,
   'pharos-sdk': PharosSDK,
+  'nadwatch': NadWatch,
 };
 
 export default function WindowManager({
