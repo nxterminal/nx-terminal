@@ -23,6 +23,7 @@ const WINDOW_DEFAULTS = {
   'pharos-sdk': { title: 'PHAROS_SDK.exe', icon: '', width: 880, height: 700, x: 120, y: 30 },
   'nadwatch': { title: 'NADWATCH.exe', icon: '👁️', width: 900, height: 620, x: 80, y: 30 },
   'parallax': { title: 'PARALLAX.exe', icon: '⚡', width: 960, height: 600, x: 60, y: 30 },
+  'monad-sdk': { title: 'MONAD_SDK.exe', icon: '⚡', width: 880, height: 700, x: 120, y: 30 },
 };
 
 export function useWindowManager() {
