@@ -616,7 +616,7 @@ export const ICON_MAP = {
   'nadwatch': IconNadwatch,
   'parallax': IconParallax,
   'monad-sdk': IconMonadSDK,
-  'chogpet': IconMonadgotchi,
+  'monad-city': IconMonadgotchi,
 };
 
 export function Win98Icon({ id, size = 32 }) {
