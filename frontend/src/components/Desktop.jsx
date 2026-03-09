@@ -3,7 +3,7 @@ import DesktopIcon from './DesktopIcon';
 import Taskbar from './Taskbar';
 import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
-import PetOverlay from './programs/chogpet/components/PetOverlay';
+import PetMiniModal from './PetMiniModal';
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
@@ -197,7 +197,7 @@ export default function Desktop() {
       />
 
       <NXAssistant />
-      <PetOverlay openWindow={openWindowWithBSOD} />
+      <PetMiniModal openWindow={openWindowWithBSOD} />
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}

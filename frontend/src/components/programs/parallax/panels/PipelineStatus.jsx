@@ -8,10 +8,10 @@ function formatBlockNum(n) {
 }
 
 const STAGES = [
-  { label: 'PROPOSE',  key: 'propose',  color: '#00FFFF', offset: 2, tip: 'Leader proposes a new block containing ordered transactions. Block N+2 is proposed while earlier blocks are still being finalized.' },
-  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1, tip: 'Validators vote on the proposed block. MonadBFT requires 2/3+ validator agreement for consensus.' },
-  { label: 'FINALIZE', key: 'finalize', color: '#30FF60', offset: 0, tip: 'Block is finalized after receiving sufficient votes. Finality achieved in ~800ms (2 block times).' },
-  { label: 'EXECUTE',  key: 'execute',  color: '#FFD700', offset: -3, tip: 'Deferred execution: transactions execute after finalization. This allows consensus and execution to run in parallel.' },
+  { label: 'PROPOSE',  key: 'propose',  color: '#00FFFF', offset: 2, tip: 'Propose — Leader proposes a new block containing ordered transactions. Block N+2 is proposed while earlier blocks are still being finalized.' },
+  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1, tip: 'Vote — Validators vote on the proposed block. MonadBFT requires 2/3+ validator agreement for consensus.' },
+  { label: 'FINALIZE', key: 'finalize', color: '#30FF60', offset: 0, tip: 'Finalize — Block is finalized after receiving sufficient votes. Finality achieved in ~800ms (2 block times).' },
+  { label: 'EXECUTE',  key: 'execute',  color: '#FFD700', offset: -3, tip: 'Execute — Deferred execution: transactions execute after finalization. This allows consensus and execution to run in parallel.' },
 ];
 
 export default function PipelineStatus({ blockNumber = 0 }) {
@@ -26,14 +26,16 @@ export default function PipelineStatus({ blockNumber = 0 }) {
       flexDirection: 'column',
       gap: '4px',
     }}>
-      <div style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: '10px', borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' }}>
-        MONADBFT PIPELINE
-      </div>
+      <InfoTooltip text="MonadBFT Pipeline — 4 consensus stages run in parallel on different blocks. While one block is proposed, the previous is voted on, the one before finalized, and an earlier one executed.">
+        <div style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: '10px', borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' }}>
+          MONADBFT PIPELINE
+        </div>
+      </InfoTooltip>
 
       {STAGES.map((stage) => {
         const block = blockNumber + stage.offset;
         return (
-          <InfoTooltip key={stage.key} title={stage.label} text={stage.tip}>
+          <InfoTooltip key={stage.key} text={stage.tip}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: stage.color, width: '60px', fontWeight: 'bold', fontSize: '10px', flexShrink: 0 }}>
                 {stage.label}

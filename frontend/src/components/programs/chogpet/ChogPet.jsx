@@ -109,21 +109,11 @@ export default function ChogPet({ onClose }) {
               className={`cp-pet-card ${petType === key ? 'selected' : ''}`}
               onClick={() => changePet(key)}
             >
-              <PetSprite petType={key} frame="idle" size={32} />
+              <PetSprite petType={key} frame="idle" size={24} silhouette />
               <div className="cp-pet-card-name">{p.icon} {p.name}</div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Summon/dismiss */}
-      <div className="cp-actions">
-        <button
-          className={`cp-btn ${isActive ? '' : 'danger'}`}
-          onClick={toggleActive}
-        >
-          {isActive ? 'Dismiss Pet' : 'Summon Pet'}
-        </button>
       </div>
 
       {/* Status bar */}

@@ -24,7 +24,7 @@ export default function ConflictLog({ events }) {
 
   return (
     <div className="plx-conflict-log">
-      <InfoTooltip title="CONFLICT LOG" text="Real-time feed of state access conflicts, re-executions, and resolutions. CONFLICT = two lanes accessed same state. RE-EXEC = tx replayed. CLEAR = conflict resolved.">
+      <InfoTooltip text="Conflict Log — Real-time feed of state access conflicts, re-executions, and resolutions. CONFLICT = two lanes accessed same state. RE-EXEC = tx replayed. CLEAR = conflict resolved.">
         <div className="plx-log-header">
           CONFLICT LOG
           <span style={{ color: '#666', fontWeight: 'normal', marginLeft: '8px', fontSize: '9px' }}>
