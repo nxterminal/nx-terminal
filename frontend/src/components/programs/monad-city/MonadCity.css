@@ -311,6 +311,7 @@
 }
 .mc-building-tooltip .mc-tt-proto { color: #836EF9; font-weight: bold; font-size: 10px; }
 .mc-building-tooltip .mc-tt-type { color: #B8A9FF; opacity: .6; font-size: 8px; margin-top: 2px; }
+.mc-building-tooltip .mc-tt-dist { color: #00F0FF; opacity: .5; font-size: 7px; margin-top: 1px; text-transform: uppercase; letter-spacing: .5px; }
 
 /* District overlay label */
 .mc-district-label {

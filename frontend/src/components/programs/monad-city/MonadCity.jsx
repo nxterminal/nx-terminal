@@ -72,6 +72,10 @@ function generateBuildings(layout) {
       stripes: Math.random() < .15 ? Math.floor(2 + Math.random() * 4) : 0,
       aw: tp === 'shop' ? ['#FF3366','#00F0FF','#FFE066','#00FF88','#836EF9','#FF9F1C'][Math.floor(Math.random() * 6)] : null,
       proto: PROTOCOLS[Math.floor(Math.random() * PROTOCOLS.length)],
+      // District visual extras (pre-computed for perf)
+      dxSlot: Math.floor(Math.random() * 5),  // which decoration variant
+      dxOff: Math.random() * 6.28,            // animation offset
+      dxH: .2 + Math.random() * .6,           // how high the decoration sits
     });
   }
   bldgs.sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
@@ -192,6 +196,198 @@ function dTile(c, gx, gy, col, brd, W, H) {
   if (brd) { c.strokeStyle = brd; c.lineWidth = .25; c.stroke(); }
 }
 
+/* ── District-specific decorations drawn on top of base building ── */
+function dDistrictDecor(c, b, p, hw, hh, h, t) {
+  const d = b.dist; if (!d) return;
+  const cl = b.col, s = b.dxSlot, off = b.dxOff;
+
+  if (d === 'defi') {
+    // Financial ticker tape on facade — scrolling numbers
+    if (h > 20) {
+      const ty = p.y - h * .3;
+      c.fillStyle = '#001828'; c.fillRect(p.x - hw + 1, ty, hw * 2 - 2, 2.5);
+      c.fillStyle = '#00F0FF'; c.globalAlpha = .3; c.font = '1.6px monospace';
+      const scroll = ((t * 18 + off * 100) % 120) - 20;
+      c.save(); c.beginPath(); c.rect(p.x - hw + 1, ty, hw * 2 - 2, 2.5); c.clip();
+      c.fillText('MON +2.4%  ETH -0.8%  BTC +1.2%  AAVE +5.1%', p.x - hw + scroll, ty + 1.8);
+      c.restore(); c.globalAlpha = 1;
+    }
+    // Glass reflection strips
+    for (let i = 0; i < 2; i++) {
+      const ry = p.y - h + 8 + i * h * .4;
+      c.fillStyle = 'rgba(0,240,255,.02)'; c.fillRect(p.x - hw + 1, ry, hw - 2, .3);
+      c.fillRect(p.x + 1, ry + .5, hw - 2, .3);
+    }
+  }
+
+  else if (d === 'nft') {
+    // NFT gallery frames on facade
+    if (h > 15) {
+      const colors = ['#FF3366','#FF00FF','#FF66AA','#DD00DD','#AA44FF'];
+      const fc = colors[s];
+      // Art frame on left face
+      const fy = p.y - h * (.3 + b.dxH * .3);
+      const fw = hw * .5, fh2 = Math.min(8, h * .15);
+      c.strokeStyle = fc; c.globalAlpha = .25; c.lineWidth = .4;
+      c.strokeRect(p.x - hw + 2, fy, fw, fh2);
+      // Fill with "art" — colored block
+      c.fillStyle = fc; c.globalAlpha = .08;
+      c.fillRect(p.x - hw + 2.5, fy + .5, fw - 1, fh2 - 1);
+      // Small label below
+      c.fillStyle = '#FF66AA'; c.globalAlpha = .2; c.font = '1.2px monospace';
+      c.fillText('#' + Math.floor(off * 1000 + s * 333), p.x - hw + 2.5, fy + fh2 + 2);
+      c.globalAlpha = 1;
+    }
+    // Neon vertical edge lines
+    c.strokeStyle = '#FF3366'; c.globalAlpha = .08 + Math.sin(t * 2 + off) * .05;
+    c.lineWidth = .6; c.beginPath();
+    c.moveTo(p.x - hw + .5, p.y); c.lineTo(p.x - hw + .5, p.y - h); c.stroke();
+    c.strokeStyle = '#FF00FF'; c.beginPath();
+    c.moveTo(p.x + hw - .5, p.y); c.lineTo(p.x + hw - .5, p.y - h); c.stroke();
+    c.globalAlpha = 1;
+  }
+
+  else if (d === 'yield') {
+    // Green rooftop gardens
+    if (h > 10) {
+      c.fillStyle = '#0A4018'; c.beginPath();
+      c.ellipse(p.x - hw * .2, p.y - h - hh + 1.5, 2.5, 1.2, 0, 0, 6.28); c.fill();
+      c.fillStyle = '#0E5824'; c.beginPath();
+      c.ellipse(p.x + hw * .15, p.y - h - hh + 1.2, 2, 1, 0, 0, 6.28); c.fill();
+    }
+    // Vine tendrils on walls
+    c.strokeStyle = '#0A5020'; c.globalAlpha = .12; c.lineWidth = .4;
+    const vy = p.y - h * .6;
+    c.beginPath(); c.moveTo(p.x - hw + 1, vy); c.quadraticCurveTo(p.x - hw + 3, vy + 5, p.x - hw + 1.5, vy + 10); c.stroke();
+    if (s > 2) { c.beginPath(); c.moveTo(p.x + hw - 1, vy - 3); c.quadraticCurveTo(p.x + hw - 3, vy + 4, p.x + hw - 1.5, vy + 8); c.stroke(); }
+    c.globalAlpha = 1;
+    // Leaf accents
+    c.fillStyle = '#00FF88'; c.globalAlpha = .06;
+    c.beginPath(); c.ellipse(p.x - hw + 2, vy + 3, 1.2, .6, .3, 0, 6.28); c.fill();
+    c.globalAlpha = 1;
+  }
+
+  else if (d === 'derivatives') {
+    // Aggressive angular accents — chevron marks
+    if (h > 22) {
+      c.strokeStyle = '#FF9F1C'; c.globalAlpha = .12; c.lineWidth = .6;
+      const cy2 = p.y - h * .5;
+      c.beginPath(); c.moveTo(p.x - hw + 2, cy2 - 2); c.lineTo(p.x - hw / 2, cy2); c.lineTo(p.x - hw + 2, cy2 + 2); c.stroke();
+      c.beginPath(); c.moveTo(p.x + hw - 2, cy2 - 2); c.lineTo(p.x + hw / 2, cy2); c.lineTo(p.x + hw - 2, cy2 + 2); c.stroke();
+      c.globalAlpha = 1;
+    }
+    // Trading candle on facade
+    if (s < 3 && h > 28) {
+      const cx2 = p.x + 2, cy2 = p.y - h * .65;
+      const up = s % 2 === 0;
+      c.fillStyle = up ? '#00FF88' : '#FF3366'; c.globalAlpha = .15;
+      c.fillRect(cx2 - .3, cy2 - 3, .6, 6);
+      c.fillRect(cx2 - 1, up ? cy2 - 1 : cy2, 2, 2);
+      c.globalAlpha = 1;
+    }
+  }
+
+  else if (d === 'infra') {
+    // Circuit board traces on walls
+    c.strokeStyle = '#836EF9'; c.globalAlpha = .08; c.lineWidth = .3;
+    const by = p.y - h * .4;
+    c.beginPath(); c.moveTo(p.x - hw + 2, by); c.lineTo(p.x - hw + 4, by);
+    c.lineTo(p.x - hw + 4, by + 3); c.lineTo(p.x - hw + 6, by + 3); c.stroke();
+    c.beginPath(); c.moveTo(p.x + 2, by + 1); c.lineTo(p.x + 4, by + 1);
+    c.lineTo(p.x + 4, by - 2); c.lineTo(p.x + 6, by - 2); c.stroke();
+    c.globalAlpha = 1;
+    // Server rack blinking lights
+    if (h > 15 && s < 3) {
+      for (let r = 0; r < 3; r++) {
+        const lx = p.x - hw + 3 + r * 2, ly = p.y - h + 5 + s * 4;
+        const on = Math.sin(t * 5 + r * 2.1 + off) > .0;
+        c.fillStyle = on ? '#00FF88' : '#330808'; c.globalAlpha = on ? .3 : .08;
+        c.fillRect(lx, ly, .5, .5);
+      }
+      c.globalAlpha = 1;
+    }
+  }
+
+  else if (d === 'perps') {
+    // Flashing "leverage" warning stripes
+    const flash = Math.sin(t * 3 + off) * .5 + .5;
+    c.fillStyle = '#FF3366'; c.globalAlpha = .04 + flash * .04;
+    for (let i = 0; i < 3; i++) {
+      const sy = p.y - h + 5 + i * h * .25;
+      c.fillRect(p.x - hw + 1, sy, hw * 2 - 2, .8);
+    }
+    c.globalAlpha = 1;
+    // PnL ticker
+    if (h > 20 && s < 2) {
+      const ty = p.y - h * .45;
+      c.fillStyle = Math.sin(t + off) > 0 ? '#00FF88' : '#FF3366';
+      c.globalAlpha = .2; c.font = '1.8px monospace';
+      c.fillText(Math.sin(t + off) > 0 ? '+$42.8K' : '-$18.3K', p.x - hw + 2, ty);
+      c.globalAlpha = 1;
+    }
+  }
+
+  else if (d === 'bridge') {
+    // Portal/wormhole ring on facade
+    if (h > 18) {
+      const cy2 = p.y - h * .5;
+      c.strokeStyle = '#00FFCC'; c.globalAlpha = .1 + Math.sin(t * 1.5 + off) * .06;
+      c.lineWidth = .5; c.beginPath();
+      c.ellipse(p.x, cy2, 3, 5, 0, 0, 6.28); c.stroke();
+      c.strokeStyle = '#00F0FF'; c.globalAlpha = .06;
+      c.beginPath(); c.ellipse(p.x, cy2, 4.5, 7, 0, 0, 6.28); c.stroke();
+      c.globalAlpha = 1;
+    }
+    // Connection lines between buildings
+    c.strokeStyle = '#00FFCC'; c.globalAlpha = .04; c.lineWidth = .25;
+    c.setLineDash([1, 2]);
+    c.beginPath(); c.moveTo(p.x + hw, p.y - h * .3); c.lineTo(p.x + hw + 8, p.y - h * .3 + 4); c.stroke();
+    c.setLineDash([]);
+    c.globalAlpha = 1;
+  }
+
+  else if (d === 'lending') {
+    // Classical column lines
+    if (h > 16) {
+      c.fillStyle = 'rgba(255,215,0,.04)';
+      for (let i = 0; i < 3; i++) {
+        const cx2 = p.x - hw + 3 + i * (hw - 2);
+        c.fillRect(cx2, p.y - h + 3, 1, h - 5);
+      }
+    }
+    // Vault door on ground floor
+    if (s < 2) {
+      c.fillStyle = '#FFE066'; c.globalAlpha = .06;
+      c.beginPath(); c.arc(p.x - hw / 2, p.y + hh - 3, 2, 0, 6.28); c.fill();
+      c.strokeStyle = '#FFE066'; c.globalAlpha = .08; c.lineWidth = .3;
+      c.beginPath(); c.arc(p.x - hw / 2, p.y + hh - 3, 2, 0, 6.28); c.stroke();
+      c.globalAlpha = 1;
+    }
+    // Gold trim at top
+    c.fillStyle = 'rgba(255,215,0,.06)';
+    c.fillRect(p.x - hw + 1, p.y - h + 1.5, hw * 2 - 2, 1);
+  }
+
+  else if (d === 'parallel') {
+    // Speed lines on facade — horizontal streaks
+    c.strokeStyle = '#B8A9FF'; c.globalAlpha = .05 + Math.sin(t * 2 + off) * .03;
+    c.lineWidth = .3;
+    for (let i = 0; i < 4; i++) {
+      const ly = p.y - h + 6 + i * h * .2;
+      const lw = hw * (.4 + Math.sin(t * 3 + i + off) * .3);
+      c.beginPath(); c.moveTo(p.x - hw + 1, ly); c.lineTo(p.x - hw + 1 + lw, ly); c.stroke();
+    }
+    c.globalAlpha = 1;
+    // Pipeline connector on roof
+    if (h > 25) {
+      c.fillStyle = '#836EF9'; c.globalAlpha = .08;
+      c.fillRect(p.x - 1, p.y - h - hh - 3, 2, 4);
+      c.fillStyle = '#B8A9FF'; c.beginPath(); c.arc(p.x, p.y - h - hh - 3, 1.5, 0, 6.28); c.fill();
+      c.globalAlpha = 1;
+    }
+  }
+}
+
 function dBldg(c, b, t, W, H, highlight) {
   const p = iso(b.gx - G2, b.gy - G2, W, H), hw = TW / 2 - 2, hh = TH / 2 - 1, h = b.h, cl = b.col;
   // Shadow
@@ -282,6 +478,8 @@ function dBldg(c, b, t, W, H, highlight) {
   if (b.roofG) for (let rg = 0; rg < 2; rg++) { c.fillStyle = '#083015'; c.beginPath(); c.ellipse(p.x - hw * .3 + rg * hw * .5, p.y - h - hh + 1.2, 1.8, 1, 0, 0, 6.28); c.fill(); }
   if (b.roofL && b.h > 18) { c.fillStyle = '#14142A'; c.fillRect(p.x - 1.8, p.y - h - hh + .8, 3.6, 1.8); c.fillRect(p.x + 3, p.y - h - hh + 1, 2.5, 1.3); }
   c.fillStyle = cl.s; c.globalAlpha = .02 + Math.sin(t + b.po) * .008; c.beginPath(); c.ellipse(p.x, p.y + hh + .5, hw * .45, hh * .25, 0, 0, 6.28); c.fill(); c.globalAlpha = 1;
+  // District-specific decorations
+  dDistrictDecor(c, b, p, hw, hh, h, t);
   // Highlight overlay for district selection
   if (highlight) {
     c.fillStyle = 'rgba(131,110,249,.15)'; c.beginPath();
@@ -474,10 +672,22 @@ function dGround(c, t, W, H, layout) {
   for (let gy = 0; gy < GR; gy++) for (let gx = 0; gx < GR; gx++) {
     const ti = layout[gy]?.[gx];
     if (ti === 1) {
-      dTile(c, gx, gy, '#0A0A14', 'rgba(131,110,249,.015)', W, H);
+      // Roads get subtle district tint
+      const rd = getDistrictAt(gx, gy);
+      const rc = rd === 'nft' ? '#0C081A' : rd === 'yield' ? '#080C0A' : rd === 'perps' ? '#0C080A' : '#0A0A14';
+      const rb = rd === 'nft' ? 'rgba(255,51,102,.012)' : rd === 'yield' ? 'rgba(0,255,136,.012)'
+        : rd === 'perps' ? 'rgba(255,51,102,.012)' : rd === 'bridge' ? 'rgba(0,255,204,.012)'
+        : 'rgba(131,110,249,.015)';
+      dTile(c, gx, gy, rc, rb, W, H);
       const p = iso(gx - G2, gy - G2, W, H);
-      if ((gx + gy) % 2 === 0) { c.fillStyle = 'rgba(255,224,102,.04)'; c.fillRect(p.x - .6, p.y - .3, 1.2, .6); }
-      if (gx % 4 === 0 && gy % 4 === 0) { c.fillStyle = 'rgba(255,255,255,.025)'; for (let s = -2; s <= 2; s++) c.fillRect(p.x + s * 2, p.y - .6, 1.2, .4); }
+      // District-colored lane markings
+      const lc = rd === 'defi' ? 'rgba(0,240,255,.06)' : rd === 'nft' ? 'rgba(255,51,102,.06)'
+        : rd === 'yield' ? 'rgba(0,255,136,.06)' : rd === 'derivatives' ? 'rgba(255,159,28,.06)'
+        : rd === 'perps' ? 'rgba(255,51,102,.06)' : rd === 'bridge' ? 'rgba(0,255,204,.06)'
+        : rd === 'lending' ? 'rgba(255,224,102,.06)' : rd === 'parallel' ? 'rgba(184,169,255,.06)'
+        : 'rgba(255,224,102,.04)';
+      if ((gx + gy) % 2 === 0) { c.fillStyle = lc; c.fillRect(p.x - .6, p.y - .3, 1.2, .6); }
+      if (gx % 4 === 0 && gy % 4 === 0) { c.fillStyle = lc; for (let s = -2; s <= 2; s++) c.fillRect(p.x + s * 2, p.y - .6, 1.2, .4); }
     } else if (ti === 2) {
       dTile(c, gx, gy, `rgb(8,${30 + Math.floor(Math.sin(t * .3 + gx + gy) * 6)},14)`, 'rgba(0,255,136,.03)', W, H);
     } else if (ti === 3) {
@@ -501,6 +711,27 @@ function dGround(c, t, W, H, layout) {
         : d === 'bridge' ? 'rgba(0,255,204,.015)' : d === 'lending' ? 'rgba(255,224,102,.015)'
         : d === 'parallel' ? 'rgba(184,169,255,.015)' : 'rgba(131,110,249,.012)';
       dTile(c, gx, gy, gc, gb, W, H);
+      // District ground accents (every few tiles)
+      if ((gx + gy * 3) % 7 === 0) {
+        const dp = iso(gx - G2, gy - G2, W, H);
+        if (d === 'nft') {
+          // Small art installation dots
+          c.fillStyle = '#FF3366'; c.globalAlpha = .04;
+          c.beginPath(); c.arc(dp.x, dp.y, 1.5, 0, 6.28); c.fill(); c.globalAlpha = 1;
+        } else if (d === 'yield') {
+          // Tiny garden patch
+          c.fillStyle = '#0A5020'; c.globalAlpha = .08;
+          c.beginPath(); c.ellipse(dp.x, dp.y, 2, 1, 0, 0, 6.28); c.fill(); c.globalAlpha = 1;
+        } else if (d === 'bridge') {
+          // Portal glow on ground
+          c.fillStyle = '#00FFCC'; c.globalAlpha = .03;
+          c.beginPath(); c.ellipse(dp.x, dp.y, 2.5, 1.2, 0, 0, 6.28); c.fill(); c.globalAlpha = 1;
+        } else if (d === 'parallel') {
+          // Speed streak
+          c.strokeStyle = '#836EF9'; c.globalAlpha = .04; c.lineWidth = .3;
+          c.beginPath(); c.moveTo(dp.x - 3, dp.y); c.lineTo(dp.x + 3, dp.y); c.stroke(); c.globalAlpha = 1;
+        }
+      }
     }
   }
 }
@@ -803,7 +1034,7 @@ export default function MonadCity() {
       const p = iso(b.gx - G2, b.gy - G2, W, H);
       const hw = TW / 2 - 2;
       if (mx >= p.x - hw && mx <= p.x + hw && my >= p.y - b.h && my <= p.y + TH / 2) {
-        setTooltip({ x: e.clientX - rect.left + 10, y: e.clientY - rect.top - 10, proto: b.proto, type: b.tp });
+        setTooltip({ x: e.clientX - rect.left + 10, y: e.clientY - rect.top - 10, proto: b.proto, type: b.tp, dist: b.dist });
         return;
       }
     }
@@ -920,6 +1151,7 @@ export default function MonadCity() {
         <div className="mc-building-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
           <div className="mc-tt-proto">{tooltip.proto}</div>
           <div className="mc-tt-type">{tooltip.type.toUpperCase()}</div>
+          {tooltip.dist && <div className="mc-tt-dist">{DISTRICTS.find(d => d.id === tooltip.dist)?.label || tooltip.dist}</div>}
         </div>
       )}
 
