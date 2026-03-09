@@ -83,19 +83,103 @@ export const SHIRT_COLORS = [
 export const DISTRICTS = [
   { id: 'map', label: 'MAP', cls: '' },
   { id: 'defi', label: 'DeFi District', cls: 'df', gxRange: [1, 8], gyRange: [1, 8] },
-  { id: 'lending', label: 'Lending Quarter', cls: 'ln', gxRange: [1, 8], gyRange: [9, 16] },
+  { id: 'nft', label: 'NFT & Gaming', cls: 'nf', gxRange: [1, 8], gyRange: [9, 16] },
+  { id: 'yield', label: 'Yield Gardens', cls: 'yl', gxRange: [1, 8], gyRange: [17, 25] },
   { id: 'derivatives', label: 'Derivatives Row', cls: 'dv', gxRange: [9, 16], gyRange: [1, 8] },
-  { id: 'options', label: 'Options Alley', cls: 'op', gxRange: [9, 16], gyRange: [9, 16] },
-  { id: 'yield', label: 'Yield Gardens', cls: '', gxRange: [17, 25], gyRange: [1, 8] },
-  { id: 'bridge', label: 'Bridge District', cls: 'br', gxRange: [17, 25], gyRange: [9, 16] },
-  { id: 'nft', label: 'NFT & Gaming', cls: 'nf', gxRange: [1, 8], gyRange: [17, 25] },
-  { id: 'infra', label: 'Infra Hub', cls: '', gxRange: [9, 16], gyRange: [17, 25] },
-  { id: 'parallel', label: 'Parallel Lane', cls: '', gxRange: [17, 25], gyRange: [17, 25] },
-  { id: 'staking', label: 'Staking Heights', cls: '', gxRange: [1, 12], gyRange: [10, 14] },
-  { id: 'social', label: 'Social Hub', cls: '', gxRange: [14, 25], gyRange: [10, 14] },
-  { id: 'ai', label: 'AI Analytics', cls: '', gxRange: [10, 16], gyRange: [4, 10] },
-  { id: 'perps', label: 'Perps Row', cls: '', gxRange: [10, 16], gyRange: [16, 22] },
+  { id: 'infra', label: 'Infra Hub', cls: 'if', gxRange: [9, 16], gyRange: [9, 16] },
+  { id: 'perps', label: 'Perps Row', cls: 'pr', gxRange: [9, 16], gyRange: [17, 25] },
+  { id: 'bridge', label: 'Bridge District', cls: 'br', gxRange: [17, 25], gyRange: [1, 8] },
+  { id: 'lending', label: 'Lending Quarter', cls: 'ln', gxRange: [17, 25], gyRange: [9, 16] },
+  { id: 'parallel', label: 'Parallel Lane', cls: 'pl', gxRange: [17, 25], gyRange: [17, 25] },
 ];
+
+// District color palettes: each district gets unique building colors
+export const DISTRICT_COLORS = {
+  defi:        [
+    { l: '#0A1A3A', r: '#142E5E', top: '#1E4CA0', w: '#00F0FF', s: '#00F0FF' },
+    { l: '#081835', r: '#103060', top: '#1A4890', w: '#00DDFF', s: '#00CCEE' },
+    { l: '#0C2040', r: '#183868', top: '#2258B0', w: '#44DDFF', s: '#00F0FF' },
+  ],
+  nft:         [
+    { l: '#2A0830', r: '#4A1058', top: '#7020B0', w: '#FF3366', s: '#FF3366' },
+    { l: '#280040', r: '#480070', top: '#6800C0', w: '#FF66AA', s: '#FF44AA' },
+    { l: '#1E0028', r: '#3C0050', top: '#5A0090', w: '#FF00FF', s: '#DD00DD' },
+  ],
+  yield:       [
+    { l: '#062810', r: '#0E4820', top: '#1A6830', w: '#00FF88', s: '#00FF88' },
+    { l: '#082E14', r: '#105828', top: '#1E7838', w: '#44FFaa', s: '#22EE88' },
+    { l: '#043818', r: '#0A5024', top: '#168040', w: '#66FFCC', s: '#00FF88' },
+  ],
+  derivatives: [
+    { l: '#2A1008', r: '#4A2010', top: '#6A3818', w: '#FF9F1C', s: '#FF9F1C' },
+    { l: '#301208', r: '#502414', top: '#704020', w: '#FFAA33', s: '#FF8800' },
+    { l: '#280E06', r: '#481C0E', top: '#683418', w: '#FFB844', s: '#FF9F1C' },
+  ],
+  infra:       [
+    { l: '#0A0A1E', r: '#161638', top: '#222250', w: '#836EF9', s: '#836EF9' },
+    { l: '#0C0C22', r: '#1A1A40', top: '#282860', w: '#B8A9FF', s: '#836EF9' },
+    { l: '#080818', r: '#141430', top: '#202048', w: '#AA88FF', s: '#8866DD' },
+  ],
+  perps:       [
+    { l: '#240808', r: '#481010', top: '#682020', w: '#FF3366', s: '#FF3366' },
+    { l: '#2C0606', r: '#500E0E', top: '#701818', w: '#FF4477', s: '#FF2255' },
+    { l: '#200A0A', r: '#401414', top: '#601E1E', w: '#FF5588', s: '#FF3366' },
+  ],
+  bridge:      [
+    { l: '#051E1E', r: '#0E3C3C', top: '#1A5858', w: '#00FFCC', s: '#00F0FF' },
+    { l: '#082828', r: '#104848', top: '#1E6868', w: '#00FFE0', s: '#00DDCC' },
+    { l: '#042020', r: '#0C3838', top: '#185050', w: '#44FFDD', s: '#00F0FF' },
+  ],
+  lending:     [
+    { l: '#161208', r: '#2C2412', top: '#483A20', w: '#FFE066', s: '#FFE066' },
+    { l: '#1A1608', r: '#342C14', top: '#504422', w: '#FFD844', s: '#FFCC22' },
+    { l: '#121006', r: '#282010', top: '#3E3418', w: '#FFEE88', s: '#FFE066' },
+  ],
+  parallel:    [
+    { l: '#120028', r: '#280050', top: '#400CA0', w: '#B8A9FF', s: '#836EF9' },
+    { l: '#180038', r: '#300068', top: '#5010C0', w: '#C8B8FF', s: '#9988FF' },
+    { l: '#0E0020', r: '#200040', top: '#380880', w: '#AA99FF', s: '#7766EE' },
+  ],
+};
+
+// District-specific signs and billboard texts
+export const DISTRICT_SIGNS = {
+  defi:        ['AAVE', 'UNI', 'SWAP', 'POOL', 'LP', 'AMM', 'DEX', 'TVL'],
+  nft:         ['NFT', 'MINT', 'RARE', 'ART', 'PFP', 'DROP', 'GEN', 'META'],
+  yield:       ['APY', 'FARM', 'STAKE', 'YIELD', 'VEST', 'EARN', 'GROW', 'SEED'],
+  derivatives: ['PERP', 'GMX', 'LONG', 'SHORT', 'OPT', 'PUT', 'CALL', 'HEDGE'],
+  infra:       ['RPC', 'NODE', 'API', 'SDK', 'ZK', 'EVM', 'GAS', 'CORE'],
+  perps:       ['10x', '50x', 'LVRG', 'PERP', 'MARG', 'PNL', 'LIQD', 'FUND'],
+  bridge:      ['BRIDGE', 'WORM', 'LZ', 'RELAY', 'LINK', 'CROSS', 'PORT', 'WRAP'],
+  lending:     ['LEND', 'BRRW', 'COLL', 'CDP', 'RATE', 'DEBT', 'VULT', 'COMP'],
+  parallel:    ['FAST', 'PARA', 'PIPE', 'SHARD', 'TPS', 'EXEC', 'MONO', 'BOLT'],
+};
+
+// District-specific billboard NFT art texts (big signs on buildings)
+export const DISTRICT_BILLBOARDS = {
+  defi:        ['UNISWAP V4', 'AAVE V3', 'BALANCER', 'CURVE', '0x PROTOCOL'],
+  nft:         ['BORED APE', 'CRYPTOPUNK', 'AZUKI', 'PUDGY', 'ART BLOCKS'],
+  yield:       ['aPRIORI', 'KINTSU', 'MAGMA', 'LIDO x MON', 'YIELD MAX'],
+  derivatives: ['dYdX', 'GMX PRO', 'SYNTHETIX', 'KWENTA', 'GAINS'],
+  infra:       ['MONAD RPC', 'PYTH ORACLE', 'CHAINLINK', 'THE GRAPH', 'ALCHEMY'],
+  perps:       ['100x PERP', 'LIQUIDATED', 'MOON SOON', 'REKT CITY', 'LEVERAGE'],
+  bridge:      ['LAYERZERO', 'WORMHOLE', 'STARGATE', 'HOP', 'ACROSS'],
+  lending:     ['CURVANCE', 'COMPOUND', 'MAKER DAO', 'SPARK', 'MORPHO'],
+  parallel:    ['10K TPS', 'MONAD EVM', 'PARALLEL', 'PIPELINE', 'CONSENSUS'],
+};
+
+// Preferred building types per district
+export const DISTRICT_BUILDING_TYPES = {
+  defi:        ['glass', 'corp', 'tower', 'bank', 'sky'],
+  nft:         ['neon', 'theater', 'mall', 'cyber', 'bar'],
+  yield:       ['dome', 'apt', 'res', 'shop', 'wh'],
+  derivatives: ['sky', 'mega', 'tower', 'corp', 'glass'],
+  infra:       ['data', 'telecom', 'fac', 'station', 'heli'],
+  perps:       ['neon', 'cyber', 'bar', 'tower', 'sky'],
+  bridge:      ['heli', 'tower', 'glass', 'station', 'corp'],
+  lending:     ['bank', 'corp', 'off', 'glass', 'hotel'],
+  parallel:    ['mega', 'sky', 'tower', 'ant', 'telecom'],
+};
 
 export const FOOTER_BRANDS = [
   { name: 'MONAD', color: '#836EF9' },
@@ -131,6 +215,15 @@ export function generateLayout() {
     if (y < GR && x < GR) L[y][x] = 4;
   });
   return L;
+}
+
+// Get which district a grid cell belongs to
+export function getDistrictAt(gx, gy) {
+  for (const d of DISTRICTS) {
+    if (d.gxRange && gx >= d.gxRange[0] && gx <= d.gxRange[1] && gy >= d.gyRange[0] && gy <= d.gyRange[1])
+      return d.id;
+  }
+  return null;
 }
 
 export function pickWeather(sentiment) {

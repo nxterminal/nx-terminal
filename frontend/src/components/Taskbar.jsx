@@ -11,9 +11,6 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
   const [assistantOn, setAssistantOn] = useState(
     () => localStorage.getItem('nx-assistant-enabled') !== 'false'
   );
-  const [petOn, setPetOn] = useState(
-    () => localStorage.getItem('nx-pet-enabled') !== 'false'
-  );
 
   useEffect(() => {
     const fetchCycle = () => {
@@ -64,12 +61,6 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
     window.dispatchEvent(new Event('nx-assistant-changed'));
   }, [assistantOn]);
 
-  const togglePet = useCallback(() => {
-    const next = !petOn;
-    localStorage.setItem('nx-pet-enabled', String(next));
-    setPetOn(next);
-    window.dispatchEvent(new Event('nx-pet-toggled'));
-  }, [petOn]);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -187,19 +178,6 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: assistantOn ? 1 : 0.4, display: 'block' }}>
             <path d="M8 1 C8 1 6 3 6 6 L6 8 C6 9 5 10 4 10 L3 10 C2 10 2 11 3 11 L6 11 C6 11 6 12 7 13 L9 13 C10 12 10 11 10 11 L13 11 C14 11 14 10 13 10 L12 10 C11 10 10 9 10 8 L10 6 C10 3 8 1 8 1Z" fill="#808080" stroke="#333" strokeWidth="0.6"/>
             <circle cx="8" cy="5" r="1" fill="#333"/>
-          </svg>
-        </button>
-
-        <button
-          className="tray-icon"
-          onClick={togglePet}
-          title={petOn ? 'Hide Monadgotchi' : 'Show Monadgotchi'}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: petOn ? 1 : 0.4, display: 'block' }}>
-            <ellipse cx="8" cy="8.5" rx="5.5" ry="6.5" fill="#a0a0a0" stroke="#555" strokeWidth="0.8"/>
-            <rect x="5" y="5" width="2" height="2" rx="0.3" fill="#333"/>
-            <rect x="9" y="5" width="2" height="2" rx="0.3" fill="#333"/>
-            <rect x="7" y="8.5" width="2" height="1" rx="0.3" fill="#333"/>
           </svg>
         </button>
 

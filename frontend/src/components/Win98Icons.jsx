@@ -564,32 +564,64 @@ function IconMonadSDK({ size = 32 }) {
   );
 }
 
-function IconMonadgotchi({ size = 32 }) {
+function IconMonadCity({ size = 32 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="mgShell" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d0d0d0" />
-          <stop offset="100%" stopColor="#a0a0a0" />
+        <linearGradient id="mcSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2A1B5E" />
+          <stop offset="100%" stopColor="#1a1040" />
+        </linearGradient>
+        <linearGradient id="mcBld1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#836EF9" />
+          <stop offset="100%" stopColor="#6B5CE7" />
+        </linearGradient>
+        <linearGradient id="mcBld2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6B5CE7" />
+          <stop offset="100%" stopColor="#4a3db0" />
         </linearGradient>
       </defs>
-      {/* Shell body (egg shape) */}
-      <rect x="5" y="2" width="22" height="28" rx="8" fill="url(#mgShell)" stroke="#777" strokeWidth="0.7" />
-      {/* LCD screen */}
-      <rect x="8" y="5" width="16" height="14" rx="1" fill="#8b956d" stroke="#555" strokeWidth="0.6" />
-      {/* Pixel pet (simple face) */}
-      <rect x="12" y="8" width="2" height="2" fill="#2d3020" />
-      <rect x="18" y="8" width="2" height="2" fill="#2d3020" />
-      <rect x="13" y="12" width="6" height="1.5" fill="#2d3020" />
-      <rect x="12" y="13.5" width="1.5" height="1" fill="#2d3020" />
-      <rect x="18.5" y="13.5" width="1.5" height="1" fill="#2d3020" />
-      {/* Three buttons */}
-      <circle cx="10" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
-      <circle cx="16" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
-      <circle cx="22" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
-      <circle cx="10" cy="22.8" r="1.5" fill="#999" />
-      <circle cx="16" cy="22.8" r="1.5" fill="#999" />
-      <circle cx="22" cy="22.8" r="1.5" fill="#999" />
+      {/* Sky background */}
+      <rect x="1" y="1" width="30" height="30" rx="2" fill="url(#mcSky)" stroke="#2A1B5E" strokeWidth="0.5" />
+      {/* Ground */}
+      <rect x="1" y="27" width="30" height="4" rx="0" fill="#1a1040" />
+      {/* Building 1 - short left */}
+      <rect x="3" y="18" width="6" height="9" fill="url(#mcBld2)" stroke="#2A1B5E" strokeWidth="0.4" />
+      <rect x="4" y="19" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.8" />
+      <rect x="6.5" y="19" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.5" />
+      <rect x="4" y="22" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.6" />
+      <rect x="6.5" y="22" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.8" />
+      <rect x="4" y="25" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.4" />
+      {/* Building 2 - tallest center */}
+      <rect x="10" y="7" width="7" height="20" fill="url(#mcBld1)" stroke="#2A1B5E" strokeWidth="0.4" />
+      <rect x="11" y="9" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.7" />
+      <rect x="14.5" y="9" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.9" />
+      <rect x="11" y="12" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.5" />
+      <rect x="14.5" y="12" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.8" />
+      <rect x="11" y="15" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.9" />
+      <rect x="14.5" y="15" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.4" />
+      <rect x="11" y="18" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.6" />
+      <rect x="14.5" y="18" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.7" />
+      <rect x="11" y="21" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.8" />
+      <rect x="14.5" y="21" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.5" />
+      {/* Building 3 - medium right */}
+      <rect x="18" y="13" width="6" height="14" fill="url(#mcBld2)" stroke="#2A1B5E" strokeWidth="0.4" />
+      <rect x="19" y="14.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.6" />
+      <rect x="21.5" y="14.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.8" />
+      <rect x="19" y="17.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.9" />
+      <rect x="21.5" y="17.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.5" />
+      <rect x="19" y="20.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.4" />
+      <rect x="21.5" y="20.5" width="1.5" height="1.5" fill="#c4b5ff" opacity="0.7" />
+      {/* Building 4 - small far right */}
+      <rect x="25" y="20" width="4" height="7" fill="url(#mcBld1)" stroke="#2A1B5E" strokeWidth="0.4" />
+      <rect x="26" y="21" width="1" height="1" fill="#c4b5ff" opacity="0.7" />
+      <rect x="26" y="23.5" width="1" height="1" fill="#c4b5ff" opacity="0.5" />
+      {/* Antenna on tallest building */}
+      <rect x="13.2" y="4" width="0.6" height="3" fill="#9a8aff" />
+      {/* Glowing M beacon on top of tallest building */}
+      <circle cx="13.5" cy="3.5" r="1.8" fill="#836EF9" opacity="0.3" />
+      <circle cx="13.5" cy="3.5" r="1" fill="#836EF9" opacity="0.5" />
+      <text x="13.5" y="4.3" textAnchor="middle" fontSize="2.5" fontWeight="bold" fill="#e0d8ff" fontFamily="monospace">M</text>
     </svg>
   );
 }
@@ -616,7 +648,7 @@ export const ICON_MAP = {
   'nadwatch': IconNadwatch,
   'parallax': IconParallax,
   'monad-sdk': IconMonadSDK,
-  'monad-city': IconMonadgotchi,
+  'monad-city': IconMonadCity,
 };
 
 export function Win98Icon({ id, size = 32 }) {
