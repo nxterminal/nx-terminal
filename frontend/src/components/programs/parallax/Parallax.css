@@ -243,6 +243,36 @@
   margin-top: 2px;
 }
 
+/* ═══ Info Tooltips (dark/purple) ═══ */
+.plx-info-tooltip {
+  position: absolute;
+  left: 0;
+  background: #111;
+  border: 1px solid #7B2FBE;
+  padding: 8px 12px;
+  max-width: 280px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(123,47,190,0.3);
+  white-space: normal;
+}
+
+.plx-info-tooltip-title {
+  color: #7B2FBE;
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.plx-info-tooltip-text {
+  color: #30FF60;
+  font-size: 11px;
+}
+
 /* ═══ Offline text ═══ */
 .plx-offline-text {
   color: #ff3333;

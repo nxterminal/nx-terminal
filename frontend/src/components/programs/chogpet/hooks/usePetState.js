@@ -8,28 +8,52 @@ import {
   PET_XP,
   FEED_HUNGER,
   PET_HAPPINESS,
+  DAILY_LIMITS,
   getLevel,
 } from '../constants';
 
-const STORAGE_KEY = 'chogpet-state';
+const STORAGE_KEY = 'monadgotchi-state';
+const OLD_STORAGE_KEY = 'chogpet-state';
+
+function checkDayReset(state) {
+  const today = new Date().toDateString();
+  if (state.lastDayReset !== today) {
+    return {
+      ...state,
+      dailyFeeds: 0,
+      dailyPets: 0,
+      dailyTipXP: 0,
+      lastDayReset: today,
+    };
+  }
+  return state;
+}
 
 function loadState() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    // Try new key first, fall back to old key for migration
+    let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      saved = localStorage.getItem(OLD_STORAGE_KEY);
+      if (saved) {
+        localStorage.setItem(STORAGE_KEY, saved);
+        localStorage.removeItem(OLD_STORAGE_KEY);
+      }
+    }
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Apply decay since last interaction
       const now = Date.now();
       const elapsed = now - (parsed.lastInteraction || now);
       const hungerLost = Math.floor(elapsed / HUNGER_DECAY_MS);
       const happinessLost = Math.floor(elapsed / HAPPINESS_DECAY_MS) * 0.5;
-      return {
+      let state = {
         ...DEFAULT_PET_STATE,
         ...parsed,
         hunger: Math.max(0, (parsed.hunger || 80) - hungerLost),
         happiness: Math.max(0, (parsed.happiness || 80) - happinessLost),
         lastInteraction: now,
       };
+      return checkDayReset(state);
     }
   } catch {}
   return { ...DEFAULT_PET_STATE, lastFed: Date.now(), lastInteraction: Date.now() };
@@ -67,7 +91,7 @@ export function usePetState() {
     return () => clearInterval(interval);
   }, []);
 
-  // Listen for external state changes (from other component instances)
+  // Listen for external state changes
   useEffect(() => {
     const handler = () => {
       const fresh = loadState();
@@ -83,12 +107,17 @@ export function usePetState() {
 
   const feed = useCallback(() => {
     setState(prev => {
+      let s = checkDayReset(prev);
+      if (s.dailyFeeds >= DAILY_LIMITS.maxFeeds || s.hunger > 95) {
+        return s;
+      }
       const next = {
-        ...prev,
-        hunger: Math.min(100, prev.hunger + FEED_HUNGER),
-        xp: prev.xp + FEED_XP,
+        ...s,
+        hunger: Math.min(100, s.hunger + FEED_HUNGER),
+        xp: s.xp + FEED_XP,
         lastFed: Date.now(),
         lastInteraction: Date.now(),
+        dailyFeeds: s.dailyFeeds + 1,
       };
       saveState(next);
       return next;
@@ -98,11 +127,16 @@ export function usePetState() {
 
   const pet = useCallback(() => {
     setState(prev => {
+      let s = checkDayReset(prev);
+      if (s.dailyPets >= DAILY_LIMITS.maxPets) {
+        return s;
+      }
       const next = {
-        ...prev,
-        happiness: Math.min(100, prev.happiness + PET_HAPPINESS),
-        xp: prev.xp + PET_XP,
+        ...s,
+        happiness: Math.min(100, s.happiness + PET_HAPPINESS),
+        xp: s.xp + PET_XP,
         lastInteraction: Date.now(),
+        dailyPets: s.dailyPets + 1,
       };
       saveState(next);
       return next;
@@ -112,7 +146,16 @@ export function usePetState() {
 
   const addXP = useCallback((amount) => {
     setState(prev => {
-      const next = { ...prev, xp: prev.xp + amount, lastInteraction: Date.now() };
+      let s = checkDayReset(prev);
+      if (s.dailyTipXP >= DAILY_LIMITS.maxTipXP) {
+        return s;
+      }
+      const next = {
+        ...s,
+        xp: s.xp + amount,
+        lastInteraction: Date.now(),
+        dailyTipXP: s.dailyTipXP + 1,
+      };
       saveState(next);
       return next;
     });
@@ -167,10 +210,13 @@ export function usePetState() {
       saveState(next);
       return next;
     });
-    // Don't notify for position changes (too frequent during drag)
   }, []);
 
   const level = getLevel(state.xp);
+
+  const s = checkDayReset(state);
+  const feedMaxed = s.dailyFeeds >= DAILY_LIMITS.maxFeeds || s.hunger > 95;
+  const petMaxed = s.dailyPets >= DAILY_LIMITS.maxPets;
 
   return {
     ...state,
@@ -183,5 +229,7 @@ export function usePetState() {
     toggleHelper,
     toggleActive,
     setPosition,
+    feedMaxed,
+    petMaxed,
   };
 }

@@ -26,10 +26,10 @@ const DESKTOP_ICONS = [
   { id: 'control-panel', icon: '::', label: 'Settings' },
   { id: 'netwatch', icon: '', label: 'NETWATCH' },
   { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
-  { id: 'nadwatch', icon: '👁️', label: 'NADWATCH' },
-  { id: 'parallax', icon: '⚡', label: 'PARALLAX' },
-  { id: 'monad-sdk', icon: '⚡', label: 'MONAD SDK' },
-  { id: 'chogpet', icon: '\u{1F438}', label: 'CHOGPET' },
+  { id: 'nadwatch', icon: '', label: 'NADWATCH' },
+  { id: 'parallax', icon: '', label: 'PARALLAX' },
+  { id: 'monad-sdk', icon: '', label: 'MONAD SDK' },
+  { id: 'chogpet', icon: '', label: 'MONADGOTCHI' },
 ];
 
 function getWallpaperStyle() {

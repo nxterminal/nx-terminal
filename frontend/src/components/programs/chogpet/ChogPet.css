@@ -1,4 +1,14 @@
-/* ===== CHOGPET.exe — Desktop Pet Styles (cp- prefix) ===== */
+/* ===== MONADGOTCHI.exe — Desktop Pet Styles (cp- prefix) ===== */
+
+/* === LCD Tamagotchi palette === */
+:root {
+  --lcd-bg: #8b956d;
+  --lcd-dark: #2d3020;
+  --lcd-light: #a3ad8a;
+  --shell-dark: #606060;
+  --shell-light: #d0d0d0;
+  --shell-mid: #a0a0a0;
+}
 
 /* === Overlay (floating pet) === */
 .cp-overlay {
@@ -63,7 +73,7 @@
   100% { transform: translateY(0); }
 }
 
-/* Particles (hearts, sparkles, food) */
+/* Particles (ASCII characters instead of emojis) */
 .cp-particle {
   position: absolute;
   top: 0;
@@ -71,6 +81,8 @@
   pointer-events: none;
   animation: cp-particle-float 1s ease-out forwards;
   z-index: 1;
+  font-family: 'Courier New', monospace;
+  color: #fff;
 }
 
 @keyframes cp-particle-float {
@@ -78,29 +90,29 @@
   100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
 }
 
-/* === Dialog Bubble === */
+/* === Dialog Bubble (LCD style) === */
 .cp-bubble {
   position: absolute;
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 8px;
-  background: #ffffee;
-  border: 1px solid #000;
-  border-radius: 8px;
+  background: var(--lcd-bg);
+  border: 2px solid var(--lcd-dark);
+  border-radius: 4px;
   padding: 6px 10px;
   max-width: 200px;
   min-width: 120px;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
   animation: cp-bubble-fade-in 0.2s ease;
   pointer-events: none;
   z-index: 2;
 }
 
 .cp-bubble-text {
-  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
-  font-size: 11px;
-  color: #000;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--lcd-dark);
   line-height: 1.4;
 }
 
@@ -113,19 +125,19 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 7px solid #000;
+  border-top: 7px solid var(--lcd-dark);
 }
 
 .cp-bubble-arrow::after {
   content: '';
   position: absolute;
-  top: -8px;
+  top: -9px;
   left: -5px;
   width: 0;
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid #ffffee;
+  border-top: 6px solid var(--lcd-bg);
 }
 
 @keyframes cp-bubble-fade-in {
@@ -133,7 +145,7 @@
   100% { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* === Context Menu (Win98 style) === */
+/* === Context Menu (Win98 style, no emojis) === */
 .cp-menu {
   background: #c0c0c0;
   border: 2px solid;
@@ -164,126 +176,217 @@
   border-bottom: 1px solid #dfdfdf;
 }
 
-/* === PetSelector Window === */
+/* === MONADGOTCHI Window — Tamagotchi Shell === */
 .cp-window {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #c0c0c0;
-  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  background: linear-gradient(180deg, var(--shell-light) 0%, var(--shell-mid) 30%, var(--shell-light) 100%);
+  font-family: 'Courier New', monospace;
   font-size: 11px;
   overflow: hidden;
+  border-radius: 12px;
 }
 
-/* Header / current pet info */
-.cp-header {
-  display: flex;
-  gap: 16px;
-  padding: 12px;
-  align-items: center;
-  border-bottom: 1px solid #808080;
-}
-
-.cp-header-sprite {
-  flex-shrink: 0;
-  background: #000;
-  padding: 8px;
-  border: 2px solid;
-  border-color: #808080 #dfdfdf #dfdfdf #808080;
-}
-
-.cp-header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.cp-header-name {
-  font-size: 16px;
+/* Shell top label */
+.cp-shell-label {
+  text-align: center;
+  padding: 6px 0 4px;
+  font-size: 13px;
   font-weight: bold;
-  margin-bottom: 4px;
+  color: var(--shell-dark);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* LCD Frame */
+.cp-lcd-frame {
+  margin: 0 16px;
+  padding: 6px;
+  background: var(--shell-dark);
+  border-radius: 8px;
+  border: 2px solid;
+  border-color: #555 #888 #888 #555;
+}
+
+/* LCD Screen */
+.cp-lcd-screen {
+  background: var(--lcd-bg);
+  border: 2px solid;
+  border-color: #6b7558 #a3ad8a #a3ad8a #6b7558;
+  border-radius: 4px;
+  padding: 8px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* LCD Icon bar */
+.cp-lcd-iconbar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--lcd-dark);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--lcd-dark);
+  opacity: 0.7;
+}
+
+/* LCD Pet display */
+.cp-lcd-pet-area {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.cp-header-level {
-  font-size: 10px;
-  color: #666;
-  padding: 1px 6px;
-  background: #e0e0e0;
-  border: 1px solid #808080;
-}
-
-.cp-header-xp {
-  font-size: 10px;
-  color: #444;
-  margin-bottom: 6px;
-}
-
-/* Stat bars */
-.cp-stat-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.cp-stat-label {
-  width: 70px;
-  font-size: 10px;
-  color: #333;
-}
-
-.cp-stat-bar-bg {
+  gap: 12px;
+  padding: 4px 0;
   flex: 1;
-  height: 12px;
-  background: #fff;
-  border: 1px solid;
-  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  justify-content: center;
+}
+
+.cp-lcd-sprite {
+  flex-shrink: 0;
+}
+
+.cp-lcd-pet-info {
+  color: var(--lcd-dark);
+}
+
+.cp-lcd-pet-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.cp-lcd-pet-level {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.cp-lcd-pet-xp {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* LCD Stat bars */
+.cp-lcd-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cp-lcd-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--lcd-dark);
+}
+
+.cp-lcd-stat-label {
+  width: 55px;
+  flex-shrink: 0;
+}
+
+.cp-lcd-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--lcd-light);
+  border: 1px solid var(--lcd-dark);
   position: relative;
   overflow: hidden;
 }
 
-.cp-stat-bar-fill {
+.cp-lcd-bar-fill {
   height: 100%;
+  background: var(--lcd-dark);
   transition: width 0.3s ease;
 }
 
-.cp-stat-bar-fill.hunger {
-  background: linear-gradient(180deg, #30FF60, #1a8a35);
-}
-
-.cp-stat-bar-fill.happiness {
-  background: linear-gradient(180deg, #FF69B4, #cc3388);
-}
-
-.cp-stat-bar-fill.xp {
-  background: linear-gradient(180deg, #7B2FBE, #4a148c);
-}
-
-.cp-stat-value {
-  width: 32px;
+.cp-lcd-stat-val {
+  width: 30px;
   text-align: right;
+  font-size: 9px;
+}
+
+.cp-lcd-stat-counter {
   font-size: 10px;
-  color: #444;
+}
+
+/* Hardware buttons */
+.cp-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px 0 8px;
+}
+
+.cp-hw-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cp-hw-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cp-hw-btn-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(180deg, #999 0%, #777 100%);
+  border-radius: 50%;
+  border: 2px solid;
+  border-color: #aaa #666 #666 #aaa;
   font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: all 0.1s;
+}
+
+.cp-hw-btn:hover:not(:disabled) .cp-hw-btn-label {
+  background: linear-gradient(180deg, #aaa 0%, #888 100%);
+}
+
+.cp-hw-btn:active:not(:disabled) .cp-hw-btn-label {
+  border-color: #666 #aaa #aaa #666;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  transform: translateY(1px);
+}
+
+.cp-hw-btn-text {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  color: var(--shell-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Pet selector section */
 .cp-selector {
-  padding: 12px;
-  border-bottom: 1px solid #808080;
+  padding: 8px 12px;
+  border-top: 1px solid #999;
 }
 
 .cp-selector-title {
   font-weight: bold;
-  margin-bottom: 8px;
-  font-size: 11px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: var(--shell-dark);
 }
 
 .cp-pet-cards {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
 }
 
@@ -291,12 +394,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: #e0e0e0;
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   cursor: pointer;
-  min-width: 80px;
+  min-width: 70px;
   transition: background 0.1s;
 }
 
@@ -306,46 +409,35 @@
 
 .cp-pet-card:active {
   border-color: #808080 #dfdfdf #dfdfdf #808080;
-  padding: 9px 11px 7px 13px;
 }
 
 .cp-pet-card.selected {
   border-color: #7B2FBE;
   background: #f0e6ff;
-  border-width: 2px;
 }
 
 .cp-pet-card-name {
-  margin-top: 4px;
-  font-size: 10px;
-  font-weight: bold;
-}
-
-.cp-pet-card-desc {
-  font-size: 9px;
-  color: #666;
-  text-align: center;
   margin-top: 2px;
+  font-size: 9px;
+  font-weight: bold;
+  color: #333;
 }
 
-/* Actions section */
+/* Actions */
 .cp-actions {
-  padding: 12px;
+  padding: 4px 12px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
   justify-content: center;
 }
 
 .cp-btn {
-  padding: 4px 16px;
+  padding: 3px 16px;
   font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
   font-size: 11px;
   background: #c0c0c0;
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .cp-btn:hover {
@@ -354,12 +446,6 @@
 
 .cp-btn:active {
   border-color: #808080 #dfdfdf #dfdfdf #808080;
-  padding: 5px 15px 3px 17px;
-}
-
-.cp-btn.active {
-  background: #7B2FBE;
-  color: #fff;
 }
 
 .cp-btn.danger {
@@ -370,13 +456,14 @@
 .cp-statusbar {
   margin-top: auto;
   padding: 3px 6px;
-  font-size: 10px;
-  color: #444;
-  border-top: 1px solid #808080;
-  background: #c0c0c0;
+  font-size: 9px;
+  color: #555;
+  border-top: 1px solid #999;
+  background: var(--shell-mid);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-radius: 0 0 12px 12px;
 }
 
 .cp-statusbar-right {

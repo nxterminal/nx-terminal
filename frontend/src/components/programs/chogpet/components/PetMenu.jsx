@@ -20,13 +20,13 @@ export default function PetMenu({ position, onClose, onFeed, onPet, onStatus, on
   }, [onClose]);
 
   const items = [
-    { label: '\u{1F356} Feed', action: () => { onFeed(); onClose(); } },
-    { label: '\u2764\uFE0F Pet', action: () => { onPet(); onClose(); } },
+    { label: 'Feed', action: () => { onFeed(); onClose(); } },
+    { label: 'Pet', action: () => { onPet(); onClose(); } },
     { divider: true },
-    { label: '\u{1F4CA} Status', action: () => { onStatus(); onClose(); } },
-    { label: `\u{1F4A1} Helper ${helperMode ? '[\u2713]' : '[\u2717]'}`, action: () => { onHelper(); onClose(); } },
+    { label: 'Status', action: () => { onStatus(); onClose(); } },
+    { label: `Helper ${helperMode ? '[ON]' : '[OFF]'}`, action: () => { onHelper(); onClose(); } },
     { divider: true },
-    { label: '\u{1F44B} Dismiss', action: () => { onDismiss(); onClose(); } },
+    { label: 'Dismiss', action: () => { onDismiss(); onClose(); } },
   ];
 
   return (

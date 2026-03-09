@@ -1,4 +1,4 @@
-// CHOGPET.exe — Desktop Pet Constants
+// MONADGOTCHI.exe — Desktop Pet Constants
 // Monad ecosystem mascots: Chog (frog), Molandak (mole), Moyaki (firebird)
 
 // 8x8 pixel art sprite data
@@ -164,10 +164,27 @@ const MOYAKI_SPRITES = {
   ],
 };
 
+// LCD Tamagotchi palette
+export const LCD = {
+  bg: '#8b956d',
+  dark: '#2d3020',
+  light: '#a3ad8a',
+  shellDark: '#606060',
+  shellLight: '#d0d0d0',
+  shellMid: '#a0a0a0',
+};
+
+// Daily interaction limits
+export const DAILY_LIMITS = {
+  maxFeeds: 8,
+  maxPets: 15,
+  maxTipXP: 10,
+};
+
 export const PET_TYPES = {
   chog: {
     name: 'Chog',
-    icon: '\u{1F438}',
+    icon: '[C]',
     description: 'A mysterious frog from the Monad swamps. Loves parallel execution.',
     colors: {
       g: '#30FF60',  // green body
@@ -181,7 +198,7 @@ export const PET_TYPES = {
   },
   molandak: {
     name: 'Molandak',
-    icon: '\u{1F9A1}',
+    icon: '[M]',
     description: 'A determined mole-badger. Digs through blocks at 400ms speed.',
     colors: {
       b: '#8B6914',  // brown body
@@ -195,7 +212,7 @@ export const PET_TYPES = {
   },
   moyaki: {
     name: 'Moyaki',
-    icon: '\u{1F525}',
+    icon: '[Y]',
     description: 'A blazing firebird. Burns through transactions with parallel flames.',
     colors: {
       o: '#FF6600',  // orange body
@@ -262,6 +279,10 @@ export const DEFAULT_PET_STATE = {
   position: { x: 200, y: null },
   lastFed: Date.now(),
   lastInteraction: Date.now(),
+  dailyFeeds: 0,
+  dailyPets: 0,
+  dailyTipXP: 0,
+  lastDayReset: new Date().toDateString(),
 };
 
 export function getLevel(xp) {
