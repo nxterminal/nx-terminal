@@ -1,7 +1,12 @@
+import { useState, useRef, useCallback } from 'react';
 import './ChogPet.css';
 import PetSprite from './components/PetSprite';
 import { usePetState } from './hooks/usePetState';
 import { PET_TYPES, DAILY_LIMITS, getLevel, getNextLevel } from './constants';
+
+function BtnTooltip({ text }) {
+  return <div className="cp-btn-tooltip">{text}</div>;
+}
 
 export default function ChogPet({ onClose }) {
   const {
@@ -9,6 +14,33 @@ export default function ChogPet({ onClose }) {
     feed, pet, changePet, toggleHelper, toggleActive, level,
     dailyFeeds = 0, dailyPets = 0, feedMaxed, petMaxed,
   } = usePetState();
+
+  const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [spriteAnim, setSpriteAnim] = useState('');
+  const hoverTimerRef = useRef(null);
+  const animTimerRef = useRef(null);
+
+  const onBtnEnter = useCallback((btn) => {
+    hoverTimerRef.current = setTimeout(() => setHoveredBtn(btn), 400);
+  }, []);
+  const onBtnLeave = useCallback(() => {
+    clearTimeout(hoverTimerRef.current);
+    setHoveredBtn(null);
+  }, []);
+
+  const triggerSpriteAnim = useCallback((cls) => {
+    setSpriteAnim(cls);
+    clearTimeout(animTimerRef.current);
+    animTimerRef.current = setTimeout(() => setSpriteAnim(''), 600);
+  }, []);
+
+  const handleFeed = useCallback(() => {
+    if (!feedMaxed) { feed(); triggerSpriteAnim('cp-feed-anim'); }
+  }, [feed, feedMaxed, triggerSpriteAnim]);
+
+  const handlePet = useCallback(() => {
+    if (!petMaxed) { pet(); triggerSpriteAnim('cp-pet-anim'); }
+  }, [pet, petMaxed, triggerSpriteAnim]);
 
   const nextLevel = getNextLevel(xp);
   const xpProgress = nextLevel
@@ -36,7 +68,7 @@ export default function ChogPet({ onClose }) {
 
           {/* Pet display area */}
           <div className="cp-lcd-pet-area">
-            <div className="cp-lcd-sprite">
+            <div className={`cp-lcd-sprite ${spriteAnim}`}>
               <PetSprite petType={petType} frame="idle" size={56} monochrome />
             </div>
             <div className="cp-lcd-pet-info">
@@ -72,31 +104,27 @@ export default function ChogPet({ onClose }) {
 
       {/* 3 Physical buttons */}
       <div className="cp-buttons">
-        <button
-          className="cp-hw-btn"
-          onClick={feed}
-          disabled={feedMaxed}
-          title={feedMaxed ? "I'm full for today!" : 'Feed'}
-        >
-          <span className="cp-hw-btn-label">A</span>
-          <span className="cp-hw-btn-text">FEED</span>
-        </button>
-        <button
-          className="cp-hw-btn"
-          onClick={pet}
-          disabled={petMaxed}
-          title={petMaxed ? 'Zzz... let me rest' : 'Pet'}
-        >
-          <span className="cp-hw-btn-label">B</span>
-          <span className="cp-hw-btn-text">PET</span>
-        </button>
-        <button
-          className="cp-hw-btn"
-          onClick={toggleHelper}
-        >
-          <span className="cp-hw-btn-label">C</span>
-          <span className="cp-hw-btn-text">TIPS {helperMode ? 'ON' : 'OFF'}</span>
-        </button>
+        <div style={{ position: 'relative' }} onMouseEnter={() => onBtnEnter('feed')} onMouseLeave={onBtnLeave}>
+          {hoveredBtn === 'feed' && <BtnTooltip text="Feed — Give food to your pet. Restores hunger. 8 feeds per day." />}
+          <button className="cp-hw-btn" onClick={handleFeed} disabled={feedMaxed}>
+            <span className="cp-hw-btn-label cp-btn-feed">F</span>
+            <span className="cp-hw-btn-text">FEED</span>
+          </button>
+        </div>
+        <div style={{ position: 'relative' }} onMouseEnter={() => onBtnEnter('pet')} onMouseLeave={onBtnLeave}>
+          {hoveredBtn === 'pet' && <BtnTooltip text="Pet — Show affection. Restores happiness. 15 pets per day." />}
+          <button className="cp-hw-btn" onClick={handlePet} disabled={petMaxed}>
+            <span className="cp-hw-btn-label cp-btn-pet">P</span>
+            <span className="cp-hw-btn-text">PET</span>
+          </button>
+        </div>
+        <div style={{ position: 'relative' }} onMouseEnter={() => onBtnEnter('tips')} onMouseLeave={onBtnLeave}>
+          {hoveredBtn === 'tips' && <BtnTooltip text="Tips — Toggle Monad tips. Earn XP when tips appear." />}
+          <button className="cp-hw-btn" onClick={toggleHelper}>
+            <span className="cp-hw-btn-label cp-btn-tips">T</span>
+            <span className="cp-hw-btn-text">TIPS {helperMode ? 'ON' : 'OFF'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Pet selector */}
