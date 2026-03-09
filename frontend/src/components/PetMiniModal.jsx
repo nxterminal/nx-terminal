@@ -196,7 +196,6 @@ export default function PetMiniModal({ openWindow }) {
         borderRadius: 16,
         border: '2px solid #888',
         boxShadow: '2px 3px 8px rgba(0,0,0,0.3)',
-        overflow: 'hidden',
       }}>
         {/* Drag handle / label */}
         <div

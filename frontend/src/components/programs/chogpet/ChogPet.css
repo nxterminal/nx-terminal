@@ -184,7 +184,7 @@
   background: linear-gradient(180deg, var(--shell-light) 0%, var(--shell-mid) 30%, var(--shell-light) 100%);
   font-family: 'Courier New', monospace;
   font-size: 11px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 12px;
 }
 
