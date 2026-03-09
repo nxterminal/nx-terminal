@@ -21,10 +21,10 @@ const WINDOW_DEFAULTS = {
   'corp-wars': { title: 'Corporation Wars', icon: '\u2694', width: 720, height: 550, x: 160, y: 50 },
   'netwatch': { title: 'NETWATCH.exe', icon: '', width: 900, height: 550, x: 80, y: 35 },
   'pharos-sdk': { title: 'PHAROS_SDK.exe', icon: '', width: 880, height: 700, x: 120, y: 30 },
-  'nadwatch': { title: 'NADWATCH.exe', icon: '👁️', width: 900, height: 620, x: 80, y: 30 },
-  'parallax': { title: 'PARALLAX.exe', icon: '⚡', width: 960, height: 600, x: 60, y: 30 },
-  'monad-sdk': { title: 'MONAD_SDK.exe', icon: '⚡', width: 880, height: 700, x: 120, y: 30 },
-  'chogpet': { title: 'CHOGPET.exe', icon: '🐸', width: 420, height: 480, x: 200, y: 100 },
+  'nadwatch': { title: 'NADWATCH.exe', icon: '~', width: 900, height: 620, x: 80, y: 30 },
+  'parallax': { title: 'PARALLAX.exe', icon: '||', width: 960, height: 600, x: 60, y: 30 },
+  'monad-sdk': { title: 'MONAD_SDK.exe', icon: '</>', width: 880, height: 700, x: 120, y: 30 },
+  'chogpet': { title: 'MONADGOTCHI.exe', icon: '[o]', width: 420, height: 480, x: 200, y: 100 },
 };
 
 export function useWindowManager() {

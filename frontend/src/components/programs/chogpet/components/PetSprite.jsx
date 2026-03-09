@@ -1,6 +1,6 @@
-import { PET_TYPES } from '../constants';
+import { PET_TYPES, LCD } from '../constants';
 
-export default function PetSprite({ petType, frame = 'idle', size = 64, onClick, onContextMenu, style }) {
+export default function PetSprite({ petType, frame = 'idle', size = 64, monochrome = false, onClick, onContextMenu, style }) {
   const pet = PET_TYPES[petType];
   if (!pet) return null;
 
@@ -30,7 +30,9 @@ export default function PetSprite({ petType, frame = 'idle', size = 64, onClick,
           style={{
             width: `${cellSize}px`,
             height: `${cellSize}px`,
-            backgroundColor: colorKey ? (colors[colorKey] || colorKey) : 'transparent',
+            backgroundColor: colorKey
+              ? (monochrome ? LCD.dark : (colors[colorKey] || colorKey))
+              : 'transparent',
           }}
         />
       ))}

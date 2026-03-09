@@ -19,6 +19,7 @@ export default function PetOverlay({ openWindow }) {
   const {
     petType, name, hunger, happiness, xp, isActive, helperMode, position,
     feed, pet, toggleHelper, toggleActive, setPosition, addXP, level,
+    feedMaxed, petMaxed,
   } = petState;
 
   const [frame, setFrame] = useState('idle');
@@ -68,10 +69,9 @@ export default function PetOverlay({ openWindow }) {
         const currentX = position.x;
         setFacingLeft(targetX < currentX);
 
-        // Animate walk
         const startX = currentX;
         const distance = targetX - startX;
-        const duration = Math.abs(distance) * 5; // 5ms per pixel
+        const duration = Math.abs(distance) * 5;
         const startTime = performance.now();
 
         const animate = (now) => {
@@ -121,7 +121,6 @@ export default function PetOverlay({ openWindow }) {
     };
     const delay = TIP_INTERVAL_MIN + Math.random() * (TIP_INTERVAL_MAX - TIP_INTERVAL_MIN);
     const interval = setInterval(showTip, delay);
-    // Show first tip after a short delay
     const firstTip = setTimeout(showTip, 5000);
     return () => {
       clearInterval(interval);
@@ -156,18 +155,22 @@ export default function PetOverlay({ openWindow }) {
   // Click handler (pet the pet)
   const handleClick = useCallback((e) => {
     if (e.button !== 0) return;
+    if (petMaxed) {
+      showBubble('Zzz... let me rest');
+      return;
+    }
     pet();
     triggerAnimation('happy');
 
-    // Spawn particles
+    // Spawn ASCII particles
     const newParticles = Array.from({ length: 3 }, (_, i) => ({
       id: Date.now() + i,
-      emoji: ['\u2764\uFE0F', '\u2728', '\u{1F49C}'][i],
+      emoji: ['*', '+', '.'][i],
       x: Math.random() * 40 - 20,
     }));
     setParticles(newParticles);
     setTimeout(() => setParticles([]), 1000);
-  }, [pet, triggerAnimation]);
+  }, [pet, triggerAnimation, petMaxed, showBubble]);
 
   // Right-click handler
   const handleContextMenu = useCallback((e) => {
@@ -214,16 +217,20 @@ export default function PetOverlay({ openWindow }) {
 
   // Feed with particles
   const handleFeed = useCallback(() => {
+    if (feedMaxed) {
+      showBubble("I'm full for today!");
+      return;
+    }
     feed();
     triggerAnimation('eating', 600);
     const newParticles = Array.from({ length: 4 }, (_, i) => ({
       id: Date.now() + i,
-      emoji: ['\u{1F356}', '\u{1F357}', '\u{1F969}', '\u2728'][i],
+      emoji: ['*', '+', '.', '~'][i],
       x: Math.random() * 50 - 25,
     }));
     setParticles(newParticles);
     setTimeout(() => setParticles([]), 1000);
-  }, [feed, triggerAnimation]);
+  }, [feed, triggerAnimation, feedMaxed, showBubble]);
 
   if (!isActive) return null;
 
@@ -288,7 +295,10 @@ export default function PetOverlay({ openWindow }) {
           position={menuPos}
           onClose={() => setMenuPos(null)}
           onFeed={handleFeed}
-          onPet={() => { pet(); triggerAnimation('happy'); }}
+          onPet={() => {
+            if (petMaxed) { showBubble('Zzz... let me rest'); }
+            else { pet(); triggerAnimation('happy'); }
+          }}
           onStatus={() => openWindow('chogpet')}
           onHelper={toggleHelper}
           onDismiss={toggleActive}

@@ -23,7 +23,7 @@ function Sidebar({ xp, completedMissions, currentRank }) {
 
   return (
     <div className="ms-sidebar">
-      <div className="ms-sidebar-icon">{'\u26A1'}</div>
+      <div className="ms-sidebar-icon">{'</>'}</div>
       <div className="ms-sidebar-title">MONAD_SDK</div>
       <div className="ms-sidebar-subtitle">Monad Training</div>
 

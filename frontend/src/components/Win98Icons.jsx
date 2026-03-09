@@ -472,6 +472,128 @@ function IconPharosSDK({ size = 32 }) {
   );
 }
 
+function IconNadwatch({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="ndwMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <radialGradient id="ndwRadar" cx="50%" cy="55%" r="50%">
+          <stop offset="0%" stopColor="#1a0033" />
+          <stop offset="100%" stopColor="#0d001a" />
+        </radialGradient>
+      </defs>
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#ndwMonGrad)" stroke="#666" strokeWidth="0.8" />
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#ndwRadar)" />
+      <circle cx="16" cy="12" r="3" fill="none" stroke="#7B2FBE" strokeWidth="0.4" opacity="0.5" />
+      <circle cx="16" cy="12" r="6" fill="none" stroke="#7B2FBE" strokeWidth="0.3" opacity="0.3" />
+      <line x1="16" y1="12" x2="22" y2="7" stroke="#7B2FBE" strokeWidth="0.8" opacity="0.8" />
+      <circle cx="12" cy="9" r="0.8" fill="#30FF60" opacity="0.9" />
+      <circle cx="19" cy="14" r="0.6" fill="#7B2FBE" opacity="0.8" />
+      <circle cx="10" cy="13" r="0.5" fill="#30FF60" opacity="0.5" />
+      <line x1="16" y1="4" x2="16" y2="19" stroke="#7B2FBE" strokeWidth="0.2" opacity="0.2" />
+      <line x1="5" y1="12" x2="27" y2="12" stroke="#7B2FBE" strokeWidth="0.2" opacity="0.2" />
+      <circle cx="16" cy="20.5" r="0.7" fill="#7B2FBE" />
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#ndwMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#ndwMonGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+function IconParallax({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="plxMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <linearGradient id="plxScreenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0d001a" />
+          <stop offset="100%" stopColor="#060010" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#plxMonGrad)" stroke="#666" strokeWidth="0.8" />
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#plxScreenGrad)" />
+      {/* 4 parallel lanes */}
+      <rect x="7" y="6" width="12" height="2" rx="0.3" fill="#7B2FBE" opacity="0.9" />
+      <rect x="7" y="9" width="16" height="2" rx="0.3" fill="#30FF60" opacity="0.7" />
+      <rect x="7" y="12" width="10" height="2" rx="0.3" fill="#9B59B6" opacity="0.8" />
+      <rect x="7" y="15" width="14" height="2" rx="0.3" fill="#30FF60" opacity="0.6" />
+      {/* Conflict flash */}
+      <circle cx="21" cy="10" r="1.5" fill="#FF3333" opacity="0.6" />
+      <circle cx="16" cy="20.5" r="0.7" fill="#7B2FBE" />
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#plxMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#plxMonGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+function IconMonadSDK({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="msMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <linearGradient id="msScreenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0d0017" />
+          <stop offset="100%" stopColor="#060010" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#msMonGrad)" stroke="#666" strokeWidth="0.8" />
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#msScreenGrad)" />
+      <rect x="7" y="6" width="10" height="1.2" rx="0.3" fill="#7B2FBE" opacity="0.8" />
+      <rect x="9" y="8.5" width="14" height="1.2" rx="0.3" fill="#e6edf3" opacity="0.5" />
+      <rect x="9" y="11" width="8" height="1.2" rx="0.3" fill="#30FF60" opacity="0.7" />
+      <rect x="9" y="13.5" width="12" height="1.2" rx="0.3" fill="#e6edf3" opacity="0.5" />
+      <rect x="7" y="16" width="6" height="1.2" rx="0.3" fill="#9B59B6" opacity="0.6" />
+      <rect x="5.5" y="6" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="8.5" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="11" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="13.5" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="5.5" y="16" width="1" height="1.2" fill="#444" opacity="0.6" />
+      <rect x="18" y="11" width="1" height="1.5" fill="#7B2FBE" opacity="0.9" />
+      <circle cx="16" cy="20.5" r="0.7" fill="#7B2FBE" />
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#msMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#msMonGrad)" stroke="#888" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+function IconMonadgotchi({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mgShell" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d0d0d0" />
+          <stop offset="100%" stopColor="#a0a0a0" />
+        </linearGradient>
+      </defs>
+      {/* Shell body (egg shape) */}
+      <rect x="5" y="2" width="22" height="28" rx="8" fill="url(#mgShell)" stroke="#777" strokeWidth="0.7" />
+      {/* LCD screen */}
+      <rect x="8" y="5" width="16" height="14" rx="1" fill="#8b956d" stroke="#555" strokeWidth="0.6" />
+      {/* Pixel pet (simple face) */}
+      <rect x="12" y="8" width="2" height="2" fill="#2d3020" />
+      <rect x="18" y="8" width="2" height="2" fill="#2d3020" />
+      <rect x="13" y="12" width="6" height="1.5" fill="#2d3020" />
+      <rect x="12" y="13.5" width="1.5" height="1" fill="#2d3020" />
+      <rect x="18.5" y="13.5" width="1.5" height="1" fill="#2d3020" />
+      {/* Three buttons */}
+      <circle cx="10" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
+      <circle cx="16" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
+      <circle cx="22" cy="23" r="2.2" fill="#888" stroke="#666" strokeWidth="0.5" />
+      <circle cx="10" cy="22.8" r="1.5" fill="#999" />
+      <circle cx="16" cy="22.8" r="1.5" fill="#999" />
+      <circle cx="22" cy="22.8" r="1.5" fill="#999" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -491,6 +613,10 @@ export const ICON_MAP = {
   'corp-wars': IconCorpWars,
   'netwatch': IconNetwatch,
   'pharos-sdk': IconPharosSDK,
+  'nadwatch': IconNadwatch,
+  'parallax': IconParallax,
+  'monad-sdk': IconMonadSDK,
+  'chogpet': IconMonadgotchi,
 };
 
 export function Win98Icon({ id, size = 32 }) {

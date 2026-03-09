@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { EVENT_TYPES, COLORS } from '../constants';
+import InfoTooltip from '../components/InfoTooltip';
 
 function formatTime(ts) {
   const d = new Date(ts);
@@ -23,12 +24,14 @@ export default function ConflictLog({ events }) {
 
   return (
     <div className="plx-conflict-log">
-      <div className="plx-log-header">
-        CONFLICT LOG
-        <span style={{ color: '#666', fontWeight: 'normal', marginLeft: '8px', fontSize: '9px' }}>
-          {events.length} events
-        </span>
-      </div>
+      <InfoTooltip title="CONFLICT LOG" text="Real-time feed of state access conflicts, re-executions, and resolutions. CONFLICT = two lanes accessed same state. RE-EXEC = tx replayed. CLEAR = conflict resolved.">
+        <div className="plx-log-header">
+          CONFLICT LOG
+          <span style={{ color: '#666', fontWeight: 'normal', marginLeft: '8px', fontSize: '9px' }}>
+            {events.length} events
+          </span>
+        </div>
+      </InfoTooltip>
       <div className="plx-log-scroll" ref={scrollRef}>
         {visible.length === 0 && (
           <div style={{ color: '#444', fontStyle: 'italic', padding: '4px 0' }}>

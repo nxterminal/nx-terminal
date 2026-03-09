@@ -1,4 +1,5 @@
 import { COLORS } from '../constants';
+import InfoTooltip from '../components/InfoTooltip';
 
 function formatBlockNum(n) {
   if (!n) return '---';
@@ -7,10 +8,10 @@ function formatBlockNum(n) {
 }
 
 const STAGES = [
-  { label: 'PROPOSE',  key: 'propose',  color: '#00FFFF', offset: 2 },
-  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1 },
-  { label: 'FINALIZE', key: 'finalize', color: '#30FF60', offset: 0 },
-  { label: 'EXECUTE',  key: 'execute',  color: '#FFD700', offset: -3 },
+  { label: 'PROPOSE',  key: 'propose',  color: '#00FFFF', offset: 2, tip: 'Leader proposes a new block containing ordered transactions. Block N+2 is proposed while earlier blocks are still being finalized.' },
+  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1, tip: 'Validators vote on the proposed block. MonadBFT requires 2/3+ validator agreement for consensus.' },
+  { label: 'FINALIZE', key: 'finalize', color: '#30FF60', offset: 0, tip: 'Block is finalized after receiving sufficient votes. Finality achieved in ~800ms (2 block times).' },
+  { label: 'EXECUTE',  key: 'execute',  color: '#FFD700', offset: -3, tip: 'Deferred execution: transactions execute after finalization. This allows consensus and execution to run in parallel.' },
 ];
 
 export default function PipelineStatus({ blockNumber = 0 }) {
@@ -32,41 +33,43 @@ export default function PipelineStatus({ blockNumber = 0 }) {
       {STAGES.map((stage) => {
         const block = blockNumber + stage.offset;
         return (
-          <div key={stage.key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: stage.color, width: '60px', fontWeight: 'bold', fontSize: '10px', flexShrink: 0 }}>
-              {stage.label}
-            </span>
-            <div style={{
-              flex: 1,
-              height: '14px',
-              background: '#111',
-              border: `1px solid ${COLORS.border}`,
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {/* Progress sweep */}
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                height: '100%',
-                width: '40%',
-                background: `linear-gradient(90deg, transparent, ${stage.color}33, transparent)`,
-                animation: 'plx-pipeline-sweep 0.4s linear infinite',
-              }} />
-              <span style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                color: '#ccc',
-                whiteSpace: 'nowrap',
-              }}>
-                Block {formatBlockNum(block)}
+          <InfoTooltip key={stage.key} title={stage.label} text={stage.tip}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: stage.color, width: '60px', fontWeight: 'bold', fontSize: '10px', flexShrink: 0 }}>
+                {stage.label}
               </span>
+              <div style={{
+                flex: 1,
+                height: '14px',
+                background: '#111',
+                border: `1px solid ${COLORS.border}`,
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                {/* Progress sweep */}
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: '40%',
+                  background: `linear-gradient(90deg, transparent, ${stage.color}33, transparent)`,
+                  animation: 'plx-pipeline-sweep 0.4s linear infinite',
+                }} />
+                <span style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '9px',
+                  color: '#ccc',
+                  whiteSpace: 'nowrap',
+                }}>
+                  Block {formatBlockNum(block)}
+                </span>
+              </div>
             </div>
-          </div>
+          </InfoTooltip>
         );
       })}
 

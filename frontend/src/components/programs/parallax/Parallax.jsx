@@ -76,19 +76,19 @@ export default function Parallax({ onClose }) {
 
   let statusIcon, statusText, statusColor;
   if (isPaused) {
-    statusIcon = '\u23F8\uFE0F';
+    statusIcon = '[PAUSED]';
     statusText = 'SIMULATION PAUSED';
     statusColor = '#888';
   } else if (!rpc.isConnected && rpc.error) {
-    statusIcon = '\uD83D\uDD34';
+    statusIcon = '[OFFLINE]';
     statusText = `NETWORK OFFLINE \u2014 Reconnecting in ${retryCountdown}s...`;
     statusColor = '#ff3333';
   } else if (rpc.isConnected && timeSinceUpdate !== null && timeSinceUpdate > 5) {
-    statusIcon = '\uD83D\uDFE1';
+    statusIcon = '[WAITING]';
     statusText = `AWAITING NEW BLOCK... (last: ${timeSinceUpdate}s ago)`;
     statusColor = '#cc9900';
   } else {
-    statusIcon = '\uD83D\uDFE2';
+    statusIcon = '[ONLINE]';
     statusText = `PARALLAX MODE \u2014 ${metrics.parallelGain.toFixed(1)}x GAIN \u2014 ${lanes.reduce((s, l) => s + l.transactions.length, 0)} TXS IN FLIGHT`;
     statusColor = '#00aa00';
   }
@@ -183,7 +183,7 @@ export default function Parallax({ onClose }) {
           }}>
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <div className="plx-offline-text">
-                {'\u26A0'} NETWORK OFFLINE
+                {'[!]'} NETWORK OFFLINE
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
                 Unable to connect to Monad<br />RPC endpoint.
