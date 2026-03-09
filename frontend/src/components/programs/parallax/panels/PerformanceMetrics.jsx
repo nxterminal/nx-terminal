@@ -30,18 +30,20 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       overflow: 'auto',
     }}>
       {/* Header */}
-      <div style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: '10px', borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' }}>
-        PERFORMANCE METRICS
-      </div>
+      <InfoTooltip text="Performance Metrics — Real-time performance dashboard showing throughput, parallelism gains, conflict rates, and gas efficiency comparisons.">
+        <div style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: '10px', borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' }}>
+          PERFORMANCE METRICS
+        </div>
+      </InfoTooltip>
 
       {/* TPS */}
-      <InfoTooltip title="SEQUENTIAL TPS" text="Transactions per second if executed one-by-one in serial order. This is the baseline throughput without parallelism.">
+      <InfoTooltip text="Sequential TPS — Transactions per second if executed one-by-one in serial order. This is the baseline throughput without parallelism.">
         <div>
           <div style={{ color: '#888', fontSize: '9px' }}>SEQUENTIAL TPS</div>
           <div style={{ color: COLORS.text, fontSize: '14px' }}>{rpc.tps.toFixed(1)}</div>
         </div>
       </InfoTooltip>
-      <InfoTooltip title="EFFECTIVE TPS" text="Actual throughput with parallel execution enabled. Equals sequential TPS multiplied by the parallel gain factor.">
+      <InfoTooltip text="Effective TPS — Actual throughput with parallel execution enabled. Equals sequential TPS multiplied by the parallel gain factor.">
         <div>
           <div style={{ color: '#888', fontSize: '9px' }}>EFFECTIVE TPS</div>
           <div style={{ color: COLORS.green, fontSize: '14px', fontWeight: 'bold' }}>
@@ -51,7 +53,7 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       </InfoTooltip>
 
       {/* Parallel Gain */}
-      <InfoTooltip title="PARALLEL GAIN" text="Speedup factor from parallel execution. A gain of 4.0x means transactions are processed 4 times faster than serial. Max theoretical gain: 8x (one per lane).">
+      <InfoTooltip text="Parallel Gain — Speedup factor from parallel execution. A gain of 4.0x means transactions are processed 4 times faster than serial. Max theoretical: 8x (one per lane).">
         <div style={{ borderTop: `1px solid ${COLORS.border}`, borderBottom: `1px solid ${COLORS.border}`, padding: '6px 0', textAlign: 'center' }}>
           <div style={{ color: COLORS.primary, fontSize: '9px', fontWeight: 'bold' }}>
             {'>>'} PARALLEL GAIN
@@ -69,13 +71,13 @@ export default function PerformanceMetrics({ metrics, rpc }) {
 
       {/* Stats */}
       <div style={{ display: 'flex', gap: '12px' }}>
-        <InfoTooltip title="CONFLICTS" text="State access conflicts detected between lanes. Occurs when two lanes read/write the same storage slot concurrently.">
+        <InfoTooltip text="Conflicts — State access conflicts detected between lanes. Occurs when two lanes read/write the same storage slot concurrently.">
           <div>
             <div style={{ color: '#888', fontSize: '9px' }}>CONFLICTS</div>
             <div style={{ color: COLORS.red, fontSize: '12px' }}>{totalConflicts}</div>
           </div>
         </InfoTooltip>
-        <InfoTooltip title="RE-EXECS" text="Transactions re-executed after a conflict. The conflicting tx replays with updated state to ensure deterministic results.">
+        <InfoTooltip text="Re-Execs — Transactions re-executed after a conflict. The conflicting tx replays with updated state to ensure deterministic results.">
           <div>
             <div style={{ color: '#888', fontSize: '9px' }}>RE-EXECS</div>
             <div style={{ color: COLORS.yellow, fontSize: '12px' }}>{totalReExecs}</div>
@@ -83,7 +85,7 @@ export default function PerformanceMetrics({ metrics, rpc }) {
         </InfoTooltip>
       </div>
 
-      <InfoTooltip title="LANE EFFICIENCY" text="Average utilization across all 8 lanes. 100% means every lane is fully occupied with transactions. Higher efficiency = better parallelism.">
+      <InfoTooltip text="Lane Efficiency — Average utilization across all 8 lanes. 100% means every lane is fully occupied. Higher efficiency = better parallelism.">
         <div>
           <div style={{ color: '#888', fontSize: '9px' }}>LANE EFFICIENCY</div>
           <div style={{ color: COLORS.green, fontSize: '12px' }}>
@@ -96,7 +98,7 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       </InfoTooltip>
 
       {/* Gas comparison */}
-      <InfoTooltip title="GAS COMPARISON" text="Compares gas processing time: serial (all txs queued) vs parallel (distributed across lanes). Lower parallel time = higher throughput.">
+      <InfoTooltip text="Gas Comparison — Compares gas processing time: serial (all txs queued) vs parallel (distributed across lanes). Lower parallel time = higher throughput.">
         <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: '6px' }}>
           <div style={{ color: '#888', fontSize: '9px', marginBottom: '4px' }}>GAS COMPARISON</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>

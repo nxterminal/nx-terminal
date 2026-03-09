@@ -206,26 +206,24 @@ export default function ExecutionLanes({ lanes, events }) {
       />
       {/* Header tooltip */}
       <InfoTooltip
-        title="EXECUTION LANES"
-        text="8 parallel swim lanes process transactions simultaneously using optimistic concurrency. Each tx is assigned to a lane based on its target address hash."
+        text="Execution Lanes — 8 parallel swim lanes process transactions simultaneously using optimistic concurrency. Each tx is assigned to a lane based on its target address hash."
         style={{ position: 'absolute', top: '2px', left: '38px', width: '200px', height: '16px', zIndex: 2 }}
       >
         <div style={{ width: '100%', height: '100%', cursor: 'default' }} />
       </InfoTooltip>
       {/* Lane label tooltips (L0-L7) */}
       {[
-        'Lane 0: Primary execution lane. Handles transactions targeting addresses with hash mod 8 = 0.',
-        'Lane 1: Parallel lane for address group 1. Executes independently unless state conflicts arise.',
-        'Lane 2: Parallel lane for address group 2. Shares no read/write sets with other lanes by default.',
-        'Lane 3: Parallel lane for address group 3. Re-executes on detected state dependency conflicts.',
-        'Lane 4: Parallel lane for address group 4. Processes DeFi txs targeting unique contracts.',
-        'Lane 5: Parallel lane for address group 5. Optimistic execution assumes no conflicts initially.',
-        'Lane 6: Parallel lane for address group 6. Conflict detection happens post-execution.',
-        'Lane 7: Parallel lane for address group 7. Maximum 8-lane parallelism for throughput gains.',
+        'Lane 0 — Primary execution lane. Handles transactions targeting addresses with hash mod 8 = 0.',
+        'Lane 1 — Parallel lane for address group 1. Executes independently unless state conflicts arise.',
+        'Lane 2 — Parallel lane for address group 2. Shares no read/write sets with other lanes by default.',
+        'Lane 3 — Parallel lane for address group 3. Re-executes on detected state dependency conflicts.',
+        'Lane 4 — Parallel lane for address group 4. Processes DeFi txs targeting unique contracts.',
+        'Lane 5 — Parallel lane for address group 5. Optimistic execution assumes no conflicts initially.',
+        'Lane 6 — Parallel lane for address group 6. Conflict detection happens post-execution.',
+        'Lane 7 — Parallel lane for address group 7. Maximum 8-lane parallelism for throughput gains.',
       ].map((tip, i) => (
         <InfoTooltip
           key={i}
-          title={`LANE ${i}`}
           text={tip}
           style={{
             position: 'absolute',
@@ -241,9 +239,8 @@ export default function ExecutionLanes({ lanes, events }) {
       ))}
       {/* Serial order tooltip */}
       <InfoTooltip
-        title="SERIAL ORDER"
-        text="Shows completed vs total transactions per lane. In serial mode, these would execute sequentially — parallel lanes process them concurrently."
-        style={{ position: 'absolute', top: '2px', right: '0px', width: '72px', height: '16px', zIndex: 2 }}
+        text="Serial Order — Shows completed vs total transactions per lane. In serial mode, these would execute sequentially. Parallel lanes process them concurrently for higher throughput."
+        style={{ position: 'absolute', top: '2px', right: '0px', width: '72px', height: '100%', zIndex: 2 }}
       >
         <div style={{ width: '100%', height: '100%', cursor: 'default' }} />
       </InfoTooltip>
