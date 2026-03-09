@@ -3,6 +3,7 @@ import DesktopIcon from './DesktopIcon';
 import Taskbar from './Taskbar';
 import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
+import PetOverlay from './programs/chogpet/components/PetOverlay';
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
@@ -28,6 +29,7 @@ const DESKTOP_ICONS = [
   { id: 'nadwatch', icon: '👁️', label: 'NADWATCH' },
   { id: 'parallax', icon: '⚡', label: 'PARALLAX' },
   { id: 'monad-sdk', icon: '⚡', label: 'MONAD SDK' },
+  { id: 'chogpet', icon: '\u{1F438}', label: 'CHOGPET' },
 ];
 
 function getWallpaperStyle() {
@@ -195,6 +197,7 @@ export default function Desktop() {
       />
 
       <NXAssistant />
+      <PetOverlay openWindow={openWindowWithBSOD} />
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}

@@ -21,6 +21,7 @@ import PharosSDK from './programs/pharos-sdk/PharosSDK';
 import NadWatch from './programs/nadwatch/NadWatch';
 import Parallax from './programs/parallax/Parallax';
 import MonadSDK from './programs/monad-sdk/MonadSDK';
+import ChogPet from './programs/chogpet/ChogPet';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -44,6 +45,7 @@ const WINDOW_COMPONENTS = {
   'nadwatch': NadWatch,
   'parallax': Parallax,
   'monad-sdk': MonadSDK,
+  'chogpet': ChogPet,
 };
 
 export default function WindowManager({
