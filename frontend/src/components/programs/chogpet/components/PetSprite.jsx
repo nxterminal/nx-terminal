@@ -6,7 +6,8 @@ export default function PetSprite({ petType, frame = 'idle', size = 64, monochro
 
   const spriteData = pet.sprites[frame] || pet.sprites.idle;
   const colors = pet.colors;
-  const cellSize = size / 8;
+  const gridSize = spriteData[0]?.length || 8;
+  const cellSize = size / gridSize;
 
   return (
     <div
@@ -15,8 +16,8 @@ export default function PetSprite({ petType, frame = 'idle', size = 64, monochro
       onContextMenu={onContextMenu}
       style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(8, ${cellSize}px)`,
-        gridTemplateRows: `repeat(8, ${cellSize}px)`,
+        gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`,
+        gridTemplateRows: `repeat(${gridSize}, ${cellSize}px)`,
         width: `${size}px`,
         height: `${size}px`,
         cursor: 'pointer',

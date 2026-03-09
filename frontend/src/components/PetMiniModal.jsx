@@ -78,6 +78,25 @@ export default function PetMiniModal({ openWindow }) {
     return () => { clearInterval(interval); clearTimeout(first); };
   }, [visible, helperMode, addXP]);
 
+  const [spriteAnim, setSpriteAnim] = useState('');
+  const spriteAnimRef = useRef(null);
+  const [hoveredBtn, setHoveredBtn] = useState(null);
+  const hoverTimerRef = useRef(null);
+
+  const onBtnEnter = useCallback((btn) => {
+    hoverTimerRef.current = setTimeout(() => setHoveredBtn(btn), 400);
+  }, []);
+  const onBtnLeave = useCallback(() => {
+    clearTimeout(hoverTimerRef.current);
+    setHoveredBtn(null);
+  }, []);
+
+  const triggerSpriteAnim = useCallback((cls) => {
+    setSpriteAnim(cls);
+    clearTimeout(spriteAnimRef.current);
+    spriteAnimRef.current = setTimeout(() => setSpriteAnim(''), 600);
+  }, []);
+
   const triggerAnim = useCallback((anim, dur = 800) => {
     setFrame(anim);
     clearTimeout(animTimeoutRef.current);
@@ -94,13 +113,15 @@ export default function PetMiniModal({ openWindow }) {
     if (feedMaxed) { showBubble("I'm full for today!"); return; }
     feed();
     triggerAnim('eating', 600);
-  }, [feed, feedMaxed, showBubble, triggerAnim]);
+    triggerSpriteAnim('cp-feed-anim');
+  }, [feed, feedMaxed, showBubble, triggerAnim, triggerSpriteAnim]);
 
   const handlePet = useCallback(() => {
     if (petMaxed) { showBubble('Zzz... let me rest'); return; }
     pet();
     triggerAnim('happy');
-  }, [pet, petMaxed, showBubble, triggerAnim]);
+    triggerSpriteAnim('cp-pet-anim');
+  }, [pet, petMaxed, showBubble, triggerAnim, triggerSpriteAnim]);
 
   // Drag
   const handleDragStart = useCallback((e) => {
@@ -218,7 +239,9 @@ export default function PetMiniModal({ openWindow }) {
             gap: 4,
           }}>
             {/* Pet */}
-            <PetSprite petType={petType} frame={frame} size={48} monochrome />
+            <div className={spriteAnim}>
+              <PetSprite petType={petType} frame={frame} size={48} monochrome />
+            </div>
             <div style={{ fontFamily: '"Courier New", monospace', fontSize: 9, color: '#2d3020', textAlign: 'center' }}>
               {name}
             </div>
@@ -245,53 +268,78 @@ export default function PetMiniModal({ openWindow }) {
 
         {/* 3 buttons */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '8px 0 6px' }}>
-          <MiniBtn label="A" text="FEED" onClick={handleFeed} disabled={feedMaxed} />
-          <MiniBtn label="B" text="PET" onClick={handlePet} disabled={petMaxed} />
-          <MiniBtn label="C" text={helperMode ? 'TIP' : 'TIP'} onClick={toggleHelper} />
+          <MiniBtn label="F" text="FEED" onClick={handleFeed} disabled={feedMaxed} color="feed" tooltip="Feed — Give food to your pet. Restores hunger. 8 feeds per day." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
+          <MiniBtn label="P" text="PET" onClick={handlePet} disabled={petMaxed} color="pet" tooltip="Pet — Show affection. Restores happiness. 15 pets per day." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
+          <MiniBtn label="T" text="TIPS" onClick={toggleHelper} color="tips" tooltip="Tips — Toggle Monad tips. Earn XP when tips appear." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
         </div>
       </div>
     </div>
   );
 }
 
-function MiniBtn({ label, text, onClick, disabled }) {
+const MINI_BTN_COLORS = {
+  feed: { bg: 'linear-gradient(180deg, #50ff80 0%, #30dd50 100%)', color: '#0a3a0a', border: '#70ffa0 #1a8a35 #1a8a35 #70ffa0' },
+  pet:  { bg: 'linear-gradient(180deg, #ff8ec4 0%, #dd5090 100%)', color: '#3a0a20', border: '#ffaad4 #aa3070 #aa3070 #ffaad4' },
+  tips: { bg: 'linear-gradient(180deg, #a060e0 0%, #7B2FBE 100%)', color: '#fff',    border: '#c080ff #5a1a90 #5a1a90 #c080ff' },
+};
+
+function MiniBtn({ label, text, onClick, disabled, color, tooltip, hoveredBtn, onEnter, onLeave }) {
+  const c = MINI_BTN_COLORS[color] || {};
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 1,
-        background: 'none',
-        border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.4 : 1,
-        padding: 0,
-      }}
+    <div
+      style={{ position: 'relative' }}
+      onMouseEnter={() => onEnter(color)}
+      onMouseLeave={onLeave}
     >
-      <span style={{
-        width: 22,
-        height: 22,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(180deg, #999 0%, #777 100%)',
-        borderRadius: '50%',
-        border: '2px solid',
-        borderColor: '#aaa #666 #666 #aaa',
-        fontFamily: '"Courier New", monospace',
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#333',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-      }}>
-        {label}
-      </span>
-      <span style={{ fontFamily: '"Courier New", monospace', fontSize: 7, color: '#606060', textTransform: 'uppercase' }}>
-        {text}
-      </span>
-    </button>
+      {hoveredBtn === color && tooltip && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: 6, background: '#ffffe1', border: '1px solid #000',
+          padding: '4px 8px', fontFamily: '"Tahoma", "MS Sans Serif", sans-serif',
+          fontSize: 11, color: '#000', whiteSpace: 'normal', zIndex: 30,
+          pointerEvents: 'none', boxShadow: '1px 1px 0 #808080',
+          maxWidth: 200, lineHeight: 1.3, minWidth: 120,
+        }}>
+          {tooltip}
+        </div>
+      )}
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1,
+          background: 'none',
+          border: 'none',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.4 : 1,
+          padding: 0,
+        }}
+      >
+        <span style={{
+          width: 22,
+          height: 22,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: c.bg || 'linear-gradient(180deg, #999 0%, #777 100%)',
+          borderRadius: '50%',
+          border: '2px solid',
+          borderColor: c.border || '#aaa #666 #666 #aaa',
+          fontFamily: '"Courier New", monospace',
+          fontSize: 10,
+          fontWeight: 'bold',
+          color: c.color || '#333',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: '"Courier New", monospace', fontSize: 7, color: '#606060', textTransform: 'uppercase' }}>
+          {text}
+        </span>
+      </button>
+    </div>
   );
 }
