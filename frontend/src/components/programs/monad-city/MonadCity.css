@@ -1,0 +1,347 @@
+/* ===== MONAD_CITY.exe — Isometric City Styles (mc- prefix) ===== */
+
+.mc-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #07040F;
+  color: #E0D8FF;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+  user-select: none;
+}
+
+.mc-root canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mc-city-canvas { z-index: 1; }
+.mc-weather-canvas { z-index: 2; pointer-events: none; }
+
+.mc-scanlines {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(131,110,249,0.006) 3px, rgba(131,110,249,0.006) 4px
+  );
+  pointer-events: none;
+  z-index: 90;
+}
+
+/* Win98 menu bar */
+.mc-menubar {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  background: #c0c0c0;
+  border-bottom: 1px solid #808080;
+  padding: 0;
+  height: 22px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+}
+
+.mc-menu-item {
+  position: relative;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: #000;
+}
+
+.mc-menu-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.mc-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #808080 #808080 #fff;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  min-width: 160px;
+  z-index: 200;
+  padding: 2px 0;
+}
+
+.mc-dropdown-item {
+  padding: 3px 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #000;
+}
+
+.mc-dropdown-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.mc-dropdown-item.mc-checked::before {
+  content: '\2713';
+  position: absolute;
+  left: 6px;
+}
+
+.mc-dropdown-sep {
+  height: 1px;
+  background: #808080;
+  margin: 2px 4px;
+  border-bottom: 1px solid #fff;
+}
+
+/* Overlay panels */
+.mc-panel {
+  position: absolute;
+  background: rgba(10,6,22,0.93);
+  border: 1px solid rgba(131,110,249,0.28);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+  box-shadow: 0 0 20px rgba(131,110,249,0.1);
+  padding: 9px;
+  font-family: 'Courier New', monospace;
+}
+
+.mc-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #B8A9FF;
+  opacity: .45;
+  margin-bottom: 1px;
+}
+
+/* Price panel */
+.mc-price-panel { top: 26px; left: 6px; width: 195px; }
+.mc-price { font-weight: 900; font-size: 22px; color: #fff; text-shadow: 0 0 12px rgba(131,110,249,.2); }
+.mc-change { font-size: 9px; margin-left: 3px; }
+.mc-change.up { color: #00FF88; }
+.mc-change.down { color: #FF3366; }
+.mc-gas-row { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+.mc-gas-dot { width: 4px; height: 4px; border-radius: 50%; background: #00FF88; box-shadow: 0 0 3px #00FF88; }
+.mc-gas-val { font-size: 11px; font-weight: 700; color: #fff; }
+.mc-block-num { font-weight: 700; font-size: 10px; color: #00F0FF; }
+.mc-meta { font-size: 7px; color: #B8A9FF; opacity: .3; margin-top: 2px; line-height: 1.4; }
+
+/* Block stats panel */
+.mc-block-panel { top: 26px; right: 6px; width: 195px; }
+.mc-block-txs { font-weight: 900; font-size: 30px; color: #836EF9; text-shadow: 0 0 18px rgba(131,110,249,.3); line-height: 1; }
+.mc-block-chart { width: 100%; height: 28px; margin: 3px 0; }
+.mc-block-cols { display: flex; justify-content: space-between; margin-top: 3px; }
+.mc-bv { font-weight: 700; font-size: 13px; }
+.mc-bv-p { color: #836EF9; }
+.mc-bv-c { color: #00F0FF; }
+
+/* Sentiment panel */
+.mc-sent-panel { bottom: 68px; left: 6px; width: 195px; }
+.mc-sent-bar { width: 100%; height: 6px; background: #040210; border-radius: 1px; overflow: hidden; display: flex; margin-top: 3px; }
+.mc-sent-long { height: 100%; background: linear-gradient(90deg,#005528,#00FF88); transition: width 1s; }
+.mc-sent-short { height: 100%; background: linear-gradient(90deg,#FF3366,#880020); transition: width 1s; }
+.mc-sent-labels { display: flex; justify-content: space-between; margin-top: 2px; font-size: 7px; }
+.mc-weather-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(131,110,249,.06); }
+.mc-weather-val { font-size: 10px; font-weight: 700; color: #00F0FF; }
+
+/* Events panel */
+.mc-events-panel { bottom: 68px; right: 6px; width: 195px; max-height: 180px; overflow: hidden; }
+.mc-event-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+  font-size: 8px;
+  cursor: pointer;
+  animation: mc-fade-event .3s forwards;
+}
+.mc-event-item:hover { opacity: .7; }
+@keyframes mc-fade-event {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.mc-event-dot {
+  width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* TPS bar */
+.mc-tps-bar {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #00F0FF;
+  background: rgba(10,6,22,0.93);
+  border: 1px solid rgba(0,240,255,.15);
+  padding: 2px 10px;
+  backdrop-filter: blur(8px);
+}
+.mc-tps-bar b { font-size: 10px; color: #fff; margin: 0 2px; }
+
+/* District bar */
+.mc-district-bar {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  max-width: 720px;
+}
+
+.mc-dt {
+  font-size: 6.5px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border: 1px solid rgba(131,110,249,0.28);
+  background: rgba(10,6,22,0.93);
+  color: #B8A9FF;
+  cursor: pointer;
+  transition: all .2s;
+  backdrop-filter: blur(5px);
+  white-space: nowrap;
+}
+.mc-dt:hover, .mc-dt.active {
+  border-color: #836EF9;
+  color: #fff;
+  background: rgba(131,110,249,.12);
+}
+.mc-dt.df { border-color: #00FF88; color: #00FF88; }
+.mc-dt.ln { border-color: #FFE066; color: #FFE066; }
+.mc-dt.dv { border-color: #FF9F1C; color: #FF9F1C; }
+.mc-dt.op { border-color: #FF3366; color: #FF3366; }
+.mc-dt.br { border-color: #00F0FF; color: #00F0FF; }
+.mc-dt.nf { border-color: #B8A9FF; color: #B8A9FF; }
+
+/* Ticker */
+.mc-ticker {
+  position: absolute;
+  bottom: 14px;
+  left: 0; right: 0;
+  height: 16px;
+  background: rgba(10,6,22,.94);
+  border-top: 1px solid rgba(131,110,249,0.28);
+  border-bottom: 1px solid rgba(131,110,249,0.28);
+  z-index: 60;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  font-size: 8px;
+}
+
+.mc-ticker-live {
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.mc-live-dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: #00FF88;
+  box-shadow: 0 0 3px #00FF88;
+  animation: mc-pulse 1.5s infinite;
+}
+@keyframes mc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .1; } }
+
+.mc-ticker-block {
+  font-size: 7px;
+  color: #00F0FF;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.mc-ticker-scroll {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  mask-image: linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);
+  -webkit-mask-image: linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);
+}
+
+.mc-ticker-content {
+  display: inline-block;
+  padding-left: 100%;
+  animation: mc-scroll 80s linear infinite;
+}
+@keyframes mc-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+/* Footer */
+.mc-footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 14px;
+  background: rgba(10,6,22,.97);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 6.5px;
+  letter-spacing: 2px;
+}
+.mc-footer-label { color: #B8A9FF; opacity: .18; }
+.mc-footer-brand { font-weight: bold; opacity: .55; }
+
+/* Building tooltip */
+.mc-building-tooltip {
+  position: absolute;
+  z-index: 80;
+  background: rgba(10,6,22,0.95);
+  border: 1px solid rgba(131,110,249,0.5);
+  padding: 6px 10px;
+  pointer-events: none;
+  font-size: 9px;
+  color: #E0D8FF;
+  white-space: nowrap;
+  box-shadow: 0 0 12px rgba(131,110,249,0.2);
+}
+.mc-building-tooltip .mc-tt-proto { color: #836EF9; font-weight: bold; font-size: 10px; }
+.mc-building-tooltip .mc-tt-type { color: #B8A9FF; opacity: .6; font-size: 8px; margin-top: 2px; }
+
+/* District overlay label */
+.mc-district-label {
+  position: absolute;
+  z-index: 70;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #fff;
+  text-shadow: 0 0 20px #836EF9;
+  pointer-events: none;
+  border: 1px solid rgba(131,110,249,0.4);
+  padding: 6px 16px;
+  background: rgba(10,6,22,0.7);
+  animation: mc-district-flash 3s forwards;
+}
+@keyframes mc-district-flash {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Flash effect on buildings for event click */
+.mc-flash-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}

@@ -29,7 +29,7 @@ const DESKTOP_ICONS = [
   { id: 'nadwatch', icon: '', label: 'NADWATCH' },
   { id: 'parallax', icon: '', label: 'PARALLAX' },
   { id: 'monad-sdk', icon: '', label: 'MONAD SDK' },
-  { id: 'chogpet', icon: '', label: 'MONADGOTCHI' },
+  { id: 'monad-city', icon: '', label: 'MONAD CITY' },
 ];
 
 function getWallpaperStyle() {

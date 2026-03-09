@@ -24,7 +24,7 @@ const WINDOW_DEFAULTS = {
   'nadwatch': { title: 'NADWATCH.exe', icon: '~', width: 900, height: 620, x: 80, y: 30 },
   'parallax': { title: 'PARALLAX.exe', icon: '||', width: 1060, height: 720, x: 40, y: 20, maximized: true },
   'monad-sdk': { title: 'MONAD_SDK.exe', icon: '</>', width: 880, height: 700, x: 120, y: 30 },
-  'chogpet': { title: 'MONADGOTCHI.exe', icon: '[o]', width: 420, height: 480, x: 200, y: 100 },
+  'monad-city': { title: 'MONAD_CITY.exe', icon: '', width: 1000, height: 700, x: 40, y: 20 },
 };
 
 export function useWindowManager() {

@@ -32,7 +32,9 @@ export default function PetSprite({ petType, frame = 'idle', size = 64, monochro
             width: `${cellSize}px`,
             height: `${cellSize}px`,
             backgroundColor: colorKey
-              ? (silhouette ? '#888' : monochrome ? LCD.dark : (colors[colorKey] || colorKey))
+              ? (silhouette ? '#888' : monochrome
+                ? (colorKey === 'W' ? 'transparent' : LCD.dark)
+                : (colors[colorKey] || colorKey))
               : 'transparent',
           }}
         />
