@@ -3,7 +3,8 @@ import { useMonadCityData } from './hooks/useMonadCityData';
 import {
   TW, TH, GR, G2, BUILDING_COLORS, SIGN_NAMES, CAR_COLORS,
   SKIN_COLORS, SHIRT_COLORS, EVENT_TYPES, PROTOCOLS, DISTRICTS,
-  FOOTER_BRANDS, generateLayout, pickWeather,
+  FOOTER_BRANDS, generateLayout, pickWeather, getDistrictAt,
+  DISTRICT_COLORS, DISTRICT_SIGNS, DISTRICT_BILLBOARDS, DISTRICT_BUILDING_TYPES,
 } from './constants';
 import './MonadCity.css';
 
@@ -20,53 +21,54 @@ function sc(co, pct) {
   } catch { return co; }
 }
 
+/* height lookup by building type */
+const TYPE_HEIGHTS = {
+  mega: [75, 40], sky: [52, 28], corp: [40, 20], tower: [48, 22], off: [26, 14],
+  dome: [16, 12], glass: [35, 25], cyber: [32, 25], neon: [40, 22], ant: [25, 32],
+  data: [18, 10], wh: [10, 7], shop: [7, 5], church: [22, 14], fac: [14, 10],
+  heli: [28, 14], pyr: [20, 16], stad: [12, 8], apt: [18, 12], hotel: [42, 22],
+  mall: [14, 9], garage: [10, 7], theater: [18, 10], hospital: [30, 18],
+  school: [16, 10], bank: [35, 20], museum: [20, 15], station: [12, 8],
+  bar: [8, 5], telecom: [35, 30], res: [11, 8],
+};
+const ALL_TYPES = Object.keys(TYPE_HEIGHTS);
+
 /* ── entity generators (called once) ── */
 function generateBuildings(layout) {
   const bldgs = [];
   for (let gy = 0; gy < GR; gy++) for (let gx = 0; gx < GR; gx++) {
     if (layout[gy]?.[gx] !== 0 || Math.random() < .03) continue;
-    const col = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
-    const r = Math.random(); let tp, h;
-    if (r < .025) { tp = 'mega'; h = 75 + Math.random() * 40; }
-    else if (r < .06) { tp = 'sky'; h = 52 + Math.random() * 28; }
-    else if (r < .10) { tp = 'corp'; h = 40 + Math.random() * 20; }
-    else if (r < .14) { tp = 'tower'; h = 48 + Math.random() * 22; }
-    else if (r < .18) { tp = 'off'; h = 26 + Math.random() * 14; }
-    else if (r < .22) { tp = 'dome'; h = 16 + Math.random() * 12; }
-    else if (r < .26) { tp = 'glass'; h = 35 + Math.random() * 25; }
-    else if (r < .30) { tp = 'cyber'; h = 32 + Math.random() * 25; }
-    else if (r < .34) { tp = 'neon'; h = 40 + Math.random() * 22; }
-    else if (r < .37) { tp = 'ant'; h = 25 + Math.random() * 32; }
-    else if (r < .40) { tp = 'data'; h = 18 + Math.random() * 10; }
-    else if (r < .43) { tp = 'wh'; h = 10 + Math.random() * 7; }
-    else if (r < .47) { tp = 'shop'; h = 7 + Math.random() * 5; }
-    else if (r < .49) { tp = 'church'; h = 22 + Math.random() * 14; }
-    else if (r < .52) { tp = 'fac'; h = 14 + Math.random() * 10; }
-    else if (r < .54) { tp = 'heli'; h = 28 + Math.random() * 14; }
-    else if (r < .57) { tp = 'pyr'; h = 20 + Math.random() * 16; }
-    else if (r < .59) { tp = 'stad'; h = 12 + Math.random() * 8; }
-    else if (r < .62) { tp = 'apt'; h = 18 + Math.random() * 12; }
-    else if (r < .65) { tp = 'hotel'; h = 42 + Math.random() * 22; }
-    else if (r < .68) { tp = 'mall'; h = 14 + Math.random() * 9; }
-    else if (r < .71) { tp = 'garage'; h = 10 + Math.random() * 7; }
-    else if (r < .74) { tp = 'theater'; h = 18 + Math.random() * 10; }
-    else if (r < .77) { tp = 'hospital'; h = 30 + Math.random() * 18; }
-    else if (r < .80) { tp = 'school'; h = 16 + Math.random() * 10; }
-    else if (r < .83) { tp = 'bank'; h = 35 + Math.random() * 20; }
-    else if (r < .86) { tp = 'museum'; h = 20 + Math.random() * 15; }
-    else if (r < .89) { tp = 'station'; h = 12 + Math.random() * 8; }
-    else if (r < .92) { tp = 'bar'; h = 8 + Math.random() * 5; }
-    else if (r < .95) { tp = 'telecom'; h = 35 + Math.random() * 30; }
-    else { tp = 'res'; h = 11 + Math.random() * 8; }
+    // Determine district and pick colors/types accordingly
+    const dist = getDistrictAt(gx, gy);
+    const distCols = dist && DISTRICT_COLORS[dist];
+    const distTypes = dist && DISTRICT_BUILDING_TYPES[dist];
+    const distSigns = dist && DISTRICT_SIGNS[dist];
+    const distBBs = dist && DISTRICT_BILLBOARDS[dist];
+    // Pick color from district palette (70%) or global (30%)
+    let col;
+    if (distCols && Math.random() < .7) col = distCols[Math.floor(Math.random() * distCols.length)];
+    else col = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+    // Pick building type: district preferred (60%) or random
+    let tp;
+    if (distTypes && Math.random() < .6) tp = distTypes[Math.floor(Math.random() * distTypes.length)];
+    else tp = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
+    const [hBase, hRng] = TYPE_HEIGHTS[tp] || [15, 10];
+    const h = hBase + Math.random() * hRng;
+    // Pick sign from district signs or global
+    const signPool = distSigns || SIGN_NAMES;
+    const sn = signPool[Math.floor(Math.random() * signPool.length)];
+    // Billboard text from district or generic
+    const bbPool = distBBs || ['MONAD', 'DeFi', 'NFT', 'BRIDGE', 'YIELD'];
+    const bbText = bbPool[Math.floor(Math.random() * bbPool.length)];
     bldgs.push({
-      gx, gy, col, tp, h,
+      gx, gy, col, tp, h, dist,
       wR: Math.max(1, Math.floor(h / 7)),
       wC: tp === 'wh' ? 5 : tp === 'shop' ? 2 : 2 + Math.floor(Math.random() * 3),
-      sign: Math.random() < .2, roofL: Math.random() < .28,
+      sign: Math.random() < .25, roofL: Math.random() < .28,
       po: Math.random() * 6.28, ps: .3 + Math.random() * 2,
-      sn: SIGN_NAMES[Math.floor(Math.random() * SIGN_NAMES.length)],
+      sn,
       ledge: Math.random() < .2 ? Math.floor(1 + Math.random() * 3) : 0,
-      bb: Math.random() < .09, roofG: Math.random() < .06,
+      bb: Math.random() < .14, bbText, roofG: Math.random() < .06,
       stripes: Math.random() < .15 ? Math.floor(2 + Math.random() * 4) : 0,
       aw: tp === 'shop' ? ['#FF3366','#00F0FF','#FFE066','#00FF88','#836EF9','#FF9F1C'][Math.floor(Math.random() * 6)] : null,
       proto: PROTOCOLS[Math.floor(Math.random() * PROTOCOLS.length)],
@@ -156,16 +158,16 @@ function generateAircraft() {
   for (let i = 0; i < 7; i++) { const hz = Math.random() < .5; air.push({ tp: 'plane', gx: Math.random() * GR, gy: Math.random() * GR, dx: hz ? (.012 + Math.random() * .02) * (Math.random() < .5 ? 1 : -1) : 0, dy: hz ? 0 : (.012 + Math.random() * .02) * (Math.random() < .5 ? 1 : -1), alt: 45 + Math.random() * 35, bk: Math.random() * 6.28 }); }
   for (let i = 0; i < 3; i++) air.push({ tp: 'ufo', gx: 5 + Math.random() * (GR - 10), gy: 5 + Math.random() * (GR - 10), ogx: 5 + Math.random() * (GR - 10), ogy: 5 + Math.random() * (GR - 10), alt: 55 + Math.random() * 25, bk: Math.random() * 6.28, col: ['#836EF9','#00F0FF','#FF3366'][i] });
   for (let i = 0; i < 2; i++) air.push({ tp: 'heli', gx: GR / 2, gy: GR / 2, orA: i * 3.14, orR: 4 + i * 3, alt: 40 + i * 10, bk: i });
-  air.push({ tp: 'blimp', gx: -4, gy: GR / 2, dx: .005, dy: 0, alt: 80, bk: Math.random() * 6.28 });
+  air.push({ tp: 'blimp', gx: -8, gy: GR / 2, dx: .004, dy: 0, alt: 120, bk: Math.random() * 6.28 });
   for (let i = 0; i < 4; i++) { const ang = Math.random() * 6.28; const spd = .02 + Math.random() * .015; air.push({ tp: 'sat', gx: Math.random() * GR, gy: Math.random() * GR, dx: Math.cos(ang) * spd, dy: Math.sin(ang) * spd, alt: 90 + Math.random() * 30, bk: Math.random() * 6.28 }); }
   return air;
 }
 
 // Weather particles (pre-allocated)
 function generateWeatherParticles() {
-  const drops = []; for (let i = 0; i < 500; i++) drops.push({ x: Math.random() * 2400, y: Math.random() * 1600, spd: 5 + Math.random() * 12, len: 3 + Math.random() * 14, a: .04 + Math.random() * .12 });
-  const sfl = []; for (let i = 0; i < 180; i++) sfl.push({ x: Math.random() * 2400, y: Math.random() * 1600, spd: .6 + Math.random() * 2, sz: .6 + Math.random() * 1.8, a: .06 + Math.random() * .2, dr: Math.random() * 6.28 });
-  const pts = []; for (let i = 0; i < 40; i++) pts.push({ x: Math.random() * 2200 - 300, y: Math.random() * 1400, spd: .1 + Math.random() * .25, sz: .6 + Math.random() * 1, a: .04 + Math.random() * .12, co: Math.random() < .5 ? '#836EF9' : '#00F0FF' });
+  const drops = []; for (let i = 0; i < 250; i++) drops.push({ x: Math.random() * 2400, y: Math.random() * 1600, spd: 5 + Math.random() * 12, len: 3 + Math.random() * 14, a: .04 + Math.random() * .12 });
+  const sfl = []; for (let i = 0; i < 100; i++) sfl.push({ x: Math.random() * 2400, y: Math.random() * 1600, spd: .6 + Math.random() * 2, sz: .6 + Math.random() * 1.8, a: .06 + Math.random() * .2, dr: Math.random() * 6.28 });
+  const pts = []; for (let i = 0; i < 20; i++) pts.push({ x: Math.random() * 2200 - 300, y: Math.random() * 1400, spd: .1 + Math.random() * .25, sz: .6 + Math.random() * 1, a: .04 + Math.random() * .12, co: Math.random() < .5 ? '#836EF9' : '#00F0FF' });
   return { drops, sfl, pts };
 }
 
@@ -247,7 +249,7 @@ function dBldg(c, b, t, W, H, highlight) {
   // Type specials
   if (b.tp === 'mega' || b.tp === 'sky' || b.tp === 'ant' || b.tp === 'tower') {
     c.strokeStyle = cl.w; c.lineWidth = .4; c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x, p.y - h - hh - 18); c.stroke();
-    if (Math.sin(t * 3 + b.po) > .2) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 3; c.beginPath(); c.arc(p.x, p.y - h - hh - 18, 1, 0, 6.28); c.fill(); c.shadowBlur = 0; }
+    if (Math.sin(t * 3 + b.po) > .2) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(p.x, p.y - h - hh - 18, 1, 0, 6.28); c.fill(); }
   }
   if (b.tp === 'mega') for (let l = 0; l < 4; l++) { const la = t * 1.1 + l * 1.57; c.fillStyle = cl.w; c.globalAlpha = .2 + Math.sin(la) * .12; c.beginPath(); c.arc(p.x + Math.cos(la) * 3, p.y - h - hh - 1 + Math.sin(la) * 1.5, .8, 0, 6.28); c.fill(); c.globalAlpha = 1; }
   if (b.tp === 'dome') { c.fillStyle = cl.top; c.beginPath(); c.ellipse(p.x, p.y - h - hh + 1.5, hw * .38, 7, 0, Math.PI, 0); c.fill(); }
@@ -257,26 +259,26 @@ function dBldg(c, b, t, W, H, highlight) {
   if (b.tp === 'shop' && b.aw) { c.fillStyle = b.aw; c.globalAlpha = .22; c.beginPath(); c.moveTo(p.x - hw, p.y - 2); c.lineTo(p.x, p.y + hh); c.lineTo(p.x, p.y + hh + 1.5); c.lineTo(p.x - hw, p.y - .5); c.closePath(); c.fill(); c.globalAlpha = 1; c.fillStyle = 'rgba(255,255,255,.03)'; c.fillRect(p.x - hw / 2 - .5, p.y + hh - 3, 2, 3); }
   if (b.tp === 'fac') for (let ch = 0; ch < 2; ch++) { const cx2 = p.x - hw * .35 + ch * hw * .7; c.fillStyle = '#161628'; c.fillRect(cx2 - 1, p.y - h - hh - 6, 2, 7); for (let sm = 0; sm < 2; sm++) { const sa = Math.sin(t * .8 + sm + ch) * 2; c.fillStyle = `rgba(80,80,100,${.03 - sm * .01})`; c.beginPath(); c.ellipse(cx2 + sa, p.y - h - hh - 7 - sm * 3.5, 2 + sm * 1.2, 1.2 + sm * .6, 0, 0, 6.28); c.fill(); } }
   if (b.tp === 'cyber') { c.strokeStyle = cl.w; c.globalAlpha = .12 + Math.sin(t * 1.6 + b.po) * .08; c.lineWidth = .5; c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h); c.stroke(); c.beginPath(); c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke(); c.globalAlpha = 1; }
-  if (b.tp === 'neon') for (let nb = 0; nb < 2; nb++) { const ny = p.y - h + 7 + nb * h * .35; c.fillStyle = cl.s; c.globalAlpha = .12 + Math.sin(t * 2 + nb + b.po) * .1; c.shadowColor = cl.s; c.shadowBlur = 2; c.fillRect(p.x - hw + 1, ny, hw * 2 - 2, 1.2); c.shadowBlur = 0; c.globalAlpha = 1; }
+  if (b.tp === 'neon') for (let nb = 0; nb < 2; nb++) { const ny = p.y - h + 7 + nb * h * .35; c.fillStyle = cl.s; c.globalAlpha = .18 + Math.sin(t * 2 + nb + b.po) * .1; c.fillRect(p.x - hw + 1, ny, hw * 2 - 2, 1.2); c.globalAlpha = 1; }
   if (b.tp === 'data') for (let row = 0; row < Math.min(b.wR, 3); row++) for (let col2 = 0; col2 < 5; col2++) { const ly = p.y - h + 3 + row * 6, lx = p.x - hw + 3 + col2 * 2.2; if (Math.sin(t * 4 + row + col2 * 3 + b.po) > .0) { c.fillStyle = col2 % 3 === 0 ? '#00FF88' : '#FF3366'; c.globalAlpha = .2; c.fillRect(lx, ly, .6, .6); c.globalAlpha = 1; } }
   if (b.tp === 'heli') { c.fillStyle = 'rgba(255,255,255,.04)'; c.fillRect(p.x - 3, p.y - h - hh + 1.5, 6, .7); c.fillRect(p.x - 3, p.y - h - hh + 1.5, .7, 3); c.fillRect(p.x + 2.3, p.y - h - hh + 1.5, .7, 3); c.strokeStyle = 'rgba(255,255,255,.03)'; c.lineWidth = .3; c.beginPath(); c.ellipse(p.x, p.y - h - hh + 3.5, 4.5, 2.2, 0, 0, 6.28); c.stroke(); }
   if (b.tp === 'church') { c.strokeStyle = cl.w; c.lineWidth = .4; c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x, p.y - h - hh - 12); c.stroke(); c.beginPath(); c.moveTo(p.x - 2.5, p.y - h - hh - 8); c.lineTo(p.x + 2.5, p.y - h - hh - 8); c.stroke(); }
   if (b.tp === 'stad') { c.fillStyle = 'rgba(131,110,249,.03)'; c.beginPath(); c.moveTo(p.x, p.y - h - hh + 2); c.lineTo(p.x - hw + 2, p.y - h + 1.5); c.lineTo(p.x, p.y - h + hh - 1); c.lineTo(p.x + hw - 2, p.y - h + 1.5); c.closePath(); c.fill(); for (let fl = 0; fl < 4; fl++) { const fx = [p.x - hw, p.x - hw * .3, p.x + hw * .3, p.x + hw][fl]; c.fillStyle = 'rgba(255,255,200,.2)'; c.beginPath(); c.arc(fx, p.y - h - 2, .8, 0, 6.28); c.fill(); } }
   if (b.tp === 'hotel') { c.fillStyle = '#FFD700'; c.globalAlpha = .06; c.fillRect(p.x - hw + 1, p.y - h + 2, hw * 2 - 2, 1.5); c.globalAlpha = 1; }
   if (b.tp === 'apt') for (let bal = 0; bal < Math.min(2, Math.floor(h / 11)); bal++) { const by2 = p.y - h + 8 + bal * 12; c.fillStyle = 'rgba(255,255,255,.02)'; c.fillRect(p.x - hw - .8, by2, 2, .6); c.fillRect(p.x + hw - 1.2, by2, 2, .6); }
-  if (b.tp === 'mall') { c.fillStyle = cl.s; c.globalAlpha = .15 + Math.sin(t * 1.5 + b.po) * .1; c.shadowColor = cl.s; c.shadowBlur = 2; c.fillRect(p.x - hw + 1, p.y - h + 3, hw * 2 - 2, 2); c.shadowBlur = 0; c.globalAlpha = 1; c.fillStyle = 'rgba(0,0,0,.06)'; c.fillRect(p.x - hw / 3, p.y + hh - 5, hw * .5, 5); }
+  if (b.tp === 'mall') { c.fillStyle = cl.s; c.globalAlpha = .2 + Math.sin(t * 1.5 + b.po) * .1; c.fillRect(p.x - hw + 1, p.y - h + 3, hw * 2 - 2, 2); c.globalAlpha = 1; c.fillStyle = 'rgba(0,0,0,.06)'; c.fillRect(p.x - hw / 3, p.y + hh - 5, hw * .5, 5); }
   if (b.tp === 'garage') { c.fillStyle = 'rgba(0,0,0,.06)'; c.fillRect(p.x + 1, p.y + hh - 6, hw - 2, 5); c.fillRect(p.x - hw + 1, p.y + hh - 6, hw * .4, 5); }
-  if (b.tp === 'theater') { c.fillStyle = cl.s; c.globalAlpha = .3 + Math.sin(t * 2 + b.po) * .15; c.shadowColor = cl.s; c.shadowBlur = 3; const tw2 = hw - 2; c.beginPath(); c.moveTo(p.x - tw2, p.y - h + 2); c.lineTo(p.x, p.y - h + 2 - 3); c.lineTo(p.x + tw2, p.y - h + 2); c.closePath(); c.fill(); c.shadowBlur = 0; c.globalAlpha = 1; }
-  if (b.tp === 'hospital') { c.fillStyle = '#FF3366'; c.globalAlpha = .2; c.fillRect(p.x - 2, p.y - h + 3, 4, 1); c.fillRect(p.x - .5, p.y - h + 1.5, 1, 4); c.globalAlpha = 1; if (Math.sin(t * 4 + b.po) > .0) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 3; c.beginPath(); c.arc(p.x, p.y - h - hh - 2, 1, 0, 6.28); c.fill(); c.shadowBlur = 0; } }
+  if (b.tp === 'theater') { c.fillStyle = cl.s; c.globalAlpha = .35 + Math.sin(t * 2 + b.po) * .15; const tw2 = hw - 2; c.beginPath(); c.moveTo(p.x - tw2, p.y - h + 2); c.lineTo(p.x, p.y - h + 2 - 3); c.lineTo(p.x + tw2, p.y - h + 2); c.closePath(); c.fill(); c.globalAlpha = 1; }
+  if (b.tp === 'hospital') { c.fillStyle = '#FF3366'; c.globalAlpha = .2; c.fillRect(p.x - 2, p.y - h + 3, 4, 1); c.fillRect(p.x - .5, p.y - h + 1.5, 1, 4); c.globalAlpha = 1; if (Math.sin(t * 4 + b.po) > .0) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(p.x, p.y - h - hh - 2, 1, 0, 6.28); c.fill(); } }
   if (b.tp === 'school') { c.fillStyle = 'rgba(255,255,255,.04)'; c.fillRect(p.x - hw * .6, p.y - h + 2, hw * 1.2, 1.5); c.strokeStyle = cl.w; c.lineWidth = .3; c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x, p.y - h - hh - 6); c.stroke(); c.fillStyle = 'rgba(255,200,50,.15)'; c.fillRect(p.x - 1.5, p.y - h - hh - 6, 3, 2); }
   if (b.tp === 'bank') { c.fillStyle = 'rgba(255,215,0,.06)'; c.fillRect(p.x - hw + 1, p.y - h + 2, hw * 2 - 2, 2); c.fillRect(p.x - hw + 1, p.y + hh - 2, hw * 2 - 2, 1); for (let col2 = 0; col2 < 3; col2++) { const cx2 = p.x - hw + 3 + col2 * hw * .6; c.fillStyle = 'rgba(255,215,0,.03)'; c.fillRect(cx2, p.y - h + 4, 1.5, h - 6); } }
   if (b.tp === 'museum') { c.fillStyle = cl.top; c.beginPath(); c.moveTo(p.x - hw * .8, p.y - h); c.lineTo(p.x, p.y - h - 8); c.lineTo(p.x + hw * .8, p.y - h); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,.04)'; c.beginPath(); c.moveTo(p.x, p.y - h - 8); c.lineTo(p.x + hw * .8, p.y - h); c.lineTo(p.x, p.y - h + hh * .6); c.closePath(); c.fill(); }
   if (b.tp === 'station') { c.fillStyle = 'rgba(0,0,0,.06)'; c.fillRect(p.x - hw * .8, p.y + hh - 6, hw * 1.6, 5); c.fillStyle = cl.s; c.globalAlpha = .15; c.fillRect(p.x - hw + 1, p.y - h + 2, hw * 2 - 2, 1.5); c.globalAlpha = 1; }
-  if (b.tp === 'bar') { c.fillStyle = cl.s; c.globalAlpha = .35 + Math.sin(t * 3 + b.po) * .2; c.shadowColor = cl.s; c.shadowBlur = 3; c.fillRect(p.x - hw + 1, p.y - h + 2, hw - 2, 1.5); c.shadowBlur = 0; c.globalAlpha = 1; c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(p.x - hw / 2 - .8, p.y + hh - 3.5, 2, 3.5); }
-  if (b.tp === 'telecom') { c.strokeStyle = cl.w; c.lineWidth = .4; c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x, p.y - h - hh - 25); c.stroke(); for (let d = 0; d < 3; d++) { const dy2 = p.y - h - hh - 8 - d * 6; c.strokeStyle = cl.w; c.globalAlpha = .15; c.beginPath(); c.moveTo(p.x - 3 + d, dy2); c.lineTo(p.x + 3 - d, dy2); c.stroke(); } c.globalAlpha = 1; if (Math.sin(t * 2.5 + b.po) > .2) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 3; c.beginPath(); c.arc(p.x, p.y - h - hh - 25, 1, 0, 6.28); c.fill(); c.shadowBlur = 0; } }
+  if (b.tp === 'bar') { c.fillStyle = cl.s; c.globalAlpha = .4 + Math.sin(t * 3 + b.po) * .2; c.fillRect(p.x - hw + 1, p.y - h + 2, hw - 2, 1.5); c.globalAlpha = 1; c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(p.x - hw / 2 - .8, p.y + hh - 3.5, 2, 3.5); }
+  if (b.tp === 'telecom') { c.strokeStyle = cl.w; c.lineWidth = .4; c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x, p.y - h - hh - 25); c.stroke(); for (let d = 0; d < 3; d++) { const dy2 = p.y - h - hh - 8 - d * 6; c.strokeStyle = cl.w; c.globalAlpha = .15; c.beginPath(); c.moveTo(p.x - 3 + d, dy2); c.lineTo(p.x + 3 - d, dy2); c.stroke(); } c.globalAlpha = 1; if (Math.sin(t * 2.5 + b.po) > .2) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(p.x, p.y - h - hh - 25, 1, 0, 6.28); c.fill(); } }
   // Sign
-  if (b.sign) { const a = .25 + Math.sin(t * 1.5 + b.po) * .2; c.fillStyle = cl.s; c.globalAlpha = a; c.shadowColor = cl.s; c.shadowBlur = 2; c.font = 'bold 2.2px Orbitron,monospace'; c.fillText(b.sn, p.x - hw + 2, p.y - h + 6); c.shadowBlur = 0; c.globalAlpha = 1; }
-  if (b.bb) { c.fillStyle = '#060614'; c.fillRect(p.x - 6, p.y - h - hh - 6, 12, 4.5); const bp = .3 + Math.sin(t * 1.2 + b.po) * .25; c.fillStyle = cl.w; c.globalAlpha = bp; c.shadowColor = cl.w; c.shadowBlur = 2; c.font = 'bold 3px Orbitron,monospace'; c.textAlign = 'center'; c.fillText(b.sn, p.x, p.y - h - hh - 2.5); c.shadowBlur = 0; c.globalAlpha = 1; c.textAlign = 'start'; }
+  if (b.sign) { const a = .3 + Math.sin(t * 1.5 + b.po) * .2; c.fillStyle = cl.s; c.globalAlpha = a; c.font = 'bold 2.2px Orbitron,monospace'; c.fillText(b.sn, p.x - hw + 2, p.y - h + 6); c.globalAlpha = 1; }
+  if (b.bb) { const bbt = b.bbText || b.sn; const bbw = Math.max(12, bbt.length * 2.8 + 4); c.fillStyle = '#060614'; c.fillRect(p.x - bbw / 2, p.y - h - hh - 8, bbw, 6); c.strokeStyle = cl.s; c.globalAlpha = .3; c.lineWidth = .4; c.strokeRect(p.x - bbw / 2, p.y - h - hh - 8, bbw, 6); const bp = .4 + Math.sin(t * 1.2 + b.po) * .25; c.fillStyle = cl.w; c.globalAlpha = bp; c.shadowColor = cl.w; c.shadowBlur = 4; c.font = 'bold 3.5px Orbitron,monospace'; c.textAlign = 'center'; c.fillText(bbt, p.x, p.y - h - hh - 3.5); c.shadowBlur = 0; c.globalAlpha = 1; c.textAlign = 'start'; }
   if (b.roofG) for (let rg = 0; rg < 2; rg++) { c.fillStyle = '#083015'; c.beginPath(); c.ellipse(p.x - hw * .3 + rg * hw * .5, p.y - h - hh + 1.2, 1.8, 1, 0, 0, 6.28); c.fill(); }
   if (b.roofL && b.h > 18) { c.fillStyle = '#14142A'; c.fillRect(p.x - 1.8, p.y - h - hh + .8, 3.6, 1.8); c.fillRect(p.x + 3, p.y - h - hh + 1, 2.5, 1.3); }
   c.fillStyle = cl.s; c.globalAlpha = .02 + Math.sin(t + b.po) * .008; c.beginPath(); c.ellipse(p.x, p.y + hh + .5, hw * .45, hh * .25, 0, 0, 6.28); c.fill(); c.globalAlpha = 1;
@@ -320,17 +322,16 @@ function dCar(c, cr, t, W, H) {
     if (!isSmall) { c.fillStyle = sc(cr.col, -.2); c.fillRect(p.x - bh * .25, p.y - 3 - bw * .28, bh * .4, bw * .35); }
   }
   const dir = hz ? (cr.dx > 0 ? 1 : -1) : (cr.dy > 0 ? 1 : -1);
-  c.fillStyle = 'rgba(255,255,190,.5)'; c.shadowColor = 'rgba(255,255,170,.15)'; c.shadowBlur = 1.2;
+  c.fillStyle = 'rgba(255,255,190,.5)';
   if (hz) c.fillRect(p.x + dir * bw / 2 - .5, p.y - 3, .8, .8); else c.fillRect(p.x - .3, p.y - 3 + dir * bw / 2 - .5, .8, .8);
   c.fillStyle = 'rgba(255,25,25,.3)';
   if (hz) c.fillRect(p.x - dir * bw / 2, p.y - 3, .7, .7); else c.fillRect(p.x, p.y - 3 - dir * bw / 2, .7, .7);
-  c.shadowBlur = 0;
   if (cr.vtp === 'ambulance' || cr.vtp === 'police' || cr.vtp === 'firetruck') {
     const blink = Math.sin(t * 12) > .3;
     c.fillStyle = cr.vtp === 'police' ? (blink ? '#FF3366' : '#3366FF') : (blink ? '#FF3366' : '#FFF');
-    c.shadowColor = c.fillStyle; c.shadowBlur = 3; c.fillRect(p.x - .8, p.y - 3 - bh / 2 - 1.2, 1.6, .8); c.shadowBlur = 0;
+    c.fillRect(p.x - .8, p.y - 3 - bh / 2 - 1.2, 1.6, .8);
   }
-  if (cr.vtp === 'sports') { c.fillStyle = cr.col; c.shadowColor = cr.col; c.shadowBlur = 2; c.fillRect(p.x - .5, p.y - 3 - bh / 2 - .3, 1, .3); c.shadowBlur = 0; }
+  if (cr.vtp === 'sports') { c.fillStyle = cr.col; c.fillRect(p.x - .5, p.y - 3 - bh / 2 - .3, 1, .3); }
   c.globalAlpha = 1;
 }
 
@@ -368,7 +369,7 @@ function dAir(c, a, t, W, H) {
     c.globalAlpha = al * .4; c.fillStyle = 'rgba(140,170,210,1)';
     if (hz) { c.fillRect(x - 6, y, 12, 2); c.fillRect(x - 2, y - 3, 4, 8); c.fillRect(x - (dir > 0 ? 6 : -2), y - 2, 2.5, 4.5); }
     else { c.fillRect(x - 1, y - 6, 2, 12); c.fillRect(x - 4, y - 2, 8, 4); c.fillRect(x - 2.2, y - (dir > 0 ? 6 : -2), 4.5, 2.5); }
-    if (Math.sin(t * 3 + a.bk) > .3) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 2.5; c.beginPath(); c.arc(x - (hz ? (dir > 0 ? 6 : 0) : 0), y - (hz ? 0 : (dir > 0 ? 6 : 0)), .8, 0, 6.28); c.fill(); c.shadowBlur = 0; }
+    if (Math.sin(t * 3 + a.bk) > .3) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(x - (hz ? (dir > 0 ? 6 : 0) : 0), y - (hz ? 0 : (dir > 0 ? 6 : 0)), .8, 0, 6.28); c.fill(); }
     c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(x + (hz ? (dir > 0 ? 6 : 0) : 0), y + (hz ? 1 : (dir > 0 ? 0 : 6)), .7, 0, 6.28); c.fill();
     c.strokeStyle = `rgba(200,200,255,${.04 * al})`; c.lineWidth = .5; c.beginPath();
     c.moveTo(x - (hz ? dir * 6 : 0), y - (hz ? 0 : dir * 6)); c.lineTo(x - (hz ? dir * 35 : 0), y - (hz ? 0 : dir * 35) + 1); c.stroke();
@@ -390,24 +391,60 @@ function dAir(c, a, t, W, H) {
     c.fillStyle = 'rgba(0,0,0,.03)'; c.globalAlpha = al; c.beginPath(); c.ellipse(p.x, p.y, 4, 1.8, 0, 0, 6.28); c.fill();
     c.globalAlpha = al * .35; c.fillStyle = 'rgba(160,160,100,1)'; c.fillRect(x - 3, y, 6, 2); c.fillRect(x + 3, y + .2, 4.5, 1);
     const rA = t * 16; c.strokeStyle = `rgba(255,255,255,${.12 * al})`; c.lineWidth = .35; c.beginPath(); c.moveTo(x - 7 * Math.cos(rA), y - 1.2); c.lineTo(x + 7 * Math.cos(rA), y - 1.2); c.stroke();
-    if (Math.sin(t * 4) > .3) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 2; c.globalAlpha = al; c.beginPath(); c.arc(x, y + 2, .6, 0, 6.28); c.fill(); c.shadowBlur = 0; }
+    if (Math.sin(t * 4) > .3) { c.fillStyle = '#FF3366'; c.globalAlpha = al; c.beginPath(); c.arc(x, y + 2, .6, 0, 6.28); c.fill(); }
     c.globalAlpha = 1;
   } else if (a.tp === 'blimp') {
-    a.gx += a.dx; if (a.gx > GR + 4) a.gx = -4;
-    const p = iso(a.gx - G2, a.gy - G2, W, H); const alt = a.alt; const bob = Math.sin(t * .25 + a.bk) * 4;
-    const x = p.x, y = p.y - alt + bob; const al = Math.min(1, fade * 1.8); if (al < .02) return;
-    c.fillStyle = 'rgba(0,0,0,.03)'; c.globalAlpha = al; c.beginPath(); c.ellipse(p.x, p.y, 20, 6, 0, 0, 6.28); c.fill();
-    c.fillStyle = 'rgba(131,110,249,.04)'; c.globalAlpha = al; c.beginPath(); c.ellipse(x, y, 42, 16, 0, 0, 6.28); c.fill();
-    c.fillStyle = 'rgba(131,110,249,.22)'; c.globalAlpha = al; c.beginPath(); c.ellipse(x, y, 35, 12, 0, 0, 6.28); c.fill();
-    c.fillStyle = 'rgba(180,160,255,.08)'; c.beginPath(); c.ellipse(x - 5, y - 4, 20, 5, -.15, 0, 6.28); c.fill();
-    c.fillStyle = 'rgba(131,110,249,.12)'; c.fillRect(x - 10, y + 11, 20, 5);
-    c.fillStyle = `rgba(200,180,255,${.5 * al})`; c.shadowColor = '#836EF9'; c.shadowBlur = 6;
-    c.font = 'bold 7px Orbitron,monospace'; c.textAlign = 'center'; c.fillText('MONAD', x, y + 2.5);
-    c.font = 'bold 3px Orbitron,monospace'; c.fillStyle = `rgba(0,240,255,${.35 * al})`; c.fillText('10K TPS', x, y + 7);
+    a.gx += a.dx; if (a.gx > GR + 8) a.gx = -8;
+    const p = iso(a.gx - G2, a.gy - G2, W, H); const alt = a.alt; const bob = Math.sin(t * .2 + a.bk) * 5;
+    const x = p.x, y = p.y - alt + bob; const al = Math.min(1, fade * 2); if (al < .01) return;
+    // Shadow on ground
+    c.fillStyle = 'rgba(0,0,0,.06)'; c.globalAlpha = al; c.beginPath(); c.ellipse(p.x, p.y, 45, 14, 0, 0, 6.28); c.fill();
+    // Outer glow
+    c.fillStyle = 'rgba(131,110,249,.03)'; c.globalAlpha = al; c.beginPath(); c.ellipse(x, y, 95, 38, 0, 0, 6.28); c.fill();
+    // Main body
+    c.fillStyle = 'rgba(131,110,249,.28)'; c.globalAlpha = al; c.beginPath(); c.ellipse(x, y, 80, 30, 0, 0, 6.28); c.fill();
+    // Body highlight
+    c.fillStyle = 'rgba(180,160,255,.1)'; c.beginPath(); c.ellipse(x - 10, y - 10, 50, 14, -.12, 0, 6.28); c.fill();
+    // Body border glow
+    c.strokeStyle = 'rgba(131,110,249,.2)'; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y, 80, 30, 0, 0, 6.28); c.stroke();
+    // Fins
+    c.fillStyle = 'rgba(100,80,200,.18)'; c.beginPath();
+    c.moveTo(x + 65, y - 8); c.lineTo(x + 80, y - 22); c.lineTo(x + 80, y - 2); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(x + 65, y + 8); c.lineTo(x + 80, y + 22); c.lineTo(x + 80, y + 2); c.closePath(); c.fill();
+    // Gondola
+    c.fillStyle = 'rgba(100,80,180,.2)'; c.fillRect(x - 22, y + 26, 44, 10);
+    c.strokeStyle = 'rgba(131,110,249,.15)'; c.lineWidth = .5; c.strokeRect(x - 22, y + 26, 44, 10);
+    // Cables
+    c.strokeStyle = 'rgba(131,110,249,.12)'; c.lineWidth = .4;
+    c.beginPath(); c.moveTo(x - 18, y + 26); c.lineTo(x - 30, y + 12); c.stroke();
+    c.beginPath(); c.moveTo(x + 18, y + 26); c.lineTo(x + 30, y + 12); c.stroke();
+    // MONAD text - big and glowing
+    c.fillStyle = `rgba(220,200,255,${.65 * al})`; c.shadowColor = '#836EF9'; c.shadowBlur = 14;
+    c.font = 'bold 16px Orbitron,monospace'; c.textAlign = 'center'; c.fillText('MONAD', x, y + 5);
+    // Subtitle
+    c.font = 'bold 7px Orbitron,monospace'; c.fillStyle = `rgba(0,240,255,${.5 * al})`; c.shadowColor = '#00F0FF'; c.shadowBlur = 8;
+    c.fillText('10,000 TPS', x, y + 14);
     c.shadowBlur = 0; c.textAlign = 'start';
-    c.fillStyle = '#FF3366'; c.globalAlpha = al * (.3 + Math.sin(t * 2) * .2); c.beginPath(); c.arc(x - 30, y, 1.5, 0, 6.28); c.fill();
-    c.beginPath(); c.arc(x + 30, y, 1.5, 0, 6.28); c.fill();
-    c.fillStyle = '#00FF88'; c.beginPath(); c.arc(x, y - 12, 1, 0, 6.28); c.fill();
+    // Running lights along body
+    for (let li = 0; li < 8; li++) {
+      const la = t * 2 + li * .785; const lx = x + Math.cos(la) * 60, ly = y + Math.sin(la) * 22;
+      c.fillStyle = '#836EF9'; c.globalAlpha = al * (.15 + Math.sin(la + t) * .12);
+      c.beginPath(); c.arc(lx, ly, 1.5, 0, 6.28); c.fill();
+    }
+    // Nav lights
+    c.fillStyle = '#FF3366'; c.globalAlpha = al * (.4 + Math.sin(t * 2) * .25);
+    c.shadowColor = '#FF3366'; c.shadowBlur = 5;
+    c.beginPath(); c.arc(x - 72, y, 2.5, 0, 6.28); c.fill();
+    c.beginPath(); c.arc(x + 72, y, 2.5, 0, 6.28); c.fill();
+    c.fillStyle = '#00FF88'; c.shadowColor = '#00FF88';
+    c.beginPath(); c.arc(x, y - 28, 2, 0, 6.28); c.fill();
+    c.shadowBlur = 0;
+    // Spotlight beam
+    if (Math.sin(t * .3) > -.3) {
+      c.fillStyle = 'rgba(131,110,249,.015)'; c.globalAlpha = al;
+      c.beginPath(); c.moveTo(x - 8, y + 36); c.lineTo(x + 8, y + 36);
+      c.lineTo(p.x + 20, p.y); c.lineTo(p.x - 20, p.y); c.closePath(); c.fill();
+    }
     c.globalAlpha = 1;
   } else if (a.tp === 'sat') {
     a.gx += a.dx; a.gy += a.dy;
@@ -419,7 +456,7 @@ function dAir(c, a, t, W, H) {
     c.globalAlpha = al * .4;
     c.fillStyle = '#4488FF'; c.fillRect(x - 6, y - .5, 4, 1); c.fillRect(x + 2, y - .5, 4, 1);
     c.fillStyle = '#AABBCC'; c.fillRect(x - 1.5, y - 1, 3, 2);
-    if (Math.sin(t * 5 + a.bk) > .5) { c.fillStyle = '#FF3366'; c.shadowColor = '#FF3366'; c.shadowBlur = 3; c.beginPath(); c.arc(x, y, 1, 0, 6.28); c.fill(); c.shadowBlur = 0; }
+    if (Math.sin(t * 5 + a.bk) > .5) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(x, y, 1, 0, 6.28); c.fill(); }
     c.globalAlpha = 1;
   }
 }
@@ -431,14 +468,6 @@ function dGround(c, t, W, H, layout) {
   c.moveTo(cTop.x, cTop.y - wPad); c.lineTo(cRight.x + wPad, cRight.y);
   c.lineTo(cBot.x, cBot.y + wPad); c.lineTo(cLeft.x - wPad, cLeft.y);
   c.closePath(); c.fill();
-  const cx = W / 2, cy = H / 2 + 20;
-  for (let i = 0; i < 14; i++) {
-    const frac = i / 14; const ang = frac * 6.28 + t * .12;
-    const rx = cx + Math.cos(ang) * (TW * G2 * .72) + Math.sin(t * .2 + i) * 8;
-    const ry = cy + Math.sin(ang) * (TH * G2 * .72) + Math.cos(t * .25 + i) * 4;
-    c.strokeStyle = `rgba(131,110,249,${.015 + Math.sin(t + i) * .008})`; c.lineWidth = .3;
-    c.beginPath(); c.ellipse(rx, ry, 10 + Math.sin(t * .4 + i) * 4, 2, ang * .3, 0, 6.28); c.stroke();
-  }
   c.strokeStyle = 'rgba(0,240,255,.025)'; c.lineWidth = 1.5; c.beginPath();
   c.moveTo(cTop.x, cTop.y - 4); c.lineTo(cRight.x + 4, cRight.y);
   c.lineTo(cBot.x, cBot.y + 4); c.lineTo(cLeft.x - 4, cLeft.y); c.closePath(); c.stroke();
@@ -460,7 +489,18 @@ function dGround(c, t, W, H, layout) {
       const sh = Math.sin(t * .8 + gx * 3 + gy * 2) * .15 + .85;
       dTile(c, gx, gy, `rgb(0,${Math.floor(20 * sh)},${Math.floor(42 * sh)})`, 'rgba(0,240,255,.04)', W, H);
     } else {
-      dTile(c, gx, gy, '#06061A', 'rgba(131,110,249,.012)', W, H);
+      // District-themed ground color
+      const d = getDistrictAt(gx, gy);
+      const gc = d === 'defi' ? '#060A1E' : d === 'nft' ? '#0A061E' : d === 'yield' ? '#060E0A'
+        : d === 'derivatives' ? '#0E0806' : d === 'infra' ? '#06061E' : d === 'perps' ? '#0E060A'
+        : d === 'bridge' ? '#060E0E' : d === 'lending' ? '#0A0A06' : d === 'parallel' ? '#08041E'
+        : '#06061A';
+      const gb = d === 'defi' ? 'rgba(0,240,255,.015)' : d === 'nft' ? 'rgba(255,51,102,.015)'
+        : d === 'yield' ? 'rgba(0,255,136,.015)' : d === 'derivatives' ? 'rgba(255,159,28,.015)'
+        : d === 'infra' ? 'rgba(131,110,249,.015)' : d === 'perps' ? 'rgba(255,51,102,.015)'
+        : d === 'bridge' ? 'rgba(0,255,204,.015)' : d === 'lending' ? 'rgba(255,224,102,.015)'
+        : d === 'parallel' ? 'rgba(184,169,255,.015)' : 'rgba(131,110,249,.012)';
+      dTile(c, gx, gy, gc, gb, W, H);
     }
   }
 }
@@ -581,8 +621,8 @@ export default function MonadCity() {
     entitiesRef.current = {
       bldgs: generateBuildings(layout),
       trees: generateTrees(layout),
-      cars: generateCars(highQuality ? 200 : 80),
-      peds: generatePeds(highQuality ? 280 : 100, layout),
+      cars: generateCars(highQuality ? 120 : 50),
+      peds: generatePeds(highQuality ? 150 : 60, layout),
       lamps: generateLamps(layout),
       air: highQuality ? generateAircraft() : [],
     };
@@ -640,68 +680,106 @@ export default function MonadCity() {
     return () => ro.disconnect();
   }, []);
 
+  // Pre-sorted static entities (buildings, trees, lamps don't move)
+  const staticEntsRef = useRef(null);
+  useEffect(() => {
+    const ents = entitiesRef.current;
+    if (!ents) return;
+    const statics = [];
+    ents.bldgs.forEach(b => statics.push({ tp: 'b', d: b.gx + b.gy, o: b }));
+    ents.trees.forEach(tr => statics.push({ tp: 't', d: tr.gx + tr.gy + .1, o: tr }));
+    ents.lamps.forEach(lm => statics.push({ tp: 'l', d: lm.gx + lm.gy + .02, o: lm }));
+    statics.sort((a, b) => a.d - b.d);
+    staticEntsRef.current = statics;
+  }, [layout, highQuality]);
+
+  // Cached contexts
+  const ctxRef = useRef(null);
+  const wctxRef = useRef(null);
+  // Cached background gradient
+  const bgRef = useRef({ W: 0, H: 0, grad: null });
+
   // Render loop
   useEffect(() => {
     let running = true;
+    let frameCount = 0;
     function render() {
       if (!running) return;
       const ents = entitiesRef.current;
       const parts = particlesRef.current;
-      if (!ents || !parts) { frameRef.current = requestAnimationFrame(render); return; }
+      const statics = staticEntsRef.current;
+      if (!ents || !parts || !statics) { frameRef.current = requestAnimationFrame(render); return; }
       const { W, H } = sizeRef.current;
       const cv = cityRef.current; const wc = weatherRef.current;
       if (!cv || !wc) { frameRef.current = requestAnimationFrame(render); return; }
-      const c = cv.getContext('2d'); const w = wc.getContext('2d');
+      // Cache contexts
+      if (!ctxRef.current || ctxRef.current.canvas !== cv) ctxRef.current = cv.getContext('2d');
+      if (!wctxRef.current || wctxRef.current.canvas !== wc) wctxRef.current = wc.getContext('2d');
+      const c = ctxRef.current; const w = wctxRef.current;
+      frameCount++;
       animRef.current += 1 / 60;
       const t = animRef.current;
       c.clearRect(0, 0, W, H);
-      // Background
-      const bg = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * .68);
-      bg.addColorStop(0, '#0C0422'); bg.addColorStop(.5, '#07040F'); bg.addColorStop(1, '#030208');
-      c.fillStyle = bg; c.fillRect(0, 0, W, H);
-      // Stars
-      for (let i = 0; i < 50; i++) {
+      // Cache background gradient
+      if (bgRef.current.W !== W || bgRef.current.H !== H) {
+        const bg = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * .68);
+        bg.addColorStop(0, '#0C0422'); bg.addColorStop(.5, '#07040F'); bg.addColorStop(1, '#030208');
+        bgRef.current = { W, H, grad: bg };
+      }
+      c.fillStyle = bgRef.current.grad; c.fillRect(0, 0, W, H);
+      // Stars (fewer)
+      for (let i = 0; i < 30; i++) {
         const sx = (i * 121 + t * .1) % W, sy = (i * 79) % (H * .28);
         if (Math.sin(t * 1.3 + i) > .5) { c.fillStyle = 'rgba(200,180,255,.15)'; c.fillRect(sx, sy, .8, .8); }
       }
       dParticles(c, t, W, H, parts.pts);
       dGround(c, t, W, H, layout);
       // Update cars + peds
-      const { bldgs, trees, cars, peds, lamps, air } = ents;
-      cars.forEach(cr => {
+      const { cars, peds, air } = ents;
+      for (let i = 0; i < cars.length; i++) {
+        const cr = cars[i];
         cr.gx += cr.dx; cr.gy += cr.dy;
-        const hz = cr.dx !== 0;
-        if (hz) { if (cr.dx > 0 && cr.gx > GR - 1) cr.gx = 1; if (cr.dx < 0 && cr.gx < 1) cr.gx = GR - 1; }
+        if (cr.dx !== 0) { if (cr.dx > 0 && cr.gx > GR - 1) cr.gx = 1; if (cr.dx < 0 && cr.gx < 1) cr.gx = GR - 1; }
         else { if (cr.dy > 0 && cr.gy > GR - 1) cr.gy = 1; if (cr.dy < 0 && cr.gy < 1) cr.gy = GR - 1; }
-      });
-      peds.forEach(pd => {
-        pd.gx += pd.dx; pd.gy += pd.dy; pd.tt--;
-        if (pd.tt <= 0) { const a2 = Math.random() * 6.28, sp = .002 + Math.random() * .005; pd.dx = Math.cos(a2) * sp; pd.dy = Math.sin(a2) * sp; pd.tt = 50 + Math.random() * 180; }
-        if (pd.gx < 1) { pd.gx = 1; pd.dx = Math.abs(pd.dx); } if (pd.gx > GR - 1) { pd.gx = GR - 1; pd.dx = -Math.abs(pd.dx); }
-        if (pd.gy < 1) { pd.gy = 1; pd.dy = Math.abs(pd.dy); } if (pd.gy > GR - 1) { pd.gy = GR - 1; pd.dy = -Math.abs(pd.dy); }
-      });
-      // Sort entities by depth
-      const ent = [];
-      bldgs.forEach(b => ent.push({ tp: 'b', d: b.gx + b.gy, o: b }));
-      trees.forEach(tr => ent.push({ tp: 't', d: tr.gx + tr.gy + .1, o: tr }));
-      cars.forEach(cr => ent.push({ tp: 'c', d: cr.gx + cr.gy + .05, o: cr }));
-      peds.forEach(pd => ent.push({ tp: 'p', d: pd.gx + pd.gy + .03, o: pd }));
-      lamps.forEach(lm => ent.push({ tp: 'l', d: lm.gx + lm.gy + .02, o: lm }));
-      ent.sort((a, b) => a.d - b.d);
-      // Check district highlight
-      const ad = activeDistrict;
-      const dist = ad ? DISTRICTS.find(d => d.id === ad) : null;
-      ent.forEach(e => {
-        if (e.tp === 'b') {
-          const hl = dist && dist.gxRange && e.o.gx >= dist.gxRange[0] && e.o.gx <= dist.gxRange[1] && e.o.gy >= dist.gyRange[0] && e.o.gy <= dist.gyRange[1];
-          dBldg(c, e.o, t, W, H, hl);
+      }
+      // Update peds every other frame
+      if (frameCount % 2 === 0) {
+        for (let i = 0; i < peds.length; i++) {
+          const pd = peds[i];
+          pd.gx += pd.dx * 2; pd.gy += pd.dy * 2; pd.tt -= 2;
+          if (pd.tt <= 0) { const a2 = Math.random() * 6.28, sp = .002 + Math.random() * .005; pd.dx = Math.cos(a2) * sp; pd.dy = Math.sin(a2) * sp; pd.tt = 50 + Math.random() * 180; }
+          if (pd.gx < 1) { pd.gx = 1; pd.dx = Math.abs(pd.dx); } if (pd.gx > GR - 1) { pd.gx = GR - 1; pd.dx = -Math.abs(pd.dx); }
+          if (pd.gy < 1) { pd.gy = 1; pd.dy = Math.abs(pd.dy); } if (pd.gy > GR - 1) { pd.gy = GR - 1; pd.dy = -Math.abs(pd.dy); }
         }
-        else if (e.tp === 't') dTree(c, e.o, t, W, H);
-        else if (e.tp === 'c') dCar(c, e.o, t, W, H);
-        else if (e.tp === 'p') dPed(c, e.o, t, W, H);
-        else if (e.tp === 'l') dLamp(c, e.o, t, W, H);
-      });
-      air.forEach(a => dAir(c, a, t, W, H));
+      }
+      // Merge dynamic entities into sorted statics using insertion
+      const ad = activeDistrict;
+      const distInfo = ad ? DISTRICTS.find(d => d.id === ad) : null;
+      // Render statics, inserting dynamic entities at correct depth
+      let ci = 0, pi = 0;
+      // Build sorted dynamic arrays (cars/peds move, so must sort)
+      const sortedCars = cars.slice().sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+      const sortedPeds = peds.slice().sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+      let si = 0;
+      while (si < statics.length || ci < sortedCars.length || pi < sortedPeds.length) {
+        const sd = si < statics.length ? statics[si].d : Infinity;
+        const cd = ci < sortedCars.length ? sortedCars[ci].gx + sortedCars[ci].gy + .05 : Infinity;
+        const pd2 = pi < sortedPeds.length ? sortedPeds[pi].gx + sortedPeds[pi].gy + .03 : Infinity;
+        if (sd <= cd && sd <= pd2) {
+          const e = statics[si]; si++;
+          if (e.tp === 'b') {
+            const hl = distInfo && distInfo.gxRange && e.o.gx >= distInfo.gxRange[0] && e.o.gx <= distInfo.gxRange[1] && e.o.gy >= distInfo.gyRange[0] && e.o.gy <= distInfo.gyRange[1];
+            dBldg(c, e.o, t, W, H, hl);
+          }
+          else if (e.tp === 't') dTree(c, e.o, t, W, H);
+          else if (e.tp === 'l') dLamp(c, e.o, t, W, H);
+        } else if (cd <= pd2) {
+          dCar(c, sortedCars[ci], t, W, H); ci++;
+        } else {
+          dPed(c, sortedPeds[pi], t, W, H); pi++;
+        }
+      }
+      for (let i = 0; i < air.length; i++) dAir(c, air[i], t, W, H);
       // Weather
       const cW = simRef.current.weather;
       if (cW && highQuality) dWeather(w, cW, t, W, H, parts);
