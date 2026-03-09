@@ -1,0 +1,399 @@
+/* ===== CHOGPET.exe — Desktop Pet Styles (cp- prefix) ===== */
+
+/* === Overlay (floating pet) === */
+.cp-overlay {
+  pointer-events: none;
+  user-select: none;
+}
+
+.cp-overlay > * {
+  pointer-events: auto;
+}
+
+.cp-pet-container {
+  cursor: grab;
+  transition: transform 0.15s ease;
+  position: relative;
+}
+
+.cp-pet-container:active {
+  cursor: grabbing;
+}
+
+/* Sprite grid */
+.cp-sprite {
+  image-rendering: pixelated;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.3));
+}
+
+/* Shadow under pet */
+.cp-shadow {
+  position: absolute;
+  bottom: -4px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  filter: blur(2px);
+}
+
+/* Name tag */
+.cp-name-tag {
+  text-align: center;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 9px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Bounce animation */
+.cp-bounce {
+  animation: cp-bounce-anim 0.4s ease;
+}
+
+@keyframes cp-bounce-anim {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-12px); }
+  50%  { transform: translateY(-8px); }
+  70%  { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
+/* Particles (hearts, sparkles, food) */
+.cp-particle {
+  position: absolute;
+  top: 0;
+  font-size: 14px;
+  pointer-events: none;
+  animation: cp-particle-float 1s ease-out forwards;
+  z-index: 1;
+}
+
+@keyframes cp-particle-float {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+}
+
+/* === Dialog Bubble === */
+.cp-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #ffffee;
+  border: 1px solid #000;
+  border-radius: 8px;
+  padding: 6px 10px;
+  max-width: 200px;
+  min-width: 120px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  animation: cp-bubble-fade-in 0.2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cp-bubble-text {
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  color: #000;
+  line-height: 1.4;
+}
+
+.cp-bubble-arrow {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #000;
+}
+
+.cp-bubble-arrow::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #ffffee;
+}
+
+@keyframes cp-bubble-fade-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* === Context Menu (Win98 style) === */
+.cp-menu {
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+  padding: 2px;
+  min-width: 140px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+}
+
+.cp-menu-item {
+  padding: 4px 20px 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #000;
+}
+
+.cp-menu-item:hover {
+  background: #000080;
+  color: #fff;
+}
+
+.cp-menu-divider {
+  height: 1px;
+  background: #808080;
+  margin: 2px 2px;
+  border-bottom: 1px solid #dfdfdf;
+}
+
+/* === PetSelector Window === */
+.cp-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #c0c0c0;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+/* Header / current pet info */
+.cp-header {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  align-items: center;
+  border-bottom: 1px solid #808080;
+}
+
+.cp-header-sprite {
+  flex-shrink: 0;
+  background: #000;
+  padding: 8px;
+  border: 2px solid;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+
+.cp-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cp-header-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-header-level {
+  font-size: 10px;
+  color: #666;
+  padding: 1px 6px;
+  background: #e0e0e0;
+  border: 1px solid #808080;
+}
+
+.cp-header-xp {
+  font-size: 10px;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+/* Stat bars */
+.cp-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cp-stat-label {
+  width: 70px;
+  font-size: 10px;
+  color: #333;
+}
+
+.cp-stat-bar-bg {
+  flex: 1;
+  height: 12px;
+  background: #fff;
+  border: 1px solid;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  position: relative;
+  overflow: hidden;
+}
+
+.cp-stat-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.cp-stat-bar-fill.hunger {
+  background: linear-gradient(180deg, #30FF60, #1a8a35);
+}
+
+.cp-stat-bar-fill.happiness {
+  background: linear-gradient(180deg, #FF69B4, #cc3388);
+}
+
+.cp-stat-bar-fill.xp {
+  background: linear-gradient(180deg, #7B2FBE, #4a148c);
+}
+
+.cp-stat-value {
+  width: 32px;
+  text-align: right;
+  font-size: 10px;
+  color: #444;
+  font-family: 'Courier New', monospace;
+}
+
+/* Pet selector section */
+.cp-selector {
+  padding: 12px;
+  border-bottom: 1px solid #808080;
+}
+
+.cp-selector-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.cp-pet-cards {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.cp-pet-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  background: #e0e0e0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  cursor: pointer;
+  min-width: 80px;
+  transition: background 0.1s;
+}
+
+.cp-pet-card:hover {
+  background: #f0e6ff;
+}
+
+.cp-pet-card:active {
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  padding: 9px 11px 7px 13px;
+}
+
+.cp-pet-card.selected {
+  border-color: #7B2FBE;
+  background: #f0e6ff;
+  border-width: 2px;
+}
+
+.cp-pet-card-name {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.cp-pet-card-desc {
+  font-size: 9px;
+  color: #666;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* Actions section */
+.cp-actions {
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cp-btn {
+  padding: 4px 16px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cp-btn:hover {
+  background: #d0d0d0;
+}
+
+.cp-btn:active {
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  padding: 5px 15px 3px 17px;
+}
+
+.cp-btn.active {
+  background: #7B2FBE;
+  color: #fff;
+}
+
+.cp-btn.danger {
+  color: #cc0000;
+}
+
+/* Status bar */
+.cp-statusbar {
+  margin-top: auto;
+  padding: 3px 6px;
+  font-size: 10px;
+  color: #444;
+  border-top: 1px solid #808080;
+  background: #c0c0c0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cp-statusbar-right {
+  color: #666;
+}
+
+/* === Responsive === */
+@media (max-width: 600px) {
+  .cp-pet-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cp-pet-card {
+    width: 100%;
+    max-width: 200px;
+    flex-direction: row;
+    gap: 8px;
+  }
+}
