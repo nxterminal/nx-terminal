@@ -159,14 +159,13 @@ function generateLamps(layout) {
 
 function generateAircraft() {
   const air = [];
-  // 10 planes (was 7)
-  for (let i = 0; i < 10; i++) { const hz = Math.random() < .5; air.push({ tp: 'plane', gx: Math.random() * GR, gy: Math.random() * GR, dx: hz ? (.01 + Math.random() * .018) * (Math.random() < .5 ? 1 : -1) : 0, dy: hz ? 0 : (.01 + Math.random() * .018) * (Math.random() < .5 ? 1 : -1), alt: 50 + Math.random() * 40, bk: Math.random() * 6.28 }); }
+  for (let i = 0; i < 7; i++) { const hz = Math.random() < .5; air.push({ tp: 'plane', gx: Math.random() * GR, gy: Math.random() * GR, dx: hz ? (.012 + Math.random() * .02) * (Math.random() < .5 ? 1 : -1) : 0, dy: hz ? 0 : (.012 + Math.random() * .02) * (Math.random() < .5 ? 1 : -1), alt: 45 + Math.random() * 35, bk: Math.random() * 6.28 }); }
   for (let i = 0; i < 3; i++) air.push({ tp: 'ufo', gx: 5 + Math.random() * (GR - 10), gy: 5 + Math.random() * (GR - 10), ogx: 5 + Math.random() * (GR - 10), ogy: 5 + Math.random() * (GR - 10), alt: 55 + Math.random() * 25, bk: Math.random() * 6.28, col: ['#836EF9','#00F0FF','#FF3366'][i] });
-  for (let i = 0; i < 3; i++) air.push({ tp: 'heli', gx: GR / 2, gy: GR / 2, orA: i * 2.09, orR: 3 + i * 3, alt: 35 + i * 10, bk: i });
+  for (let i = 0; i < 2; i++) air.push({ tp: 'heli', gx: GR / 2, gy: GR / 2, orA: i * 3.14, orR: 4 + i * 3, alt: 40 + i * 10, bk: i });
   air.push({ tp: 'blimp', gx: -10, gy: GR / 2, dx: .003, dy: 0, alt: 130, bk: Math.random() * 6.28 });
-  // 6 drones
-  for (let i = 0; i < 6; i++) { const ang = Math.random() * 6.28; air.push({ tp: 'drone', gx: 3 + Math.random() * (GR - 6), gy: 3 + Math.random() * (GR - 6), ogx: 3 + Math.random() * (GR - 6), ogy: 3 + Math.random() * (GR - 6), alt: 25 + Math.random() * 20, bk: Math.random() * 6.28, col: ['#00F0FF','#FF3366','#00FF88','#836EF9','#FFE066','#FF9F1C'][i] }); }
-  for (let i = 0; i < 5; i++) { const ang = Math.random() * 6.28; const spd = .02 + Math.random() * .015; air.push({ tp: 'sat', gx: Math.random() * GR, gy: Math.random() * GR, dx: Math.cos(ang) * spd, dy: Math.sin(ang) * spd, alt: 90 + Math.random() * 30, bk: Math.random() * 6.28 }); }
+  // 4 drones
+  for (let i = 0; i < 4; i++) { air.push({ tp: 'drone', gx: 3 + Math.random() * (GR - 6), gy: 3 + Math.random() * (GR - 6), ogx: 3 + Math.random() * (GR - 6), ogy: 3 + Math.random() * (GR - 6), alt: 25 + Math.random() * 20, bk: Math.random() * 6.28, col: ['#00F0FF','#FF3366','#00FF88','#836EF9'][i] }); }
+  for (let i = 0; i < 4; i++) { const ang = Math.random() * 6.28; const spd = .02 + Math.random() * .015; air.push({ tp: 'sat', gx: Math.random() * GR, gy: Math.random() * GR, dx: Math.cos(ang) * spd, dy: Math.sin(ang) * spd, alt: 90 + Math.random() * 30, bk: Math.random() * 6.28 }); }
   return air;
 }
 
@@ -202,386 +201,212 @@ function dTile(c, gx, gy, col, brd, W, H) {
 /* ── District-specific decorations drawn on top of base building ── */
 function dDistrictDecor(c, b, p, hw, hh, h, t) {
   const d = b.dist; if (!d) return;
-  const cl = b.col, s = b.dxSlot, off = b.dxOff;
+  const s = b.dxSlot, off = b.dxOff;
 
   if (d === 'defi') {
-    // === FINANCIAL GLASS TOWERS — ticker tapes, chart displays, holographic data ===
-    // Large LED ticker tape running across facade
-    if (h > 15) {
+    // Ticker tape bar
+    if (h > 18) {
       const ty = p.y - h * .35;
-      c.fillStyle = '#001828'; c.fillRect(p.x - hw, ty - 1, hw * 2, 4);
-      c.fillStyle = '#00F0FF'; c.globalAlpha = .6; c.font = 'bold 2px monospace';
-      const scroll = ((t * 22 + off * 100) % 160) - 40;
-      c.save(); c.beginPath(); c.rect(p.x - hw, ty - 1, hw * 2, 4); c.clip();
-      c.fillText('MON +2.4%  ETH -0.8%  BTC +1.2%  AAVE +5.1%  UNI +3.7%', p.x - hw + scroll, ty + 2);
-      c.restore(); c.globalAlpha = 1;
-    }
-    // Mini chart display on facade
-    if (h > 25 && s < 3) {
-      const cy = p.y - h * .6, cx = p.x - hw + 2;
-      c.fillStyle = '#001422'; c.fillRect(cx, cy, hw - 1, 6);
-      c.strokeStyle = '#00F0FF'; c.globalAlpha = .5; c.lineWidth = .5;
-      c.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const px = cx + 1 + i * (hw - 3) / 6, py = cy + 3 + Math.sin(t * .8 + i * 1.2 + off) * 2;
-        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
-      }
-      c.stroke(); c.globalAlpha = 1;
-    }
-    // Glass reflection sweeps (animated)
-    const sweep = (t * .6 + off) % 3;
-    if (sweep < 1) {
-      const sy = p.y - h + sweep * h;
-      c.fillStyle = 'rgba(0,240,255,.08)'; c.fillRect(p.x - hw, sy, hw * 2, 2);
-    }
-    // Holographic data ring on roof
-    if (h > 30) {
-      c.strokeStyle = '#00F0FF'; c.globalAlpha = .2 + Math.sin(t * 2 + off) * .1;
-      c.lineWidth = .6; c.beginPath();
-      c.ellipse(p.x, p.y - h - hh, hw * .6, 2, 0, 0, 6.28); c.stroke();
+      c.fillStyle = '#001828'; c.fillRect(p.x - hw, ty - 1, hw * 2, 3.5);
+      c.fillStyle = '#00F0FF'; c.globalAlpha = .5; c.font = 'bold 2px monospace';
+      c.fillText('MON +2.4% ETH -0.8%', p.x - hw + 1, ty + 1.5);
       c.globalAlpha = 1;
     }
     // Cyan accent edges
     c.strokeStyle = '#00F0FF'; c.globalAlpha = .15; c.lineWidth = .5;
-    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h); c.stroke();
-    c.beginPath(); c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
+    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h);
+    c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
   }
 
   else if (d === 'nft') {
-    // === NFT GALLERY — tons of colorful art, frames, graffiti, neon ===
-    const nftColors = ['#FF3366','#FF00FF','#FF66AA','#DD00DD','#AA44FF','#FFAA00','#00FFCC','#FF4400'];
-    // LARGE art panels on BOTH faces
-    if (h > 12) {
-      for (let face = 0; face < 2; face++) {
-        const panels = 1 + Math.floor(h / 25);
-        for (let pi = 0; pi < panels; pi++) {
-          const fc = nftColors[(s + pi + face * 3) % nftColors.length];
-          const fy = p.y - h * (.25 + pi * .3);
-          const fw = hw * .7, fh2 = Math.min(10, h * .2);
-          const fx = face === 0 ? p.x - hw + 1.5 : p.x + 1;
-          // Frame border
-          c.strokeStyle = fc; c.globalAlpha = .5; c.lineWidth = .6;
-          c.strokeRect(fx, fy, fw, fh2);
-          // Art fill — colorful block with pattern
-          c.fillStyle = fc; c.globalAlpha = .2;
-          c.fillRect(fx + .5, fy + .5, fw - 1, fh2 - 1);
-          // Inner pattern (stripes/dots based on slot)
-          c.globalAlpha = .15;
-          if ((s + pi) % 3 === 0) {
-            for (let stripe = 0; stripe < 3; stripe++) {
-              c.fillStyle = nftColors[(s + stripe + pi) % nftColors.length];
-              c.fillRect(fx + 1, fy + 1 + stripe * (fh2 - 2) / 3, fw - 2, (fh2 - 2) / 3 - .3);
-            }
-          } else if ((s + pi) % 3 === 1) {
-            c.fillStyle = nftColors[(s + 2) % nftColors.length]; c.globalAlpha = .2;
-            c.beginPath(); c.arc(fx + fw / 2, fy + fh2 / 2, Math.min(fw, fh2) / 3, 0, 6.28); c.fill();
-          }
-          // NFT ID label
-          c.fillStyle = '#FF66AA'; c.globalAlpha = .4; c.font = 'bold 1.4px monospace';
-          c.fillText('#' + Math.floor(off * 1000 + s * 333 + pi * 111), fx + 1, fy + fh2 + 1.8);
-        }
-      }
+    // Art panels — one per face, simple colored blocks
+    if (h > 14) {
+      const nftC = ['#FF3366','#FF00FF','#AA44FF','#FFAA00','#00FFCC'][s];
+      const fy = p.y - h * .4, fw = hw * .6, fh2 = Math.min(8, h * .18);
+      // Left face panel
+      c.strokeStyle = nftC; c.globalAlpha = .45; c.lineWidth = .5;
+      c.strokeRect(p.x - hw + 1.5, fy, fw, fh2);
+      c.fillStyle = nftC; c.globalAlpha = .18;
+      c.fillRect(p.x - hw + 2, fy + .5, fw - 1, fh2 - 1);
+      // Right face panel
+      c.strokeStyle = nftC; c.globalAlpha = .35;
+      c.strokeRect(p.x + 1, fy + 2, fw, fh2);
+      c.fillStyle = nftC; c.globalAlpha = .14;
+      c.fillRect(p.x + 1.5, fy + 2.5, fw - 1, fh2 - 1);
+      c.globalAlpha = 1;
     }
-    // Neon vertical edge glow — thick and bright
-    const pulse = .3 + Math.sin(t * 2.5 + off) * .15;
-    c.strokeStyle = '#FF3366'; c.globalAlpha = pulse; c.lineWidth = 1.2;
-    c.beginPath(); c.moveTo(p.x - hw + .3, p.y); c.lineTo(p.x - hw + .3, p.y - h); c.stroke();
-    c.strokeStyle = '#FF00FF'; c.beginPath();
+    // Neon edge glow
+    const pulse = .25 + Math.sin(t * 2.5 + off) * .12;
+    c.strokeStyle = '#FF3366'; c.globalAlpha = pulse; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(p.x - hw + .3, p.y); c.lineTo(p.x - hw + .3, p.y - h);
     c.moveTo(p.x + hw - .3, p.y); c.lineTo(p.x + hw - .3, p.y - h); c.stroke();
-    // Horizontal neon bar
-    c.strokeStyle = '#DD00DD'; c.globalAlpha = pulse * .7; c.lineWidth = .8;
-    c.beginPath(); c.moveTo(p.x - hw, p.y - h); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
-    // "GALLERY" or "MINT" text on facade
-    if (h > 20) {
-      const labels = ['GALLERY','MINT','ART','NFT','RARE'];
-      c.fillStyle = '#FF3366'; c.globalAlpha = .45 + Math.sin(t * 1.5 + off) * .15;
-      c.font = 'bold 2.5px Orbitron,monospace';
-      c.fillText(labels[s % labels.length], p.x - hw + 2, p.y - h + 4);
+    // Label
+    if (h > 22 && s < 3) {
+      c.fillStyle = '#FF3366'; c.globalAlpha = .4; c.font = 'bold 2.2px Orbitron,monospace';
+      c.fillText(['GALLERY','MINT','ART'][s], p.x - hw + 2, p.y - h + 4);
       c.globalAlpha = 1;
     }
   }
 
   else if (d === 'yield') {
-    // === ORGANIC GARDEN DISTRICT — lush, green, terraced, overgrown ===
-    // Large rooftop garden with multiple plants
-    if (h > 8) {
-      const greens = ['#0A4018','#0E5824','#126A2C','#087020','#1A8030'];
-      for (let g = 0; g < 4; g++) {
-        const gx = p.x - hw * .5 + g * hw * .35;
-        c.fillStyle = greens[g % greens.length]; c.globalAlpha = .6;
-        c.beginPath(); c.ellipse(gx, p.y - h - hh + 1.5, 2 + Math.sin(t * .5 + g) * .4, 1.5, 0, 0, 6.28); c.fill();
-      }
+    // Rooftop garden bushes
+    if (h > 10) {
+      c.fillStyle = '#0E5824'; c.globalAlpha = .5;
+      c.beginPath(); c.ellipse(p.x - hw * .3, p.y - h - hh + 1.5, 2.5, 1.3, 0, 0, 6.28); c.fill();
+      c.fillStyle = '#0A4018';
+      c.beginPath(); c.ellipse(p.x + hw * .2, p.y - h - hh + 1.2, 2, 1, 0, 0, 6.28); c.fill();
       c.globalAlpha = 1;
     }
-    // Dense vine tendrils on both walls
-    c.strokeStyle = '#0A6828'; c.globalAlpha = .35; c.lineWidth = .6;
-    for (let v = 0; v < 3; v++) {
-      const vx = p.x - hw + 1 + v * (hw - 1);
-      const vy = p.y - h * (.4 + v * .15);
-      c.beginPath(); c.moveTo(vx, vy);
-      c.quadraticCurveTo(vx + 2, vy + h * .15, vx + 1, vy + h * .3);
-      c.quadraticCurveTo(vx - 1, vy + h * .4, vx + .5, vy + h * .5); c.stroke();
-      // Leaves along vine
-      for (let leaf = 0; leaf < 3; leaf++) {
-        const ly = vy + h * (.1 + leaf * .15);
-        c.fillStyle = '#00FF88'; c.globalAlpha = .15;
-        c.beginPath(); c.ellipse(vx + (leaf % 2 ? 1.5 : -1), ly, 1.5, .7, leaf * .5, 0, 6.28); c.fill();
-      }
-    }
+    // Vine + leaves (single vine per wall)
+    c.strokeStyle = '#0A6828'; c.globalAlpha = .3; c.lineWidth = .5;
+    const vy = p.y - h * .5;
+    c.beginPath(); c.moveTo(p.x - hw + 1, vy);
+    c.quadraticCurveTo(p.x - hw + 3, vy + h * .15, p.x - hw + 1.5, vy + h * .35); c.stroke();
+    c.fillStyle = '#00FF88'; c.globalAlpha = .12;
+    c.fillRect(p.x - hw + 1.5, vy + h * .1, 2, 1);
+    c.fillRect(p.x - hw + .5, vy + h * .2, 2, 1);
     c.globalAlpha = 1;
-    // Green glow around base
-    c.fillStyle = '#00FF88'; c.globalAlpha = .04;
-    c.beginPath(); c.ellipse(p.x, p.y + hh, hw * .8, hh * .5, 0, 0, 6.28); c.fill();
-    c.globalAlpha = 1;
-    // Terraced ledge accents (green strips)
-    if (h > 16) {
-      for (let terr = 0; terr < 3; terr++) {
-        const ty = p.y - h + 5 + terr * h * .28;
-        c.fillStyle = '#0A5020'; c.globalAlpha = .25;
-        c.fillRect(p.x - hw - 1, ty, hw * 2 + 2, 1.5);
-        c.fillStyle = '#0E7030'; c.globalAlpha = .15;
-        for (let fl = 0; fl < 3; fl++) {
-          c.beginPath(); c.ellipse(p.x - hw + 2 + fl * hw * .6, ty - .5, 1.2, .8, 0, 0, 6.28); c.fill();
-        }
-      }
+    // Green ledges
+    if (h > 18) {
+      c.fillStyle = '#0A5020'; c.globalAlpha = .2;
+      c.fillRect(p.x - hw - .5, p.y - h * .4, hw * 2 + 1, 1.2);
+      c.fillRect(p.x - hw - .5, p.y - h * .7, hw * 2 + 1, 1.2);
       c.globalAlpha = 1;
     }
   }
 
   else if (d === 'derivatives') {
-    // === AGGRESSIVE TRADING DISTRICT — charts, candles, angular marks ===
-    // Large chevron marks on facade
-    if (h > 16) {
-      c.strokeStyle = '#FF9F1C'; c.globalAlpha = .4; c.lineWidth = 1;
-      for (let chev = 0; chev < 2; chev++) {
-        const cy2 = p.y - h * (.35 + chev * .3);
-        c.beginPath(); c.moveTo(p.x - hw + 1, cy2 - 3); c.lineTo(p.x, cy2); c.lineTo(p.x - hw + 1, cy2 + 3); c.stroke();
-        c.beginPath(); c.moveTo(p.x + hw - 1, cy2 - 3); c.lineTo(p.x, cy2); c.lineTo(p.x + hw - 1, cy2 + 3); c.stroke();
+    // Chevron marks
+    if (h > 18) {
+      c.strokeStyle = '#FF9F1C'; c.globalAlpha = .35; c.lineWidth = .8;
+      const cy2 = p.y - h * .45;
+      c.beginPath(); c.moveTo(p.x - hw + 1, cy2 - 3); c.lineTo(p.x, cy2); c.lineTo(p.x - hw + 1, cy2 + 3); c.stroke();
+      c.globalAlpha = 1;
+    }
+    // Candle chart
+    if (h > 22 && s < 3) {
+      const cx2 = p.x - hw + 2, cy2 = p.y - h * .65;
+      c.fillStyle = '#0A0600'; c.fillRect(cx2, cy2, hw - 1, 6);
+      c.globalAlpha = .45;
+      for (let cd = 0; cd < 4; cd++) {
+        c.fillStyle = cd % 2 === 0 ? '#00FF88' : '#FF3366';
+        c.fillRect(cx2 + 1 + cd * (hw - 3) / 4, cy2 + 1, 1, 4);
       }
       c.globalAlpha = 1;
     }
-    // Trading candle chart on facade
-    if (h > 20) {
-      const cx2 = p.x - hw + 2, cy2 = p.y - h * .6;
-      c.fillStyle = '#0A0600'; c.fillRect(cx2, cy2, hw - 1, 8);
-      for (let candle = 0; candle < 5; candle++) {
-        const up = Math.sin(t * .5 + candle * 1.7 + off) > 0;
-        c.fillStyle = up ? '#00FF88' : '#FF3366'; c.globalAlpha = .5;
-        const ch = 2 + Math.abs(Math.sin(t * .3 + candle + off)) * 3;
-        const cx = cx2 + 1 + candle * (hw - 3) / 5;
-        c.fillRect(cx, cy2 + 4 - (up ? ch : 0), 1.2, ch);
-        c.fillRect(cx + .4, cy2 + 1, .4, 6); // wick
-      }
-      c.globalAlpha = 1;
-    }
-    // Orange accent edges
-    c.strokeStyle = '#FF9F1C'; c.globalAlpha = .2; c.lineWidth = .6;
-    c.beginPath(); c.moveTo(p.x, p.y - h - hh); c.lineTo(p.x - hw, p.y - h); c.lineTo(p.x, p.y - h + hh); c.stroke();
+    // Orange roof accent
+    c.strokeStyle = '#FF9F1C'; c.globalAlpha = .18; c.lineWidth = .5;
+    c.beginPath(); c.moveTo(p.x - hw, p.y - h); c.lineTo(p.x, p.y - h - hh); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
-    // Price text
-    if (h > 28 && s < 2) {
-      c.fillStyle = '#FF9F1C'; c.globalAlpha = .5; c.font = 'bold 2.2px Orbitron,monospace';
-      c.fillText('$' + (Math.sin(t * .2 + off) * 500 + 2000).toFixed(0), p.x - hw + 2, p.y - h * .8);
-      c.globalAlpha = 1;
-    }
   }
 
   else if (d === 'infra') {
-    // === INDUSTRIAL TECH HUB — circuit traces, antennas, server racks, cables ===
-    // Dense circuit board traces on walls
-    c.strokeStyle = '#836EF9'; c.globalAlpha = .25; c.lineWidth = .4;
-    for (let trace = 0; trace < 4; trace++) {
-      const by = p.y - h * (.2 + trace * .2);
-      const bx = p.x - hw + 2 + trace * 2;
-      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + 2, by); c.lineTo(bx + 2, by + 3);
-      c.lineTo(bx + 4, by + 3); c.lineTo(bx + 4, by + 1); c.stroke();
-      // Circuit node dots
-      c.fillStyle = '#836EF9'; c.globalAlpha = .35;
-      c.beginPath(); c.arc(bx + 4, by + 1, .5, 0, 6.28); c.fill();
-    }
-    c.globalAlpha = 1;
-    // Server rack blinking lights grid
-    if (h > 12) {
-      for (let row = 0; row < Math.min(4, Math.floor(h / 10)); row++) {
-        for (let col = 0; col < 4; col++) {
-          const lx = p.x - hw + 2 + col * 2.5, ly = p.y - h + 4 + row * 5;
-          const on = Math.sin(t * 6 + row * 2.1 + col * 3.3 + off) > .0;
-          c.fillStyle = on ? '#00FF88' : '#330808'; c.globalAlpha = on ? .45 : .12;
-          c.fillRect(lx, ly, .8, .8);
-        }
+    // Circuit traces (2 traces, combined path)
+    c.strokeStyle = '#836EF9'; c.globalAlpha = .22; c.lineWidth = .4;
+    c.beginPath();
+    const by = p.y - h * .4;
+    c.moveTo(p.x - hw + 2, by); c.lineTo(p.x - hw + 4, by); c.lineTo(p.x - hw + 4, by + 3); c.lineTo(p.x - hw + 6, by + 3);
+    c.moveTo(p.x + 2, by + 1); c.lineTo(p.x + 4, by + 1); c.lineTo(p.x + 4, by - 2); c.lineTo(p.x + 6, by - 2);
+    c.stroke(); c.globalAlpha = 1;
+    // Server rack lights (fewer)
+    if (h > 14) {
+      for (let r = 0; r < 3; r++) {
+        const lx = p.x - hw + 2.5 + r * 2.5, ly = p.y - h + 5 + s * 3;
+        const on = Math.sin(t * 5 + r * 2.1 + off) > 0;
+        c.fillStyle = on ? '#00FF88' : '#330808'; c.globalAlpha = on ? .4 : .1;
+        c.fillRect(lx, ly, .7, .7);
       }
       c.globalAlpha = 1;
     }
-    // Antenna/dish on roof
-    if (h > 20) {
-      c.strokeStyle = '#836EF9'; c.globalAlpha = .3; c.lineWidth = .5;
-      c.beginPath(); c.moveTo(p.x + hw * .3, p.y - h - hh); c.lineTo(p.x + hw * .3, p.y - h - hh - 8); c.stroke();
-      c.strokeStyle = '#B8A9FF'; c.beginPath();
-      c.arc(p.x + hw * .3, p.y - h - hh - 6, 2.5, Math.PI * .8, Math.PI * 1.6); c.stroke();
+    // Antenna
+    if (h > 22) {
+      c.strokeStyle = '#836EF9'; c.globalAlpha = .25; c.lineWidth = .4;
+      c.beginPath(); c.moveTo(p.x + hw * .3, p.y - h - hh); c.lineTo(p.x + hw * .3, p.y - h - hh - 7); c.stroke();
       c.globalAlpha = 1;
-      // Blinking light on antenna
-      if (Math.sin(t * 4 + off) > .2) {
-        c.fillStyle = '#00FF88'; c.globalAlpha = .6;
-        c.beginPath(); c.arc(p.x + hw * .3, p.y - h - hh - 8, .6, 0, 6.28); c.fill();
-        c.globalAlpha = 1;
-      }
     }
-    // Purple accent glow at base
-    c.fillStyle = '#836EF9'; c.globalAlpha = .04;
-    c.beginPath(); c.ellipse(p.x, p.y + hh, hw * .6, hh * .4, 0, 0, 6.28); c.fill();
-    c.globalAlpha = 1;
   }
 
   else if (d === 'perps') {
-    // === HIGH LEVERAGE DISTRICT — warning stripes, red alerts, PnL displays ===
-    // Bright warning stripes — hazard pattern
+    // Warning stripes
     const flash = Math.sin(t * 4 + off) * .5 + .5;
-    for (let i = 0; i < 4; i++) {
-      const sy = p.y - h + 4 + i * h * .22;
-      // Alternating red/yellow hazard stripe
-      c.fillStyle = i % 2 === 0 ? '#FF3366' : '#FFE066'; c.globalAlpha = .12 + flash * .08;
-      c.fillRect(p.x - hw + .5, sy, hw * 2 - 1, 1.2);
+    c.globalAlpha = .1 + flash * .06;
+    for (let i = 0; i < 3; i++) {
+      c.fillStyle = i % 2 === 0 ? '#FF3366' : '#FFE066';
+      c.fillRect(p.x - hw + .5, p.y - h + 4 + i * h * .25, hw * 2 - 1, 1);
     }
-    c.globalAlpha = 1;
-    // Large PnL display
-    if (h > 18) {
+    // PnL display
+    if (h > 20 && s < 2) {
       const profit = Math.sin(t * .3 + off) > 0;
-      const ty = p.y - h * .5;
-      c.fillStyle = '#0A0006'; c.fillRect(p.x - hw + 1, ty - 2, hw - 1, 5);
-      c.fillStyle = profit ? '#00FF88' : '#FF3366';
-      c.globalAlpha = .6; c.font = 'bold 2.5px Orbitron,monospace';
-      c.fillText(profit ? '+$142.8K' : '-$87.3K', p.x - hw + 2, ty + 2);
-      c.globalAlpha = 1;
+      c.fillStyle = profit ? '#00FF88' : '#FF3366'; c.globalAlpha = .5;
+      c.font = 'bold 2.2px Orbitron,monospace';
+      c.fillText(profit ? '+$142K' : '-$87K', p.x - hw + 2, p.y - h * .5);
     }
-    // Red edge glow
-    c.strokeStyle = '#FF3366'; c.globalAlpha = .2 + flash * .1; c.lineWidth = .8;
-    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h); c.stroke();
-    c.beginPath(); c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
+    // Red edges
+    c.strokeStyle = '#FF3366'; c.globalAlpha = .18; c.lineWidth = .7;
+    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h);
+    c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
-    // LIQUIDATION text
-    if (h > 30 && s === 0 && flash > .7) {
-      c.fillStyle = '#FF3366'; c.globalAlpha = .5; c.font = 'bold 2px Orbitron,monospace';
-      c.fillText('REKT', p.x - hw + 2, p.y - h * .75);
-      c.globalAlpha = 1;
-    }
   }
 
   else if (d === 'bridge') {
-    // === BRIDGE DISTRICT — portals, wormholes, beams, dimensional effects ===
-    // Large portal/wormhole ring on facade
-    if (h > 14) {
+    // Portal ring
+    if (h > 16) {
       const cy2 = p.y - h * .5;
-      const pulse = .3 + Math.sin(t * 1.5 + off) * .15;
-      // Outer ring glow
-      c.strokeStyle = '#00FFCC'; c.globalAlpha = pulse * .4; c.lineWidth = 1.2;
-      c.beginPath(); c.ellipse(p.x, cy2, 5, 8, 0, 0, 6.28); c.stroke();
-      // Inner ring
-      c.strokeStyle = '#00F0FF'; c.globalAlpha = pulse * .6; c.lineWidth = .8;
-      c.beginPath(); c.ellipse(p.x, cy2, 3, 5.5, 0, 0, 6.28); c.stroke();
-      // Portal fill
-      c.fillStyle = '#00FFCC'; c.globalAlpha = pulse * .08;
+      const pulse = .25 + Math.sin(t * 1.5 + off) * .12;
+      c.strokeStyle = '#00FFCC'; c.globalAlpha = pulse * .5; c.lineWidth = 1;
+      c.beginPath(); c.ellipse(p.x, cy2, 4, 7, 0, 0, 6.28); c.stroke();
+      c.fillStyle = '#00FFCC'; c.globalAlpha = pulse * .06;
       c.beginPath(); c.ellipse(p.x, cy2, 3, 5.5, 0, 0, 6.28); c.fill();
-      // Rotating particles in portal
-      for (let pp = 0; pp < 4; pp++) {
-        const pa = t * 2 + pp * 1.57 + off;
-        c.fillStyle = '#00FFCC'; c.globalAlpha = .3;
-        c.beginPath(); c.arc(p.x + Math.cos(pa) * 3, cy2 + Math.sin(pa) * 5, .6, 0, 6.28); c.fill();
-      }
       c.globalAlpha = 1;
     }
-    // Connection beam to neighboring buildings
-    c.strokeStyle = '#00FFCC'; c.globalAlpha = .1 + Math.sin(t + off) * .05; c.lineWidth = .4;
-    c.setLineDash([2, 3]);
-    c.beginPath(); c.moveTo(p.x + hw, p.y - h * .4); c.lineTo(p.x + hw + 12, p.y - h * .4 + 6); c.stroke();
-    c.beginPath(); c.moveTo(p.x - hw, p.y - h * .6); c.lineTo(p.x - hw - 10, p.y - h * .6 + 5); c.stroke();
-    c.setLineDash([]);
-    c.globalAlpha = 1;
-    // Teal accent edges
-    c.strokeStyle = '#00FFCC'; c.globalAlpha = .15; c.lineWidth = .5;
-    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h); c.stroke();
-    c.beginPath(); c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
+    // Teal edges
+    c.strokeStyle = '#00FFCC'; c.globalAlpha = .13; c.lineWidth = .5;
+    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h);
+    c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
   }
 
   else if (d === 'lending') {
-    // === CLASSICAL BANKING — columns, gold trim, vault doors, marble ===
-    // Classical columns on facade
-    if (h > 14) {
-      c.fillStyle = '#FFE066'; c.globalAlpha = .12;
-      const cols = Math.min(4, Math.floor(hw / 2.5));
+    // Columns (3 max, single alpha set)
+    if (h > 16) {
+      c.fillStyle = '#FFE066'; c.globalAlpha = .1;
+      const cols = Math.min(3, Math.floor(hw / 3));
       for (let i = 0; i < cols; i++) {
         const cx2 = p.x - hw + 2 + i * (hw * 2 - 4) / Math.max(1, cols - 1);
-        // Column shaft
         c.fillRect(cx2, p.y - h + 3, 1.2, h - 5);
-        // Capital (top of column)
-        c.fillRect(cx2 - .5, p.y - h + 2, 2.2, 1.5);
-        // Base
-        c.fillRect(cx2 - .3, p.y + hh - 2, 1.8, 1);
       }
       c.globalAlpha = 1;
     }
-    // Large vault door on ground floor
-    if (s < 3) {
-      const vx = p.x - hw / 2, vy = p.y + hh - 5;
-      c.fillStyle = '#FFE066'; c.globalAlpha = .12;
-      c.beginPath(); c.arc(vx, vy + 1, 3, Math.PI, 0); c.fill();
-      c.fillRect(vx - 3, vy + 1, 6, 3);
-      c.strokeStyle = '#FFE066'; c.globalAlpha = .2; c.lineWidth = .5;
-      c.beginPath(); c.arc(vx, vy + 1, 3, Math.PI, 0); c.stroke();
-      // Vault dial
-      c.beginPath(); c.arc(vx, vy + 1, 1, 0, 6.28); c.stroke();
-      c.globalAlpha = 1;
-    }
     // Gold trim bands
-    c.fillStyle = '#FFE066'; c.globalAlpha = .15;
+    c.fillStyle = '#FFE066'; c.globalAlpha = .12;
     c.fillRect(p.x - hw + .5, p.y - h + 1.5, hw * 2 - 1, 1.5);
     c.fillRect(p.x - hw + .5, p.y + hh - 1, hw * 2 - 1, 1);
-    // Pediment (triangular top) for tall buildings
-    if (h > 25) {
-      c.fillStyle = '#FFE066'; c.globalAlpha = .08;
-      c.beginPath(); c.moveTo(p.x - hw + 1, p.y - h + 1);
-      c.lineTo(p.x, p.y - h - 5); c.lineTo(p.x + hw - 1, p.y - h + 1); c.closePath(); c.fill();
-      c.strokeStyle = '#FFE066'; c.globalAlpha = .15; c.lineWidth = .4;
-      c.beginPath(); c.moveTo(p.x - hw + 1, p.y - h + 1);
-      c.lineTo(p.x, p.y - h - 5); c.lineTo(p.x + hw - 1, p.y - h + 1); c.stroke();
-      c.globalAlpha = 1;
-    }
     c.globalAlpha = 1;
   }
 
   else if (d === 'parallel') {
-    // === SPEED/PIPELINE DISTRICT — motion lines, energy beams, futuristic ===
-    // Dense horizontal speed lines across facade
-    c.strokeStyle = '#B8A9FF'; c.lineWidth = .5;
-    for (let i = 0; i < 6; i++) {
-      const ly = p.y - h + 4 + i * h * .15;
-      const lw = hw * (.5 + Math.sin(t * 4 + i * 1.3 + off) * .4);
-      const la = .12 + Math.sin(t * 3 + i + off) * .08;
-      c.globalAlpha = la;
-      c.beginPath(); c.moveTo(p.x - hw + .5, ly); c.lineTo(p.x - hw + .5 + lw, ly); c.stroke();
-      // Mirror on right face
-      c.beginPath(); c.moveTo(p.x + hw - .5, ly + 1); c.lineTo(p.x + hw - .5 - lw * .7, ly + 1); c.stroke();
+    // Speed lines (4, combined path)
+    c.strokeStyle = '#B8A9FF'; c.lineWidth = .4; c.globalAlpha = .15;
+    c.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const ly = p.y - h + 5 + i * h * .2;
+      const lw = hw * (.5 + Math.sin(t * 3 + i * 1.3 + off) * .3);
+      c.moveTo(p.x - hw + .5, ly); c.lineTo(p.x - hw + .5 + lw, ly);
     }
-    c.globalAlpha = 1;
-    // Large pipeline connector on roof
-    if (h > 18) {
-      c.fillStyle = '#836EF9'; c.globalAlpha = .2;
-      c.fillRect(p.x - 1.5, p.y - h - hh - 5, 3, 6);
-      c.fillStyle = '#B8A9FF'; c.globalAlpha = .35;
-      c.beginPath(); c.arc(p.x, p.y - h - hh - 5, 2.5, 0, 6.28); c.fill();
-      // Pulsing energy ring
-      const er = 2.5 + Math.sin(t * 3 + off) * .5;
-      c.strokeStyle = '#836EF9'; c.globalAlpha = .3; c.lineWidth = .6;
-      c.beginPath(); c.arc(p.x, p.y - h - hh - 5, er, 0, 6.28); c.stroke();
+    c.stroke(); c.globalAlpha = 1;
+    // Pipeline on roof
+    if (h > 20) {
+      c.fillStyle = '#836EF9'; c.globalAlpha = .18;
+      c.fillRect(p.x - 1, p.y - h - hh - 4, 2, 5);
+      c.globalAlpha = .3; c.beginPath(); c.arc(p.x, p.y - h - hh - 4, 2, 0, 6.28); c.fill();
       c.globalAlpha = 1;
     }
-    // Purple accent edges
-    c.strokeStyle = '#836EF9'; c.globalAlpha = .12 + Math.sin(t * 2 + off) * .06;
-    c.lineWidth = .6;
-    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h); c.stroke();
-    c.beginPath(); c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
+    // Purple edges
+    c.strokeStyle = '#836EF9'; c.globalAlpha = .12; c.lineWidth = .5;
+    c.beginPath(); c.moveTo(p.x - hw, p.y); c.lineTo(p.x - hw, p.y - h);
+    c.moveTo(p.x + hw, p.y); c.lineTo(p.x + hw, p.y - h); c.stroke();
     c.globalAlpha = 1;
   }
 }
@@ -845,47 +670,20 @@ function dAir(c, a, t, W, H) {
   const fade = edgeF(a.gx || GR / 2, a.gy || GR / 2);
   if (a.tp === 'plane') {
     a.gx += a.dx; a.gy += a.dy;
-    if (a.gx > GR + 2) a.gx = -2; if (a.gx < -2) a.gx = GR + 2;
-    if (a.gy > GR + 2) a.gy = -2; if (a.gy < -2) a.gy = GR + 2;
+    if (a.gx > GR + 1) a.gx = -1; if (a.gx < -1) a.gx = GR + 1;
+    if (a.gy > GR + 1) a.gy = -1; if (a.gy < -1) a.gy = GR + 1;
     const p = iso(a.gx - G2, a.gy - G2, W, H); const alt = a.alt; const bob = Math.sin(t + a.bk) * 2;
     const x = p.x, y = p.y - alt + bob; const al = Math.min(1, fade * 1.5); if (al < .02) return;
-    // Shadow
-    c.globalAlpha = al * .25;
-    c.fillStyle = 'rgba(0,0,0,.08)'; c.beginPath(); c.ellipse(p.x, p.y, 10, 4, 0, 0, 6.28); c.fill();
+    c.globalAlpha = al * .35;
+    c.fillStyle = 'rgba(0,0,0,.06)'; c.beginPath(); c.ellipse(p.x, p.y, 5, 2, 0, 0, 6.28); c.fill();
     const hz = a.dx !== 0; const dir = hz ? (a.dx > 0 ? 1 : -1) : (a.dy > 0 ? 1 : -1);
-    c.globalAlpha = al * .5; c.fillStyle = 'rgba(160,185,220,1)';
-    if (hz) {
-      // Fuselage — 2.5x bigger
-      c.fillRect(x - 15, y - 1, 30, 4);
-      // Wings
-      c.fillRect(x - 4, y - 8, 8, 18);
-      // Tail
-      c.fillRect(x - (dir > 0 ? 14 : -6), y - 5, 5, 10);
-      // Tail fin
-      c.fillStyle = 'rgba(140,160,200,.4)';
-      c.beginPath(); c.moveTo(x + dir * -14, y - 1); c.lineTo(x + dir * -16, y - 6); c.lineTo(x + dir * -12, y - 1); c.closePath(); c.fill();
-      // Engine pods
-      c.fillStyle = 'rgba(100,120,160,.5)';
-      c.fillRect(x - 2, y - 5, 3, 2); c.fillRect(x - 2, y + 5, 3, 2);
-    } else {
-      c.fillRect(x - 2, y - 15, 4, 30);
-      c.fillRect(x - 9, y - 4, 18, 8);
-      c.fillRect(x - 5, y - (dir > 0 ? 14 : -6), 10, 5);
-      c.fillStyle = 'rgba(140,160,200,.4)';
-      c.beginPath(); c.moveTo(x - 1, y + dir * -14); c.lineTo(x - 6, y + dir * -16); c.lineTo(x - 1, y + dir * -12); c.closePath(); c.fill();
-      c.fillStyle = 'rgba(100,120,160,.5)';
-      c.fillRect(x - 5, y - 2, 2, 3); c.fillRect(x + 5, y - 2, 2, 3);
-    }
-    // Nav lights
-    if (Math.sin(t * 3 + a.bk) > .3) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(x - (hz ? dir * 14 : 0), y - (hz ? 0 : dir * 14), 1.2, 0, 6.28); c.fill(); }
-    c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(x + (hz ? dir * 14 : 0), y + (hz ? 1 : dir * 14), 1, 0, 6.28); c.fill();
-    // Wingtip lights
-    c.fillStyle = '#FF3366'; c.globalAlpha = al * .4;
-    if (hz) { c.beginPath(); c.arc(x, y - 8, .7, 0, 6.28); c.fill(); c.fillStyle = '#00FF88'; c.beginPath(); c.arc(x, y + 10, .7, 0, 6.28); c.fill(); }
-    else { c.beginPath(); c.arc(x - 9, y, .7, 0, 6.28); c.fill(); c.fillStyle = '#00FF88'; c.beginPath(); c.arc(x + 9, y, .7, 0, 6.28); c.fill(); }
-    // Contrail
-    c.strokeStyle = `rgba(200,200,255,${.06 * al})`; c.lineWidth = .8; c.beginPath();
-    c.moveTo(x - (hz ? dir * 15 : 0), y - (hz ? 0 : dir * 15)); c.lineTo(x - (hz ? dir * 50 : 0), y - (hz ? 0 : dir * 50) + 2); c.stroke();
+    c.globalAlpha = al * .4; c.fillStyle = 'rgba(140,170,210,1)';
+    if (hz) { c.fillRect(x - 6, y, 12, 2); c.fillRect(x - 2, y - 3, 4, 8); c.fillRect(x - (dir > 0 ? 6 : -2), y - 2, 2.5, 4.5); }
+    else { c.fillRect(x - 1, y - 6, 2, 12); c.fillRect(x - 4, y - 2, 8, 4); c.fillRect(x - 2.2, y - (dir > 0 ? 6 : -2), 4.5, 2.5); }
+    if (Math.sin(t * 3 + a.bk) > .3) { c.fillStyle = '#FF3366'; c.beginPath(); c.arc(x - (hz ? (dir > 0 ? 6 : 0) : 0), y - (hz ? 0 : (dir > 0 ? 6 : 0)), .8, 0, 6.28); c.fill(); }
+    c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(x + (hz ? (dir > 0 ? 6 : 0) : 0), y + (hz ? 1 : (dir > 0 ? 0 : 6)), .7, 0, 6.28); c.fill();
+    c.strokeStyle = `rgba(200,200,255,${.04 * al})`; c.lineWidth = .5; c.beginPath();
+    c.moveTo(x - (hz ? dir * 6 : 0), y - (hz ? 0 : dir * 6)); c.lineTo(x - (hz ? dir * 35 : 0), y - (hz ? 0 : dir * 35) + 1); c.stroke();
     c.globalAlpha = 1;
   } else if (a.tp === 'ufo') {
     a.gx = a.ogx + Math.sin(t * .18 + a.bk) * 5; a.gy = a.ogy + Math.cos(t * .13 + a.bk) * 5;
@@ -907,29 +705,18 @@ function dAir(c, a, t, W, H) {
     if (Math.sin(t * 4) > .3) { c.fillStyle = '#FF3366'; c.globalAlpha = al; c.beginPath(); c.arc(x, y + 2, .6, 0, 6.28); c.fill(); }
     c.globalAlpha = 1;
   } else if (a.tp === 'drone') {
-    // Small delivery/surveillance drones — hover and patrol
     a.gx = a.ogx + Math.sin(t * .4 + a.bk) * 3;
     a.gy = a.ogy + Math.cos(t * .3 + a.bk * 1.5) * 3;
     const p = iso(a.gx - G2, a.gy - G2, W, H); const alt = a.alt;
     const x = p.x, y = p.y - alt + Math.sin(t * 2 + a.bk) * 1.5;
     const al = Math.min(1, fade * 1.5); if (al < .02) return;
-    // Shadow
-    c.fillStyle = 'rgba(0,0,0,.04)'; c.globalAlpha = al; c.beginPath(); c.ellipse(p.x, p.y, 3, 1.2, 0, 0, 6.28); c.fill();
-    c.globalAlpha = al * .5;
-    // Body
-    c.fillStyle = '#222244'; c.fillRect(x - 2, y - .5, 4, 1.5);
-    // Arms
-    c.fillStyle = '#333355'; c.fillRect(x - 4.5, y, 9, .5); c.fillRect(x - .25, y - 3, .5, 6);
-    // Rotors (spinning)
-    const rA = t * 20;
-    c.strokeStyle = a.col; c.globalAlpha = al * .3; c.lineWidth = .4;
-    for (let r = 0; r < 4; r++) {
-      const rx = x + [-4, 4, -4, 4][r] * .9, ry = y + [-2.5, -2.5, 2.5, 2.5][r];
-      c.beginPath(); c.moveTo(rx - 2.5 * Math.cos(rA + r), ry); c.lineTo(rx + 2.5 * Math.cos(rA + r), ry); c.stroke();
-    }
-    // LED light
-    c.fillStyle = a.col; c.globalAlpha = al * (.4 + Math.sin(t * 5 + a.bk) * .2);
-    c.beginPath(); c.arc(x, y + 1.5, .6, 0, 6.28); c.fill();
+    c.globalAlpha = al * .45;
+    // Body + arms
+    c.fillStyle = '#333355'; c.fillRect(x - 4, y - .25, 8, .5); c.fillRect(x - .25, y - 2.5, .5, 5);
+    c.fillStyle = '#222244'; c.fillRect(x - 1.5, y - .5, 3, 1.2);
+    // LED
+    c.fillStyle = a.col; c.globalAlpha = al * .4;
+    c.fillRect(x - .5, y + 1, 1, 1);
     c.globalAlpha = 1;
   } else if (a.tp === 'blimp') {
     a.gx += a.dx; if (a.gx > GR + 10) a.gx = -10;
