@@ -16,8 +16,6 @@ import Notepad from '../windows/Notepad';
 import RecycleBin from '../windows/RecycleBin';
 import NxtWallet from '../windows/NxtWallet';
 import CorpWars from '../windows/CorpWars';
-import NetWatch from './programs/netwatch/NetWatch';
-import PharosSDK from './programs/pharos-sdk/PharosSDK';
 import NadWatch from './programs/nadwatch/NadWatch';
 import Parallax from './programs/parallax/Parallax';
 import MonadSDK from './programs/monad-sdk/MonadSDK';
@@ -41,8 +39,6 @@ const WINDOW_COMPONENTS = {
   'notepad': Notepad,
   'recycle-bin': RecycleBin,
   'corp-wars': CorpWars,
-  'netwatch': NetWatch,
-  'pharos-sdk': PharosSDK,
   'nadwatch': NadWatch,
   'parallax': Parallax,
   'monad-sdk': MonadSDK,

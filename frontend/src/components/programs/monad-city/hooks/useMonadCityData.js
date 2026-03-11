@@ -3,21 +3,31 @@ import { useMonadRPC } from '../../nadwatch/hooks/useMonadRPC';
 
 export function useMonadCityData() {
   const rpc = useMonadRPC();
-  const [price, setPrice] = useState({ usd: 0.0207, change: -2.82, mcap: 229, vol: 35.5 });
+  const [price, setPrice] = useState({
+    usd: 0.0207, change: -2.82, mcap: 229, vol: 35.5,
+    fdv: null, circulating: null, total: null, ath: null, athChange: null, rank: null,
+  });
   const fetchRef = useRef(null);
 
   const fetchPrice = useCallback(async () => {
     try {
       const r = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true'
+        'https://api.coingecko.com/api/v3/coins/monad?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false'
       );
       const d = await r.json();
-      if (d.monad) {
+      if (d.market_data) {
+        const md = d.market_data;
         setPrice({
-          usd: d.monad.usd || 0.0207,
-          change: d.monad.usd_24h_change || -2.82,
-          mcap: Math.round((d.monad.usd_market_cap || 229e6) / 1e6),
-          vol: Math.round((d.monad.usd_24h_vol || 35.5e6) / 1e6 * 10) / 10,
+          usd: md.current_price?.usd || 0.0207,
+          change: md.price_change_percentage_24h || -2.82,
+          mcap: Math.round((md.market_cap?.usd || 229e6) / 1e6),
+          vol: Math.round((md.total_volume?.usd || 35.5e6) / 1e6 * 10) / 10,
+          fdv: md.fully_diluted_valuation?.usd ? Math.round(md.fully_diluted_valuation.usd / 1e6) : null,
+          circulating: md.circulating_supply ? Math.round(md.circulating_supply / 1e6) : null,
+          total: md.total_supply ? Math.round(md.total_supply / 1e6) : null,
+          ath: md.ath?.usd || null,
+          athChange: md.ath_change_percentage?.usd || null,
+          rank: d.market_cap_rank || null,
         });
       }
     } catch { /* silent */ }

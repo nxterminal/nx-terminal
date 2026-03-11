@@ -168,6 +168,9 @@
   z-index: 1;
   position: relative;
   transition: opacity 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .flow-placeholder {
@@ -826,7 +829,9 @@
 .flow-ai-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
 }
 
 .flow-ai-messages {

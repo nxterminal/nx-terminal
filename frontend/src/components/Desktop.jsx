@@ -23,8 +23,6 @@ const DESKTOP_ICONS = [
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'netwatch', icon: '', label: 'NETWATCH' },
-  { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
   { id: 'flow', icon: '\u25C6', label: 'FLOW.exe' },
   { id: 'nadwatch', icon: '', label: 'NADWATCH' },
   { id: 'parallax', icon: '', label: 'PARALLAX' },

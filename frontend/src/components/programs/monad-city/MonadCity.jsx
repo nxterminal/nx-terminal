@@ -1316,6 +1316,13 @@ export default function MonadCity() {
               <div><div className="mc-label">BLOCK</div><span className="mc-block-num">#{blockNumber.toLocaleString()}</span></div>
             </div>
             <div className="mc-meta">MCAP ${price.mcap}M &middot; VOL ${price.vol}M</div>
+            <div className="mc-meta-ext">
+              {price.fdv != null && <div className="mc-meta-row"><span className="mc-label">FDV</span><span>${price.fdv}M</span></div>}
+              {price.circulating != null && <div className="mc-meta-row"><span className="mc-label">CIRC</span><span>{price.circulating}M</span></div>}
+              {price.total != null && <div className="mc-meta-row"><span className="mc-label">SUPPLY</span><span>{price.total}M</span></div>}
+              {price.ath != null && <div className="mc-meta-row"><span className="mc-label">ATH</span><span>${price.ath.toFixed(4)} <span className="mc-change down">({price.athChange?.toFixed(1)}%)</span></span></div>}
+              {price.rank != null && <div className="mc-meta-row"><span className="mc-label">RANK</span><span>#{price.rank}</span></div>}
+            </div>
           </div>
 
           {/* Block Stats Panel */}
