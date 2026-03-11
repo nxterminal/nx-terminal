@@ -971,9 +971,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(139,92,246,0.2);
   flex-shrink: 0;
+  background: rgba(139,92,246,0.05);
 }
 
 .flow-ai-nav__back {
@@ -993,6 +994,28 @@
   background: rgba(139,92,246,0.25);
   border-color: rgba(139,92,246,0.5);
   color: #fff;
+}
+
+.flow-ai-nav__back-main {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(139,92,246,0.6);
+  background: rgba(139,92,246,0.2);
+  color: #E0D4FF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.flow-ai-nav__back-main:hover {
+  background: rgba(139,92,246,0.4);
+  border-color: rgba(139,92,246,0.8);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(139,92,246,0.3);
 }
 
 .flow-ai-nav__links {
