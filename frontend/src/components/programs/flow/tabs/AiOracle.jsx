@@ -166,8 +166,8 @@ export default function AiOracle({ market, onNavigate }) {
     <div className="flow-ai-container">
       {/* NAV BAR */}
       <div className="flow-ai-nav">
-        <button className="flow-ai-nav__back" onClick={() => onNavigate?.('stream')}>
-          &larr; Back
+        <button className="flow-ai-nav__back-main" onClick={() => onNavigate?.('stream')}>
+          &#9666; BACK TO FLOW MENU
         </button>
         <div className="flow-ai-nav__links">
           <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('stream')}>
