@@ -48,3 +48,33 @@
   gap: 12px;
   font-family: system-ui, sans-serif;
 }
+
+/* NFTGate full-height within window */
+.dev-academy-root > div:first-child:not(.da-nav) {
+  min-height: 100%;
+}
+
+/* Smooth fade-in for lesson transitions */
+.dev-academy-root > div {
+  animation: da-fadein 0.25s ease-out;
+}
+
+@keyframes da-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Textarea focus style */
+.dev-academy-root textarea:focus {
+  border-color: #334155 !important;
+}
+
+/* Input focus style for fill-blank */
+.dev-academy-root input:focus {
+  border-color: #3b82f6 !important;
+}
+
+/* Button hover helpers */
+.dev-academy-root button:active:not(:disabled) {
+  transform: scale(0.98);
+}
