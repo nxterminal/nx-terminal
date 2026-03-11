@@ -23,12 +23,12 @@ const DESKTOP_ICONS = [
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'flow', icon: '\u25C6', label: 'FLOW.exe' },
-  { id: 'nadwatch', icon: '', label: 'NADWATCH' },
-  { id: 'parallax', icon: '', label: 'PARALLAX' },
-  { id: 'monad-sdk', icon: '', label: 'MONAD SDK' },
-  { id: 'monad-city', icon: '', label: 'MONAD CITY' },
-  { id: 'dev-academy', icon: 'DA', label: 'DEV_ACADEMY' },
+  { id: 'flow', icon: '\u25C6', label: 'Flow' },
+  { id: 'nadwatch', icon: '', label: 'Nadwatch' },
+  { id: 'parallax', icon: '', label: 'Parallax' },
+  { id: 'monad-sdk', icon: '', label: 'Monad SDK' },
+  { id: 'monad-city', icon: '', label: 'Monad City' },
+  { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
 ];
 
 function getWallpaperStyle() {

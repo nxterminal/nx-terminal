@@ -700,11 +700,10 @@ function IconDevAcademy({ size = 32 }) {
       <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#daScreenGrad)" />
       {/* Green accent bar at top of screen */}
       <rect x="5" y="4" width="22" height="2" rx="1" fill="url(#daAccent)" opacity="0.9" />
-      {/* "DA" text centered on screen */}
-      <text x="16" y="14.5" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#f1f5f9" fontFamily="monospace" letterSpacing="-0.5">DA</text>
-      {/* Code angle brackets */}
-      <text x="8" y="14.5" textAnchor="middle" fontSize="5" fill="#10b981" fontFamily="monospace" opacity="0.7">&lt;</text>
-      <text x="24" y="14.5" textAnchor="middle" fontSize="5" fill="#10b981" fontFamily="monospace" opacity="0.7">&gt;</text>
+      {/* "NX" text centered on screen */}
+      <text x="16" y="11" textAnchor="middle" fontSize="5.5" fontWeight="bold" fill="#10b981" fontFamily="monospace">NX</text>
+      {/* "dev" subtitle */}
+      <text x="16" y="16.5" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#f1f5f9" fontFamily="monospace" letterSpacing="-0.3">dev</text>
       {/* Monitor chin */}
       <circle cx="16" cy="20.5" r="0.7" fill="#10b981" />
       {/* Stand */}
