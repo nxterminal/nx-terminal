@@ -25,7 +25,7 @@ const WINDOW_DEFAULTS = {
   'parallax': { title: 'PARALLAX.exe', icon: '||', width: 1060, height: 720, x: 40, y: 20, maximized: true },
   'monad-sdk': { title: 'MONAD_SDK.exe', icon: '</>', width: 880, height: 700, x: 120, y: 30 },
   'monad-city': { title: 'MONAD_CITY.exe', icon: '', width: 1000, height: 700, x: 40, y: 20 },
-  'flow': { title: 'FLOW.exe', icon: '\u25C6', width: 1100, height: 750, x: 30, y: 15 },
+  'flow': { title: 'FLOW.exe', icon: '\u25C6', width: 1100, height: 750, x: 30, y: 15, maximized: true },
 };
 
 export function useWindowManager() {

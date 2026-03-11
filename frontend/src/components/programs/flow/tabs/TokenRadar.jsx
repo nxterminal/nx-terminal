@@ -1,6 +1,7 @@
-import { COLORS, PROTOCOLS } from '../constants';
+import { COLORS, PROTOCOLS, TOOLTIPS } from '../constants';
 import { useTokenRadar } from '../hooks/useTokenRadar';
 import ProtocolBadge from '../components/ProtocolBadge';
+import Tooltip from '../components/Tooltip';
 
 function formatUsd(val) {
   if (val >= 1e6) return '$' + (val / 1e6).toFixed(2) + 'M';
@@ -95,6 +96,7 @@ export default function TokenRadar() {
               </div>
             </div>
 
+            <Tooltip text={TOOLTIPS.safetyScore}>
             <div className="flow-token-card__right">
               <div className="flow-token-card__score-label">SCORE</div>
               <div className="flow-token-card__score" style={{ color: scoreColor(token.score) }}>
@@ -107,6 +109,7 @@ export default function TokenRadar() {
                 />
               </div>
             </div>
+            </Tooltip>
           </div>
         ))}
       </div>

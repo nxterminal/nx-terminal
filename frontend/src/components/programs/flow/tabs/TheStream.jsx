@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { PROTOCOLS, COLORS } from '../constants';
+import { PROTOCOLS, COLORS, TOOLTIPS } from '../constants';
 import ProtocolBadge from '../components/ProtocolBadge';
+import Tooltip from '../components/Tooltip';
 
 const SIDE_FILTERS = [
   { value: 'all', label: 'ALL' },
@@ -159,7 +160,9 @@ export default function TheStream({ streamFilters, setStreamFilter, isPaused, to
             <ProtocolBadge protocol={trade.protocol} />
 
             {trade.isWhale && (
-              <span className="flow-trade-item__whale-badge">🐋 WHALE</span>
+              <Tooltip text={TOOLTIPS.whale}>
+                <span className="flow-trade-item__whale-badge">🐋 WHALE</span>
+              </Tooltip>
             )}
 
             <span className="flow-trade-item__value">
