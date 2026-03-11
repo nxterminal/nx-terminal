@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { TABS, COLORS } from './constants';
+import { useState, useEffect, useRef } from 'react';
+import { TABS, COLORS, TOOLTIPS } from './constants';
 import { useFlowState } from './hooks/useFlowState';
 import { useMarketData } from './hooks/useMarketData';
 import { useStreamData } from './hooks/useStreamData';
 import StatusDot from './components/StatusDot';
+import Tooltip from './components/Tooltip';
 import TheStream from './tabs/TheStream';
 import WalletXRay from './tabs/WalletXRay';
 import TokenRadar from './tabs/TokenRadar';
 import ClobVision from './tabs/ClobVision';
 import AiOracle from './tabs/AiOracle';
+import HelpGuide from './tabs/HelpGuide';
 import './Flow.css';
 
 const TAB_COMPONENTS = {
@@ -17,6 +19,16 @@ const TAB_COMPONENTS = {
   radar: TokenRadar,
   clob: ClobVision,
   ai: AiOracle,
+  help: HelpGuide,
+};
+
+const TAB_TOOLTIPS = {
+  stream: TOOLTIPS.theStream,
+  wallet: TOOLTIPS.walletXray,
+  radar: TOOLTIPS.tokenRadar,
+  clob: TOOLTIPS.clobVision,
+  ai: TOOLTIPS.aiOracle,
+  help: 'User guide and documentation for FLOW.exe',
 };
 
 const BOOT_LINES = [
@@ -173,30 +185,40 @@ export default function Flow({ onClose }) {
         </div>
 
         <div className="flow-header__center">
-          <span className="flow-header__stat">
-            <StatusDot status={connectionStatus} />
-            <span style={{ color: market.isConnected ? COLORS.accent : COLORS.danger, marginLeft: 6 }}>
-              {market.isConnected ? 'LIVE' : 'OFFLINE'}
+          <Tooltip text="Connection status to Monad RPC node">
+            <span className="flow-header__stat">
+              <StatusDot status={connectionStatus} />
+              <span style={{ color: market.isConnected ? COLORS.accent : COLORS.danger, marginLeft: 6 }}>
+                {market.isConnected ? 'LIVE' : 'OFFLINE'}
+              </span>
             </span>
-          </span>
+          </Tooltip>
           <span className="flow-header__dot">&middot;</span>
-          <span className="flow-header__stat">
-            TPS <span className="flow-header__val">{formatNumber(market.tps)}</span>
-          </span>
-          <span className="flow-header__dot">&middot;</span>
-          <span className="flow-header__stat">
-            Block <span className="flow-header__val">#{formatNumber(market.blockNumber)}</span>
-          </span>
-          <span className="flow-header__dot">&middot;</span>
-          <span className="flow-header__stat">
-            MON <span className="flow-header__val" style={{ color: changeColor }}>
-              {formatPrice(market.monPrice)}
+          <Tooltip text={TOOLTIPS.tps}>
+            <span className="flow-header__stat">
+              TPS <span className="flow-header__val">{formatNumber(market.tps)}</span>
             </span>
-          </span>
+          </Tooltip>
           <span className="flow-header__dot">&middot;</span>
-          <span className="flow-header__stat">
-            Gas <span className="flow-header__val">{market.gasPrice ? market.gasPrice.toFixed(4) : '--'}</span>
-          </span>
+          <Tooltip text={TOOLTIPS.block}>
+            <span className="flow-header__stat">
+              Block <span className="flow-header__val">#{formatNumber(market.blockNumber)}</span>
+            </span>
+          </Tooltip>
+          <span className="flow-header__dot">&middot;</span>
+          <Tooltip text={TOOLTIPS.monPrice}>
+            <span className="flow-header__stat">
+              MON <span className="flow-header__val" style={{ color: changeColor }}>
+                {formatPrice(market.monPrice)}
+              </span>
+            </span>
+          </Tooltip>
+          <span className="flow-header__dot">&middot;</span>
+          <Tooltip text={TOOLTIPS.gas}>
+            <span className="flow-header__stat">
+              Gas <span className="flow-header__val">{market.gasPrice ? market.gasPrice.toFixed(4) : '--'}</span>
+            </span>
+          </Tooltip>
         </div>
 
         <div className="flow-header__right">
@@ -207,18 +229,19 @@ export default function Flow({ onClose }) {
       {/* TAB BAR */}
       <div className="flow-tabs">
         {TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`flow-tab ${activeTab === tab.id ? 'flow-tab--active' : ''}`}
-            onClick={() => setTab(tab.id)}
-          >
-            {tab.label}
-            {tab.id === 'stream' && unseenTrades > 0 && activeTab !== 'stream' && (
-              <span className="flow-tab__badge">
-                {unseenTrades > 99 ? '99+' : unseenTrades}
-              </span>
-            )}
-          </button>
+          <Tooltip key={tab.id} text={TAB_TOOLTIPS[tab.id]}>
+            <button
+              className={`flow-tab ${activeTab === tab.id ? 'flow-tab--active' : ''}`}
+              onClick={() => setTab(tab.id)}
+            >
+              {tab.label}
+              {tab.id === 'stream' && unseenTrades > 0 && activeTab !== 'stream' && (
+                <span className="flow-tab__badge">
+                  {unseenTrades > 99 ? '99+' : unseenTrades}
+                </span>
+              )}
+            </button>
+          </Tooltip>
         ))}
       </div>
 

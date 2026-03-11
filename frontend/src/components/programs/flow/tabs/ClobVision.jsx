@@ -1,6 +1,7 @@
-import { COLORS, PROTOCOLS } from '../constants';
+import { COLORS, PROTOCOLS, TOOLTIPS } from '../constants';
 import { useClobData } from '../hooks/useClobData';
 import ProtocolBadge from '../components/ProtocolBadge';
+import Tooltip from '../components/Tooltip';
 
 function formatPrice(p) {
   if (p == null || isNaN(p)) return '--';
@@ -65,7 +66,7 @@ export default function ClobVision() {
           )}
         </div>
         <div className="flow-clob-header__right">
-          <span>Spread <span style={{ color: COLORS.accent }}>{stats.spread.toFixed(3)}%</span></span>
+          <Tooltip text={TOOLTIPS.spread}><span>Spread <span style={{ color: COLORS.accent }}>{stats.spread.toFixed(3)}%</span></span></Tooltip>
           <span style={{ color: COLORS.textMuted }}>·</span>
           <span>Vol <span style={{ color: '#fff' }}>{formatUsd(stats.volume24h)}</span></span>
         </div>

@@ -634,29 +634,29 @@ function IconFlow({ size = 32 }) {
           <stop offset="0%" stopColor="#0D1117" />
           <stop offset="100%" stopColor="#161B22" />
         </linearGradient>
-        <linearGradient id="flowGreen" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22C55E" />
-          <stop offset="100%" stopColor="#16A34A" />
+        <linearGradient id="flowPurple" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#A78BFA" />
+          <stop offset="100%" stopColor="#7C3AED" />
         </linearGradient>
         <linearGradient id="flowDiamond" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#34D399" />
-          <stop offset="50%" stopColor="#22C55E" />
-          <stop offset="100%" stopColor="#059669" />
+          <stop offset="0%" stopColor="#C4B5FD" />
+          <stop offset="50%" stopColor="#8B5CF6" />
+          <stop offset="100%" stopColor="#6D28D9" />
         </linearGradient>
       </defs>
       {/* Background rounded square */}
-      <rect x="1" y="1" width="30" height="30" rx="4" fill="url(#flowBg)" stroke="#22C55E" strokeWidth="0.6" opacity="0.9" />
+      <rect x="1" y="1" width="30" height="30" rx="4" fill="url(#flowBg)" stroke="#8B5CF6" strokeWidth="0.6" opacity="0.9" />
       {/* Flowing data streams — 3 horizontal lines with moving dots */}
-      <line x1="4" y1="10" x2="28" y2="10" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
-      <line x1="4" y1="16" x2="28" y2="16" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
-      <line x1="4" y1="22" x2="28" y2="22" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
+      <line x1="4" y1="10" x2="28" y2="10" stroke="#8B5CF6" strokeWidth="0.4" opacity="0.2" />
+      <line x1="4" y1="16" x2="28" y2="16" stroke="#8B5CF6" strokeWidth="0.4" opacity="0.2" />
+      <line x1="4" y1="22" x2="28" y2="22" stroke="#8B5CF6" strokeWidth="0.4" opacity="0.2" />
       {/* Stream pulses */}
-      <circle cx="8" cy="10" r="1" fill="#22C55E" opacity="0.6" />
-      <circle cx="14" cy="10" r="0.7" fill="#22C55E" opacity="0.4" />
-      <circle cx="22" cy="10" r="1.2" fill="#22C55E" opacity="0.7" />
-      <circle cx="11" cy="22" r="0.8" fill="#22C55E" opacity="0.5" />
-      <circle cx="20" cy="22" r="1" fill="#22C55E" opacity="0.6" />
-      <circle cx="26" cy="22" r="0.6" fill="#22C55E" opacity="0.3" />
+      <circle cx="8" cy="10" r="1" fill="#A78BFA" opacity="0.6" />
+      <circle cx="14" cy="10" r="0.7" fill="#8B5CF6" opacity="0.4" />
+      <circle cx="22" cy="10" r="1.2" fill="#C4B5FD" opacity="0.7" />
+      <circle cx="11" cy="22" r="0.8" fill="#A78BFA" opacity="0.5" />
+      <circle cx="20" cy="22" r="1" fill="#8B5CF6" opacity="0.6" />
+      <circle cx="26" cy="22" r="0.6" fill="#C4B5FD" opacity="0.3" />
       {/* Center diamond — the FLOW symbol */}
       <g transform="translate(16,16) rotate(45)">
         <rect x="-5" y="-5" width="10" height="10" rx="1.5" fill="url(#flowDiamond)" opacity="0.9" />
@@ -672,7 +672,7 @@ function IconFlow({ size = 32 }) {
       <rect x="3" y="3" width="3" height="1.5" rx="0.5" fill="#22C55E" opacity="0.7" />
       <rect x="26" y="3" width="3" height="1.5" rx="0.5" fill="#EF4444" opacity="0.7" />
       {/* Bottom bar — mini chart */}
-      <polyline points="4,27 7,25.5 10,26.5 13,24 16,25 19,23 22,24.5 25,22.5 28,24" fill="none" stroke="url(#flowGreen)" strokeWidth="0.8" opacity="0.7" />
+      <polyline points="4,27 7,25.5 10,26.5 13,24 16,25 19,23 22,24.5 25,22.5 28,24" fill="none" stroke="url(#flowPurple)" strokeWidth="0.8" opacity="0.7" />
     </svg>
   );
 }

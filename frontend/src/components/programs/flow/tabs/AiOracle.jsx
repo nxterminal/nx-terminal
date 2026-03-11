@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { COLORS } from '../constants';
 
-const SYSTEM_MSG = {
-  role: 'system',
-  text: 'FLOW AI Oracle online. I analyze real-time Monad DeFi data — ask me about tokens, pools, wallets, or market conditions. Try: "What are the trending pools?" or "Is MON bullish?"',
-};
+const QUICK_ACTIONS = [
+  'What are the trending pools?',
+  'Is MON bullish?',
+  'How to spot scams?',
+  'What is the gas fee?',
+  'Tell me about Kuru',
+  'How does Wallet X-Ray work?',
+];
 
-// Local AI responses based on market data context
 function generateResponse(query, market) {
   const q = query.toLowerCase();
 
@@ -43,8 +46,21 @@ function generateResponse(query, market) {
   return `Based on current Monad metrics:\n\n• MON: $${market?.monPrice?.toFixed(4) || '--'} (${market?.monChange24h > 0 ? '+' : ''}${market?.monChange24h?.toFixed(2) || '--'}%)\n• Network: ${market?.tps || '--'} TPS at block #${(market?.blockNumber || 0).toLocaleString()}\n• Gas: ${(market?.gasPrice || 0).toFixed(4)} Gwei\n\nFor more specific analysis, try asking about trending pools, token safety, wallet analysis, or market sentiment.`;
 }
 
+function renderText(text) {
+  return text.split('\n').map((line, i, arr) => (
+    <span key={i}>
+      {line.split(/(\*\*.*?\*\*)/).map((part, j) =>
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong key={j} style={{ color: '#fff' }}>{part.slice(2, -2)}</strong>
+          : part
+      )}
+      {i < arr.length - 1 && <br />}
+    </span>
+  ));
+}
+
 export default function AiOracle({ market }) {
-  const [messages, setMessages] = useState([{ ...SYSTEM_MSG, id: 'sys' }]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -53,9 +69,7 @@ export default function AiOracle({ market }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    const text = input.trim();
+  const sendMessage = (text) => {
     if (!text || typing) return;
 
     const userMsg = { role: 'user', text, id: 'u-' + Date.now() };
@@ -63,7 +77,6 @@ export default function AiOracle({ market }) {
     setInput('');
     setTyping(true);
 
-    // Simulate thinking delay
     setTimeout(() => {
       const response = generateResponse(text, market);
       setMessages(prev => [...prev, { role: 'ai', text: response, id: 'ai-' + Date.now() }]);
@@ -71,26 +84,45 @@ export default function AiOracle({ market }) {
     }, 800 + Math.random() * 1200);
   };
 
+  const handleSend = (e) => {
+    e.preventDefault();
+    sendMessage(input.trim());
+  };
+
   return (
     <div className="flow-ai-container">
       {/* MESSAGES */}
       <div className="flow-ai-messages">
+        {/* Welcome card always visible */}
+        <div className="flow-ai-welcome">
+          <div className="flow-ai-welcome__icon">◆</div>
+          <div className="flow-ai-welcome__title">FLOW AI Oracle</div>
+          <div className="flow-ai-welcome__desc">
+            I analyze real-time Monad DeFi data. Ask me about tokens, pools, wallets, or market conditions.
+          </div>
+          {messages.length === 0 && (
+            <div className="flow-ai-chips">
+              {QUICK_ACTIONS.map((q, i) => (
+                <button
+                  key={i}
+                  className="flow-ai-chip"
+                  onClick={() => sendMessage(q)}
+                  disabled={typing}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {messages.map(msg => (
           <div key={msg.id} className={`flow-ai-message ${msg.role === 'user' ? 'flow-ai-message--user' : ''}`}>
             <div className={`flow-ai-avatar flow-ai-avatar--${msg.role}`}>
-              {msg.role === 'ai' ? '◆' : msg.role === 'system' ? '⚙' : '▸'}
+              {msg.role === 'ai' ? '◆' : '▸'}
             </div>
             <div className={`flow-ai-bubble flow-ai-bubble--${msg.role}`}>
-              {msg.text.split('\n').map((line, i) => (
-                <span key={i}>
-                  {line.split(/(\*\*.*?\*\*)/).map((part, j) =>
-                    part.startsWith('**') && part.endsWith('**')
-                      ? <strong key={j} style={{ color: '#fff' }}>{part.slice(2, -2)}</strong>
-                      : part
-                  )}
-                  {i < msg.text.split('\n').length - 1 && <br />}
-                </span>
-              ))}
+              {renderText(msg.text)}
             </div>
           </div>
         ))}
@@ -112,7 +144,7 @@ export default function AiOracle({ market }) {
         <input
           className="flow-ai-input__field"
           type="text"
-          placeholder="Ask about Monad DeFi…"
+          placeholder="Ask about Monad DeFi..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={typing}
@@ -123,7 +155,7 @@ export default function AiOracle({ market }) {
           disabled={typing || !input.trim()}
           style={typing ? { opacity: 0.5 } : undefined}
         >
-          {typing ? '…' : 'ASK'}
+          {typing ? '...' : 'ASK'}
         </button>
       </form>
     </div>

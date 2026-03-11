@@ -21,7 +21,27 @@ export const TABS = [
   { id: 'radar',   label: 'Token Radar' },
   { id: 'clob',    label: 'CLOB Vision' },
   { id: 'ai',      label: 'AI Oracle' },
+  { id: 'help',    label: '? Help' },
 ];
+
+export const TOOLTIPS = {
+  tps: 'Transactions Per Second — measures network throughput on Monad',
+  block: 'Current block number on Monad (finality ~400ms)',
+  monPrice: 'Live MON token price from CoinGecko',
+  gas: 'Current gas price in Gwei — Monad keeps this extremely low',
+  theStream: 'Real-time trade feed from all Monad DEXs',
+  walletXray: 'Analyze any Monad wallet: balances, tokens, and activity',
+  tokenRadar: 'Pool scoring engine — rates pools 0-100 for safety',
+  clobVision: 'Live orderbook visualization for Kuru CLOB DEX',
+  aiOracle: 'Ask questions about Monad DeFi using live market data',
+  buy: 'A buy trade — someone purchased this token',
+  sell: 'A sell trade — someone sold this token',
+  whale: 'Large trade ($10K+) that may move the market',
+  protocol: 'The DEX protocol where this trade was executed',
+  safetyScore: 'Composite score 0-100 based on liquidity, volume, age, and volatility',
+  spread: 'Difference between best bid and best ask price',
+  depth: 'Total order size at each price level in the orderbook',
+};
 
 export const COLORS = {
   bg:        '#07090E',
