@@ -32,10 +32,10 @@ const TAB_TOOLTIPS = {
 };
 
 const BOOT_LINES = [
-  { text: 'FLOW.exe v1.0 — DeFi Intelligence Terminal', color: '#22C55E', delay: 0 },
+  { text: 'FLOW.exe v1.0 — DeFi Intelligence Terminal', color: '#8B5CF6', delay: 0 },
   { text: '(C) 2026 NX TERMINAL CORP', color: '#555D6B', delay: 150 },
   { text: '', delay: 300 },
-  { text: 'CONNECTING TO MONAD RPC...', color: '#22C55E', delay: 400 },
+  { text: 'CONNECTING TO MONAD RPC...', color: '#8B5CF6', delay: 400 },
   { text: '  Chain ID: 143 ................................. OK', color: '#555D6B', delay: 700 },
   { text: '  Block time: 400ms ............................. OK', color: '#555D6B', delay: 900 },
   { text: '', delay: 1050 },
@@ -46,11 +46,11 @@ const BOOT_LINES = [
   { text: '  > CLOB Vision — orderbook visualization ....... OK', color: '#555D6B', delay: 1900 },
   { text: '  > AI Oracle — intelligence layer .............. OK', color: '#555D6B', delay: 2100 },
   { text: '', delay: 2250 },
-  { text: 'INITIALIZING MARKET DATA FEEDS .................. OK', color: '#22C55E', delay: 2350 },
-  { text: 'GECKOTERMINAL API ............................... OK', color: '#22C55E', delay: 2550 },
-  { text: 'COINGECKO PRICE ORACLE .......................... OK', color: '#22C55E', delay: 2700 },
+  { text: 'INITIALIZING MARKET DATA FEEDS .................. OK', color: '#8B5CF6', delay: 2350 },
+  { text: 'GECKOTERMINAL API ............................... OK', color: '#8B5CF6', delay: 2550 },
+  { text: 'COINGECKO PRICE ORACLE .......................... OK', color: '#8B5CF6', delay: 2700 },
   { text: '', delay: 2850 },
-  { text: 'ALL SYSTEMS NOMINAL. ENTERING FLOW STATE.', color: '#22C55E', delay: 2950 },
+  { text: 'ALL SYSTEMS NOMINAL. ENTERING FLOW STATE.', color: '#8B5CF6', delay: 2950 },
 ];
 
 const BOOT_DURATION = 3400;
@@ -254,6 +254,7 @@ export default function Flow({ onClose }) {
           togglePause={togglePause}
           market={market}
           stream={stream}
+          onNavigate={setTab}
         />
       </div>
     </div>
