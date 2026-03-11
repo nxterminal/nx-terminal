@@ -825,21 +825,174 @@
   color: #555D6B;
 }
 
-/* ═══ AI ═══ */
-.flow-ai-messages {
-  flex: 1;
-  overflow: auto;
-  padding: 16px;
+/* ═══ AI FLOATING BUTTON ═══ */
+.flow-ai-fab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 5;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(139,92,246,0.5);
+  background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(109,40,217,0.4));
+  color: #E0D4FF;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(139,92,246,0.2);
 }
 
+.flow-ai-fab:hover {
+  background: linear-gradient(135deg, rgba(139,92,246,0.5), rgba(109,40,217,0.6));
+  border-color: rgba(139,92,246,0.8);
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(139,92,246,0.35);
+  transform: translateY(-1px);
+}
+
+.flow-ai-fab__icon {
+  font-size: 14px;
+  color: #A78BFA;
+}
+
+.flow-ai-fab__label {
+  letter-spacing: 1px;
+}
+
+/* ═══ AI MODAL OVERLAY ═══ */
+.flow-ai-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.flow-ai-modal {
+  display: flex;
+  flex-direction: column;
+  width: 520px;
+  max-width: 90%;
+  height: 420px;
+  max-height: 80%;
+  background: #0D1117;
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.1);
+  overflow: hidden;
+}
+
+/* MODAL HEADER */
+.flow-ai-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(139,92,246,0.15);
+  background: rgba(139,92,246,0.06);
+  flex-shrink: 0;
+}
+
+.flow-ai-modal__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-ai-modal__icon {
+  font-size: 14px;
+  color: #8B5CF6;
+}
+
+.flow-ai-modal__title {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.flow-ai-modal__badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #A78BFA;
+}
+
+.flow-ai-modal__close {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flow-ai-modal__close:hover {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.3);
+  color: #EF4444;
+}
+
+/* MODAL BODY */
+.flow-ai-modal__body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flow-ai-modal__welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 10px;
+  gap: 10px;
+}
+
+.flow-ai-modal__welcome-text {
+  font-size: 11px;
+  color: #555D6B;
+  line-height: 1.5;
+}
+
+/* MODAL INPUT */
+.flow-ai-modal__input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+/* ═══ AI SHARED (messages, bubbles, chips) ═══ */
 .flow-ai-message {
   display: flex;
-  gap: 10px;
-  max-width: 85%;
+  gap: 8px;
+  max-width: 90%;
 }
 
 .flow-ai-message--user {
@@ -848,8 +1001,8 @@
 }
 
 .flow-ai-avatar {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -871,44 +1024,32 @@
   font-size: 10px;
 }
 
-.flow-ai-avatar--system {
-  background: rgba(255,255,255,0.04);
-  color: #3B4252;
-  font-size: 12px;
-}
-
 .flow-ai-bubble {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
 .flow-ai-bubble--ai {
-  background: rgba(139,92,246,0.12);
+  background: rgba(139,92,246,0.1);
   border: 1px solid rgba(139,92,246,0.1);
 }
 
 .flow-ai-bubble--user {
-  background: rgba(129,140,248,0.12);
-  border: 1px solid rgba(129,140,248,0.12);
-}
-
-.flow-ai-bubble--system {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: #555D6B;
+  background: rgba(129,140,248,0.1);
+  border: 1px solid rgba(129,140,248,0.1);
 }
 
 .flow-ai-typing {
   display: flex;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 10px 14px;
 }
 
 .flow-ai-typing span {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #8B5CF6;
   animation: flow-typing 1s ease-in-out infinite;
@@ -916,13 +1057,6 @@
 
 .flow-ai-typing span:nth-child(2) { animation-delay: 0.15s; }
 .flow-ai-typing span:nth-child(3) { animation-delay: 0.3s; }
-
-.flow-ai-input {
-  display: flex;
-  gap: 8px;
-  padding: 8px 16px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
 
 .flow-ai-input__field {
   flex: 1;
@@ -946,7 +1080,7 @@
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
   font-weight: 700;
-  padding: 8px 18px;
+  padding: 8px 16px;
   border-radius: 6px;
   border: none;
   background: linear-gradient(135deg, #8B5CF6, #6D28D9);
@@ -957,71 +1091,6 @@
 
 .flow-ai-input__btn:hover {
   filter: brightness(1.1);
-}
-
-/* ═══ AI BACK BUTTON ═══ */
-.flow-ai-back-btn {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 7px 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(139,92,246,0.8);
-  background: rgba(139,92,246,0.35);
-  color: #F0E5FF;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-}
-
-.flow-ai-back-btn:hover {
-  background: rgba(139,92,246,0.5);
-  border-color: #8B5CF6;
-  color: #fff;
-  box-shadow: 0 0 12px rgba(139,92,246,0.35);
-}
-
-/* ═══ AI WELCOME ═══ */
-.flow-ai-welcome {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 20px 20px 16px;
-  gap: 6px;
-}
-
-.flow-ai-welcome__icon {
-  font-size: 28px;
-  color: #8B5CF6;
-  margin-bottom: 4px;
-}
-
-.flow-ai-welcome__title {
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.flow-ai-welcome__desc {
-  font-size: 12px;
-  color: #555D6B;
-  max-width: 420px;
-  line-height: 1.5;
-}
-
-.flow-ai-welcome__beta {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 3px;
-  background: rgba(139,92,246,0.12);
-  border: 1px solid rgba(139,92,246,0.3);
-  color: #A78BFA;
-  margin-top: 4px;
 }
 
 .flow-ai-chips {
@@ -1102,15 +1171,15 @@
   border-radius: 2px;
 }
 
-.flow-ai-messages::-webkit-scrollbar {
+.flow-ai-modal__body::-webkit-scrollbar {
   width: 4px;
 }
 
-.flow-ai-messages::-webkit-scrollbar-track {
+.flow-ai-modal__body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.flow-ai-messages::-webkit-scrollbar-thumb {
+.flow-ai-modal__body::-webkit-scrollbar-thumb {
   background: rgba(139,92,246,0.15);
   border-radius: 2px;
 }

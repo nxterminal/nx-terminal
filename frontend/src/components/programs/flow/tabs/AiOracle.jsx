@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { COLORS, API } from '../constants';
+import { API } from '../constants';
 
 const QUICK_ACTIONS = [
   { label: 'Top trending pools', query: 'trending' },
@@ -127,7 +127,7 @@ function renderText(text) {
   ));
 }
 
-export default function AiOracle({ market, onNavigate }) {
+export default function AiOracleModal({ market, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -163,77 +163,84 @@ export default function AiOracle({ market, onNavigate }) {
   };
 
   return (
-    <>
-      {/* MESSAGES */}
-      <div className="flow-ai-messages">
-        <div className="flow-ai-welcome">
-          <button className="flow-ai-back-btn" onClick={() => onNavigate?.('stream')}>
-            ◂ BACK TO MENU
-          </button>
-          <div className="flow-ai-welcome__icon">◆</div>
-          <div className="flow-ai-welcome__title">FLOW AI Oracle</div>
-          <div className="flow-ai-welcome__desc">
-            I fetch real-time data from Monad DEXs. Responses use live API data.
+    <div className="flow-ai-overlay" onClick={onClose}>
+      <div className="flow-ai-modal" onClick={(e) => e.stopPropagation()}>
+        {/* MODAL HEADER */}
+        <div className="flow-ai-modal__header">
+          <div className="flow-ai-modal__header-left">
+            <span className="flow-ai-modal__icon">◆</span>
+            <span className="flow-ai-modal__title">FLOW AI Oracle</span>
+            <span className="flow-ai-modal__badge">BETA</span>
           </div>
-          <div className="flow-ai-welcome__beta">BETA v1.0</div>
-          {messages.length === 0 && (
-            <div className="flow-ai-chips">
-              {QUICK_ACTIONS.map((q, i) => (
-                <button
-                  key={i}
-                  className="flow-ai-chip"
-                  onClick={() => sendMessage(q.query)}
-                  disabled={typing}
-                >
-                  {q.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <button className="flow-ai-modal__close" onClick={onClose}>X</button>
         </div>
 
-        {messages.map(msg => (
-          <div key={msg.id} className={`flow-ai-message ${msg.role === 'user' ? 'flow-ai-message--user' : ''}`}>
-            <div className={`flow-ai-avatar flow-ai-avatar--${msg.role}`}>
-              {msg.role === 'ai' ? '◆' : '▸'}
+        {/* MESSAGES */}
+        <div className="flow-ai-modal__body">
+          {messages.length === 0 && (
+            <div className="flow-ai-modal__welcome">
+              <div className="flow-ai-modal__welcome-text">
+                I fetch real-time data from Monad DEXs. Responses use live API data.
+              </div>
+              <div className="flow-ai-chips">
+                {QUICK_ACTIONS.map((q, i) => (
+                  <button
+                    key={i}
+                    className="flow-ai-chip"
+                    onClick={() => sendMessage(q.query)}
+                    disabled={typing}
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className={`flow-ai-bubble flow-ai-bubble--${msg.role}`}>
-              {renderText(msg.text)}
-            </div>
-          </div>
-        ))}
+          )}
 
-        {typing && (
-          <div className="flow-ai-message">
-            <div className="flow-ai-avatar flow-ai-avatar--ai">◆</div>
-            <div className="flow-ai-typing">
-              <span /><span /><span />
+          {messages.map(msg => (
+            <div key={msg.id} className={`flow-ai-message ${msg.role === 'user' ? 'flow-ai-message--user' : ''}`}>
+              <div className={`flow-ai-avatar flow-ai-avatar--${msg.role}`}>
+                {msg.role === 'ai' ? '◆' : '▸'}
+              </div>
+              <div className={`flow-ai-bubble flow-ai-bubble--${msg.role}`}>
+                {renderText(msg.text)}
+              </div>
             </div>
-          </div>
-        )}
+          ))}
 
-        <div ref={messagesEndRef} />
+          {typing && (
+            <div className="flow-ai-message">
+              <div className="flow-ai-avatar flow-ai-avatar--ai">◆</div>
+              <div className="flow-ai-typing">
+                <span /><span /><span />
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* INPUT */}
+        <form className="flow-ai-modal__input" onSubmit={handleSend}>
+          <input
+            className="flow-ai-input__field"
+            type="text"
+            placeholder="Ask about Monad DeFi..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={typing}
+            autoFocus
+          />
+          <button
+            className="flow-ai-input__btn"
+            type="submit"
+            disabled={typing || !input.trim()}
+            style={typing ? { opacity: 0.5 } : undefined}
+          >
+            {typing ? '...' : 'ASK'}
+          </button>
+        </form>
       </div>
-
-      {/* INPUT */}
-      <form className="flow-ai-input" onSubmit={handleSend}>
-        <input
-          className="flow-ai-input__field"
-          type="text"
-          placeholder="Ask about Monad DeFi..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={typing}
-        />
-        <button
-          className="flow-ai-input__btn"
-          type="submit"
-          disabled={typing || !input.trim()}
-          style={typing ? { opacity: 0.5 } : undefined}
-        >
-          {typing ? '...' : 'ASK'}
-        </button>
-      </form>
-    </>
+    </div>
   );
 }
