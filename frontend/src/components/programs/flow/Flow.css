@@ -1,5 +1,6 @@
 /* ═══ BASE ═══ */
 .flow-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -865,62 +866,59 @@
   letter-spacing: 1px;
 }
 
-/* ═══ AI MODAL OVERLAY ═══ */
-.flow-ai-overlay {
+/* ═══ AI PANEL (bottom-right) ═══ */
+.flow-ai-panel {
   position: absolute;
-  inset: 0;
-  z-index: 50;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-}
-
-.flow-ai-modal {
+  bottom: 12px;
+  right: 12px;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  width: 520px;
-  max-width: 90%;
-  height: 420px;
-  max-height: 80%;
+  width: 380px;
+  height: 360px;
   background: #0D1117;
   border: 1px solid rgba(139,92,246,0.3);
-  border-radius: 10px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.1);
+  border-radius: 8px;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.08);
   overflow: hidden;
 }
 
-/* MODAL HEADER */
-.flow-ai-modal__header {
+/* PANEL HEADER */
+.flow-ai-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(139,92,246,0.15);
   background: rgba(139,92,246,0.06);
   flex-shrink: 0;
 }
 
-.flow-ai-modal__header-left {
+.flow-ai-panel__header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
-.flow-ai-modal__icon {
-  font-size: 14px;
+.flow-ai-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flow-ai-panel__icon {
+  font-size: 12px;
   color: #8B5CF6;
 }
 
-.flow-ai-modal__title {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
+.flow-ai-panel__title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
   font-weight: 700;
   color: #fff;
 }
 
-.flow-ai-modal__badge {
+.flow-ai-panel__badge {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
   font-weight: 700;
@@ -931,59 +929,65 @@
   color: #A78BFA;
 }
 
-.flow-ai-modal__close {
+.flow-ai-panel__btn {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
   font-weight: 700;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
-  color: #888;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: #666;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.flow-ai-modal__close:hover {
+.flow-ai-panel__btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #ccc;
+}
+
+.flow-ai-panel__btn--close:hover {
   background: rgba(239,68,68,0.15);
   border-color: rgba(239,68,68,0.3);
   color: #EF4444;
 }
 
-/* MODAL BODY */
-.flow-ai-modal__body {
+/* PANEL BODY */
+.flow-ai-panel__body {
   flex: 1;
   overflow: auto;
-  padding: 12px 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  min-height: 0;
 }
 
-.flow-ai-modal__welcome {
+.flow-ai-panel__welcome {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 16px 10px;
-  gap: 10px;
+  padding: 12px 8px;
+  gap: 8px;
 }
 
-.flow-ai-modal__welcome-text {
-  font-size: 11px;
+.flow-ai-panel__welcome-text {
+  font-size: 10px;
   color: #555D6B;
   line-height: 1.5;
 }
 
-/* MODAL INPUT */
-.flow-ai-modal__input {
+/* PANEL INPUT */
+.flow-ai-panel__input {
   display: flex;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 6px;
+  padding: 8px 12px;
   border-top: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
 }
@@ -1171,15 +1175,15 @@
   border-radius: 2px;
 }
 
-.flow-ai-modal__body::-webkit-scrollbar {
+.flow-ai-panel__body::-webkit-scrollbar {
   width: 4px;
 }
 
-.flow-ai-modal__body::-webkit-scrollbar-track {
+.flow-ai-panel__body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.flow-ai-modal__body::-webkit-scrollbar-thumb {
+.flow-ai-panel__body::-webkit-scrollbar-thumb {
   background: rgba(139,92,246,0.15);
   border-radius: 2px;
 }
