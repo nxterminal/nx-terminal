@@ -20,7 +20,6 @@ export const TABS = [
   { id: 'wallet',  label: 'Wallet X-Ray' },
   { id: 'radar',   label: 'Token Radar' },
   { id: 'clob',    label: 'CLOB Vision' },
-  { id: 'ai',      label: 'AI Oracle' },
   { id: 'help',    label: '? Help' },
 ];
 

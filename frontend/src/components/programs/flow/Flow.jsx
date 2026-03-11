@@ -9,7 +9,7 @@ import TheStream from './tabs/TheStream';
 import WalletXRay from './tabs/WalletXRay';
 import TokenRadar from './tabs/TokenRadar';
 import ClobVision from './tabs/ClobVision';
-import AiOracle from './tabs/AiOracle';
+import AiOracleModal from './tabs/AiOracle';
 import HelpGuide from './tabs/HelpGuide';
 import './Flow.css';
 
@@ -18,7 +18,6 @@ const TAB_COMPONENTS = {
   wallet: WalletXRay,
   radar: TokenRadar,
   clob: ClobVision,
-  ai: AiOracle,
   help: HelpGuide,
 };
 
@@ -27,7 +26,6 @@ const TAB_TOOLTIPS = {
   wallet: TOOLTIPS.walletXray,
   radar: TOOLTIPS.tokenRadar,
   clob: TOOLTIPS.clobVision,
-  ai: TOOLTIPS.aiOracle,
   help: 'User guide and documentation for FLOW.exe',
 };
 
@@ -118,6 +116,8 @@ export default function Flow({ onClose }) {
   const { activeTab, setTab, streamFilters, setStreamFilter, isPaused, togglePause } = useFlowState();
   const market = useMarketData();
   const stream = useStreamData(isPaused);
+
+  const [showAi, setShowAi] = useState(false);
 
   const [booting, setBooting] = useState(() => {
     return !sessionStorage.getItem('flow-booted');
@@ -257,6 +257,19 @@ export default function Flow({ onClose }) {
           onNavigate={setTab}
         />
       </div>
+
+      {/* AI ORACLE FLOATING BUTTON */}
+      {!showAi && (
+        <button className="flow-ai-fab" onClick={() => setShowAi(true)}>
+          <span className="flow-ai-fab__icon">◆</span>
+          <span className="flow-ai-fab__label">AI</span>
+        </button>
+      )}
+
+      {/* AI ORACLE MODAL */}
+      {showAi && (
+        <AiOracleModal market={market} onClose={() => setShowAi(false)} />
+      )}
     </div>
   );
 }
