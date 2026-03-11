@@ -684,6 +684,16 @@
   font-size: 16px;
   font-weight: 700;
   color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.flow-clob-header__pair option {
+  background: #0D1117;
 }
 
 .flow-clob-header__label {

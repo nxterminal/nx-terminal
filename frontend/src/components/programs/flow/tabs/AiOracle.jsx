@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { COLORS } from '../constants';
 
 const SYSTEM_MSG = {
-  role: 'ai',
+  role: 'system',
   text: 'FLOW AI Oracle online. I analyze real-time Monad DeFi data — ask me about tokens, pools, wallets, or market conditions. Try: "What are the trending pools?" or "Is MON bullish?"',
 };
 
@@ -78,7 +78,7 @@ export default function AiOracle({ market }) {
         {messages.map(msg => (
           <div key={msg.id} className={`flow-ai-message ${msg.role === 'user' ? 'flow-ai-message--user' : ''}`}>
             <div className={`flow-ai-avatar flow-ai-avatar--${msg.role}`}>
-              {msg.role === 'ai' ? '◆' : '▸'}
+              {msg.role === 'ai' ? '◆' : msg.role === 'system' ? '⚙' : '▸'}
             </div>
             <div className={`flow-ai-bubble flow-ai-bubble--${msg.role}`}>
               {msg.text.split('\n').map((line, i) => (

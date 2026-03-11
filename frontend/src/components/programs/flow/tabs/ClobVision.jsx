@@ -42,22 +42,11 @@ export default function ClobVision() {
           {selectedPair && (
             <>
               <select
+                className="flow-clob-header__pair"
                 value={selectedPair?.id || ''}
                 onChange={(e) => {
                   const p = pairs.find(pp => pp.id === e.target.value);
                   if (p) setSelectedPair(p);
-                }}
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: '#fff',
-                  background: 'transparent',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 4,
-                  padding: '4px 8px',
-                  cursor: 'pointer',
-                  outline: 'none',
                 }}
               >
                 {pairs.map(p => (

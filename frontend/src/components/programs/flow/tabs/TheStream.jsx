@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { PROTOCOLS, COLORS } from '../constants';
-import { useStreamData } from '../hooks/useStreamData';
 import ProtocolBadge from '../components/ProtocolBadge';
 
 const SIDE_FILTERS = [
@@ -37,8 +36,8 @@ function timeAgo(timestamp) {
   return Math.floor(diff / 86400) + 'd';
 }
 
-export default function TheStream({ streamFilters, setStreamFilter, isPaused, togglePause }) {
-  const { trades, loading, tradeCount } = useStreamData(isPaused);
+export default function TheStream({ streamFilters, setStreamFilter, isPaused, togglePause, stream }) {
+  const { trades, loading, tradeCount } = stream;
 
   const filteredTrades = useMemo(() => {
     return trades.filter(t => {
@@ -77,6 +76,16 @@ export default function TheStream({ streamFilters, setStreamFilter, isPaused, to
               {f.label}
             </button>
           ))}
+          <input
+            className="flow-filter-input"
+            type="number"
+            placeholder="Custom $"
+            min="0"
+            onChange={(e) => {
+              const val = parseInt(e.target.value) || 0;
+              setStreamFilter('minValue', val);
+            }}
+          />
         </div>
 
         {/* Protocol filter */}
