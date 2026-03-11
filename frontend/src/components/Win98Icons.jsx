@@ -677,6 +677,46 @@ function IconFlow({ size = 32 }) {
   );
 }
 
+function IconDevAcademy({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="daMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <linearGradient id="daScreenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#020617" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </linearGradient>
+        <linearGradient id="daAccent" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#06b6d4" />
+        </linearGradient>
+      </defs>
+      {/* Monitor frame */}
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#daMonGrad)" stroke="#666" strokeWidth="0.8" />
+      {/* Screen */}
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#daScreenGrad)" />
+      {/* Green accent bar at top of screen */}
+      <rect x="5" y="4" width="22" height="2" rx="1" fill="url(#daAccent)" opacity="0.9" />
+      {/* "DA" text centered on screen */}
+      <text x="16" y="14.5" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#f1f5f9" fontFamily="monospace" letterSpacing="-0.5">DA</text>
+      {/* Code angle brackets */}
+      <text x="8" y="14.5" textAnchor="middle" fontSize="5" fill="#10b981" fontFamily="monospace" opacity="0.7">&lt;</text>
+      <text x="24" y="14.5" textAnchor="middle" fontSize="5" fill="#10b981" fontFamily="monospace" opacity="0.7">&gt;</text>
+      {/* Monitor chin */}
+      <circle cx="16" cy="20.5" r="0.7" fill="#10b981" />
+      {/* Stand */}
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#daMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#daMonGrad)" stroke="#888" strokeWidth="0.5" />
+      {/* Small progress bar on base */}
+      <rect x="10" y="25.5" width="12" height="1" rx="0.5" fill="#1e293b" />
+      <rect x="10" y="25.5" width="7" height="1" rx="0.5" fill="url(#daAccent)" opacity="0.8" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -701,6 +741,7 @@ export const ICON_MAP = {
   'monad-sdk': IconMonadSDK,
   'monad-city': IconMonadCity,
   'flow': IconFlow,
+  'dev-academy': IconDevAcademy,
 };
 
 export function Win98Icon({ id, size = 32 }) {

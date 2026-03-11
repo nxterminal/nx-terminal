@@ -64,7 +64,7 @@ export default function ModuleView({ pathData, progress, onStartLesson, onBack, 
                           fontSize: 12, fontFamily: "system-ui, sans-serif",
                           display: "flex", alignItems: "center", gap: 4, transition: "all 0.15s",
                         }}>
-                        {isDone ? "[done]" : lesson.type === "code" ? "[code]" : "[read]"} {lesson.title}
+                        {isDone ? "[done]" : lesson.type === "code" ? "[code]" : lesson.type === "fill-blank" ? "[fill]" : lesson.type === "fix-bug" ? "[fix]" : lesson.type === "reorder" ? "[sort]" : lesson.type === "output-predict" ? "[eval]" : "[read]"} {lesson.title}
                       </button>
                     );
                   })}
