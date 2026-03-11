@@ -25,6 +25,7 @@ const DESKTOP_ICONS = [
   { id: 'control-panel', icon: '::', label: 'Settings' },
   { id: 'netwatch', icon: '', label: 'NETWATCH' },
   { id: 'pharos-sdk', icon: '', label: 'PHAROS SDK' },
+  { id: 'flow', icon: '\u25C6', label: 'FLOW.exe' },
   { id: 'nadwatch', icon: '', label: 'NADWATCH' },
   { id: 'parallax', icon: '', label: 'PARALLAX' },
   { id: 'monad-sdk', icon: '', label: 'MONAD SDK' },

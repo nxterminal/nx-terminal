@@ -22,6 +22,7 @@ import NadWatch from './programs/nadwatch/NadWatch';
 import Parallax from './programs/parallax/Parallax';
 import MonadSDK from './programs/monad-sdk/MonadSDK';
 import MonadCity from './programs/monad-city/MonadCity';
+import Flow from './programs/flow/Flow';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -46,6 +47,7 @@ const WINDOW_COMPONENTS = {
   'parallax': Parallax,
   'monad-sdk': MonadSDK,
   'monad-city': MonadCity,
+  'flow': Flow,
 };
 
 export default function WindowManager({
