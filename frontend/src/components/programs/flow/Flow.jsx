@@ -117,7 +117,8 @@ export default function Flow({ onClose }) {
   const market = useMarketData();
   const stream = useStreamData(isPaused);
 
-  const [showAi, setShowAi] = useState(false);
+  // 'closed' | 'minimized' | 'open'
+  const [aiState, setAiState] = useState('closed');
 
   const [booting, setBooting] = useState(() => {
     return !sessionStorage.getItem('flow-booted');
@@ -258,17 +259,20 @@ export default function Flow({ onClose }) {
         />
       </div>
 
-      {/* AI ORACLE FLOATING BUTTON */}
-      {!showAi && (
-        <button className="flow-ai-fab" onClick={() => setShowAi(true)}>
+      {/* AI ORACLE — floating button when closed/minimized, panel when open */}
+      {aiState !== 'open' && (
+        <button className="flow-ai-fab" onClick={() => setAiState('open')}>
           <span className="flow-ai-fab__icon">◆</span>
-          <span className="flow-ai-fab__label">AI</span>
+          <span className="flow-ai-fab__label">AI Oracle</span>
         </button>
       )}
 
-      {/* AI ORACLE MODAL */}
-      {showAi && (
-        <AiOracleModal market={market} onClose={() => setShowAi(false)} />
+      {aiState === 'open' && (
+        <AiOracleModal
+          market={market}
+          onMinimize={() => setAiState('minimized')}
+          onClose={() => setAiState('closed')}
+        />
       )}
     </div>
   );
