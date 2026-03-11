@@ -159,11 +159,16 @@ export default function Flow({ onClose }) {
 
   const containerRef = useRef(null);
 
-  // Reset parent scroll whenever AI panel state changes (browser autoFocus can shift it)
+  // Force parent win98-content to overflow:hidden so it can never scroll
+  // This prevents the AI panel (or any focus event) from shifting the layout
   useEffect(() => {
     const parent = containerRef.current?.parentElement;
-    if (parent) parent.scrollTop = 0;
-  }, [aiState]);
+    if (!parent) return;
+    const prev = parent.style.overflow;
+    parent.style.overflow = 'hidden';
+    parent.scrollTop = 0;
+    return () => { parent.style.overflow = prev; };
+  }, []);
 
   return (
     <div className="flow-container" ref={containerRef}>

@@ -131,10 +131,11 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
-  const messagesEndRef = useRef(null);
+  const bodyRef = useRef(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = bodyRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages, typing]);
 
   const sendMessage = useCallback(async (text) => {
@@ -178,7 +179,7 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
       </div>
 
       {/* MESSAGES */}
-      <div className="flow-ai-panel__body">
+      <div className="flow-ai-panel__body" ref={bodyRef}>
         {messages.length === 0 && (
           <div className="flow-ai-panel__welcome">
             <div className="flow-ai-panel__welcome-text">
@@ -219,7 +220,6 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
       {/* INPUT */}
@@ -231,7 +231,6 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={typing}
-          ref={el => el && requestAnimationFrame(() => el.focus({ preventScroll: true }))}
         />
         <button
           className="flow-ai-input__btn"
