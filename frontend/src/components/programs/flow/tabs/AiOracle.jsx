@@ -231,7 +231,7 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={typing}
-          autoFocus
+          ref={el => el && requestAnimationFrame(() => el.focus({ preventScroll: true }))}
         />
         <button
           className="flow-ai-input__btn"

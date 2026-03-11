@@ -157,8 +157,16 @@ export default function Flow({ onClose }) {
   const connectionStatus = market.isConnected ? 'live' : 'offline';
   const changeColor = market.monChange24h > 0 ? COLORS.buy : market.monChange24h < 0 ? COLORS.sell : COLORS.text;
 
+  const containerRef = useRef(null);
+
+  // Reset parent scroll whenever AI panel state changes (browser autoFocus can shift it)
+  useEffect(() => {
+    const parent = containerRef.current?.parentElement;
+    if (parent) parent.scrollTop = 0;
+  }, [aiState]);
+
   return (
-    <div className="flow-container">
+    <div className="flow-container" ref={containerRef}>
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
