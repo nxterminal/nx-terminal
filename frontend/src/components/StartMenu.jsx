@@ -11,6 +11,7 @@ const PROGRAMS = [
   { id: 'inbox', label: 'Inbox' },
   { id: 'hire-devs', label: 'Mint/Hire Devs' },
   { id: 'notepad', label: 'Notepad' },
+  { id: 'dev-academy', label: 'Dev Academy' },
 ];
 
 const GAMES = [

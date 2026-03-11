@@ -28,6 +28,7 @@ const DESKTOP_ICONS = [
   { id: 'parallax', icon: '', label: 'PARALLAX' },
   { id: 'monad-sdk', icon: '', label: 'MONAD SDK' },
   { id: 'monad-city', icon: '', label: 'MONAD CITY' },
+  { id: 'dev-academy', icon: 'DA', label: 'DEV_ACADEMY' },
 ];
 
 function getWallpaperStyle() {

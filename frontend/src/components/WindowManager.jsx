@@ -21,6 +21,7 @@ import Parallax from './programs/parallax/Parallax';
 import MonadSDK from './programs/monad-sdk/MonadSDK';
 import MonadCity from './programs/monad-city/MonadCity';
 import Flow from './programs/flow/Flow';
+import DevAcademy from './programs/dev-academy/DevAcademy';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -44,6 +45,7 @@ const WINDOW_COMPONENTS = {
   'monad-sdk': MonadSDK,
   'monad-city': MonadCity,
   'flow': Flow,
+  'dev-academy': DevAcademy,
 };
 
 export default function WindowManager({
