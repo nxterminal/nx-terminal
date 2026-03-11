@@ -163,18 +163,13 @@ export default function AiOracle({ market, onNavigate }) {
   };
 
   return (
-    <div className="flow-ai-container">
-      {/* TOP BAR with back button */}
-      <div className="flow-ai-topbar">
-        <div className="flow-ai-topbar__spacer" />
-        <button className="flow-ai-back-btn" onClick={() => onNavigate?.('stream')}>
-          ◂ BACK
-        </button>
-      </div>
-
+    <>
       {/* MESSAGES */}
       <div className="flow-ai-messages">
         <div className="flow-ai-welcome">
+          <button className="flow-ai-back-btn" onClick={() => onNavigate?.('stream')}>
+            ◂ BACK TO MENU
+          </button>
           <div className="flow-ai-welcome__icon">◆</div>
           <div className="flow-ai-welcome__title">FLOW AI Oracle</div>
           <div className="flow-ai-welcome__desc">
@@ -239,6 +234,6 @@ export default function AiOracle({ market, onNavigate }) {
           {typing ? '...' : 'ASK'}
         </button>
       </form>
-    </div>
+    </>
   );
 }
