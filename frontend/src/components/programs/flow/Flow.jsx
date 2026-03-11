@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { TABS, COLORS } from './constants';
 import { useFlowState } from './hooks/useFlowState';
 import { useMarketData } from './hooks/useMarketData';
@@ -60,6 +60,8 @@ function formatPrice(price) {
 function BootScreen({ onDone }) {
   const [visibleLines, setVisibleLines] = useState(0);
   const [progress, setProgress] = useState(0);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     const timers = BOOT_LINES.map((line, i) =>
@@ -68,14 +70,14 @@ function BootScreen({ onDone }) {
     const progressTimer = setInterval(() => {
       setProgress(prev => Math.min(prev + 3, 100));
     }, BOOT_DURATION / 33);
-    const doneTimer = setTimeout(onDone, BOOT_DURATION);
+    const doneTimer = setTimeout(() => onDoneRef.current(), BOOT_DURATION);
 
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(doneTimer);
       clearInterval(progressTimer);
     };
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="flow-boot">
@@ -151,7 +153,10 @@ export default function Flow({ onClose }) {
 
       {/* BOOT SCREEN */}
       {booting && (
-        <div style={{ opacity: bootFade ? 0 : 1, transition: 'opacity 0.3s ease' }}>
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10, background: '#0D1117',
+          opacity: bootFade ? 0 : 1, transition: 'opacity 0.3s ease',
+        }}>
           <BootScreen onDone={handleBootDone} />
         </div>
       )}
