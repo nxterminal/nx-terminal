@@ -829,8 +829,8 @@
 .flow-ai-container {
   display: flex;
   flex-direction: column;
-  position: absolute;
-  inset: 0;
+  position: relative;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -841,6 +841,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 .flow-ai-message {
@@ -971,8 +972,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 6px 12px;
+  padding: 8px 12px;
+  height: 36px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(139,92,246,0.15);
+  background: rgba(139,92,246,0.08);
+  position: relative;
+  z-index: 10;
 }
 
 .flow-ai-topbar__spacer {
@@ -985,12 +991,14 @@
   font-weight: 700;
   padding: 6px 14px;
   border-radius: 4px;
-  border: 1px solid rgba(139,92,246,0.6);
-  background: rgba(139,92,246,0.25);
-  color: #E0D4FF;
+  border: 1px solid rgba(139,92,246,0.8);
+  background: rgba(139,92,246,0.35);
+  color: #F0E5FF;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .flow-ai-back-btn:hover {
@@ -1008,6 +1016,7 @@
   text-align: center;
   padding: 12px 20px 16px;
   gap: 6px;
+  margin: auto 0;
 }
 
 .flow-ai-welcome__icon {
