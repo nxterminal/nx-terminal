@@ -166,18 +166,23 @@ export default function AiOracle({ market, onNavigate }) {
     <div className="flow-ai-container">
       {/* NAV BAR */}
       <div className="flow-ai-nav">
-        <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('stream')}>
-          &larr; Stream
+        <button className="flow-ai-nav__back" onClick={() => onNavigate?.('stream')}>
+          &larr; Back
         </button>
-        <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('radar')}>
-          Radar
-        </button>
-        <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('clob')}>
-          CLOB
-        </button>
-        <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('wallet')}>
-          Wallet
-        </button>
+        <div className="flow-ai-nav__links">
+          <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('stream')}>
+            Stream
+          </button>
+          <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('radar')}>
+            Radar
+          </button>
+          <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('clob')}>
+            CLOB
+          </button>
+          <button className="flow-ai-nav__btn" onClick={() => onNavigate?.('wallet')}>
+            Wallet
+          </button>
+        </div>
       </div>
 
       {/* MESSAGES */}
