@@ -626,6 +626,57 @@ function IconMonadCity({ size = 32 }) {
   );
 }
 
+function IconFlow({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="flowBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#0D1117" />
+          <stop offset="100%" stopColor="#161B22" />
+        </linearGradient>
+        <linearGradient id="flowGreen" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#16A34A" />
+        </linearGradient>
+        <linearGradient id="flowDiamond" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#34D399" />
+          <stop offset="50%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+      </defs>
+      {/* Background rounded square */}
+      <rect x="1" y="1" width="30" height="30" rx="4" fill="url(#flowBg)" stroke="#22C55E" strokeWidth="0.6" opacity="0.9" />
+      {/* Flowing data streams — 3 horizontal lines with moving dots */}
+      <line x1="4" y1="10" x2="28" y2="10" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
+      <line x1="4" y1="16" x2="28" y2="16" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
+      <line x1="4" y1="22" x2="28" y2="22" stroke="#22C55E" strokeWidth="0.4" opacity="0.2" />
+      {/* Stream pulses */}
+      <circle cx="8" cy="10" r="1" fill="#22C55E" opacity="0.6" />
+      <circle cx="14" cy="10" r="0.7" fill="#22C55E" opacity="0.4" />
+      <circle cx="22" cy="10" r="1.2" fill="#22C55E" opacity="0.7" />
+      <circle cx="11" cy="22" r="0.8" fill="#22C55E" opacity="0.5" />
+      <circle cx="20" cy="22" r="1" fill="#22C55E" opacity="0.6" />
+      <circle cx="26" cy="22" r="0.6" fill="#22C55E" opacity="0.3" />
+      {/* Center diamond — the FLOW symbol */}
+      <g transform="translate(16,16) rotate(45)">
+        <rect x="-5" y="-5" width="10" height="10" rx="1.5" fill="url(#flowDiamond)" opacity="0.9" />
+        <rect x="-5" y="-5" width="10" height="10" rx="1.5" fill="none" stroke="#fff" strokeWidth="0.5" opacity="0.3" />
+      </g>
+      {/* Inner diamond glow */}
+      <g transform="translate(16,16) rotate(45)">
+        <rect x="-3" y="-3" width="6" height="6" rx="0.8" fill="none" stroke="#fff" strokeWidth="0.4" opacity="0.5" />
+      </g>
+      {/* F letter in center */}
+      <text x="16" y="18.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#fff" fontFamily="monospace" opacity="0.95">F</text>
+      {/* Corner accents — buy/sell indicators */}
+      <rect x="3" y="3" width="3" height="1.5" rx="0.5" fill="#22C55E" opacity="0.7" />
+      <rect x="26" y="3" width="3" height="1.5" rx="0.5" fill="#EF4444" opacity="0.7" />
+      {/* Bottom bar — mini chart */}
+      <polyline points="4,27 7,25.5 10,26.5 13,24 16,25 19,23 22,24.5 25,22.5 28,24" fill="none" stroke="url(#flowGreen)" strokeWidth="0.8" opacity="0.7" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -649,6 +700,7 @@ export const ICON_MAP = {
   'parallax': IconParallax,
   'monad-sdk': IconMonadSDK,
   'monad-city': IconMonadCity,
+  'flow': IconFlow,
 };
 
 export function Win98Icon({ id, size = 32 }) {
