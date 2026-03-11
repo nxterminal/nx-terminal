@@ -164,10 +164,13 @@ export default function AiOracle({ market, onNavigate }) {
 
   return (
     <div className="flow-ai-container">
-      {/* BACK BUTTON - fixed top-right */}
-      <button className="flow-ai-back-btn" onClick={() => onNavigate?.('stream')}>
-        &#9666; BACK
-      </button>
+      {/* TOP BAR with back button */}
+      <div className="flow-ai-topbar">
+        <div className="flow-ai-topbar__spacer" />
+        <button className="flow-ai-back-btn" onClick={() => onNavigate?.('stream')}>
+          ◂ BACK
+        </button>
+      </div>
 
       {/* MESSAGES */}
       <div className="flow-ai-messages">
