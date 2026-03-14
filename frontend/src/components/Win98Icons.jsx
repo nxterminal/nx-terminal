@@ -716,6 +716,51 @@ function IconDevAcademy({ size = 32 }) {
   );
 }
 
+function IconMonadBuild({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mbMonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d4d0c8" />
+          <stop offset="100%" stopColor="#a0a098" />
+        </linearGradient>
+        <linearGradient id="mbScreenGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0d0017" />
+          <stop offset="100%" stopColor="#1a0a2e" />
+        </linearGradient>
+        <linearGradient id="mbAccent" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#A78BFA" />
+          <stop offset="100%" stopColor="#7C3AED" />
+        </linearGradient>
+      </defs>
+      {/* Monitor frame */}
+      <rect x="3" y="2" width="26" height="20" rx="2" fill="url(#mbMonGrad)" stroke="#666" strokeWidth="0.8" />
+      {/* Screen */}
+      <rect x="5" y="4" width="22" height="15" rx="1" fill="url(#mbScreenGrad)" />
+      {/* Purple accent bar at top */}
+      <rect x="5" y="4" width="22" height="1.5" rx="0.5" fill="url(#mbAccent)" opacity="0.9" />
+      {/* Code lines on screen */}
+      <rect x="7" y="7" width="8" height="1" rx="0.3" fill="#7C3AED" opacity="0.8" />
+      <rect x="9" y="9.5" width="12" height="1" rx="0.3" fill="#e6edf3" opacity="0.4" />
+      <rect x="9" y="12" width="6" height="1" rx="0.3" fill="#30FF60" opacity="0.6" />
+      {/* Hammer/wrench icon on screen right side */}
+      <line x1="20" y1="8" x2="23" y2="11" stroke="#A78BFA" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="23" y1="8" x2="20" y2="11" stroke="#C4B5FD" strokeWidth="1.2" strokeLinecap="round" />
+      <rect x="20.5" y="12" width="2" height="3.5" rx="0.5" fill="#7C3AED" opacity="0.7" />
+      {/* Gear accent */}
+      <circle cx="21.5" cy="14.5" r="1.5" fill="none" stroke="#A78BFA" strokeWidth="0.5" opacity="0.6" />
+      {/* Monitor chin */}
+      <circle cx="16" cy="20.5" r="0.7" fill="#7C3AED" />
+      {/* Stand */}
+      <rect x="11" y="22" width="10" height="2" rx="0.5" fill="url(#mbMonGrad)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="24" width="16" height="3" rx="1" fill="url(#mbMonGrad)" stroke="#888" strokeWidth="0.5" />
+      {/* Purple progress bar on base */}
+      <rect x="10" y="25.5" width="12" height="1" rx="0.5" fill="#1a0a2e" />
+      <rect x="10" y="25.5" width="8" height="1" rx="0.5" fill="url(#mbAccent)" opacity="0.8" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -741,6 +786,7 @@ export const ICON_MAP = {
   'monad-city': IconMonadCity,
   'flow': IconFlow,
   'dev-academy': IconDevAcademy,
+  'monad-build': IconMonadBuild,
 };
 
 export function Win98Icon({ id, size = 32 }) {
