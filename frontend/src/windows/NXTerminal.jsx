@@ -228,9 +228,9 @@ function Contracts() {
           NXDevNFT (Employee Badges)
         </div>
         <div style={line}><span style={label}>Address: </span><span style={addr}>{NXDEVNFT_ADDRESS}</span></div>
-        <div style={line}><span style={label}>Network: </span><span style={val}>Pharos Atlantic (688689)</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>Monad (143)</span></div>
         <div style={line}><span style={label}>Supply:  </span><span style={val}>{minted} / 35,000 minted</span></div>
-        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0001 PHRS</span></div>
+        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0001 MON</span></div>
         <ExplorerLink address={NXDEVNFT_ADDRESS} />
       </div>
 
@@ -240,7 +240,7 @@ function Contracts() {
           $NXT Token (Protocol Wars Currency)
         </div>
         <div style={line}><span style={label}>Address: </span><span style={addr}>{NXT_TOKEN_ADDRESS}</span></div>
-        <div style={line}><span style={label}>Network: </span><span style={val}>Pharos Atlantic (688689)</span></div>
+        <div style={line}><span style={label}>Network: </span><span style={val}>Monad (143)</span></div>
         <div style={line}><span style={label}>Total Supply: </span><span style={val}>1,000,000,000 NXT</span></div>
         <ExplorerLink address={NXT_TOKEN_ADDRESS} />
       </div>
@@ -267,7 +267,7 @@ function Contracts() {
       </div>
 
       <div style={{ color: '#808080', marginTop: '16px', fontSize: '11px', textAlign: 'center' }}>
-        NX Terminal Corp. (C) 1998. All contracts verified on Pharos.
+        NX Terminal Corp. (C) 1998. All contracts verified on Monad.
       </div>
     </div>
   );

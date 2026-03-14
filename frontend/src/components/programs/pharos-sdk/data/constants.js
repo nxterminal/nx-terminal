@@ -84,9 +84,9 @@ export const BOOT_MESSAGES = [
   { text: "Loading mission database...", color: "#00ff41", delay: 900 },
   { text: "  [OK] Track 1: Basic Training (5 missions)", color: "#aaa", delay: 1200 },
   { text: "  [OK] Track 2: Corporate Warfare (LOCKED)", color: "#666", delay: 1400 },
-  { text: "  [OK] Track 3: Pharos Deep Dive (LOCKED)", color: "#666", delay: 1600 },
-  { text: "Connecting to Pharos Atlantic Testnet...", color: "#00ff41", delay: 2000 },
-  { text: "  Chain ID: 688689 \u2014 Connection established", color: "#aaa", delay: 2400 },
+  { text: "  [OK] Track 3: Monad Deep Dive (LOCKED)", color: "#666", delay: 1600 },
+  { text: "Connecting to Monad...", color: "#00ff41", delay: 2000 },
+  { text: "  Chain ID: 143 \u2014 Connection established", color: "#aaa", delay: 2400 },
   { text: "Loading compiler modules...", color: "#00ff41", delay: 2800 },
   { text: "  [OK] Solidity 0.8.19", color: "#aaa", delay: 3000 },
   { text: "  [OK] Code validator", color: "#aaa", delay: 3150 },
@@ -104,12 +104,12 @@ export const BOOT_MESSAGES = [
   { text: "Press [ENTER TRAINING] to begin orientation...", color: "#fff", delay: 5100 },
 ];
 
-// ═══ PHAROS NETWORK INFO ═══
-export const PHAROS_INFO = {
-  CHAIN_NAME: "Pharos Atlantic Testnet",
-  CHAIN_ID: 688689,
-  RPC_URL: "https://atlantic.dplabs-internal.com",
-  EXPLORER: "https://atlantic.pharosscan.xyz",
+// ═══ MONAD NETWORK INFO ═══
+export const MONAD_INFO = {
+  CHAIN_NAME: "Monad",
+  CHAIN_ID: 143,
+  RPC_URL: "https://monad-mainnet.drpc.org",
+  EXPLORER: "https://monadexplorer.com",
   CONSENSUS: "AsyncBFT",
   TPS: "30,000+",
   FINALITY: "Sub-second (~0.5s)",

@@ -1,23 +1,24 @@
 import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// Pharos Atlantic Testnet — not in viem's default chains
-export const pharos = {
-  id: 688689,
-  name: 'Pharos Atlantic Testnet',
-  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
+// Monad — custom chain definition
+export const monad = {
+  id: 143,
+  name: 'Monad',
+  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://atlantic.dplabs-internal.com'] },
+    default: { http: ['https://monad-mainnet.drpc.org'] },
+    fallback: { http: ['https://rpc.monad.xyz'] },
   },
   blockExplorers: {
-    default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' },
+    default: { name: 'MonadExplorer', url: 'https://monadexplorer.com' },
   },
 };
 
 export const wagmiConfig = createConfig({
-  chains: [pharos],
+  chains: [monad],
   connectors: [injected()],
   transports: {
-    [pharos.id]: http('https://atlantic.dplabs-internal.com'),
+    [monad.id]: http('https://monad-mainnet.drpc.org'),
   },
 });

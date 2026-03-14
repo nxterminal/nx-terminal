@@ -1,6 +1,6 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { PHAROS_CHAIN_ID } from '../services/contract';
+import { MONAD_CHAIN_ID } from '../services/contract';
 
 export function useWallet() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
@@ -8,14 +8,14 @@ export function useWallet() {
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
 
-  const isWrongChain = isConnected && chain?.id !== PHAROS_CHAIN_ID;
+  const isWrongChain = isConnected && chain?.id !== MONAD_CHAIN_ID;
 
   const connectWallet = () => {
     connect({ connector: injected() });
   };
 
-  const switchToPharos = () => {
-    switchChain({ chainId: PHAROS_CHAIN_ID });
+  const switchToMonad = () => {
+    switchChain({ chainId: MONAD_CHAIN_ID });
   };
 
   const formatAddress = (addr) => {
@@ -32,7 +32,7 @@ export function useWallet() {
     connectError,
     connect: connectWallet,
     disconnect,
-    switchToPharos,
+    switchToMonad,
     formatAddress,
     displayAddress: address ? formatAddress(address) : null,
   };

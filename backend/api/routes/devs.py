@@ -230,6 +230,6 @@ async def get_dev_metadata(token_id: int):
         "description": f"{dev['name']} — {a_an} {rarity} {dev['archetype']} at {corp_display}. {dev.get('alignment', '')}. Currently {dev['mood'].lower()} in {dev['location']}.",
         "image": f"ipfs://{dev['ipfs_hash']}" if dev.get("ipfs_hash") else "",
         "animation_url": f"ipfs://{dev['ipfs_hash']}" if dev.get("ipfs_hash") else "",
-        "external_url": f"https://nxterminal.gg/dev/{token_id}",
+        "external_url": f"https://nxterminal.xyz/dev/{token_id}",
         "attributes": attrs,
     }

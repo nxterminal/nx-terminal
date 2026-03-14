@@ -33,12 +33,12 @@ function buildSparkline(data) {
 }
 
 const METRIC_TOOLTIPS = {
-  tps: 'Transactions Per Second \u2014 Rolling average TPS calculated over the last 10 blocks. Pharos targets 30,000+ TPS.',
-  gas: 'Gas Throughput \u2014 Amount of computational gas used per second, measured in Gigagas (Ggas). Pharos targets 2 Ggas/s. Higher values mean more complex transactions.',
-  blk: 'Block Height \u2014 The current block number on Pharos Atlantic Testnet. Each block contains a batch of confirmed transactions.',
-  blockTime: 'Block Time \u2014 Average time between consecutive blocks. Pharos targets sub-second block time (~0.5\u20130.8s). Green means within target.',
+  tps: 'Transactions Per Second \u2014 Rolling average TPS calculated over the last 10 blocks. Monad targets 10,000+ TPS.',
+  gas: 'Gas Throughput \u2014 Amount of computational gas used per second, measured in Gigagas (Ggas). Higher values mean more complex transactions.',
+  blk: 'Block Height \u2014 The current block number on Monad. Each block contains a batch of confirmed transactions.',
+  blockTime: 'Block Time \u2014 Average time between consecutive blocks. Monad targets ~400ms block time. Green means within target.',
   val: 'Active Validators \u2014 Estimated number of validators securing the network. Marked with ~ because this is estimated from block data, not directly reported by the RPC.',
-  totalTx: 'Total Transactions \u2014 Cumulative number of transactions processed on Pharos Atlantic Testnet since genesis.',
+  totalTx: 'Total Transactions \u2014 Cumulative number of transactions processed on Monad since genesis.',
   sparkline: 'TPS History (last 60 seconds) \u2014 Each bar represents the rolling average TPS at one polling interval (every 3 seconds). Taller bars = more transactions.',
 };
 
@@ -91,7 +91,7 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
         <span style={{ color: '#fff' }}>PHAROS ATLANTIC TESTNET</span>
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 688689</span>
+        <span style={{ color: '#666' }}>CHAIN 143</span>
       </div>
 
       {/* Metrics */}

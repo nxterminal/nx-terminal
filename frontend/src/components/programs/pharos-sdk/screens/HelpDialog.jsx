@@ -4,20 +4,20 @@ const TABS = ['About', 'Beta Info', 'Corporations'];
 
 const TAB_CONTENT = {
   'About': [
-    { type: 'heading', text: 'PHAROS_SDK.exe \u2014 Developer Training Simulator' },
+    { type: 'heading', text: 'MONAD_SDK.exe \u2014 Developer Training Simulator' },
     { type: 'text', text: 'Version: 1.0 BETA' },
     { type: 'text', text: '' },
-    { type: 'text', text: 'PHAROS_SDK is an interactive training program that teaches blockchain development through gamified coding exercises.' },
+    { type: 'text', text: 'MONAD_SDK is an interactive training program that teaches blockchain development through gamified coding exercises.' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Complete missions to learn:' },
-    { type: 'text', text: '\u2022 Smart contract basics (Solidity)\n\u2022 Wallet and key management\n\u2022 DeFi mechanics (AMMs, lending)\n\u2022 Pharos Network architecture\n\u2022 On-chain data reading (JSON-RPC)' },
+    { type: 'text', text: '\u2022 Smart contract basics (Solidity)\n\u2022 Wallet and key management\n\u2022 DeFi mechanics (AMMs, lending)\n\u2022 Monad architecture\n\u2022 On-chain data reading (JSON-RPC)' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Each mission is assigned by one of the six Protocol Wars corporations, with unique briefings and storylines.' },
     { type: 'text', text: '' },
     { type: 'label', text: 'STATUS: BETA' },
     { type: 'text', text: 'Progress saved locally in your browser.' },
     { type: 'text', text: '' },
-    { type: 'mono', text: 'Network: Pharos Atlantic Testnet\nChain ID: 688689' },
+    { type: 'mono', text: 'Network: Monad\nChain ID: 143' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Built by Ember Labs\nnxterminal.com \u00B7 @nxterminalcorp' },
   ],
@@ -35,10 +35,10 @@ const TAB_CONTENT = {
     { type: 'text', text: 'The full version will be available exclusively for NX Terminal NFT holders after mint.' },
     { type: 'text', text: '' },
     { type: 'label', text: '\u25C6 Track 2: Corporate Warfare (10 missions)' },
-    { type: 'text', text: '  Write contracts from scratch, AMM liquidity provision, lending protocol interaction, security & vulnerability hunting, Pharos parallel execution, RWA tokenization, gas optimization, CTF challenges.' },
+    { type: 'text', text: '  Write contracts from scratch, AMM liquidity provision, lending protocol interaction, security & vulnerability hunting, Monad parallel execution, RWA tokenization, gas optimization, CTF challenges.' },
     { type: 'text', text: '' },
-    { type: 'label', text: '\u25C6 Track 3: Pharos Deep Dive (ongoing)' },
-    { type: 'text', text: '  New missions as Pharos adds features, community challenges, mainnet-specific content.' },
+    { type: 'label', text: '\u25C6 Track 3: Monad Deep Dive (ongoing)' },
+    { type: 'text', text: '  New missions as Monad adds features, community challenges, mainnet-specific content.' },
     { type: 'text', text: '' },
     { type: 'text', text: '\u25C6 On-chain progress tracking\n\u25C6 Leaderboard with rankings\n\u25C6 Completion certificates as NFT badges\n\u25C6 Real testnet deployments from exercises' },
     { type: 'text', text: '' },
@@ -126,7 +126,7 @@ export default function HelpDialog({ onClose }) {
           flexShrink: 0,
         }}>
           <span style={{ color: '#fff', fontSize: '12px', fontFamily: 'Tahoma, sans-serif', fontWeight: 'bold' }}>
-            PHAROS_SDK Help
+            MONAD_SDK Help
           </span>
           <button
             onClick={onClose}
