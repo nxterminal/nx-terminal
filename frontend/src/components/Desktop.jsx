@@ -29,6 +29,7 @@ const DESKTOP_ICONS = [
   { id: 'monad-sdk', icon: '', label: 'Monad SDK' },
   { id: 'monad-city', icon: '', label: 'Monad City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
+  { id: 'monad-build', icon: '\u26A1', label: 'MONAD_BUILD' },
 ];
 
 function getWallpaperStyle() {
