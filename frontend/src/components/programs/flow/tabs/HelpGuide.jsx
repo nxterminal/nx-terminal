@@ -190,7 +190,7 @@ export default function HelpGuide() {
         textAlign: 'center',
         padding: '8px 0 16px',
       }}>
-        Data provided by GeckoTerminal & CoinGecko APIs — Monad Chain ID 143 — 400ms block time
+        Data provided by GeckoTerminal & CoinGecko APIs — Monad Testnet Chain ID 10143
       </div>
     </div>
   );

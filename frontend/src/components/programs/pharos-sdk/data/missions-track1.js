@@ -114,12 +114,12 @@ const TRACK_1 = {
           question: "Monad Chain ID is:",
           options: [
             "1 (Ethereum Mainnet)",
-            "143",
+            "10143",
             "56 (BNB Chain)",
             "137 (Polygon)",
           ],
           correct: 1,
-          explanation: "Monad uses Chain ID 143. You need this to add the network to MetaMask or other wallets.",
+          explanation: "Monad Testnet uses Chain ID 10143. You need this to add the network to MetaMask or other wallets.",
         },
       ],
       completionMessage:
@@ -302,7 +302,7 @@ const TRACK_1 = {
       language: "javascript",
       codeLines: [
         { num: 1,  text: "// Query Monad via JSON-RPC", editable: false },
-        { num: 2,  text: 'const RPC_URL = "https://monad-mainnet.drpc.org";', editable: false },
+        { num: 2,  text: 'const RPC_URL = "https://monad-testnet.drpc.org";', editable: false },
         { num: 3,  text: "", editable: false },
         { num: 4,  text: "async function getBlockNumber() {", editable: false },
         { num: 5,  text: "  const response = await fetch(RPC_URL, {", editable: false },

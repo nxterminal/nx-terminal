@@ -86,15 +86,15 @@ export const MONAD_PATH = {
           blanks: [
             { answer: '"Monad Testnet"', placeholder: 'chain name', explanation: "The chain name is a string describing the network" },
             { answer: "10143", placeholder: 'number', explanation: "Monad testnet uses chain ID 10143" },
-            { answer: '"https://testnet-rpc.monad.xyz"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
+            { answer: '"https://monad-testnet.drpc.org"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
           ],
           xp: 10,
         },
         {
           id: "ml3", type: "code", title: "Connect to Monad",
-          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://testnet-rpc.monad.xyz' and a chainId variable set to 10143",
+          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://monad-testnet.drpc.org' and a chainId variable set to 10143",
           starter: "// Set up Monad testnet config\n",
-          solution: 'const rpcUrl = "https://testnet-rpc.monad.xyz";\nconst chainId = 10143;',
+          solution: 'const rpcUrl = "https://monad-testnet.drpc.org";\nconst chainId = 10143;',
           hint: "Use const to declare the RPC URL string and chain ID number", xp: 15,
         },
       ],
@@ -267,7 +267,7 @@ export const MONAD_PATH = {
           blanks: [
             { answer: "http", placeholder: "transport type", explanation: "viem uses 'http' transport for JSON-RPC connections" },
             { answer: "http", placeholder: "function", explanation: "The http function creates an HTTP transport" },
-            { answer: '"https://testnet-rpc.monad.xyz"', placeholder: "RPC URL", explanation: "Pass the Monad RPC URL to the transport" },
+            { answer: '"https://monad-testnet.drpc.org"', placeholder: "RPC URL", explanation: "Pass the Monad RPC URL to the transport" },
           ],
           xp: 10,
         },

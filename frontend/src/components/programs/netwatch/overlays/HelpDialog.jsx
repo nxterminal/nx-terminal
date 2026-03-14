@@ -36,10 +36,10 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Monad
-Chain ID:  143
-RPC:       monad-mainnet.drpc.org
-Explorer:  monadexplorer.com
+Network:   Monad Testnet
+Chain ID:  10143
+RPC:       monad-testnet.drpc.org
+Explorer:  testnet.monadexplorer.com
 Consensus: AsyncBFT
 Target TPS: 30,000+
 Block Time: Sub-second (~0.5-0.8s)

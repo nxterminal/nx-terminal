@@ -2,13 +2,13 @@
 const ZAN_RPC_URL = typeof import.meta !== "undefined" && import.meta.env?.VITE_ZAN_RPC_URL;
 
 export const MONAD_CONFIG = {
-  RPC_URL: "https://monad-mainnet.drpc.org",
-  RPC_FALLBACK: ZAN_RPC_URL || "https://rpc.monad.xyz",
-  CHAIN_ID: 143,
+  RPC_URL: "https://monad-testnet.drpc.org",
+  RPC_FALLBACK: ZAN_RPC_URL || "https://monad-testnet.drpc.org",
+  CHAIN_ID: 10143,
   POLL_INTERVAL: 3000,
   MAX_TX_DISPLAY: 15,
   TPS_HISTORY_LENGTH: 40,
-  EXPLORER_URL: "https://monadexplorer.com",
+  EXPLORER_URL: "https://testnet.monadexplorer.com",
 };
 
 // ═══ CORPORATION DATA (Protocol Wars lore) ═══

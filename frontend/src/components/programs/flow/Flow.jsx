@@ -34,7 +34,7 @@ const BOOT_LINES = [
   { text: '(C) 2026 NX TERMINAL CORP', color: '#555D6B', delay: 150 },
   { text: '', delay: 300 },
   { text: 'CONNECTING TO MONAD RPC...', color: '#8B5CF6', delay: 400 },
-  { text: '  Chain ID: 143 ................................. OK', color: '#555D6B', delay: 700 },
+  { text: '  Chain ID: 10143 ................................ OK', color: '#555D6B', delay: 700 },
   { text: '  Block time: 400ms ............................. OK', color: '#555D6B', delay: 900 },
   { text: '', delay: 1050 },
   { text: 'LOADING MODULES', color: '#C8D6E5', delay: 1100 },
@@ -236,7 +236,7 @@ export default function Flow({ onClose }) {
         </div>
 
         <div className="flow-header__right">
-          Monad &middot; Chain 143 &middot; 400ms
+          Monad Testnet &middot; Chain 10143
         </div>
       </div>
 

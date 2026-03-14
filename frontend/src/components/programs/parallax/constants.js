@@ -22,7 +22,7 @@ export const BOOT_MESSAGES = [
   { text: '(C) 2026 NX TERMINAL CORP \u2014 OPTIMISTIC CONCURRENCY DIVISION', color: '#888', delay: 200 },
   { text: '', color: '', delay: 400 },
   { text: 'CONNECTING TO MONAD RPC ENDPOINT...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 143............................... OK', color: '#888', delay: 900 },
+  { text: 'CHAIN ID: 10143............................... OK', color: '#888', delay: 900 },
   { text: 'BLOCK TIME: 400ms........................... OK', color: '#888', delay: 1200 },
   { text: '', color: '', delay: 1400 },
   { text: 'INITIALIZING PARALLEL EXECUTION ENGINE...', color: '#30FF60', delay: 1600 },

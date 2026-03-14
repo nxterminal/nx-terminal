@@ -89,9 +89,9 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}>{'\u2550'.repeat(3)} </span>
         <span style={{ color: '#00bfff', textShadow: '0 0 6px rgba(0,191,255,0.5)' }}>NETWORK VITALS</span>
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
-        <span style={{ color: '#fff' }}>PHAROS ATLANTIC TESTNET</span>
+        <span style={{ color: '#fff' }}>MONAD TESTNET</span>
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 143</span>
+        <span style={{ color: '#666' }}>CHAIN 10143</span>
       </div>
 
       {/* Metrics */}
