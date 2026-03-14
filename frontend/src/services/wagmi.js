@@ -1,7 +1,7 @@
 import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// Monad — custom chain definition
+// Monad Testnet — custom chain definition
 export const monad = {
   id: 10143,
   name: 'Monad Testnet',

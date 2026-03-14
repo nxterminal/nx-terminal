@@ -15,7 +15,7 @@ REQUIREMENTS:
   - BACKEND_SIGNER_PRIVATE_KEY env var (EOA with SIGNER_ROLE on NXDevNFT)
   - web3.py >= 7.0 (pip install web3)
   - The signer address must have SIGNER_ROLE granted by contract owner
-  - Monad RPC: https://monad-mainnet.drpc.org
+  - Monad RPC: https://monad-testnet.drpc.org
 
 SAFETY:
   - This script does NOT execute transactions by default
@@ -42,8 +42,8 @@ logger = logging.getLogger(__name__)
 # -- Contract addresses (Monad) --------------------------------------------
 NXDEVNFT_ADDRESS = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
 NXT_TOKEN_ADDRESS = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47"
-MONAD_RPC = "https://monad-mainnet.drpc.org"
-MONAD_CHAIN_ID = 143
+MONAD_RPC = "https://monad-testnet.drpc.org"
+MONAD_CHAIN_ID = 10143
 
 # -- Env config --------------------------------------------------------
 SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")

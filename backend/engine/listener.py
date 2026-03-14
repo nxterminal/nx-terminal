@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 # CONFIG
 # ═══════════════════════════════════════════════════════════
 
-RPC_URL = os.getenv("MONAD_RPC_URL", "https://monad-mainnet.drpc.org")
+RPC_URL = os.getenv("MONAD_RPC_URL", "https://monad-testnet.drpc.org")
 NFT_CONTRACT = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
 IMAGE_CID = "bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4"
 

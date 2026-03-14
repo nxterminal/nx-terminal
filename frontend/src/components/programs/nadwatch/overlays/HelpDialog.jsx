@@ -13,7 +13,7 @@ NADWATCH is a real-time network monitor for
 the Monad blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
-It visualizes live data from Monad Mainnet
+It visualizes live data from Monad Testnet
 including blocks, transactions, TPS, gas,
 parallel execution load, and consensus pipeline.
 
