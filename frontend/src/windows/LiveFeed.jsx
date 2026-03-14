@@ -284,10 +284,10 @@ export default function LiveFeed() {
   const [connected, setConnected] = useState(false);
   const [hasBackendData, setHasBackendData] = useState(false);
   const [mintedDevs, setMintedDevs] = useState(() => {
-    // One-time cleanup: clear old MegaETH mint data after Pharos migration
-    if (!localStorage.getItem('nx-pharos-migrated')) {
+    // One-time cleanup: clear old mint data after Monad migration
+    if (!localStorage.getItem('nx-monad-migrated')) {
       localStorage.removeItem('nx-minted-devs');
-      localStorage.setItem('nx-pharos-migrated', '1');
+      localStorage.setItem('nx-monad-migrated', '1');
       return 0;
     }
     return parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);

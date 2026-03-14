@@ -1,6 +1,6 @@
 """
 NX TERMINAL — Blockchain Listener
-Watches DevMinted events on Pharos Atlantic Testnet, generates dev data
+Watches DevMinted events on Monad, generates dev data
 procedurally, and inserts new devs into the database automatically.
 
 Runs alongside the engine in the nx-engine service.
@@ -21,9 +21,9 @@ from urllib.parse import urlparse
 # CONFIG
 # ═══════════════════════════════════════════════════════════
 
-RPC_URL = os.getenv("PHAROS_RPC_URL", "https://atlantic.dplabs-internal.com")
+RPC_URL = os.getenv("MONAD_RPC_URL", "https://monad-mainnet.drpc.org")
 NFT_CONTRACT = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
-IMAGE_CID = "bafybeidqzkcpcannjtvnasq6ll7nskm2tf5xjb23xhr4wjb3iodxsm6eym"
+IMAGE_CID = "bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4"
 
 # DevMinted(address indexed owner, uint256 indexed tokenId)
 DEV_MINTED_TOPIC = "0x" + "0" * 24  # Will compute below
@@ -276,7 +276,7 @@ def insert_dev(cur, token_id, owner, data):
 # ═══════════════════════════════════════════════════════════
 
 def rpc_call(method, params=None):
-    """Make a JSON-RPC call to Pharos."""
+    """Make a JSON-RPC call to Monad."""
     payload = {
         "jsonrpc": "2.0",
         "method": method,

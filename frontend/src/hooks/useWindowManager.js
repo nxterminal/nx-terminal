@@ -20,7 +20,7 @@ const WINDOW_DEFAULTS = {
   'recycle-bin': { title: 'Recycle Bin', icon: 'x', width: 560, height: 400, x: 170, y: 70 },
   'corp-wars': { title: 'Corporation Wars', icon: '\u2694', width: 720, height: 550, x: 160, y: 50 },
   'netwatch': { title: 'Netwatch', icon: '', width: 900, height: 550, x: 80, y: 35 },
-  'pharos-sdk': { title: 'Pharos SDK', icon: '', width: 880, height: 700, x: 120, y: 30 },
+  'pharos-sdk': { title: 'Monad SDK (Legacy)', icon: '', width: 880, height: 700, x: 120, y: 30 },
   'nadwatch': { title: 'Nadwatch', icon: '~', width: 900, height: 620, x: 80, y: 30, maximized: true },
   'parallax': { title: 'Parallax', icon: '||', width: 1060, height: 720, x: 40, y: 20, maximized: true },
   'monad-sdk': { title: 'Monad SDK', icon: '</>', width: 880, height: 700, x: 120, y: 30 },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import './NetWatch.css';
-import { usePharosRPC } from './hooks/usePharosRPC';
+import { useMonadRPC } from './hooks/usePharosRPC';
 import BlockRain from './panels/BlockRain';
 import NetworkVitals from './panels/NetworkVitals';
 import TransactionFlow from './panels/TransactionFlow';
@@ -18,7 +18,7 @@ export default function NetWatch({ onClose }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [retryCountdown, setRetryCountdown] = useState(0);
 
-  const rpc = usePharosRPC();
+  const rpc = useMonadRPC();
 
   useEffect(() => {
     if (paused) {
@@ -115,7 +115,7 @@ export default function NetWatch({ onClose }) {
                 {showScanlines ? '\u2713 ' : '  '}Toggle Scanlines
               </div>
               <div className="nw-dropdown-separator" />
-              <div className="nw-dropdown-item nw-disabled" title="Coming after Pharos mainnet launch">
+              <div className="nw-dropdown-item nw-disabled" title="Coming soon">
                 Switch to Mainnet (soon)
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function NetWatch({ onClose }) {
                 {'\u26A0'} NETWORK OFFLINE
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
-                Unable to connect to Pharos<br />testnet RPC endpoint.
+                Unable to connect to Monad<br />RPC endpoint.
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
                 {retryCountdown > 0
@@ -229,7 +229,7 @@ export default function NetWatch({ onClose }) {
           <span style={{ color: statusColor, fontSize: '11px' }}>{statusText}</span>
         </div>
         <div className="nw-statusbar-right">
-          NETWATCH BETA {'\u00B7'} ATLANTIC TESTNET {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL {'\u00D7'} PHAROS
+          NETWATCH BETA {'\u00B7'} MONAD {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL
         </div>
       </div>
 

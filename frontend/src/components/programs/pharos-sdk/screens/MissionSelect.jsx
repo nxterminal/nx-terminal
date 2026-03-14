@@ -16,9 +16,9 @@ export default function MissionSelect({ completedMissions, onSelectMission }) {
 
   return (
     <div>
-      <div className="ps-select-welcome">Welcome to PHAROS_SDK Training</div>
+      <div className="ps-select-welcome">Welcome to MONAD_SDK Training</div>
       <div className="ps-select-desc">
-        Complete missions to learn blockchain development on Pharos Network.
+        Complete missions to learn blockchain development on Monad.
         Each mission is guided by one of the six Protocol Wars corporations.
       </div>
 
@@ -83,7 +83,7 @@ export default function MissionSelect({ completedMissions, onSelectMission }) {
 
       <div className="ps-track2-box">
         <div>
-          10 advanced missions covering DeFi, security, and Pharos architecture.
+          10 advanced missions covering DeFi, security, and Monad architecture.
           Available for NX Terminal NFT holders after mint.
         </div>
         <span

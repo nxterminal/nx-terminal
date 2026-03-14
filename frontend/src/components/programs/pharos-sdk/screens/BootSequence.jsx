@@ -7,7 +7,7 @@ export default function BootSequence({ onComplete }) {
   const timersRef = useRef([]);
 
   useEffect(() => {
-    if (sessionStorage.getItem('pharos_sdk_boot_seen')) {
+    if (sessionStorage.getItem('monad_sdk_boot_seen')) {
       onComplete();
       return;
     }
@@ -25,12 +25,12 @@ export default function BootSequence({ onComplete }) {
 
   const handleSkip = () => {
     timersRef.current.forEach(clearTimeout);
-    sessionStorage.setItem('pharos_sdk_boot_seen', '1');
+    sessionStorage.setItem('monad_sdk_boot_seen', '1');
     onComplete();
   };
 
   const handleEnter = () => {
-    sessionStorage.setItem('pharos_sdk_boot_seen', '1');
+    sessionStorage.setItem('monad_sdk_boot_seen', '1');
     onComplete();
   };
 

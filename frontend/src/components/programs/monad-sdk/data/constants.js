@@ -1,5 +1,5 @@
 // ═══ MONAD_SDK — CONSTANTS ═══
-// Re-export shared game-universe data from PharosSDK
+// Re-export shared game-universe data
 export { CORPORATIONS, DIFFICULTIES, EXERCISE_TYPES } from '../../pharos-sdk/data/constants';
 
 // ═══ MONAD-THEMED RANKS ═══

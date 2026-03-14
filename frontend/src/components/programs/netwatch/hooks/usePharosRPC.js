@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PHAROS_CONFIG } from "../utils/constants";
+import { MONAD_CONFIG } from "../utils/constants";
 
 // ═══ Known data point for Total TX estimation (Option B) ═══
 const KNOWN_BLOCK = 14942707;
@@ -16,7 +16,7 @@ async function rpcCall(method, params = []) {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(PHAROS_CONFIG.RPC_URL, {
+    const response = await fetch(MONAD_CONFIG.RPC_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -38,9 +38,9 @@ async function rpcCall(method, params = []) {
     return data.result;
   } catch (err) {
     clearTimeout(timeout);
-    if (PHAROS_CONFIG.RPC_FALLBACK) {
+    if (MONAD_CONFIG.RPC_FALLBACK) {
       try {
-        const response = await fetch(PHAROS_CONFIG.RPC_FALLBACK, {
+        const response = await fetch(MONAD_CONFIG.RPC_FALLBACK, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -74,7 +74,7 @@ function estimateTotalTx(blockNum) {
   return Math.round(KNOWN_TX_COUNT + (blockNum - KNOWN_BLOCK) * AVG_TX_PER_BLOCK);
 }
 
-export function usePharosRPC() {
+export function useMonadRPC() {
   const [state, setState] = useState({
     blockNumber: 0,
     tps: 0,
@@ -194,7 +194,7 @@ export function usePharosRPC() {
       }
 
       tpsHistoryRef.current = [
-        ...tpsHistoryRef.current.slice(-(PHAROS_CONFIG.TPS_HISTORY_LENGTH - 1)),
+        ...tpsHistoryRef.current.slice(-(MONAD_CONFIG.TPS_HISTORY_LENGTH - 1)),
         tps,
       ];
 
@@ -238,7 +238,7 @@ export function usePharosRPC() {
 
       txCacheRef.current = [...newTxs, ...txCacheRef.current].slice(
         0,
-        PHAROS_CONFIG.MAX_TX_DISPLAY
+        MONAD_CONFIG.MAX_TX_DISPLAY
       );
 
       setState({
@@ -273,7 +273,7 @@ export function usePharosRPC() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, PHAROS_CONFIG.POLL_INTERVAL);
+    const interval = setInterval(fetchData, MONAD_CONFIG.POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchData]);
 

@@ -6,10 +6,10 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
-const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeidqzkcpcannjtvnasq6ll7nskm2tf5xjb23xhr4wjb3iodxsm6eym';
+const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4';
 
 const DEPLOY_STEPS = [
-  { text: 'Connecting to Pharos Network...', duration: 800 },
+  { text: 'Connecting to Monad...', duration: 800 },
   { text: 'Installing neural pathways...', duration: 800 },
   { text: 'Compiling personality matrix...', duration: 1200 },
   { text: 'Deploying to corporation...', duration: 1000 },
@@ -786,7 +786,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   ) : (
                     <>
                       Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
-                        {priceDisplay} PHRS x {quantity} = {totalCostDisplay} PHRS
+                        {priceDisplay} MON x {quantity} = {totalCostDisplay} MON
                       </span>
                     </>
                   )}
