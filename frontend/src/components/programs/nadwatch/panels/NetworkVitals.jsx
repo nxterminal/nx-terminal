@@ -25,7 +25,7 @@ function buildSparkline(data) {
 const METRIC_TOOLTIPS = {
   tps: 'Transactions Per Second — Rolling average. Monad targets 10,000 TPS with parallel execution.',
   gas: 'Gas Throughput — Computational gas used per second. Monad targets much higher throughput than Ethereum.',
-  blk: 'Block Height — Current block number on Monad Mainnet. Blocks are produced every ~400ms.',
+  blk: 'Block Height — Current block number on Monad Testnet. Blocks are produced every ~400ms.',
   blockTime: 'Block Time — Average time between blocks. Monad targets 400ms. Green = within target.',
   fin: 'Finality — Time to finality. Monad achieves ~800ms (2 blocks) with MonadBFT.',
   par: 'Parallel Load — Estimated parallel execution lanes in use. 8 lanes total.',
@@ -84,9 +84,9 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}>{'═'.repeat(3)} </span>
         <span style={{ color: COLORS.primary, textShadow: `0 0 6px ${COLORS.primaryDim}` }}>NETWORK VITALS</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#fff' }}>MONAD MAINNET</span>
+        <span style={{ color: '#fff' }}>MONAD TESTNET</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 143</span>
+        <span style={{ color: '#666' }}>CHAIN 10143</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>

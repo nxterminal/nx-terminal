@@ -1,8 +1,8 @@
-// NXDevNFT v9 & NXTToken v5 on Monad (chain 143)
+// NXDevNFT v9 & NXTToken v5 on Monad Testnet (chain 10143)
 export const NXDEVNFT_ADDRESS = '0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636';
 export const NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47';
-export const MONAD_CHAIN_ID = 143;
-export const EXPLORER_BASE = 'https://monadexplorer.com';
+export const MONAD_CHAIN_ID = 10143;
+export const EXPLORER_BASE = 'https://testnet.monadexplorer.com';
 
 // Minimal ABI — only the functions the frontend needs
 export const NXDEVNFT_ABI = [

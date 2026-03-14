@@ -313,7 +313,7 @@ export const MONAD_TIPS = [
   "MON is the native gas token of Monad. Block time: just 400ms!",
   "MonadBFT uses a 4-stage pipeline: PROPOSE \u2192 VOTE \u2192 FINALIZE \u2192 EXECUTE",
   "Monad achieves ~10,000 TPS through optimistic parallel execution!",
-  "Chain ID 143 \u2014 Monad Mainnet is fully EVM-compatible!",
+  "Chain ID 10143 \u2014 Monad Testnet is fully EVM-compatible!",
   "Monad uses optimistic concurrency: execute in parallel, detect conflicts, re-execute if needed.",
   "MonadDb is a custom state database optimized for parallel read/write access.",
   "Monad's finality is ~800ms \u2014 approximately 2 block times!",

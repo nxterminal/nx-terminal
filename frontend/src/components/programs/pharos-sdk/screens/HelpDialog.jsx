@@ -17,7 +17,7 @@ const TAB_CONTENT = {
     { type: 'label', text: 'STATUS: BETA' },
     { type: 'text', text: 'Progress saved locally in your browser.' },
     { type: 'text', text: '' },
-    { type: 'mono', text: 'Network: Monad\nChain ID: 143' },
+    { type: 'mono', text: 'Network: Monad Testnet\nChain ID: 10143' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Built by Ember Labs\nnxterminal.com \u00B7 @nxterminalcorp' },
   ],

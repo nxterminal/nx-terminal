@@ -14,9 +14,9 @@ export const RANKS = [
 
 // ═══ MONAD NETWORK INFO ═══
 export const MONAD_INFO = {
-  CHAIN_NAME: 'Monad Mainnet',
-  CHAIN_ID: 143,
-  RPC_URL: 'https://rpc.monad.xyz',
+  CHAIN_NAME: 'Monad Testnet',
+  CHAIN_ID: 10143,
+  RPC_URL: 'https://monad-testnet.drpc.org',
   BLOCK_TIME: '400ms',
   CONSENSUS: 'MonadBFT',
   TPS: '10,000',
@@ -33,8 +33,8 @@ export const BOOT_MESSAGES = [
   { text: 'Loading mission database...', color: '#30FF60', delay: 900 },
   { text: '  [OK] Track 1: Monad Fundamentals (5 missions)', color: '#aaa', delay: 1200 },
   { text: '  [OK] Track 2: Advanced Monad (LOCKED)', color: '#666', delay: 1400 },
-  { text: 'Connecting to Monad Mainnet...', color: '#30FF60', delay: 1800 },
-  { text: '  Chain ID: 143 \u2014 Connection established', color: '#aaa', delay: 2200 },
+  { text: 'Connecting to Monad Testnet...', color: '#30FF60', delay: 1800 },
+  { text: '  Chain ID: 10143 \u2014 Connection established', color: '#aaa', delay: 2200 },
   { text: '  Block time: 400ms \u2014 Parallel execution: ACTIVE', color: '#aaa', delay: 2500 },
   { text: 'Loading compiler modules...', color: '#30FF60', delay: 2800 },
   { text: '  [OK] Solidity 0.8.19', color: '#aaa', delay: 3000 },

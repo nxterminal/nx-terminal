@@ -86,7 +86,7 @@ async function generateResponse(query, market) {
     const tps = market?.tps;
     const block = market?.blockNumber;
     if (gas != null || tps != null) {
-      return `**Monad Network Status** (live)\n\n• Gas Price: **${gas?.toFixed(4) || '--'} Gwei** (~$0.001 per tx)\n• TPS: **${tps?.toFixed(0) || '--'}** transactions/second\n• Latest Block: **#${(block || 0).toLocaleString()}**\n• Block Time: **400ms** (finality)\n• Chain ID: **143**\n\nMonad's parallel EVM execution enables sub-penny gas fees at thousands of TPS.`;
+      return `**Monad Network Status** (live)\n\n• Gas Price: **${gas?.toFixed(4) || '--'} Gwei** (~$0.001 per tx)\n• TPS: **${tps?.toFixed(0) || '--'}** transactions/second\n• Latest Block: **#${(block || 0).toLocaleString()}**\n• Block Time: **400ms** (finality)\n• Chain ID: **10143**\n\nMonad's parallel EVM execution enables sub-penny gas fees at thousands of TPS.`;
     }
     return 'Network data is still loading. Try again in a moment.';
   }
@@ -108,7 +108,7 @@ async function generateResponse(query, market) {
   }
 
   if (q.includes('monad') || q.includes('chain')) {
-    return `**About Monad**\n\nMonad is a high-performance EVM-compatible Layer 1 blockchain.\n\n• **Chain ID**: 143\n• **Block Time**: 400ms\n• **Consensus**: MonadBFT\n• **Execution**: Parallel EVM\n• **Gas**: Near-zero fees (< $0.01)\n• **TPS**: Currently ${market?.tps?.toFixed(0) || '1000+'}+ transactions per second\n\nTop DEXs: Kuru (CLOB), Uniswap, PancakeSwap, Curve, Balancer, Nad.fun`;
+    return `**About Monad**\n\nMonad is a high-performance EVM-compatible Layer 1 blockchain.\n\n• **Chain ID**: 10143\n• **Block Time**: 400ms\n• **Consensus**: MonadBFT\n• **Execution**: Parallel EVM\n• **Gas**: Near-zero fees (< $0.01)\n• **TPS**: Currently ${market?.tps?.toFixed(0) || '1000+'}+ transactions per second\n\nTop DEXs: Kuru (CLOB), Uniswap, PancakeSwap, Curve, Balancer, Nad.fun`;
   }
 
   return `I'm not sure how to answer that yet.\n\n**FLOW AI Oracle v1.0 (Beta)** — I can help with:\n• Pool data — "top trending pools" or "new pools"\n• Price analysis — "MON price analysis"\n• Network stats — "gas fees" or "network status"\n• Safety — "how to spot scams"\n• Guides — "how to use FLOW"\n\nThis is an early version. More capabilities are coming soon!`;

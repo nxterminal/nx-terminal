@@ -112,15 +112,15 @@ const TRACK_1 = {
           explanation: 'Without a reserve, an attacker could submit transactions that intentionally revert, consuming validator resources without paying. The reserve ensures there\'s always MON available to cover gas costs.',
         },
         {
-          question: 'Monad Mainnet Chain ID is:',
+          question: 'Monad Testnet Chain ID is:',
           options: [
             '1 (Ethereum Mainnet)',
-            '143',
+            '10143',
             '10 (Optimism)',
             '42161 (Arbitrum)',
           ],
           correct: 1,
-          explanation: 'Monad Mainnet uses Chain ID 143. You need this to add the network to MetaMask or configure your development tools.',
+          explanation: 'Monad Testnet uses Chain ID 10143. You need this to add the network to MetaMask or configure your development tools.',
         },
       ],
       completionMessage:
@@ -154,7 +154,7 @@ const TRACK_1 = {
         { num: 1,  text: '// SPDX-License-Identifier: MIT', editable: false },
         { num: 2,  text: 'pragma solidity ^0.8.19;', editable: false },
         { num: 3,  text: '', editable: false },
-        { num: 4,  text: '// Deploying on Monad (Chain ID: 143)', editable: false },
+        { num: 4,  text: '// Deploying on Monad Testnet (Chain ID: 10143)', editable: false },
         { num: 5,  text: 'contract MonadToken {', editable: false },
         { num: 6,  text: '    string public name = "Monad Token";', editable: false },
         { num: 7,  text: '    string public symbol = "MTKN";', editable: false },
