@@ -3,7 +3,7 @@ import { useReadContract } from 'wagmi';
 import { SIMULATION_CONFIG } from '../config/gameConfig';
 import {
   NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS,
-  EXPLORER_BASE,
+  EXPLORER_BASE, MONAD_CHAIN_ID,
 } from '../services/contract';
 
 const EXPLORER_ADDR = (addr) => `${EXPLORER_BASE}/address/${addr}`;
@@ -204,6 +204,7 @@ function Contracts() {
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'totalMinted',
+    chainId: MONAD_CHAIN_ID,
   });
 
   const minted = totalMinted != null ? Number(totalMinted).toLocaleString() : '...';

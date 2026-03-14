@@ -3,7 +3,7 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE, MONAD_CHAIN_ID } from '../services/contract';
 
 const RARITY_COLORS = {
   common: 'var(--common-on-grey, #333333)', uncommon: 'var(--green-on-grey, #005500)', rare: 'var(--blue-on-grey, #0d47a1)',
@@ -62,6 +62,7 @@ function ClaimSection({ wallet, tokenIds }) {
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'claimEnabled',
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!wallet },
   });
 
@@ -71,6 +72,7 @@ function ClaimSection({ wallet, tokenIds }) {
     abi: NXDEVNFT_ABI,
     functionName: 'previewClaim',
     args: [ids],
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!wallet && ids.length > 0 },
   });
 
@@ -620,6 +622,7 @@ export default function NxtWallet() {
     abi: NXDEVNFT_ABI,
     functionName: 'tokensOfOwner',
     args: wallet ? [wallet] : undefined,
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!wallet },
   });
 
