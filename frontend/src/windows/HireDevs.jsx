@@ -470,18 +470,19 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   const [mintError, setMintError] = useState(null);
   const [mintSuccess, setMintSuccess] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [rpcFallback, setRpcFallback] = useState(null);
 
-  const { address, isConnected, isConnecting, connect, displayAddress } = useWallet();
+  const { address, isConnected, isConnecting, connect, displayAddress, chain, isWrongChain, switchToMonad } = useWallet();
 
   // ── Contract reads ───────────────────────────────────────
-  const { data: mintPrice } = useReadContract({
+  const { data: mintPrice, error: mintPriceError } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPrice',
     chainId: MONAD_CHAIN_ID,
   });
 
-  const { data: mintPhase } = useReadContract({
+  const { data: mintPhase, error: mintPhaseError } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPhase',
@@ -494,6 +495,41 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     functionName: 'remainingSupply',
     chainId: MONAD_CHAIN_ID,
   });
+
+  // ── Direct RPC fallback if wagmi reads fail ──────────────
+  useEffect(() => {
+    if (mintPrice != null && mintPhase != null) return;
+    // Only fallback after a short delay to let wagmi try first
+    const timer = setTimeout(async () => {
+      if (mintPrice != null && mintPhase != null) return;
+      try {
+        const rpc = 'https://monad-testnet.drpc.org';
+        const call = async (data) => {
+          const res = await fetch(rpc, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'] }),
+          });
+          const json = await res.json();
+          return json.result;
+        };
+        // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf
+        const [priceHex, phaseHex] = await Promise.all([
+          call('0x6817c76c'),
+          call('0x17881cbf'),
+        ]);
+        if (priceHex && phaseHex) {
+          setRpcFallback({
+            mintPrice: BigInt(priceHex),
+            mintPhase: Number(BigInt(phaseHex)),
+          });
+        }
+      } catch {
+        // RPC fallback failed too
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [mintPrice, mintPhase]);
 
   const { data: freeAllowance } = useReadContract({
     address: NXDEVNFT_ADDRESS,
@@ -550,18 +586,21 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     setQuantity(1);
   };
 
-  // ── Derived state ────────────────────────────────────────
-  const phase = mintPhase != null ? Number(mintPhase) : null;
+  // ── Derived state (with RPC fallback) ───────────────────
+  const effectiveMintPhase = mintPhase != null ? mintPhase : (rpcFallback?.mintPhase ?? null);
+  const effectiveMintPrice = mintPrice != null ? mintPrice : (rpcFallback?.mintPrice ?? null);
+
+  const phase = effectiveMintPhase != null ? Number(effectiveMintPhase) : null;
   const isClosed = phase == null || phase === PHASE_CLOSED;
   const hasFreeMint = freeAllowance != null && Number(freeAllowance) > 0;
   const canWhitelistMint = phase === PHASE_WHITELIST && isWhitelisted;
   const canPublicMint = phase === PHASE_PUBLIC;
   const canMint = hasFreeMint || canWhitelistMint || canPublicMint;
 
-  const pricePerUnit = mintPrice != null ? mintPrice : 0n;
-  const priceDisplay = mintPrice != null ? formatEther(mintPrice) : '...';
-  const totalCost = mintPrice != null ? mintPrice * BigInt(quantity) : 0n;
-  const totalCostDisplay = mintPrice != null ? formatEther(totalCost) : '...';
+  const pricePerUnit = effectiveMintPrice != null ? effectiveMintPrice : 0n;
+  const priceDisplay = effectiveMintPrice != null ? formatEther(effectiveMintPrice) : '...';
+  const totalCost = effectiveMintPrice != null ? effectiveMintPrice * BigInt(quantity) : 0n;
+  const totalCostDisplay = effectiveMintPrice != null ? formatEther(totalCost) : '...';
   const remainingDisplay = remaining != null ? Number(remaining).toLocaleString() : '...';
 
   // Determine which mint function to call
@@ -590,6 +629,11 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   const handleMint = () => {
     if (!isConnected) {
       connect();
+      return;
+    }
+
+    if (isWrongChain) {
+      switchToMonad();
       return;
     }
 
@@ -632,6 +676,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   // ── Mint button label ────────────────────────────────────
   const getMintButtonLabel = () => {
     if (!isConnected) return isConnecting ? 'Connecting...' : 'Connect Wallet to Mint';
+    if (isWrongChain) return 'Switch to Monad Testnet';
     if (isMinting) return 'Confirm in Wallet...';
     if (isConfirming) return 'Confirming...';
     if (isFree) return `FREE MINT (${Number(freeAllowance)} left)`;
@@ -651,6 +696,14 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
       }}>
         <span>{'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy</span>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
+          {isConnected && (
+            <span style={{
+              color: isWrongChain ? 'var(--terminal-red)' : 'var(--terminal-green)',
+              fontWeight: 'bold',
+            }}>
+              {isWrongChain ? `⚠ Wrong Network (${chain?.name || 'Unknown'})` : '⛓ Monad Testnet'}
+            </span>
+          )}
           {phase != null && (
             <span style={{
               color: isClosed ? 'var(--terminal-red)' : 'var(--terminal-green)',
@@ -743,8 +796,31 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         {/* Mint confirmation phase */}
         {step >= QUESTIONS.length && (
           <div>
+            {/* Wrong chain warning */}
+            {isConnected && isWrongChain && (
+              <div className="win-raised" style={{
+                padding: '12px', marginBottom: '12px',
+                border: '2px solid var(--terminal-amber)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
+                  WRONG NETWORK DETECTED
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
+                  You are connected to {chain?.name || `Chain ${chain?.id}`}. Switch to Monad Testnet to mint.
+                </div>
+                <button
+                  className="win-btn"
+                  onClick={switchToMonad}
+                  style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '11px' }}
+                >
+                  Switch to Monad Testnet
+                </button>
+              </div>
+            )}
+
             {/* Mint closed banner */}
-            {isClosed && !hasFreeMint && (
+            {isClosed && !hasFreeMint && !isWrongChain && (
               <div className="win-raised" style={{
                 padding: '12px', marginBottom: '12px',
                 border: '2px solid var(--terminal-red)',

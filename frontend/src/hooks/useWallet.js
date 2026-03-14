@@ -14,8 +14,34 @@ export function useWallet() {
     connect({ connector: injected() });
   };
 
-  const switchToMonad = () => {
-    switchChain({ chainId: MONAD_CHAIN_ID });
+  const switchToMonad = async () => {
+    // Try wagmi switchChain first
+    try {
+      switchChain({ chainId: MONAD_CHAIN_ID });
+    } catch {
+      // Fallback: use window.ethereum directly to add+switch
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x279F' }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x279F',
+                chainName: 'Monad Testnet',
+                nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+                rpcUrls: ['https://monad-testnet.drpc.org'],
+                blockExplorerUrls: ['https://testnet.monadexplorer.com'],
+              }],
+            });
+          }
+        }
+      }
+    }
   };
 
   const formatAddress = (addr) => {
