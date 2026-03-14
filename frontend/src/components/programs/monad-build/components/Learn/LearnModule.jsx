@@ -72,11 +72,11 @@ module.exports = {
   },
   networks: {
     monad: {
-      url: "https://rpc.monad.xyz",
-      chainId: 143,
+      url: "https://monad-testnet.drpc.org",
+      chainId: 10143,
     },
     monadTestnet: {
-      url: "https://testnet-rpc.monad.xyz",
+      url: "https://monad-testnet.drpc.org",
       chainId: 10143,
     },
   },

@@ -13,12 +13,12 @@ module.exports = {
   },
   networks: {
     monad: {
-      url: "https://rpc.monad.xyz",
-      chainId: 143,
+      url: "https://monad-testnet.drpc.org",
+      chainId: 10143,
       accounts: [process.env.PRIVATE_KEY],
     },
     monadTestnet: {
-      url: "https://testnet-rpc.monad.xyz",
+      url: "https://monad-testnet.drpc.org",
       chainId: 10143,
       accounts: [process.env.PRIVATE_KEY],
     },
@@ -36,8 +36,8 @@ optimizer = true
 optimizer_runs = 200
 
 [rpc_endpoints]
-monad = "https://rpc.monad.xyz"
-monadTestnet = "https://testnet-rpc.monad.xyz"`;
+monad = "https://monad-testnet.drpc.org"
+monadTestnet = "https://monad-testnet.drpc.org"`;
 
 export default function CompileStep() {
   const [showHardhat, setShowHardhat] = useState(false);

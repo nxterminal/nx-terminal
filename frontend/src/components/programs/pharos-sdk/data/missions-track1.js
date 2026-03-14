@@ -111,7 +111,7 @@ const TRACK_1 = {
           explanation: "With your private key, anyone can sign transactions as you \u2014 including transferring all your assets. There is no 'password reset' in crypto.",
         },
         {
-          question: "Monad Chain ID is:",
+          question: "Monad Testnet Chain ID is:",
           options: [
             "1 (Ethereum Mainnet)",
             "10143",

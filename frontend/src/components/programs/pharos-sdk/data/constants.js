@@ -106,7 +106,7 @@ export const BOOT_MESSAGES = [
 
 // ═══ MONAD NETWORK INFO ═══
 export const MONAD_INFO = {
-  CHAIN_NAME: "Monad",
+  CHAIN_NAME: "Monad Testnet",
   CHAIN_ID: 10143,
   RPC_URL: "https://monad-testnet.drpc.org",
   EXPLORER: "https://testnet.monadexplorer.com",

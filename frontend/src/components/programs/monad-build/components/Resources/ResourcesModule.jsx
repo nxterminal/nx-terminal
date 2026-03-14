@@ -43,11 +43,11 @@ function Section({ title, defaultOpen = false, children }) {
 const VIEM_SNIPPET = `import { createPublicClient, http } from 'viem';
 
 const monad = {
-  id: 143,
-  name: 'Monad',
+  id: 10143,
+  name: 'Monad Testnet',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.monad.xyz'] } },
-  blockExplorers: { default: { name: 'MonadVision', url: 'https://monadvision.com' } },
+  rpcUrls: { default: { http: ['https://monad-testnet.drpc.org'] } },
+  blockExplorers: { default: { name: 'MonadExplorer', url: 'https://testnet.monadexplorer.com' } },
 };
 
 const client = createPublicClient({
