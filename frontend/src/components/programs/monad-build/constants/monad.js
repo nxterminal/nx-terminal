@@ -1,10 +1,10 @@
 export const MONAD_MAINNET = {
-  chainId: 143,
-  name: 'Monad',
-  rpcUrl: 'https://rpc.monad.xyz',
-  explorer: 'https://monadvision.com',
+  chainId: 10143,
+  name: 'Monad Testnet',
+  rpcUrl: 'https://monad-testnet.drpc.org',
+  explorer: 'https://testnet.monadexplorer.com',
   explorerApi: 'https://sourcify-api-monad.blockvision.org',
-  etherscanExplorer: 'https://monadscan.com',
+  etherscanExplorer: 'https://testnet.monadexplorer.com',
   etherscanApi: 'https://api.monadscan.com/api',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
 };
@@ -12,8 +12,8 @@ export const MONAD_MAINNET = {
 export const MONAD_TESTNET = {
   chainId: 10143,
   name: 'Monad Testnet',
-  rpcUrl: 'https://testnet-rpc.monad.xyz',
-  explorer: 'https://testnet.monadvision.com',
+  rpcUrl: 'https://monad-testnet.drpc.org',
+  explorer: 'https://testnet.monadexplorer.com',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
 };
 
@@ -27,11 +27,7 @@ export const CANONICAL_CONTRACTS = {
 };
 
 export const MONAD_RPC_PROVIDERS = [
-  { name: 'QuickNode', url: 'https://rpc.monad.xyz', rateLimit: '25 rps' },
-  { name: 'Alchemy', url: 'https://rpc1.monad.xyz', rateLimit: '15 rps' },
-  { name: 'Goldsky', url: 'https://rpc2.monad.xyz', rateLimit: '300/10s' },
-  { name: 'Ankr', url: 'https://rpc3.monad.xyz', rateLimit: '300/10s' },
-  { name: 'Monad Foundation', url: 'https://rpc-mainnet.monadinfra.com', rateLimit: '20 rps' },
+  { name: 'dRPC', url: 'https://monad-testnet.drpc.org', rateLimit: '25 rps' },
 ];
 
 export const FAUCETS = [

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { API, DEX_ID_MAP } from '../constants';
 
-const MONAD_RPC = 'https://rpc.monad.xyz';
+const MONAD_RPC = 'https://monad-testnet.drpc.org';
 
 // Top ERC20 tokens on Monad with their contract addresses
 const KNOWN_TOKENS = [

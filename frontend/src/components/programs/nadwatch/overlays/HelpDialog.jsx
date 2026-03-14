@@ -33,9 +33,9 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Monad Mainnet
-Chain ID:  143
-RPC:       rpc.monad.xyz
+Network:   Monad Testnet
+Chain ID:  10143
+RPC:       monad-testnet.drpc.org
 Block Time: 400ms
 Target TPS: 10,000
 Consensus:  MonadBFT

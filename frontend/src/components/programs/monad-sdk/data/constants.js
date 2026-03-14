@@ -14,9 +14,9 @@ export const RANKS = [
 
 // ═══ MONAD NETWORK INFO ═══
 export const MONAD_INFO = {
-  CHAIN_NAME: 'Monad Mainnet',
-  CHAIN_ID: 143,
-  RPC_URL: 'https://rpc.monad.xyz',
+  CHAIN_NAME: 'Monad Testnet',
+  CHAIN_ID: 10143,
+  RPC_URL: 'https://monad-testnet.drpc.org',
   BLOCK_TIME: '400ms',
   CONSENSUS: 'MonadBFT',
   TPS: '10,000',

@@ -18,7 +18,7 @@ export default function DeploySuccess() {
 
   function handleShare() {
     const text = encodeURIComponent(
-      `Just deployed my contract on @monad_xyz in under 1 second! Built with #NXTerminal MONAD_BUILD.exe\n\n${config.explorer}/address/${state.deployedAddress}`
+      `Just deployed my contract on @monad_xyz in under 1 second! Built with #NXTerminal Monad Build.exe\n\n${config.explorer}/address/${state.deployedAddress}`
     );
     window.open(`https://x.com/intent/tweet?text=${text}`, '_blank');
   }

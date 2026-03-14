@@ -3,15 +3,14 @@ import { injected } from 'wagmi/connectors';
 
 // Monad — custom chain definition
 export const monad = {
-  id: 143,
-  name: 'Monad',
+  id: 10143,
+  name: 'Monad Testnet',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://monad-mainnet.drpc.org'] },
-    fallback: { http: ['https://rpc.monad.xyz'] },
+    default: { http: ['https://monad-testnet.drpc.org'] },
   },
   blockExplorers: {
-    default: { name: 'MonadExplorer', url: 'https://monadexplorer.com' },
+    default: { name: 'MonadExplorer', url: 'https://testnet.monadexplorer.com' },
   },
 };
 
@@ -19,6 +18,6 @@ export const wagmiConfig = createConfig({
   chains: [monad],
   connectors: [injected()],
   transports: {
-    [monad.id]: http('https://monad-mainnet.drpc.org'),
+    [monad.id]: http('https://monad-testnet.drpc.org'),
   },
 });

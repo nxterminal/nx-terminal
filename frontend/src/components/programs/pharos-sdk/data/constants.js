@@ -86,7 +86,7 @@ export const BOOT_MESSAGES = [
   { text: "  [OK] Track 2: Corporate Warfare (LOCKED)", color: "#666", delay: 1400 },
   { text: "  [OK] Track 3: Monad Deep Dive (LOCKED)", color: "#666", delay: 1600 },
   { text: "Connecting to Monad...", color: "#00ff41", delay: 2000 },
-  { text: "  Chain ID: 143 \u2014 Connection established", color: "#aaa", delay: 2400 },
+  { text: "  Chain ID: 10143 \u2014 Connection established", color: "#aaa", delay: 2400 },
   { text: "Loading compiler modules...", color: "#00ff41", delay: 2800 },
   { text: "  [OK] Solidity 0.8.19", color: "#aaa", delay: 3000 },
   { text: "  [OK] Code validator", color: "#aaa", delay: 3150 },
@@ -106,10 +106,10 @@ export const BOOT_MESSAGES = [
 
 // ═══ MONAD NETWORK INFO ═══
 export const MONAD_INFO = {
-  CHAIN_NAME: "Monad",
-  CHAIN_ID: 143,
-  RPC_URL: "https://monad-mainnet.drpc.org",
-  EXPLORER: "https://monadexplorer.com",
+  CHAIN_NAME: "Monad Testnet",
+  CHAIN_ID: 10143,
+  RPC_URL: "https://monad-testnet.drpc.org",
+  EXPLORER: "https://testnet.monadexplorer.com",
   CONSENSUS: "AsyncBFT",
   TPS: "30,000+",
   FINALITY: "Sub-second (~0.5s)",

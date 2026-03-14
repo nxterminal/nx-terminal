@@ -1,6 +1,6 @@
-// ═══ MONAD MAINNET CONFIGURATION ═══
-export const MONAD_RPC = 'https://rpc.monad.xyz';
-export const CHAIN_ID = 143;
+// ═══ MONAD TESTNET CONFIGURATION ═══
+export const MONAD_RPC = 'https://monad-testnet.drpc.org';
+export const CHAIN_ID = 10143;
 export const BLOCK_TIME_MS = 400;
 export const TARGET_TPS = 10000;
 export const POLL_INTERVAL = 400;
@@ -71,7 +71,7 @@ export const BOOT_MESSAGES = [
   { text: '(C) 2026 NX TERMINAL CORP — FOR THE NADS', color: '#888', delay: 200 },
   { text: '', color: '', delay: 400 },
   { text: 'ESTABLISHING MONAD RPC CONNECTION...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 143............................... OK', color: '#888', delay: 900 },
+  { text: 'CHAIN ID: 10143............................. OK', color: '#888', delay: 900 },
   { text: 'BLOCK TIME: 400ms........................... OK', color: '#888', delay: 1200 },
   { text: 'TARGET TPS: 10,000.......................... OK', color: '#888', delay: 1500 },
   { text: '', color: '', delay: 1700 },
