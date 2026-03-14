@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MONAD_CHAIN_ID } from '../services/contract';
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
@@ -47,6 +47,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
     abi: NXDEVNFT_ABI,
     functionName: 'tokensOfOwner',
     args: address ? [address] : undefined,
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!address },
   });
 
@@ -477,18 +478,21 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPrice',
+    chainId: MONAD_CHAIN_ID,
   });
 
   const { data: mintPhase } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPhase',
+    chainId: MONAD_CHAIN_ID,
   });
 
   const { data: remaining } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'remainingSupply',
+    chainId: MONAD_CHAIN_ID,
   });
 
   const { data: freeAllowance } = useReadContract({
@@ -496,6 +500,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     abi: NXDEVNFT_ABI,
     functionName: 'freeMintAllowance',
     args: address ? [address] : undefined,
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!address },
   });
 
@@ -504,6 +509,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     abi: NXDEVNFT_ABI,
     functionName: 'whitelisted',
     args: address ? [address] : undefined,
+    chainId: MONAD_CHAIN_ID,
     query: { enabled: !!address },
   });
 
