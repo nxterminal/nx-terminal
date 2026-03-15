@@ -497,38 +497,76 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   });
 
   // ── Direct RPC fallback if wagmi reads fail ──────────────
+  // Try: 1) window.ethereum (wallet provider), 2) direct RPC fetch, 3) hardcoded known values
   useEffect(() => {
     if (mintPrice != null && mintPhase != null) return;
-    // Only fallback after a short delay to let wagmi try first
-    const timer = setTimeout(async () => {
-      if (mintPrice != null && mintPhase != null) return;
-      try {
-        const rpc = 'https://monad-testnet.drpc.org';
-        const call = async (data) => {
-          const res = await fetch(rpc, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'] }),
-          });
-          const json = await res.json();
-          return json.result;
-        };
-        // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf
-        const [priceHex, phaseHex] = await Promise.all([
-          call('0x6817c76c'),
-          call('0x17881cbf'),
-        ]);
-        if (priceHex && phaseHex) {
-          setRpcFallback({
-            mintPrice: BigInt(priceHex),
-            mintPhase: Number(BigInt(phaseHex)),
-          });
+    let cancelled = false;
+
+    const tryRead = async () => {
+      // Helper: eth_call via a provider
+      const ethCall = async (provider, data) => {
+        if (typeof provider === 'function') {
+          return await provider(data);
         }
-      } catch {
-        // RPC fallback failed too
+        const res = await fetch(provider, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'] }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error.message);
+        return json.result;
+      };
+
+      // Provider via window.ethereum (wallet's own RPC connection)
+      const walletCall = async (data) => {
+        if (!window.ethereum) throw new Error('No wallet');
+        return await window.ethereum.request({
+          method: 'eth_call',
+          params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'],
+        });
+      };
+
+      // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf
+      const providers = [
+        walletCall,
+        'https://monad-testnet.drpc.org',
+        'https://testnet-rpc.monad.xyz',
+      ];
+
+      for (const prov of providers) {
+        if (cancelled) return;
+        try {
+          const [priceHex, phaseHex] = await Promise.all([
+            typeof prov === 'function' ? prov('0x6817c76c') : ethCall(prov, '0x6817c76c'),
+            typeof prov === 'function' ? prov('0x17881cbf') : ethCall(prov, '0x17881cbf'),
+          ]);
+          if (priceHex && phaseHex && priceHex !== '0x' && phaseHex !== '0x') {
+            if (!cancelled) {
+              setRpcFallback({
+                mintPrice: BigInt(priceHex),
+                mintPhase: Number(BigInt(phaseHex)),
+              });
+            }
+            return; // success
+          }
+        } catch {
+          // try next provider
+        }
       }
-    }, 2000);
-    return () => clearTimeout(timer);
+
+      // Ultimate fallback: hardcoded known values from deployed contract
+      // mintPhase = 2 (PUBLIC), mintPrice = 100000000000000 (0.0001 MON)
+      if (!cancelled) {
+        setRpcFallback({
+          mintPrice: 100000000000000n,
+          mintPhase: 2,
+        });
+      }
+    };
+
+    const timer = setTimeout(tryRead, 1500);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [mintPrice, mintPhase]);
 
   const { data: freeAllowance } = useReadContract({
