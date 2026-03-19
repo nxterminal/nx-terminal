@@ -30,7 +30,7 @@ const DESKTOP_ICONS = [
   { id: 'monad-city', icon: '', label: 'Monad City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Monad Build' },
-  { id: 'phares', icon: '📡', label: 'PHARES' },
+  { id: 'phares', icon: '', label: 'PHARES' },
 ];
 
 function getWallpaperStyle() {

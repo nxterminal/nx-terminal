@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { TABS, HEADER_METRICS } from './constants';
 import { usePharesState } from './hooks/usePharesState';
+import { useWallet } from '../../../hooks/useWallet';
+import { api } from '../../../services/api';
 import ActiveMarkets from './tabs/ActiveMarkets';
 import MyPositions from './tabs/MyPositions';
 import Resolved from './tabs/Resolved';
@@ -17,6 +19,11 @@ const TAB_COMPONENTS = {
   leaderboard: LeaderboardTab,
 };
 
+function formatBalance(n) {
+  if (n == null || n === 0) return '0';
+  return Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
 export default function Phares() {
   const {
     activeTab,
@@ -27,9 +34,11 @@ export default function Phares() {
     setSelectedSide,
     betAmount,
     setBetAmount,
-    walletConnected,
-    toggleWallet,
   } = usePharesState();
+
+  const { address, isConnected, connect, displayAddress } = useWallet();
+  const [nxtBalance, setNxtBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     // Load Outfit font
@@ -53,7 +62,27 @@ export default function Phares() {
     };
   }, []);
 
+  // Fetch NXT balance when wallet connects
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setNxtBalance(null);
+      return;
+    }
+
+    setLoadingBalance(true);
+    api.getWalletSummary(address)
+      .then(data => {
+        setNxtBalance(data.balance_claimable || 0);
+      })
+      .catch(() => {
+        // If API fails, show 0
+        setNxtBalance(0);
+      })
+      .finally(() => setLoadingBalance(false));
+  }, [isConnected, address]);
+
   const TabContent = TAB_COMPONENTS[activeTab];
+  const balanceDisplay = loadingBalance ? '...' : formatBalance(nxtBalance);
 
   return (
     <div className="phares-root">
@@ -87,8 +116,8 @@ export default function Phares() {
               <span className="phares-metric-value">{HEADER_METRICS.traders}</span>
             </div>
           </div>
-          <button className="phares-connect-btn" onClick={toggleWallet}>
-            {walletConnected ? '0x7a3...f29d' : 'CONNECT WALLET'}
+          <button className="phares-connect-btn" onClick={isConnected ? undefined : connect}>
+            {isConnected ? displayAddress : 'CONNECT WALLET'}
           </button>
         </div>
       </header>
@@ -124,7 +153,9 @@ export default function Phares() {
             setSelectedSide={setSelectedSide}
             betAmount={betAmount}
             setBetAmount={setBetAmount}
-            walletConnected={walletConnected}
+            walletConnected={isConnected}
+            nxtBalance={nxtBalance}
+            balanceDisplay={balanceDisplay}
           />
           <PositionsPanel />
           <LeaderboardPanel />
