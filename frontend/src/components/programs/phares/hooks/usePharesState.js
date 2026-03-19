@@ -8,7 +8,6 @@ export function usePharesState() {
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0]);
   const [selectedSide, setSelectedSide] = useState(null);
   const [betAmount, setBetAmount] = useState('');
-  const [walletConnected, setWalletConnected] = useState(false);
 
   const setTab = useCallback((tabId) => {
     setActiveTab(tabId);
@@ -21,10 +20,6 @@ export function usePharesState() {
     setBetAmount('');
   }, []);
 
-  const toggleWallet = useCallback(() => {
-    setWalletConnected(prev => !prev);
-  }, []);
-
   return {
     activeTab,
     setTab,
@@ -34,7 +29,5 @@ export function usePharesState() {
     setSelectedSide,
     betAmount,
     setBetAmount,
-    walletConnected,
-    toggleWallet,
   };
 }

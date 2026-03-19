@@ -761,6 +761,47 @@ function IconMonadBuild({ size = 32 }) {
   );
 }
 
+function IconPhares({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="pharesBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#08090c" />
+          <stop offset="100%" stopColor="#0e1015" />
+        </linearGradient>
+        <linearGradient id="pharesGreen" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#34eba8" />
+          <stop offset="100%" stopColor="#00c96a" />
+        </linearGradient>
+        <linearGradient id="pharesBar" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#00c96a" />
+          <stop offset="100%" stopColor="#e83e52" />
+        </linearGradient>
+      </defs>
+      {/* Background */}
+      <rect x="1" y="1" width="30" height="30" rx="4" fill="url(#pharesBg)" stroke="#00c96a" strokeWidth="0.6" opacity="0.9" />
+      {/* Chart candlesticks */}
+      <rect x="5" y="12" width="2.5" height="8" rx="0.5" fill="#00c96a" opacity="0.8" />
+      <rect x="9" y="9" width="2.5" height="11" rx="0.5" fill="#00c96a" opacity="0.9" />
+      <rect x="13" y="14" width="2.5" height="6" rx="0.5" fill="#e83e52" opacity="0.7" />
+      <rect x="17" y="7" width="2.5" height="13" rx="0.5" fill="#00c96a" opacity="0.9" />
+      <rect x="21" y="11" width="2.5" height="9" rx="0.5" fill="#e83e52" opacity="0.7" />
+      <rect x="25" y="8" width="2.5" height="12" rx="0.5" fill="#00c96a" opacity="0.8" />
+      {/* Prediction line */}
+      <polyline points="6,11 10,8 14,13 18,6 22,10 26,7" fill="none" stroke="url(#pharesGreen)" strokeWidth="1" opacity="0.9" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Signal dots */}
+      <circle cx="6" cy="11" r="1.2" fill="#34eba8" opacity="0.9" />
+      <circle cx="18" cy="6" r="1.2" fill="#34eba8" opacity="0.9" />
+      <circle cx="26" cy="7" r="1.2" fill="#34eba8" opacity="0.9" />
+      {/* Bottom bar — YES/NO odds */}
+      <rect x="4" y="23" width="15" height="3" rx="1" fill="#00c96a" opacity="0.7" />
+      <rect x="19" y="23" width="9" height="3" rx="1" fill="#e83e52" opacity="0.7" />
+      {/* P letter */}
+      <text x="16" y="28.5" textAnchor="middle" fontSize="3" fontWeight="bold" fill="#fff" fontFamily="monospace" opacity="0.5">YES 68%</text>
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -787,6 +828,7 @@ export const ICON_MAP = {
   'flow': IconFlow,
   'dev-academy': IconDevAcademy,
   'monad-build': IconMonadBuild,
+  'phares': IconPhares,
 };
 
 export function Win98Icon({ id, size = 32 }) {

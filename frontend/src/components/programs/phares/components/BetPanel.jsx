@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { OPTION_COLORS } from '../constants';
 
 const PRESETS = [50, 100, 250, 500];
-const BALANCE = 2450;
 
-export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide, betAmount, setBetAmount, walletConnected }) {
+export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide, betAmount, setBetAmount, walletConnected, nxtBalance, balanceDisplay }) {
   const [confirmed, setConfirmed] = useState(false);
+
+  // Use real balance from wallet, fallback to 0 if not connected
+  const balance = walletConnected && nxtBalance != null ? Math.floor(nxtBalance) : 0;
 
   if (!selectedMarket) {
     return (
@@ -26,12 +28,14 @@ export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide
 
   const getSubmitText = () => {
     if (confirmed) return 'CONFIRMED ✓';
+    if (!walletConnected) return 'CONNECT WALLET';
     if (!selectedSide) return 'SELECT POSITION';
     if (!amount) return 'ENTER AMOUNT';
+    if (amount > balance) return 'INSUFFICIENT BALANCE';
     return `CONFIRM ${selectedSide.toUpperCase()} · ${amount} NXT`;
   };
 
-  const canSubmit = selectedSide && amount > 0 && !confirmed;
+  const canSubmit = walletConnected && selectedSide && amount > 0 && amount <= balance && !confirmed;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -80,7 +84,9 @@ export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide
       {/* Amount */}
       <div className="phares-amount-header">
         <span className="phares-amount-label">Amount</span>
-        <span className="phares-amount-balance">Balance: {BALANCE.toLocaleString()} NXT</span>
+        <span className="phares-amount-balance">
+          Balance: {walletConnected ? `${balanceDisplay || '0'} NXT` : '-- NXT'}
+        </span>
       </div>
       <div className="phares-amount-wrapper">
         <input
@@ -90,7 +96,7 @@ export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide
           value={betAmount}
           onChange={e => setBetAmount(e.target.value)}
           min="0"
-          max={BALANCE}
+          max={balance}
         />
         <span className="phares-amount-unit">NXT</span>
       </div>
@@ -100,7 +106,7 @@ export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide
             {p}
           </button>
         ))}
-        <button className="phares-preset-btn" onClick={() => setBetAmount(String(BALANCE))}>
+        <button className="phares-preset-btn" onClick={() => setBetAmount(String(balance))}>
           MAX
         </button>
       </div>
