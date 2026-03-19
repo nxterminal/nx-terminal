@@ -28,6 +28,7 @@ const WINDOW_DEFAULTS = {
   'flow': { title: 'Flow', icon: '\u25C6', width: 1100, height: 750, x: 30, y: 15, maximized: true },
   'dev-academy': { title: 'NX Dev Academy', icon: 'DA', width: 900, height: 650, x: 100, y: 35, maximized: true },
   'monad-build': { title: 'Monad Build.exe', icon: '\u26A1', width: 1100, height: 700, x: 50, y: 20, maximized: true },
+  'phares': { title: 'PHARES.EXE', icon: '📡', width: 1100, height: 700, x: 40, y: 20, maximized: true },
 };
 
 export function useWindowManager() {

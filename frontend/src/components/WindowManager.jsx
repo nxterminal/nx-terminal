@@ -23,6 +23,7 @@ import MonadCity from './programs/monad-city/MonadCity';
 import Flow from './programs/flow/Flow';
 import DevAcademy from './programs/dev-academy/DevAcademy';
 import MonadBuild from './programs/monad-build/MonadBuild';
+import Phares from './programs/phares/Phares';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -48,6 +49,7 @@ const WINDOW_COMPONENTS = {
   'flow': Flow,
   'dev-academy': DevAcademy,
   'monad-build': MonadBuild,
+  'phares': Phares,
 };
 
 export default function WindowManager({
