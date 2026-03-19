@@ -23,13 +23,13 @@ const DESKTOP_ICONS = [
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'flow', icon: '\u25C6', label: 'Flow' },
-  { id: 'nadwatch', icon: '', label: 'Nadwatch' },
-  { id: 'parallax', icon: '', label: 'Parallax' },
-  { id: 'monad-sdk', icon: '', label: 'Monad SDK' },
-  { id: 'monad-city', icon: '', label: 'Monad City' },
+  { id: 'flow', icon: '\u25C6', label: 'Flow', hidden: true },
+  { id: 'nadwatch', icon: '', label: 'Nadwatch', hidden: true },
+  { id: 'parallax', icon: '', label: 'Parallax', hidden: true },
+  { id: 'monad-sdk', icon: '', label: 'Monad SDK', hidden: true },
+  { id: 'monad-city', icon: '', label: 'Monad City', hidden: true },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
-  { id: 'monad-build', icon: '\u26A1', label: 'Monad Build' },
+  { id: 'monad-build', icon: '\u26A1', label: 'Monad Build', hidden: true },
   { id: 'phares', icon: '', label: 'PHARES' },
 ];
 
@@ -175,7 +175,7 @@ export default function Desktop() {
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
       <div className="desktop-icons">
-        {DESKTOP_ICONS.map(item => (
+        {DESKTOP_ICONS.filter(item => !item.hidden).map(item => (
           <DesktopIcon
             key={item.id}
             id={item.id}

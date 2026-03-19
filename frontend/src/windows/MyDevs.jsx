@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MONAD_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, PHAROS_CHAIN_ID } from '../services/contract';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
@@ -430,7 +430,7 @@ export default function MyDevs({ openDevProfile }) {
     abi: NXDEVNFT_ABI,
     functionName: 'tokensOfOwner',
     args: address ? [address] : undefined,
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
     query: { enabled: !!address },
   });
 

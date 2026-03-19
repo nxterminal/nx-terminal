@@ -36,10 +36,10 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Monad Testnet
-Chain ID:  10143
-RPC:       monad-testnet.drpc.org
-Explorer:  testnet.monadexplorer.com
+Network:   Pharos Atlantic Testnet
+Chain ID:  688689
+RPC:       atlantic.dplabs-internal.com
+Explorer:  atlantic.pharosscan.xyz
 Consensus: AsyncBFT
 Target TPS: 30,000+
 Block Time: Sub-second (~0.5-0.8s)

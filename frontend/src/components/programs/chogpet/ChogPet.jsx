@@ -119,7 +119,7 @@ export default function ChogPet({ onClose }) {
           </button>
         </div>
         <div style={{ position: 'relative' }} onMouseEnter={() => onBtnEnter('tips')} onMouseLeave={onBtnLeave}>
-          {hoveredBtn === 'tips' && <BtnTooltip text="Tips — Toggle Monad tips. Earn XP when tips appear." />}
+          {hoveredBtn === 'tips' && <BtnTooltip text="Tips — Toggle blockchain tips. Earn XP when tips appear." />}
           <button className="cp-hw-btn" onClick={toggleHelper}>
             <span className="cp-hw-btn-label cp-btn-tips">T</span>
             <span className="cp-hw-btn-text">TIPS {helperMode ? 'ON' : 'OFF'}</span>

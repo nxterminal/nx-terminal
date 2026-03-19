@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MONAD_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, PHAROS_CHAIN_ID } from '../services/contract';
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
 const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4';
 
 const DEPLOY_STEPS = [
-  { text: 'Connecting to Monad...', duration: 800 },
+  { text: 'Connecting to Pharos...', duration: 800 },
   { text: 'Installing neural pathways...', duration: 800 },
   { text: 'Compiling personality matrix...', duration: 1200 },
   { text: 'Deploying to corporation...', duration: 1000 },
@@ -47,7 +47,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
     abi: NXDEVNFT_ABI,
     functionName: 'tokensOfOwner',
     args: address ? [address] : undefined,
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
     query: { enabled: !!address },
   });
 
@@ -472,28 +472,28 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [rpcFallback, setRpcFallback] = useState(null);
 
-  const { address, isConnected, isConnecting, connect, displayAddress, chain, isWrongChain, switchToMonad } = useWallet();
+  const { address, isConnected, isConnecting, connect, displayAddress, chain, isWrongChain, switchToPharos } = useWallet();
 
   // ── Contract reads ───────────────────────────────────────
   const { data: mintPrice, error: mintPriceError } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPrice',
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
   });
 
   const { data: mintPhase, error: mintPhaseError } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'mintPhase',
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
   });
 
   const { data: remaining } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'remainingSupply',
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
   });
 
   // ── Direct RPC fallback if wagmi reads fail ──────────────
@@ -530,8 +530,8 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
       // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf
       const providers = [
         walletCall,
-        'https://monad-testnet.drpc.org',
-        'https://testnet-rpc.monad.xyz',
+        'https://atlantic.dplabs-internal.com',
+        'https://atlantic.dplabs-internal.com',
       ];
 
       for (const prov of providers) {
@@ -556,7 +556,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
       }
 
       // Ultimate fallback: hardcoded known values from deployed contract
-      // mintPhase = 2 (PUBLIC), mintPrice = 100000000000000 (0.0001 MON)
+      // mintPhase = 2 (PUBLIC), mintPrice = 100000000000000 (0.0001 PHRS)
       if (!cancelled) {
         setRpcFallback({
           mintPrice: 100000000000000n,
@@ -574,7 +574,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     abi: NXDEVNFT_ABI,
     functionName: 'freeMintAllowance',
     args: address ? [address] : undefined,
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
     query: { enabled: !!address },
   });
 
@@ -583,7 +583,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     abi: NXDEVNFT_ABI,
     functionName: 'whitelisted',
     args: address ? [address] : undefined,
-    chainId: MONAD_CHAIN_ID,
+    chainId: PHAROS_CHAIN_ID,
     query: { enabled: !!address },
   });
 
@@ -671,7 +671,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     }
 
     if (isWrongChain) {
-      switchToMonad();
+      switchToPharos();
       return;
     }
 
@@ -714,7 +714,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   // ── Mint button label ────────────────────────────────────
   const getMintButtonLabel = () => {
     if (!isConnected) return isConnecting ? 'Connecting...' : 'Connect Wallet to Mint';
-    if (isWrongChain) return 'Switch to Monad Testnet';
+    if (isWrongChain) return 'Switch to Pharos Testnet';
     if (isMinting) return 'Confirm in Wallet...';
     if (isConfirming) return 'Confirming...';
     if (isFree) return `FREE MINT (${Number(freeAllowance)} left)`;
@@ -739,7 +739,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               color: isWrongChain ? 'var(--terminal-red)' : 'var(--terminal-green)',
               fontWeight: 'bold',
             }}>
-              {isWrongChain ? `⚠ Wrong Network (${chain?.name || 'Unknown'})` : '⛓ Monad Testnet'}
+              {isWrongChain ? `⚠ Wrong Network (${chain?.name || 'Unknown'})` : '⛓ Pharos Testnet'}
             </span>
           )}
           {phase != null && (
@@ -845,14 +845,14 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   WRONG NETWORK DETECTED
                 </div>
                 <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-                  You are connected to {chain?.name || `Chain ${chain?.id}`}. Switch to Monad Testnet to mint.
+                  You are connected to {chain?.name || `Chain ${chain?.id}`}. Switch to Pharos Testnet to mint.
                 </div>
                 <button
                   className="win-btn"
-                  onClick={switchToMonad}
+                  onClick={switchToPharos}
                   style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '11px' }}
                 >
-                  Switch to Monad Testnet
+                  Switch to Pharos Testnet
                 </button>
               </div>
             )}
@@ -906,7 +906,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   ) : (
                     <>
                       Cost: <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
-                        {priceDisplay} MON x {quantity} = {totalCostDisplay} MON
+                        {priceDisplay} PHRS x {quantity} = {totalCostDisplay} PHRS
                       </span>
                     </>
                   )}

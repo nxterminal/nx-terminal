@@ -15,7 +15,7 @@ REQUIREMENTS:
   - BACKEND_SIGNER_PRIVATE_KEY env var (EOA with SIGNER_ROLE on NXDevNFT)
   - web3.py >= 7.0 (pip install web3)
   - The signer address must have SIGNER_ROLE granted by contract owner
-  - Monad RPC: https://monad-testnet.drpc.org
+  - Pharos RPC: https://atlantic.dplabs-internal.com
 
 SAFETY:
   - This script does NOT execute transactions by default
@@ -39,11 +39,11 @@ from .config import (
 
 logger = logging.getLogger(__name__)
 
-# -- Contract addresses (Monad) --------------------------------------------
+# -- Contract addresses (Pharos Atlantic Testnet) --------------------------
 NXDEVNFT_ADDRESS = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
 NXT_TOKEN_ADDRESS = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47"
-MONAD_RPC = "https://monad-testnet.drpc.org"
-MONAD_CHAIN_ID = 10143
+PHAROS_RPC = os.getenv("PHAROS_RPC_URL", "https://atlantic.dplabs-internal.com")
+PHAROS_CHAIN_ID = 688689
 
 # -- Env config --------------------------------------------------------
 SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")
@@ -147,7 +147,7 @@ def _send_batch(w3, contract, account, batch_ids, batch_amounts, nonce):
     ).build_transaction({
         "from": account.address,
         "nonce": nonce,
-        "chainId": MONAD_CHAIN_ID,
+        "chainId": PHAROS_CHAIN_ID,
         "gas": 500_000 + (len(batch_ids) * 30_000),
     })
 
@@ -227,9 +227,9 @@ def sync_claimable_balances():
     try:
         from web3 import Web3
 
-        w3 = Web3(Web3.HTTPProvider(MONAD_RPC))
+        w3 = Web3(Web3.HTTPProvider(PHAROS_RPC))
         if not w3.is_connected():
-            logger.error("Cannot connect to Monad RPC.")
+            logger.error("Cannot connect to Pharos RPC.")
             db_conn.close()
             return
 
