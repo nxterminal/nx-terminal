@@ -1,10 +1,20 @@
 """Routes: Dev NFTs — browse, detail, history"""
 
+import os
+import json
+import logging
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
-from backend.api.deps import fetch_one, fetch_all
+from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.engine.dev_generator import generate_dev_data
+
+log = logging.getLogger("nx_api")
 
 router = APIRouter()
+
+# RPC for on-chain ownership check
+_RPC_URL = os.getenv("PHAROS_RPC_URL", os.getenv("MONAD_RPC_URL", "https://atlantic.dplabs-internal.com"))
+_NFT_CONTRACT = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
 
 
 @router.get("")
@@ -68,12 +78,104 @@ async def count_devs():
     return {"total": row["total"]}
 
 
+def _rpc_call(method, params=None):
+    """Quick JSON-RPC call for on-chain checks."""
+    import requests
+    try:
+        r = requests.post(_RPC_URL, json={
+            "jsonrpc": "2.0", "method": method, "params": params or [], "id": 1,
+        }, timeout=5)
+        data = r.json()
+        return data.get("result")
+    except Exception:
+        return None
+
+
+def _check_token_owner(token_id):
+    """Check on-chain owner of a token via ownerOf(uint256). Returns address or None."""
+    # ownerOf(uint256) selector = 0x6352211e
+    data = "0x6352211e" + hex(token_id)[2:].zfill(64)
+    result = _rpc_call("eth_call", [{"to": _NFT_CONTRACT, "data": data}, "latest"])
+    if result and result != "0x" and len(result) >= 66:
+        return "0x" + result[-40:]
+    return None
+
+
+def _insert_dev_on_demand(token_id, owner):
+    """Generate and insert a dev procedurally when the listener missed it."""
+    def check_name(name):
+        row = fetch_one("SELECT name FROM devs WHERE name = %s", (name,))
+        return row is not None
+
+    data = generate_dev_data(token_id, check_name_exists=check_name)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO devs (
+                    token_id, name, owner_address, archetype, corporation, rarity_tier,
+                    personality_seed,
+                    alignment, risk_level, social_style, coding_style, work_ethic,
+                    species, ipfs_hash,
+                    stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck,
+                    status, next_cycle_at, minted_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s,
+                    %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    'active', NOW(), NOW()
+                )
+                ON CONFLICT (token_id) DO NOTHING
+            """, (
+                token_id,
+                data["name"], owner.lower(),
+                data["archetype"], data["corporation"], data["rarity"],
+                data["personality_seed"],
+                data["alignment"], data["risk_level"], data["social_style"],
+                data["coding_style"], data["work_ethic"],
+                data["species"], data["ipfs_hash"],
+                data["stat_coding"], data["stat_hacking"], data["stat_trading"],
+                data["stat_social"], data["stat_endurance"], data["stat_luck"],
+            ))
+
+            # Also ensure player record exists
+            cur.execute("""
+                INSERT INTO players (wallet_address, corporation, total_devs_minted)
+                VALUES (%s, %s, 1)
+                ON CONFLICT (wallet_address) DO UPDATE SET
+                    total_devs_minted = players.total_devs_minted + 1,
+                    last_active_at = NOW()
+            """, (owner.lower(), data["corporation"]))
+
+    log.info(f"On-demand generated dev #{token_id}: {data['name']} ({data['archetype']})")
+    return data["name"]
+
+
 @router.get("/{token_id}")
 async def get_dev(token_id: int):
-    """Get full dev profile."""
+    """Get full dev profile. Auto-generates if minted on-chain but not yet in DB."""
+    dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
+    if dev:
+        return dev
+
+    # Not in DB — check if it exists on-chain
+    owner = _check_token_owner(token_id)
+    if not owner:
+        raise HTTPException(404, "Dev not found")
+
+    # Token exists on-chain but listener missed it — generate on-demand
+    try:
+        _insert_dev_on_demand(token_id, owner)
+    except Exception as e:
+        log.error(f"On-demand dev generation failed for #{token_id}: {e}")
+        raise HTTPException(503, "Dev generation in progress, try again shortly")
+
+    # Fetch the newly created dev
     dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
     if not dev:
-        raise HTTPException(404, "Dev not found")
+        raise HTTPException(503, "Dev generation in progress, try again shortly")
     return dev
 
 
