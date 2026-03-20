@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useMonadRPC } from '../../nadwatch/hooks/useMonadRPC';
+import { usePharosRPC } from '../../netwatch/hooks/usePharosRPC';
 
 export function useMonadCityData() {
-  const rpc = useMonadRPC();
+  const rpc = usePharosRPC();
   const [price, setPrice] = useState({
     usd: 0.0207, change: -2.82, mcap: 229, vol: 35.5,
     fdv: null, circulating: null, total: null, ath: null, athChange: null, rank: null,
@@ -12,7 +12,8 @@ export function useMonadCityData() {
   const fetchPrice = useCallback(async () => {
     try {
       const r = await fetch(
-        'https://api.coingecko.com/api/v3/coins/monad?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false'
+        // TODO: update to Pharos CoinGecko ID when available on mainnet
+        'https://api.coingecko.com/api/v3/coins/pharos?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false'
       );
       const d = await r.json();
       if (d.market_data) {
