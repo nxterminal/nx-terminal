@@ -53,7 +53,7 @@ export default function ChogPet({ onClose }) {
   return (
     <div className="cp-window">
       {/* Shell top label */}
-      <div className="cp-shell-label">MONADGOTCHI</div>
+      <div className="cp-shell-label">PHAROSGOTCHI</div>
 
       {/* LCD Screen */}
       <div className="cp-lcd-frame">
@@ -151,7 +151,7 @@ export default function ChogPet({ onClose }) {
           {hunger < 30 && ' [!] Hungry!'}
         </span>
         <span className="cp-statusbar-right">
-          MONADGOTCHI v1.0 | NX TERMINAL x MONAD
+          PHAROSGOTCHI v1.0 | NX TERMINAL x PHAROS
         </span>
       </div>
     </div>

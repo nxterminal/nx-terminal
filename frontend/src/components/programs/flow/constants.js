@@ -10,7 +10,7 @@ export const PROTOCOLS = {
 };
 
 export const TOKENS = [
-  'MON', 'WETH', 'USDC', 'USDT', 'WMON', 'AUSD',
+  'PHRS', 'WETH', 'USDC', 'USDT', 'WMON', 'AUSD',
   'CHOG', 'YAKI', 'PURP', 'BLOB', 'HEDG', 'NADFUN',
   'MONKE', 'GMON', 'MOCHI'
 ];
@@ -24,15 +24,15 @@ export const TABS = [
 ];
 
 export const TOOLTIPS = {
-  tps: 'Transactions Per Second — measures network throughput on Monad',
-  block: 'Current block number on Monad (finality ~400ms)',
-  monPrice: 'Live MON token price from CoinGecko',
-  gas: 'Current gas price in Gwei — Monad keeps this extremely low',
-  theStream: 'Real-time trade feed from all Monad DEXs',
-  walletXray: 'Analyze any Monad wallet: balances, tokens, and activity',
+  tps: 'Transactions Per Second — measures network throughput on Pharos',
+  block: 'Current block number on Pharos (sub-second finality)',
+  monPrice: 'Live PHRS token price from CoinGecko',
+  gas: 'Current gas price in Gwei — Pharos keeps this extremely low',
+  theStream: 'Real-time trade feed from all Pharos DEXs',
+  walletXray: 'Analyze any Pharos wallet: balances, tokens, and activity',
   tokenRadar: 'Pool scoring engine — rates pools 0-100 for safety',
   clobVision: 'Live orderbook visualization for Kuru CLOB DEX',
-  aiOracle: 'Ask questions about Monad DeFi using live market data',
+  aiOracle: 'Ask questions about Pharos DeFi using live market data',
   buy: 'A buy trade — someone purchased this token',
   sell: 'A sell trade — someone sold this token',
   whale: 'Large trade ($10K+) that may move the market',
@@ -94,7 +94,7 @@ export const API = {
   GECKOTERMINAL_TRADES: (poolAddr) => `https://api.geckoterminal.com/api/v2/networks/monad/pools/${poolAddr}/trades`,
   GECKOTERMINAL_POOL: (poolAddr) => `https://api.geckoterminal.com/api/v2/networks/monad/pools/${poolAddr}`,
   DEXPAPRIKA_POOLS: 'https://api.dexpaprika.com/networks/monad/pools',
-  GOPLUS_TOKEN_SECURITY: (addr) => `https://api.gopluslabs.io/api/v1/token_security/10143?contract_addresses=${addr}`,
+  GOPLUS_TOKEN_SECURITY: (addr) => `https://api.gopluslabs.io/api/v1/token_security/688689?contract_addresses=${addr}`,
 };
 
 // GeckoTerminal rate limit: 10 calls/min for free tier
@@ -103,5 +103,5 @@ export const POLL_INTERVALS = {
   POOLS: 15000,           // Pool data: 15s
   TRADES: 12000,          // Trades: 12s
   NEW_POOLS: 20000,       // New pools: 20s
-  RPC: 400,               // Monad RPC: 400ms (via useMonadRPC)
+  RPC: 400,               // Pharos RPC poll interval (via useMonadRPC)
 };

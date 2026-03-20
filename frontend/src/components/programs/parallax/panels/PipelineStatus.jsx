@@ -9,7 +9,7 @@ function formatBlockNum(n) {
 
 const STAGES = [
   { label: 'PROPOSE',  key: 'propose',  color: '#00FFFF', offset: 2, tip: 'Propose — Leader proposes a new block containing ordered transactions. Block N+2 is proposed while earlier blocks are still being finalized.' },
-  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1, tip: 'Vote — Validators vote on the proposed block. MonadBFT requires 2/3+ validator agreement for consensus.' },
+  { label: 'VOTE',     key: 'vote',     color: '#7B2FBE', offset: 1, tip: 'Vote — Validators vote on the proposed block. AsyncBFT requires 2/3+ validator agreement for consensus.' },
   { label: 'FINALIZE', key: 'finalize', color: '#30FF60', offset: 0, tip: 'Finalize — Block is finalized after receiving sufficient votes. Finality achieved in ~800ms (2 block times).' },
   { label: 'EXECUTE',  key: 'execute',  color: '#FFD700', offset: -3, tip: 'Execute — Deferred execution: transactions execute after finalization. This allows consensus and execution to run in parallel.' },
 ];
@@ -26,9 +26,9 @@ export default function PipelineStatus({ blockNumber = 0 }) {
       flexDirection: 'column',
       gap: '4px',
     }}>
-      <InfoTooltip text="MonadBFT Pipeline — 4 consensus stages run in parallel on different blocks. While one block is proposed, the previous is voted on, the one before finalized, and an earlier one executed.">
+      <InfoTooltip text="AsyncBFT Pipeline — 4 consensus stages run in parallel on different blocks. While one block is proposed, the previous is voted on, the one before finalized, and an earlier one executed.">
         <div style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: '10px', borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '4px' }}>
-          MONADBFT PIPELINE
+          ASYNCBFT PIPELINE
         </div>
       </InfoTooltip>
 

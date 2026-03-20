@@ -180,12 +180,12 @@ export default function BlockRain({ blockNumber }) {
         blockTextAlphaRef.current = Math.max(0, blockTextAlphaRef.current - 0.008);
       }
 
-      // "MONAD FEED — LIVE" label
+      // "PHAROS FEED — LIVE" label
       ctx.save();
       ctx.font = '9px "Courier New", monospace';
       ctx.fillStyle = 'rgba(123, 47, 190, 0.7)';
       ctx.textAlign = 'left';
-      ctx.fillText('MONAD FEED \u2014 LIVE', 6, 14);
+      ctx.fillText('PHAROS FEED \u2014 LIVE', 6, 14);
       ctx.restore();
     };
 
@@ -200,7 +200,7 @@ export default function BlockRain({ blockNumber }) {
         style={{ display: 'block', width: '100%', height: '100%' }}
       />
       <Tooltip
-        text="Block Rain — Real-time visualization of Monad blockchain activity. Purple/green bicolor columns with Monanimal easter eggs."
+        text="Block Rain — Real-time visualization of Pharos blockchain activity. Purple/green bicolor columns with Monanimal easter eggs."
         style={{ position: 'absolute', top: '2px', left: '2px', width: '140px', height: '18px', zIndex: 2 }}
       >
         <div style={{ width: '100%', height: '100%', cursor: 'default' }} />

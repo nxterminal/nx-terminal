@@ -1,5 +1,5 @@
-// MONADGOTCHI.exe — Desktop Pet Constants
-// Monad ecosystem mascots: Chog (frog), Molandak (mole), Moyaki (firebird)
+// PHAROSGOTCHI.exe — Desktop Pet Constants
+// Pharos ecosystem mascots: Chog (frog), Molandak (mole), Moyaki (firebird)
 
 // 12x12 pixel art sprite data
 // Each frame is a 12x12 array where each value is a color key or null (transparent)
@@ -245,7 +245,7 @@ export const PET_TYPES = {
   chog: {
     name: 'Chog',
     icon: '[C]',
-    description: 'A mysterious frog from the Monad swamps. Loves parallel execution.',
+    description: 'A mysterious frog from the Pharos ecosystem. Loves parallel execution.',
     colors: {
       g: '#30FF60',  // green body
       d: '#1a8a35',  // dark green (feet/accents)
@@ -308,7 +308,7 @@ export const FEED_HUNGER = 25;
 export const PET_HAPPINESS = 10;
 export const BUBBLE_DURATION = 8000;
 
-export const MONAD_TIPS = [
+export const PHAROS_TIPS = [
   "Did you know? Pharos processes transactions in parallel with sub-second finality!",
   "PHRS is the native gas token of Pharos. AsyncBFT consensus for blazing speed!",
   "AsyncBFT uses a pipelined consensus: PROPOSE \u2192 VOTE \u2192 FINALIZE \u2192 EXECUTE",

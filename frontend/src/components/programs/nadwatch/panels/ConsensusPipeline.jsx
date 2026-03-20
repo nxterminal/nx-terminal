@@ -46,7 +46,7 @@ export default function ConsensusPipeline({ blockNumber = 0 }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-            <span style={{ color: COLORS.primary, fontWeight: 'bold' }}>MONADBFT PIPELINE</span>
+            <span style={{ color: COLORS.primary, fontWeight: 'bold' }}>ASYNCBFT PIPELINE</span>
             <span style={{ color: '#444', fontSize: '9px' }}>[click to collapse]</span>
           </div>
           {stages.map((s) => (
