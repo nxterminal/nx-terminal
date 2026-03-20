@@ -1,6 +1,6 @@
 import { Loader2, Check, X, ExternalLink } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { MONAD_MAINNET, MONAD_TESTNET } from '../../constants/monad';
+import { PHAROS_MAINNET, PHAROS_TESTNET } from '../../constants/monad';
 
 const PHASES = [
   { key: 'compiling', label: 'Preparing Transaction...', desc: 'Building deployment transaction' },
@@ -23,7 +23,7 @@ function getPhaseIndex(status) {
 export default function DeployStatus() {
   const { state } = useBuild();
   const currentPhase = getPhaseIndex(state.deployStatus);
-  const config = state.network === 'mainnet' ? MONAD_MAINNET : MONAD_TESTNET;
+  const config = state.network === 'mainnet' ? PHAROS_MAINNET : PHAROS_TESTNET;
 
   if (state.deployStatus === 'idle') return null;
 

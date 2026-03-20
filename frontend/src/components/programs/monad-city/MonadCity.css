@@ -134,6 +134,25 @@
 .mc-meta-row { display: flex; justify-content: space-between; font-size: 7px; color: #C4B5FD; opacity: .6; line-height: 1.6; }
 .mc-meta-row .mc-label { color: #8B5CF6; opacity: .7; }
 
+/* Testnet badge — glowing green */
+.mc-testnet-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #00ff41;
+  border: 1px solid #00ff41;
+  border-radius: 3px;
+  text-shadow: 0 0 8px #00ff41, 0 0 16px #00ff41;
+  box-shadow: 0 0 6px rgba(0,255,65,0.4), inset 0 0 6px rgba(0,255,65,0.1);
+  animation: mc-testnet-glow 2s ease-in-out infinite alternate;
+}
+@keyframes mc-testnet-glow {
+  from { text-shadow: 0 0 6px #00ff41, 0 0 12px #00ff41; box-shadow: 0 0 4px rgba(0,255,65,0.3), inset 0 0 4px rgba(0,255,65,0.05); }
+  to   { text-shadow: 0 0 12px #00ff41, 0 0 24px #00ff41, 0 0 36px rgba(0,255,65,0.3); box-shadow: 0 0 10px rgba(0,255,65,0.5), inset 0 0 8px rgba(0,255,65,0.1); }
+}
+
 /* Block stats panel */
 .mc-block-panel { top: 26px; right: 6px; width: 195px; }
 .mc-block-txs { font-weight: 900; font-size: 30px; color: #836EF9; text-shadow: 0 0 18px rgba(131,110,249,.3); line-height: 1; }

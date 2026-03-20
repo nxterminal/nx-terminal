@@ -1300,12 +1300,12 @@ export default function MonadCity() {
         <>
           {/* Price Panel */}
           <div className="mc-panel mc-price-panel">
-            <div className="mc-label">PHRS / USD</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+              <div className="mc-label">PHRS / USD</div>
+              <span className="mc-testnet-badge">TESTNET</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
-              <span className="mc-price">${price.usd.toFixed(4)}</span>
-              <span className={`mc-change ${price.change >= 0 ? 'up' : 'down'}`}>
-                {price.change >= 0 ? '+' : ''}{price.change.toFixed(2)}%
-              </span>
+              <span className="mc-price">$0.00</span>
             </div>
             <div className="mc-gas-row">
               <div className="mc-label">GAS</div>
@@ -1315,14 +1315,7 @@ export default function MonadCity() {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
               <div><div className="mc-label">BLOCK</div><span className="mc-block-num">#{blockNumber.toLocaleString()}</span></div>
             </div>
-            <div className="mc-meta">MCAP ${price.mcap}M &middot; VOL ${price.vol}M</div>
-            <div className="mc-meta-ext">
-              {price.fdv != null && <div className="mc-meta-row"><span className="mc-label">FDV</span><span>${price.fdv}M</span></div>}
-              {price.circulating != null && <div className="mc-meta-row"><span className="mc-label">CIRC</span><span>{price.circulating}M</span></div>}
-              {price.total != null && <div className="mc-meta-row"><span className="mc-label">SUPPLY</span><span>{price.total}M</span></div>}
-              {price.ath != null && <div className="mc-meta-row"><span className="mc-label">ATH</span><span>${price.ath.toFixed(4)} <span className="mc-change down">({price.athChange?.toFixed(1)}%)</span></span></div>}
-              {price.rank != null && <div className="mc-meta-row"><span className="mc-label">RANK</span><span>#{price.rank}</span></div>}
-            </div>
+            <div className="mc-meta">ATLANTIC TESTNET &middot; CHAIN 688689</div>
           </div>
 
           {/* Block Stats Panel */}

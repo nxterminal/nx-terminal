@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { CheckCircle2, ExternalLink, Copy, Check, Share2, Hammer } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { MONAD_MAINNET, MONAD_TESTNET } from '../../constants/monad';
+import { PHAROS_MAINNET, PHAROS_TESTNET } from '../../constants/monad';
 import Button from '../shared/Button';
 import Card from '../shared/Card';
 
 export default function DeploySuccess() {
   const { state, dispatch } = useBuild();
   const [copied, setCopied] = useState(false);
-  const config = state.network === 'mainnet' ? MONAD_MAINNET : MONAD_TESTNET;
+  const config = state.network === 'mainnet' ? PHAROS_MAINNET : PHAROS_TESTNET;
 
   function handleCopy() {
     navigator.clipboard.writeText(state.deployedAddress);
