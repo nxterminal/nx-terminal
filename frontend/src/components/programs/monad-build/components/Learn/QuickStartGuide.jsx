@@ -15,7 +15,7 @@ const STEPS = [
 
 export default function QuickStartGuide() {
   const [completed, setCompleted] = useState({});
-  const { isConnected, connect, isWrongChain, switchToMonad } = useWallet();
+  const { isConnected, connect, isWrongChain, switchToPharos } = useWallet();
   const { dispatch } = useBuild();
 
   function toggleStep(i) {
@@ -83,7 +83,7 @@ export default function QuickStartGuide() {
                   </Button>
                 )}
                 {i === 1 && isConnected && isWrongChain && (
-                  <Button size="sm" onClick={switchToMonad}>Switch Network</Button>
+                  <Button size="sm" onClick={switchToPharos}>Switch Network</Button>
                 )}
                 {i === 2 && (
                   <a

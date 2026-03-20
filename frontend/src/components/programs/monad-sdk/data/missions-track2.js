@@ -1,13 +1,13 @@
 import { EXERCISE_TYPES } from './constants';
 
 const TRACK_2 = {
-  id: 'advanced_monad',
-  name: 'Advanced Monad',
-  description: 'Deep dive into Monad architecture. Requires NX Terminal NFT.',
+  id: 'advanced_pharos',
+  name: 'Advanced Pharos',
+  description: 'Deep dive into Pharos architecture. Requires NX Terminal NFT.',
   locked: true,
   missions: [
     {
-      id: 'm06', number: 6, title: 'MonadDb Deep Dive',
+      id: 'm06', number: 6, title: 'PharosDb Deep Dive',
       subtitle: 'Custom database for parallel state access',
       corp: 'closed_ai', difficulty: 3, type: EXERCISE_TYPES.CODE, xp: 150,
       briefing: 'Locked. Requires NX Terminal NFT.', language: 'solidity',
@@ -42,7 +42,7 @@ const TRACK_2 = {
       codeLines: [], questions: [], completionMessage: '',
     },
     {
-      id: 'm11', number: 11, title: 'MEV on Monad',
+      id: 'm11', number: 11, title: 'MEV on Pharos',
       subtitle: 'Extractable value in parallel chains',
       corp: 'closed_ai', difficulty: 3, type: EXERCISE_TYPES.QUIZ, xp: 150,
       briefing: 'Locked. Requires NX Terminal NFT.',
@@ -57,7 +57,7 @@ const TRACK_2 = {
     },
     {
       id: 'm13', number: 13, title: 'Validator Operations',
-      subtitle: 'Running a Monad validator node',
+      subtitle: 'Running a Pharos validator node',
       corp: 'y_ai', difficulty: 4, type: EXERCISE_TYPES.CODE, xp: 200,
       briefing: 'Locked. Requires NX Terminal NFT.', language: 'javascript',
       codeLines: [], questions: [], completionMessage: '',

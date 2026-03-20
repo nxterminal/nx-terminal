@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { COLORS } from '../constants';
 
-const TABS = ['About', 'Lanes', 'Monad'];
+const TABS = ['About', 'Lanes', 'Pharos'];
 
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
@@ -9,7 +9,7 @@ PARALLAX.exe — Parallel Execution Visualizer
 Version 1.0
 ${'═'.repeat(45)}
 
-PARALLAX is a real-time visualizer for Monad's
+PARALLAX is a real-time visualizer for Pharos's
 parallel transaction execution, built as part
 of the NX Terminal: Protocol Wars ecosystem.
 
@@ -23,11 +23,11 @@ ${'═'.repeat(45)}
 
 This is an EDUCATIONAL VISUALIZATION. Lane
 assignment is simulated by hashing the target
-address. Real Monad uses MonadDb with read/write
+address. Real Pharos uses PharosDb with read/write
 set tracking for optimistic parallel execution.
 
 The conflict detection shown here is simplified.
-Actual Monad conflict resolution is more
+Actual Pharos conflict resolution is more
 sophisticated and handles edge cases that this
 visualization does not model.
 
@@ -80,24 +80,24 @@ PERFORMANCE METRICS (right sidebar)
   PARALLEL GAIN shows the speedup factor.
   Lane efficiency = % of active execution.`,
 
-  'Monad': `${'═'.repeat(45)}
-ABOUT MONAD
+  'Pharos': `${'═'.repeat(45)}
+ABOUT PHAROS
 ${'═'.repeat(45)}
 
-Monad is a high-performance EVM-compatible
+Pharos is a high-performance EVM-compatible
 Layer 1 blockchain with parallel execution.
 
 KEY FEATURES:
-  • 10,000 TPS with parallel execution
-  • 400ms block time
-  • ~800ms finality (2 blocks)
-  • MonadBFT consensus (pipelined)
-  • MonadDb custom database for SSDs
+  • 30,000+ TPS with parallel execution
+  • Sub-second block time
+  • Sub-second finality
+  • AsyncBFT consensus (pipelined)
+  • PharosDb custom database for SSDs
   • RaptorCast erasure-coded propagation
   • EVM bytecode compatible
 
 PARALLEL EXECUTION:
-  Monad executes transactions in parallel
+  Pharos executes transactions in parallel
   using optimistic concurrency. If two txs
   conflict (access same state), one is
   re-executed. Results are deterministic.
@@ -106,15 +106,13 @@ PARALLEL EXECUTION:
   when most transactions access independent
   state, which is the common case.
 
-MONADBFT PIPELINE:
+ASYNCBFT PIPELINE:
   Four stages run simultaneously:
   PROPOSE → VOTE → FINALIZE → EXECUTE
   Each stage processes a different block,
   maximizing throughput.
 
-Learn more: docs.monad.xyz
-
-GMONAD.`,
+Learn more: docs.pharos.xyz`,
 };
 
 export default function HelpDialog({ onClose, initialTab = 'About' }) {

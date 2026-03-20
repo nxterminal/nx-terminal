@@ -12,7 +12,7 @@ import {
   getLevel,
 } from '../constants';
 
-const STORAGE_KEY = 'monadgotchi-state';
+const STORAGE_KEY = 'pharosgotchi-state';
 const OLD_STORAGE_KEY = 'chogpet-state';
 
 function checkDayReset(state) {

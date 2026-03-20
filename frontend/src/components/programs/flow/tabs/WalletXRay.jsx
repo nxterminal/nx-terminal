@@ -48,7 +48,7 @@ export default function WalletXRay({ market }) {
         <input
           className="flow-wallet-search__input"
           type="text"
-          placeholder="Enter Monad wallet address (0x…)"
+          placeholder="Enter Pharos wallet address (0x…)"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           spellCheck={false}
@@ -68,7 +68,7 @@ export default function WalletXRay({ market }) {
       {/* LOADING */}
       {loading && (
         <div className="flow-wallet-empty">
-          <span style={{ color: COLORS.accent }}>Scanning wallet on Monad…</span>
+          <span style={{ color: COLORS.accent }}>Scanning wallet on Pharos…</span>
         </div>
       )}
 
@@ -97,8 +97,8 @@ export default function WalletXRay({ market }) {
             </div>
           </DataCard>
 
-          {/* MON Balance */}
-          <DataCard title="MON BALANCE">
+          {/* PHRS Balance */}
+          <DataCard title="PHRS BALANCE">
             <div className="flow-pnl-value" style={{ color: COLORS.accent }}>
               {formatBalance(wallet.monBalance)}
             </div>

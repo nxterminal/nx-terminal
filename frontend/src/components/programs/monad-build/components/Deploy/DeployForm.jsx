@@ -5,7 +5,7 @@ import Button from '../shared/Button';
 
 export default function DeployForm({ onDeploy }) {
   const { state, dispatch } = useBuild();
-  const { isConnected, connect, displayAddress, isWrongChain, switchToMonad } = useWallet();
+  const { isConnected, connect, displayAddress, isWrongChain, switchToPharos } = useWallet();
 
   const isMainnet = state.network === 'mainnet';
 
@@ -51,7 +51,7 @@ export default function DeployForm({ onDeploy }) {
           {!isConnected ? (
             <Button size="sm" onClick={connect}>Connect Wallet</Button>
           ) : isWrongChain ? (
-            <Button size="sm" onClick={switchToMonad}>Switch to Pharos</Button>
+            <Button size="sm" onClick={switchToPharos}>Switch to Pharos</Button>
           ) : (
             <span className="mb-badge mb-badge-green">Connected</span>
           )}

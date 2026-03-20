@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { API, DEX_ID_MAP } from '../constants';
 
-const MONAD_RPC = 'https://monad-testnet.drpc.org';
+const MONAD_RPC = 'https://atlantic.dplabs-internal.com';
 
-// Top ERC20 tokens on Monad with their contract addresses
+// Top ERC20 tokens on Pharos with their contract addresses
 const KNOWN_TOKENS = [
   { symbol: 'WMON',  address: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a', decimals: 18 },
   { symbol: 'USDC',  address: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea', decimals: 6 },
@@ -67,7 +67,7 @@ export function useWalletData() {
 
   const lookup = useCallback(async (address) => {
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      setError('Invalid address — enter a 0x… Monad address');
+      setError('Invalid address — enter a 0x… Pharos address');
       return;
     }
 
@@ -81,7 +81,7 @@ export function useWalletData() {
     setWallet(null);
 
     try {
-      // 1) Fetch native MON balance
+      // 1) Fetch native PHRS balance
       const monHex = await rpcCall('eth_getBalance', [address, 'latest']);
       const monBalance = hexToBigFloat(monHex, 18);
 

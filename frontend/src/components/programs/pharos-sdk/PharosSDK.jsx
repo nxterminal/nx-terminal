@@ -81,7 +81,7 @@ export default function PharosSDK({ onClose }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('monad_sdk_progress');
+      const saved = localStorage.getItem('pharos_sdk_progress');
       if (saved) {
         const { completed, xp: savedXp } = JSON.parse(saved);
         setCompletedMissions(completed || []);
@@ -91,7 +91,7 @@ export default function PharosSDK({ onClose }) {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('monad_sdk_progress', JSON.stringify({
+    localStorage.setItem('pharos_sdk_progress', JSON.stringify({
       completed: completedMissions,
       xp,
     }));
@@ -142,8 +142,8 @@ export default function PharosSDK({ onClose }) {
   const handleResetProgress = useCallback(() => {
     setCompletedMissions([]);
     setXp(0);
-    localStorage.removeItem('monad_sdk_progress');
-    sessionStorage.removeItem('monad_sdk_boot_seen');
+    localStorage.removeItem('pharos_sdk_progress');
+    sessionStorage.removeItem('pharos_sdk_boot_seen');
     setShowResetConfirm(false);
     setOpenMenu(null);
     setActiveMission(null);

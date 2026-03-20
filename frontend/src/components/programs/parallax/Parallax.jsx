@@ -161,8 +161,8 @@ export default function Parallax({ onClose }) {
               <div className="plx-dropdown-item" onClick={() => { closeMenu(); setHelpTab('Lanes'); setShowHelp(true); }}>
                 Lane Guide
               </div>
-              <div className="plx-dropdown-item" onClick={() => { closeMenu(); setHelpTab('Monad'); setShowHelp(true); }}>
-                About Monad
+              <div className="plx-dropdown-item" onClick={() => { closeMenu(); setHelpTab('Pharos'); setShowHelp(true); }}>
+                About Pharos
               </div>
             </div>
           )}
@@ -186,7 +186,7 @@ export default function Parallax({ onClose }) {
                 {'[!]'} NETWORK OFFLINE
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
-                Unable to connect to Monad<br />RPC endpoint.
+                Unable to connect to Pharos<br />RPC endpoint.
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
                 {retryCountdown > 0
@@ -246,7 +246,7 @@ export default function Parallax({ onClose }) {
           <span style={{ color: statusColor, fontSize: '11px' }}>{statusText}</span>
         </div>
         <div className="plx-statusbar-right">
-          PARALLAX v1.0 {'\u00B7'} MONAD MAINNET {'\u00B7'} 8 LANES {'\u2502'} NX TERMINAL {'\u00D7'} MONAD
+          PARALLAX v1.0 {'\u00B7'} PHAROS TESTNET {'\u00B7'} 8 LANES {'\u2502'} NX TERMINAL {'\u00D7'} PHAROS
         </div>
       </div>
 

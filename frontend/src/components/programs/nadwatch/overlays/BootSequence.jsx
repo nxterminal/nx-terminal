@@ -55,7 +55,7 @@ export default function BootSequence({ onComplete }) {
         {lines.map((msg, i) => {
           if (!msg.text) return <div key={i} style={{ height: '14px' }} />;
 
-          const isGmonad = msg.text.includes('GMONAD');
+          const isPharos = msg.text.includes('PHAROS. THE NADS');
           const okMatch = msg.text.match(/^(\s*(?:>.*|.*\.\.\.))\s+(OK)$/);
 
           if (okMatch) {
@@ -71,8 +71,8 @@ export default function BootSequence({ onComplete }) {
             <div key={i} style={{
               color: msg.color,
               lineHeight: '1.5',
-              textShadow: isGmonad ? `0 0 8px ${COLORS.primary}` : 'none',
-              fontWeight: isGmonad ? 'bold' : 'normal',
+              textShadow: isPharos ? `0 0 8px ${COLORS.primary}` : 'none',
+              fontWeight: isPharos ? 'bold' : 'normal',
             }}>
               {msg.text}
             </div>

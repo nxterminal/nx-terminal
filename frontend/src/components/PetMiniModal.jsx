@@ -3,7 +3,7 @@ import PetSprite from './programs/chogpet/components/PetSprite';
 import DialogBubble from './programs/chogpet/components/DialogBubble';
 import { usePetState } from './programs/chogpet/hooks/usePetState';
 import {
-  MONAD_TIPS,
+  PHAROS_TIPS,
   TIP_INTERVAL_MIN,
   TIP_INTERVAL_MAX,
   BLINK_INTERVAL,
@@ -31,7 +31,7 @@ export default function PetMiniModal({ openWindow }) {
   const dragRef = useRef(null);
   const modalRef = useRef(null);
   const animTimeoutRef = useRef(null);
-  const tipIndexRef = useRef(Math.floor(Math.random() * MONAD_TIPS.length));
+  const tipIndexRef = useRef(Math.floor(Math.random() * PHAROS_TIPS.length));
 
   // Listen for toggle from taskbar
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function PetMiniModal({ openWindow }) {
   useEffect(() => {
     if (!visible || !helperMode) return;
     const showTip = () => {
-      const tip = MONAD_TIPS[tipIndexRef.current % MONAD_TIPS.length];
+      const tip = PHAROS_TIPS[tipIndexRef.current % PHAROS_TIPS.length];
       tipIndexRef.current++;
       setBubbleText(tip);
       setBubbleVisible(true);
@@ -212,7 +212,7 @@ export default function PetMiniModal({ openWindow }) {
             textTransform: 'uppercase',
           }}
         >
-          MONADGOTCHI
+          PHAROSGOTCHI
         </div>
 
         {/* LCD frame */}
@@ -269,7 +269,7 @@ export default function PetMiniModal({ openWindow }) {
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '8px 0 6px' }}>
           <MiniBtn label="F" text="FEED" onClick={handleFeed} disabled={feedMaxed} color="feed" tooltip="Feed — Give food to your pet. Restores hunger. 8 feeds per day." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
           <MiniBtn label="P" text="PET" onClick={handlePet} disabled={petMaxed} color="pet" tooltip="Pet — Show affection. Restores happiness. 15 pets per day." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
-          <MiniBtn label="T" text="TIPS" onClick={toggleHelper} color="tips" tooltip="Tips — Toggle Monad tips. Earn XP when tips appear." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
+          <MiniBtn label="T" text="TIPS" onClick={toggleHelper} color="tips" tooltip="Tips — Toggle Pharos tips. Earn XP when tips appear." hoveredBtn={hoveredBtn} onEnter={onBtnEnter} onLeave={onBtnLeave} />
         </div>
       </div>
     </div>

@@ -23,7 +23,7 @@ const WINDOW_DEFAULTS = {
   'pharos-sdk': { title: 'Pharos SDK', icon: '', width: 880, height: 700, x: 120, y: 30 },
   'nadwatch': { title: 'Nadwatch', icon: '~', width: 900, height: 620, x: 80, y: 30, maximized: true },
   'parallax': { title: 'Parallax', icon: '||', width: 1060, height: 720, x: 40, y: 20, maximized: true },
-  'monad-sdk': { title: 'Monad SDK', icon: '</>', width: 880, height: 700, x: 120, y: 30 },
+  'monad-sdk': { title: 'Pharos SDK', icon: '</>', width: 880, height: 700, x: 120, y: 30 },
   'monad-city': { title: 'Pharos City', icon: '', width: 1000, height: 700, x: 40, y: 20 },
   'flow': { title: 'Flow', icon: '\u25C6', width: 1100, height: 750, x: 30, y: 15, maximized: true },
   'dev-academy': { title: 'NX Dev Academy', icon: 'DA', width: 900, height: 650, x: 100, y: 35, maximized: true },

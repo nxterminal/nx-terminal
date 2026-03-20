@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { COLORS } from '../constants';
 
-const TABS = ['About', 'Panels', 'Monad'];
+const TABS = ['About', 'Panels', 'Pharos'];
 
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
-NADWATCH.exe — Monad Network Surveillance
+NADWATCH.exe — Pharos Network Surveillance
 Version 1.0
 ${'═'.repeat(45)}
 
 NADWATCH is a real-time network monitor for
-the Monad blockchain, built as part of the
+the Pharos blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
-It visualizes live data from Monad Testnet
+It visualizes live data from Pharos Testnet
 including blocks, transactions, TPS, gas,
 parallel execution load, and consensus pipeline.
 
@@ -21,8 +21,8 @@ ${'═'.repeat(45)}
 HOW IT WORKS
 ${'═'.repeat(45)}
 
-NADWATCH connects to Monad via JSON-RPC and
-polls every 400ms (matching block time). All
+NADWATCH connects to Pharos via JSON-RPC and
+polls regularly (matching block time). All
 data is fetched client-side.
 
 The Block Rain shows purple/green bicolor
@@ -33,13 +33,13 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Monad Testnet
-Chain ID:  10143
-RPC:       monad-testnet.drpc.org
-Block Time: 400ms
-Target TPS: 10,000
-Consensus:  MonadBFT
-Finality:   ~800ms (2 blocks)
+Network:   Pharos Atlantic Testnet
+Chain ID:  688689
+RPC:       atlantic.dplabs-internal.com
+Block Time: sub-second
+Target TPS: 30,000+
+Consensus:  AsyncBFT
+Token:      PHRS
 
 nxterminal.com`,
 
@@ -58,7 +58,7 @@ NETWORK VITALS (top right)
 
 TRANSACTION FLOW (bottom right)
   Live feed of decoded transactions.
-  Shows type, addresses, value in MON.
+  Shows type, addresses, value in PHRS.
   Timestamps include milliseconds.
 
 PARALLEL LOAD (bottom bar)
@@ -66,42 +66,40 @@ PARALLEL LOAD (bottom bar)
   execution utilization.
 
 CONSENSUS PIPELINE (bottom bar)
-  MonadBFT pipeline: PROPOSE, VOTE,
+  AsyncBFT pipeline: PROPOSE, VOTE,
   FINALIZE, EXECUTE. Click to expand.
 
 CORP ACTIVITY (bottom)
   Protocol Wars corporation activity.`,
 
-  'Monad': `${'═'.repeat(45)}
-ABOUT MONAD
+  'Pharos': `${'═'.repeat(45)}
+ABOUT PHAROS
 ${'═'.repeat(45)}
 
-Monad is a high-performance EVM-compatible
+Pharos is a high-performance EVM-compatible
 Layer 1 blockchain with parallel execution.
 
 KEY FEATURES:
-  • 10,000 TPS with parallel execution
-  • 400ms block time
-  • ~800ms finality (2 blocks)
-  • MonadBFT consensus (pipelined)
-  • MonadDb custom database for SSDs
+  • 30,000+ TPS with parallel execution
+  • Sub-second block time
+  • Sub-second finality
+  • AsyncBFT consensus (pipelined)
+  • PharosDb custom database for SSDs
   • RaptorCast erasure-coded propagation
   • EVM bytecode compatible
 
 PARALLEL EXECUTION:
-  Monad executes transactions in parallel
+  Pharos executes transactions in parallel
   using optimistic concurrency. If two txs
   conflict (access same state), one is
   re-executed. Results are deterministic.
 
-MONADBFT PIPELINE:
+ASYNCBFT PIPELINE:
   Four stages run simultaneously:
   PROPOSE → VOTE → FINALIZE → EXECUTE
   Each stage processes a different block.
 
-Learn more: docs.monad.xyz
-
-GMONAD.`,
+Learn more: docs.pharos.xyz`,
 };
 
 export default function HelpDialog({ onClose, initialTab = 'About' }) {

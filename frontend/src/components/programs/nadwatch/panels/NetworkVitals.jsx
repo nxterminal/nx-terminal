@@ -23,11 +23,11 @@ function buildSparkline(data) {
 }
 
 const METRIC_TOOLTIPS = {
-  tps: 'Transactions Per Second — Rolling average. Monad targets 10,000 TPS with parallel execution.',
-  gas: 'Gas Throughput — Computational gas used per second. Monad targets much higher throughput than Ethereum.',
-  blk: 'Block Height — Current block number on Monad Testnet. Blocks are produced every ~400ms.',
-  blockTime: 'Block Time — Average time between blocks. Monad targets 400ms. Green = within target.',
-  fin: 'Finality — Time to finality. Monad achieves ~800ms (2 blocks) with MonadBFT.',
+  tps: 'Transactions Per Second — Rolling average. Pharos targets 30,000+ TPS with parallel execution.',
+  gas: 'Gas Throughput — Computational gas used per second. Pharos targets much higher throughput than Ethereum.',
+  blk: 'Block Height — Current block number on Pharos Testnet. Blocks are produced at sub-second intervals.',
+  blockTime: 'Block Time — Average time between blocks. Pharos targets sub-second. Green = within target.',
+  fin: 'Finality — Time to finality. Pharos achieves sub-second finality with AsyncBFT.',
   par: 'Parallel Load — Estimated parallel execution lanes in use. 8 lanes total.',
   val: 'Active Validators — Estimated validator count. Marked with ~ because estimated.',
   sparkline: 'TPS History (last 30 samples) — Each bar represents TPS at one polling interval.',
@@ -64,7 +64,7 @@ export default function NetworkVitals({ data }) {
 
   const fc = (field) => flashFields[field] ? 'ndw-flash' : '';
 
-  // Block time in ms for Monad
+  // Block time in ms for Pharos
   const blockTimeMs = data.blockTime * 1000;
   const blockTimeColor = blockTimeMs < 450 ? COLORS.green :
                           blockTimeMs < 600 ? COLORS.yellow : COLORS.red;
@@ -84,9 +84,9 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}>{'═'.repeat(3)} </span>
         <span style={{ color: COLORS.primary, textShadow: `0 0 6px ${COLORS.primaryDim}` }}>NETWORK VITALS</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#fff' }}>MONAD TESTNET</span>
+        <span style={{ color: '#fff' }}>PHAROS TESTNET</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 10143</span>
+        <span style={{ color: '#666' }}>CHAIN 688689</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>

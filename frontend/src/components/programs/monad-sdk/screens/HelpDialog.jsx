@@ -1,45 +1,45 @@
 import { useState } from 'react';
 
-const TABS = ['About', 'Monad Info', 'Corporations'];
+const TABS = ['About', 'Pharos Info', 'Corporations'];
 
 const TAB_CONTENT = {
   'About': [
-    { type: 'heading', text: 'MONAD_SDK.exe \u2014 Developer Training Simulator' },
+    { type: 'heading', text: 'PHAROS_SDK.exe \u2014 Developer Training Simulator' },
     { type: 'text', text: 'Version: 1.0 BETA' },
     { type: 'text', text: '' },
-    { type: 'text', text: 'MONAD_SDK is an interactive training program that teaches Monad blockchain development through gamified coding exercises.' },
+    { type: 'text', text: 'PHAROS_SDK is an interactive training program that teaches Pharos blockchain development through gamified coding exercises.' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Complete missions to learn:' },
-    { type: 'text', text: '\u2022 Gas mechanics on Monad\n\u2022 Reserve balance system\n\u2022 EVM-compatible contract deployment\n\u2022 MonadBFT consensus pipeline\n\u2022 Parallel execution & conflict detection' },
+    { type: 'text', text: '\u2022 Gas mechanics on Pharos\n\u2022 Reserve balance system\n\u2022 EVM-compatible contract deployment\n\u2022 AsyncBFT consensus pipeline\n\u2022 Parallel execution & conflict detection' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Each mission is assigned by one of the six Protocol Wars corporations, with unique briefings and storylines.' },
     { type: 'text', text: '' },
     { type: 'label', text: 'STATUS: BETA' },
     { type: 'text', text: 'Progress saved locally in your browser.' },
     { type: 'text', text: '' },
-    { type: 'mono', text: 'Network: Monad Testnet\nChain ID: 10143\nBlock Time: ~1s\nTPS: ~10,000' },
+    { type: 'mono', text: 'Network: Pharos Atlantic Testnet\nChain ID: 688689\nBlock Time: Sub-second\nTPS: 30,000+' },
     { type: 'text', text: '' },
     { type: 'text', text: 'Built by Ember Labs\nnxterminal.com \u00B7 @nxterminalcorp' },
   ],
-  'Monad Info': [
-    { type: 'heading', text: 'MONAD NETWORK OVERVIEW' },
+  'Pharos Info': [
+    { type: 'heading', text: 'PHAROS NETWORK OVERVIEW' },
     { type: 'text', text: '' },
-    { type: 'label', text: 'What is Monad?' },
-    { type: 'text', text: 'Monad is a high-performance EVM-compatible Layer 1 blockchain that achieves ~10,000 TPS through parallel transaction execution.' },
+    { type: 'label', text: 'What is Pharos?' },
+    { type: 'text', text: 'Pharos is a high-performance EVM-compatible Layer 1 blockchain that achieves 30,000+ TPS through parallel transaction execution.' },
     { type: 'text', text: '' },
     { type: 'label', text: 'Key Features' },
-    { type: 'mono', text: 'Block Time:     400ms\nFinality:       ~800ms (2 blocks)\nTPS:            ~10,000\nConsensus:      MonadBFT (pipelined)\nExecution:      Optimistic parallel\nDatabase:       MonadDb (SSD-optimized)\nPropagation:    RaptorCast\nVM:             EVM bytecode compatible\nChain ID:       10143\nValidator Set:  ~175' },
+    { type: 'mono', text: 'Block Time:     Sub-second\nFinality:       ~800ms (2 blocks)\nTPS:            30,000+\nConsensus:      AsyncBFT (pipelined)\nExecution:      Optimistic parallel\nDatabase:       PharosDb (SSD-optimized)\nPropagation:    RaptorCast\nVM:             EVM bytecode compatible\nChain ID:       688689\nValidator Set:  ~120' },
     { type: 'text', text: '' },
     { type: 'label', text: 'Parallel Execution' },
-    { type: 'text', text: 'Monad executes transactions in parallel using optimistic concurrency. Transactions are distributed across execution lanes. If two txs access the same state, a conflict is detected and one is re-executed deterministically.' },
+    { type: 'text', text: 'Pharos executes transactions in parallel using optimistic concurrency. Transactions are distributed across execution lanes. If two txs access the same state, a conflict is detected and one is re-executed deterministically.' },
     { type: 'text', text: '' },
-    { type: 'label', text: 'MonadBFT Pipeline' },
+    { type: 'label', text: 'AsyncBFT Pipeline' },
     { type: 'text', text: 'Four stages run simultaneously:\n  PROPOSE \u2192 VOTE \u2192 FINALIZE \u2192 EXECUTE\nEach stage processes a different block, maximizing throughput without sacrificing consensus safety.' },
     { type: 'text', text: '' },
     { type: 'label', text: 'Reserve Balance' },
-    { type: 'text', text: 'Every account maintains a small MON reserve that cannot be spent, ensuring validators are compensated even for reverted transactions.' },
+    { type: 'text', text: 'Every account maintains a small PHRS reserve that cannot be spent, ensuring validators are compensated even for reverted transactions.' },
     { type: 'text', text: '' },
-    { type: 'text', text: 'Learn more: docs.monad.xyz' },
+    { type: 'text', text: 'Learn more: docs.pharos.xyz' },
   ],
   'Corporations': [
     { type: 'heading', text: 'The Six Corporations' },
@@ -123,7 +123,7 @@ export default function HelpDialog({ onClose }) {
           flexShrink: 0,
         }}>
           <span style={{ color: '#fff', fontSize: '12px', fontFamily: 'Tahoma, sans-serif', fontWeight: 'bold' }}>
-            MONAD_SDK Help
+            PHAROS_SDK Help
           </span>
           <button
             onClick={onClose}

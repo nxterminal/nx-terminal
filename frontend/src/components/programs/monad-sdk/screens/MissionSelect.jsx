@@ -16,15 +16,15 @@ export default function MissionSelect({ completedMissions, onSelectMission }) {
 
   return (
     <div>
-      <div className="ms-select-welcome">Welcome to MONAD_SDK Training</div>
+      <div className="ms-select-welcome">Welcome to PHAROS_SDK Training</div>
       <div className="ms-select-desc">
-        Complete missions to learn blockchain development on Monad Network.
+        Complete missions to learn blockchain development on Pharos Network.
         Each mission is guided by one of the six Protocol Wars corporations.
       </div>
 
       {/* Track 1 */}
       <div className="ms-track-label">
-        {'\u2550\u2550\u2550'} TRACK 1: MONAD FUNDAMENTALS {'\u2550\u2550\u2550'}
+        {'\u2550\u2550\u2550'} TRACK 1: PHAROS FUNDAMENTALS {'\u2550\u2550\u2550'}
       </div>
 
       <div className="ms-mission-list-panel">
@@ -78,12 +78,12 @@ export default function MissionSelect({ completedMissions, onSelectMission }) {
 
       {/* Track 2 */}
       <div className="ms-track-label">
-        {'\u2550\u2550\u2550'} TRACK 2: ADVANCED MONAD {'\u2550\u2550\u2550'} <span style={{ color: '#cc6600' }}>{'\uD83D\uDD12'} REQUIRES MINT</span>
+        {'\u2550\u2550\u2550'} TRACK 2: ADVANCED PHAROS {'\u2550\u2550\u2550'} <span style={{ color: '#cc6600' }}>{'\uD83D\uDD12'} REQUIRES MINT</span>
       </div>
 
       <div className="ms-track2-box">
         <div>
-          10 advanced missions covering MonadDb, RaptorCast, parallel execution patterns,
+          10 advanced missions covering PharosDb, RaptorCast, parallel execution patterns,
           and validator operations. Available for NX Terminal NFT holders after mint.
         </div>
         <span

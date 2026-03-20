@@ -1,8 +1,8 @@
-// ═══ MONAD TESTNET CONFIGURATION ═══
-export const MONAD_RPC = 'https://monad-testnet.drpc.org';
-export const CHAIN_ID = 10143;
+// ═══ PHAROS TESTNET CONFIGURATION ═══
+export const MONAD_RPC = 'https://atlantic.dplabs-internal.com';
+export const CHAIN_ID = 688689;
 export const BLOCK_TIME_MS = 400;
-export const TARGET_TPS = 10000;
+export const TARGET_TPS = 30000;
 export const POLL_INTERVAL = 400;
 export const MAX_TX_DISPLAY = 200;
 export const TPS_HISTORY_LENGTH = 30;
@@ -23,7 +23,7 @@ export const COLORS = {
 };
 
 // Monanimals easter egg words for BlockRain
-export const MONANIMAL_WORDS = ['CHOG', 'MOYAKI', 'MOLANDAK', 'SALMONAD', 'NAD', 'GMONAD', 'MOUCH'];
+export const MONANIMAL_WORDS = ['CHOG', 'MOYAKI', 'MOLANDAK', 'SALMONAD', 'NAD', 'PHAROS', 'MOUCH'];
 
 // Extended character set for BlockRain
 export const RAIN_CHARS = '0123456789ABCDEFabcdef{}[]<>:;/\\|=+*&^%$#@!~ΣΩπ∆アイウエオカキクケコ';
@@ -67,23 +67,23 @@ export const CORPS = [
 
 // Boot sequence messages
 export const BOOT_MESSAGES = [
-  { text: 'NADWATCH v1.0 — MONAD NETWORK SURVEILLANCE TERMINAL', color: '#7B2FBE', delay: 0 },
+  { text: 'NADWATCH v1.0 — PHAROS NETWORK SURVEILLANCE TERMINAL', color: '#7B2FBE', delay: 0 },
   { text: '(C) 2026 NX TERMINAL CORP — FOR THE NADS', color: '#888', delay: 200 },
   { text: '', color: '', delay: 400 },
-  { text: 'ESTABLISHING MONAD RPC CONNECTION...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 10143............................. OK', color: '#888', delay: 900 },
-  { text: 'BLOCK TIME: 400ms........................... OK', color: '#888', delay: 1200 },
-  { text: 'TARGET TPS: 10,000.......................... OK', color: '#888', delay: 1500 },
+  { text: 'ESTABLISHING PHAROS RPC CONNECTION...', color: '#30FF60', delay: 500 },
+  { text: 'CHAIN ID: 688689............................ OK', color: '#888', delay: 900 },
+  { text: 'BLOCK TIME: sub-second...................... OK', color: '#888', delay: 1200 },
+  { text: 'TARGET TPS: 30,000+......................... OK', color: '#888', delay: 1500 },
   { text: '', color: '', delay: 1700 },
   { text: 'INITIALIZING BLOCK RAIN ENGINE.............. OK', color: '#30FF60', delay: 1900 },
   { text: '  > COLOR MODE: PURPLE/GREEN BICOLOR', color: '#9B59B6', delay: 2100 },
   { text: '  > MONANIMAL EASTER EGGS: ENABLED', color: '#9B59B6', delay: 2300 },
   { text: 'LOADING TRANSACTION DECODER................. OK', color: '#30FF60', delay: 2500 },
-  { text: '  > HIGH-SPEED MODE: ACTIVE (10K TPS READY)', color: '#9B59B6', delay: 2700 },
+  { text: '  > HIGH-SPEED MODE: ACTIVE (30K+ TPS READY)', color: '#9B59B6', delay: 2700 },
   { text: 'PARALLEL EXECUTION MONITOR.................. OK', color: '#30FF60', delay: 2900 },
   { text: 'CONSENSUS PIPELINE TRACKER.................. OK', color: '#30FF60', delay: 3100 },
   { text: '', color: '', delay: 3300 },
-  { text: 'GMONAD. THE NADS ARE WATCHING.', color: '#7B2FBE', delay: 3500 },
+  { text: 'PHAROS. THE NADS ARE WATCHING.', color: '#7B2FBE', delay: 3500 },
   { text: '', color: '', delay: 3800 },
   { text: 'ENTERING SURVEILLANCE MODE...', color: '#fff', delay: 4000 },
 ];

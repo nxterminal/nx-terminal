@@ -26,7 +26,7 @@ const DESKTOP_ICONS = [
   { id: 'flow', icon: '\u25C6', label: 'Flow', hidden: true },
   { id: 'nadwatch', icon: '', label: 'Nadwatch', hidden: true },
   { id: 'parallax', icon: '', label: 'Parallax', hidden: true },
-  { id: 'monad-sdk', icon: '', label: 'Monad SDK', hidden: true },
+  { id: 'monad-sdk', icon: '', label: 'Pharos SDK', hidden: true },
   { id: 'monad-city', icon: '', label: 'Pharos City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Pharos Build' },
