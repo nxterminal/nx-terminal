@@ -1,8 +1,8 @@
 export const MONAD_PATH = {
   id: "monad",
-  name: "Monad Builder",
+  name: "Blockchain Builder",
   icon: "{ }",
-  description: "Build on Monad. Smart contracts, parallel execution, and dApps.",
+  description: "Build on Pharos. Smart contracts, parallel execution, and dApps.",
   modules: [
     {
       id: "mm1", title: "Monad Fundamentals", corp: "mistrial",
@@ -80,21 +80,21 @@ export const MONAD_PATH = {
           explanation: "Monad detects conflicts automatically and re-executes only the affected transactions. Users don't need to do anything.",
         },
         {
-          id: "ml2b", type: "fill-blank", title: "Monad Config",
-          prompt: "Fill in the blanks for a Monad testnet configuration:",
+          id: "ml2b", type: "fill-blank", title: "Pharos Config",
+          prompt: "Fill in the blanks for a Pharos testnet configuration:",
           code: 'const config = {\n  chainName: ___,\n  chainId: ___,\n  rpcUrl: ___,\n};',
           blanks: [
-            { answer: '"Monad Testnet"', placeholder: 'chain name', explanation: "The chain name is a string describing the network" },
-            { answer: "10143", placeholder: 'number', explanation: "Monad testnet uses chain ID 10143" },
-            { answer: '"https://monad-testnet.drpc.org"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
+            { answer: '"Pharos Atlantic Testnet"', placeholder: 'chain name', explanation: "The chain name is a string describing the network" },
+            { answer: "688689", placeholder: 'number', explanation: "Pharos testnet uses chain ID 688689" },
+            { answer: '"https://atlantic.dplabs-internal.com"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
           ],
           xp: 10,
         },
         {
-          id: "ml3", type: "code", title: "Connect to Monad",
-          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://monad-testnet.drpc.org' and a chainId variable set to 10143",
-          starter: "// Set up Monad testnet config\n",
-          solution: 'const rpcUrl = "https://monad-testnet.drpc.org";\nconst chainId = 10143;',
+          id: "ml3", type: "code", title: "Connect to Pharos",
+          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://atlantic.dplabs-internal.com' and a chainId variable set to 688689",
+          starter: "// Set up Pharos testnet config\n",
+          solution: 'const rpcUrl = "https://atlantic.dplabs-internal.com";\nconst chainId = 688689;',
           hint: "Use const to declare the RPC URL string and chain ID number", xp: 15,
         },
       ],

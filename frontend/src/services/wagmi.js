@@ -1,23 +1,23 @@
 import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// Monad Testnet — custom chain definition
-export const monad = {
-  id: 10143,
-  name: 'Monad Testnet',
-  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+// Pharos Atlantic Testnet — custom chain definition
+export const pharos = {
+  id: 688689,
+  name: 'Pharos Atlantic Testnet',
+  nativeCurrency: { name: 'Pharos', symbol: 'PHRS', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://monad-testnet.drpc.org'] },
+    default: { http: ['https://atlantic.dplabs-internal.com'] },
   },
   blockExplorers: {
-    default: { name: 'MonadExplorer', url: 'https://testnet.monadexplorer.com' },
+    default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' },
   },
 };
 
 export const wagmiConfig = createConfig({
-  chains: [monad],
+  chains: [pharos],
   connectors: [injected()],
   transports: {
-    [monad.id]: http('https://monad-testnet.drpc.org'),
+    [pharos.id]: http('https://atlantic.dplabs-internal.com'),
   },
 });

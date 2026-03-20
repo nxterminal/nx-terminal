@@ -21,7 +21,7 @@ const TRACK_1 = {
       briefing:
         "Welcome to the program, recruit. Before you write a single line of " +
         "code, you need to understand the battlefield.\n\n" +
-        "Monad is a Layer 1 blockchain capable of processing 10,000+ " +
+        "Pharos is a Layer 1 blockchain capable of processing 30,000+ " +
         "transactions per second with sub-second finality. But what IS a blockchain?\n\n" +
         "Closed AI Corp requires all recruits to pass this basic assessment.\n" +
         'CEO Scam Altwoman says: "Even our interns know this. Don\'t embarrass us."',
@@ -38,7 +38,7 @@ const TRACK_1 = {
           explanation: "A blockchain is a distributed ledger \u2014 a shared database where no single entity has control. Validators agree on the state through consensus.",
         },
         {
-          question: "What makes Monad different from Ethereum?",
+          question: "What makes Pharos different from Ethereum?",
           options: [
             "It doesn't use smart contracts",
             "It runs on a single server",
@@ -46,7 +46,7 @@ const TRACK_1 = {
             "It only supports NFTs",
           ],
           correct: 2,
-          explanation: "Monad uses pipelined execution and optimistic parallel processing to process transactions simultaneously, achieving 10,000+ TPS vs Ethereum's ~15 TPS.",
+          explanation: "Pharos uses AsyncBFT consensus and parallel processing to process transactions simultaneously, achieving 30,000+ TPS vs Ethereum's ~15 TPS.",
         },
         {
           question: "What is 'finality' in blockchain?",
@@ -57,7 +57,7 @@ const TRACK_1 = {
             "When a smart contract self-destructs",
           ],
           correct: 1,
-          explanation: "Finality means a transaction is permanently confirmed and cannot be reversed. Monad achieves this in under 1 second.",
+          explanation: "Finality means a transaction is permanently confirmed and cannot be reversed. Pharos achieves this in under 1 second.",
         },
       ],
       completionMessage:
@@ -81,7 +81,7 @@ const TRACK_1 = {
       xp: 50,
       briefing:
         "Every operative needs an identity on the network. In the world of " +
-        "Monad, that identity is your wallet.\n\n" +
+        "Pharos, that identity is your wallet.\n\n" +
         "A wallet doesn't actually \"store\" your tokens \u2014 it stores the " +
         "cryptographic keys that prove you own them. Your public key is your " +
         "address. Your private key is your life.\n\n" +
@@ -111,15 +111,15 @@ const TRACK_1 = {
           explanation: "With your private key, anyone can sign transactions as you \u2014 including transferring all your assets. There is no 'password reset' in crypto.",
         },
         {
-          question: "Monad Testnet Chain ID is:",
+          question: "Pharos Testnet Chain ID is:",
           options: [
             "1 (Ethereum Mainnet)",
-            "10143",
+            "688689",
             "56 (BNB Chain)",
             "137 (Polygon)",
           ],
           correct: 1,
-          explanation: "Monad Testnet uses Chain ID 10143. You need this to add the network to MetaMask or other wallets.",
+          explanation: "Pharos Testnet uses Chain ID 688689. You need this to add the network to MetaMask or other wallets.",
         },
       ],
       completionMessage:
@@ -231,7 +231,7 @@ const TRACK_1 = {
         "Resources must flow between protocols. Shallow Mind Research " +
         "Division requires you to understand decentralized exchange mechanics " +
         "before accessing our trading infrastructure.\n\n" +
-        "Decentralized exchanges on Monad use an Automated " +
+        "Decentralized exchanges on Pharos use an Automated " +
         "Market Maker (AMM) model.\n\n" +
         'CEO Sundial Richy: "We published 47 papers on AMM theory. ' +
         'None of them have a practical implementation. That\'s your job."',
@@ -259,7 +259,7 @@ const TRACK_1 = {
           explanation: "Slippage occurs when the market moves between submitting a trade and its execution, causing a different price than expected.",
         },
         {
-          question: "Why does Monad's high TPS matter for DEX trading?",
+          question: "Why does Pharos's high TPS matter for DEX trading?",
           options: [
             "It doesn't \u2014 TPS is irrelevant for DEXs",
             "Faster confirmation reduces slippage and front-running risk",
@@ -294,15 +294,15 @@ const TRACK_1 = {
         "A good operative knows how to read the network. Mistrial Systems " +
         "has intercepted suspicious on-chain activity, but the raw data " +
         "needs to be decoded.\n\n" +
-        "Your mission: complete the JavaScript code to query the Monad " +
+        "Your mission: complete the JavaScript code to query the Pharos " +
         "blockchain using standard JSON-RPC calls.\n\n" +
         'CEO Pierre-Antoine du Code: "We forked this tutorial from ' +
         'Ethereum\'s docs. The documentation is... incomplete. On purpose."\n\n' +
         "TIP: If you completed NETWATCH training, you already know these concepts.",
       language: "javascript",
       codeLines: [
-        { num: 1,  text: "// Query Monad via JSON-RPC", editable: false },
-        { num: 2,  text: 'const RPC_URL = "https://monad-testnet.drpc.org";', editable: false },
+        { num: 1,  text: "// Query Pharos via JSON-RPC", editable: false },
+        { num: 2,  text: 'const RPC_URL = "https://atlantic.dplabs-internal.com";', editable: false },
         { num: 3,  text: "", editable: false },
         { num: 4,  text: "async function getBlockNumber() {", editable: false },
         { num: 5,  text: "  const response = await fetch(RPC_URL, {", editable: false },
@@ -349,7 +349,7 @@ const TRACK_1 = {
       completionMessage:
         "RPC QUERY SUCCESSFUL.\n" +
         "Current block: #15,021,337\n" +
-        "Finality: ~0.8s | Chain: Monad\n\n" +
+        "Finality: ~0.5s | Chain: Pharos\n\n" +
         'Mistrial Systems: "Good work. We\'ll add your name to the\n' +
         'contributors list. In small font. Maybe."\n\n' +
         "\u2550\u2550\u2550 BASIC TRAINING COMPLETE \u2550\u2550\u2550\n" +

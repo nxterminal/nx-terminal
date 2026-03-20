@@ -1,15 +1,17 @@
-// ═══ MONAD NETWORK CONFIGURATION ═══
+// ═══ PHAROS NETWORK CONFIGURATION ═══
 const ZAN_RPC_URL = typeof import.meta !== "undefined" && import.meta.env?.VITE_ZAN_RPC_URL;
 
-export const MONAD_CONFIG = {
-  RPC_URL: "https://monad-testnet.drpc.org",
-  RPC_FALLBACK: ZAN_RPC_URL || "https://monad-testnet.drpc.org",
-  CHAIN_ID: 10143,
+export const PHAROS_CONFIG = {
+  RPC_URL: "https://atlantic.dplabs-internal.com",
+  RPC_FALLBACK: ZAN_RPC_URL || "https://atlantic.dplabs-internal.com",
+  CHAIN_ID: 688689,
   POLL_INTERVAL: 3000,
   MAX_TX_DISPLAY: 15,
   TPS_HISTORY_LENGTH: 40,
-  EXPLORER_URL: "https://testnet.monadexplorer.com",
+  EXPLORER_URL: "https://atlantic.pharosscan.xyz",
 };
+// Backwards compat alias
+export const MONAD_CONFIG = PHAROS_CONFIG;
 
 // ═══ CORPORATION DATA (Protocol Wars lore) ═══
 export const CORPORATIONS = {
@@ -86,9 +88,9 @@ export const BOOT_MESSAGES = [
   { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#888", delay: 200 },
   { text: "", color: "", delay: 400 },
   { text: "Initializing secure connection...", color: "#00ff41", delay: 500 },
-  { text: "Connecting to MONAD NETWORK...", color: "#00ff41", delay: 900 },
-  { text: "RPC endpoint: " + MONAD_CONFIG.RPC_URL, color: "#888", delay: 1200 },
-  { text: "Handshake complete. Chain ID: " + MONAD_CONFIG.CHAIN_ID, color: "#888", delay: 1600 },
+  { text: "Connecting to PHAROS NETWORK...", color: "#00ff41", delay: 900 },
+  { text: "RPC endpoint: " + PHAROS_CONFIG.RPC_URL, color: "#888", delay: 1200 },
+  { text: "Handshake complete. Chain ID: " + PHAROS_CONFIG.CHAIN_ID, color: "#888", delay: 1600 },
   { text: "", color: "", delay: 1800 },
   { text: "Loading surveillance modules...", color: "#00ff41", delay: 2000 },
   { text: "  [OK] Block monitor", color: "#aaa", delay: 2200 },

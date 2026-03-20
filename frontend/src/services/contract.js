@@ -1,8 +1,10 @@
-// NXDevNFT v9 & NXTToken v5 on Monad Testnet (chain 10143)
+// NXDevNFT v8 & NXTToken v4 on Pharos Atlantic Testnet (chain 688689)
 export const NXDEVNFT_ADDRESS = '0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636';
 export const NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47';
-export const MONAD_CHAIN_ID = 10143;
-export const EXPLORER_BASE = 'https://testnet.monadexplorer.com';
+export const PHAROS_CHAIN_ID = 688689;
+export const EXPLORER_BASE = 'https://atlantic.pharosscan.xyz';
+// Backwards compat alias — remove once all imports updated
+export const MONAD_CHAIN_ID = PHAROS_CHAIN_ID;
 
 // Minimal ABI — only the functions the frontend needs
 export const NXDEVNFT_ABI = [
