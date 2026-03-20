@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPublicClient, http, formatGwei } from 'viem';
-import { MONAD_MAINNET, MONAD_TESTNET } from '../constants/monad';
+import { PHAROS_MAINNET, PHAROS_TESTNET } from '../constants/monad';
 
 function getClient(network) {
-  const config = network === 'mainnet' ? MONAD_MAINNET : MONAD_TESTNET;
+  const config = network === 'mainnet' ? PHAROS_MAINNET : PHAROS_TESTNET;
   return createPublicClient({
     chain: {
       id: config.chainId,

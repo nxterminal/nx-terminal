@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import { MONAD_RPC_PROVIDERS, CANONICAL_CONTRACTS, FAUCETS, MONAD_MAINNET } from '../../constants/monad';
+import { PHAROS_RPC_PROVIDERS, CANONICAL_CONTRACTS, FAUCETS, PHAROS_MAINNET } from '../../constants/monad';
 import Button from '../shared/Button';
 
 function CopyButton({ text }) {
@@ -74,7 +74,7 @@ export default function ResourcesModule() {
             </tr>
           </thead>
           <tbody>
-            {MONAD_RPC_PROVIDERS.map(rpc => (
+            {PHAROS_RPC_PROVIDERS.map(rpc => (
               <tr key={rpc.name}>
                 <td style={{ fontWeight: 500, color: 'var(--mb-text-primary)' }}>{rpc.name}</td>
                 <td>
@@ -132,7 +132,7 @@ export default function ResourcesModule() {
                   <div className="mb-flex mb-gap-sm">
                     <CopyButton text={addr} />
                     <a
-                      href={`${MONAD_MAINNET.explorer}/address/${addr}`}
+                      href={`${PHAROS_MAINNET.explorer}/address/${addr}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mb-btn mb-btn-ghost mb-btn-sm"

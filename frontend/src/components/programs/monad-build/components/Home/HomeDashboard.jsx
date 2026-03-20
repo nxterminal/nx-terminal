@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Coins, Image, Gamepad2, BookOpen, Rocket, Globe, Zap, Clock, Gauge, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { MONAD_KEY_DIFFERENCES } from '../../constants/monad';
+import { PHAROS_KEY_DIFFERENCES } from '../../constants/monad';
 import Card from '../shared/Card';
 import Badge from '../shared/Badge';
 
@@ -37,7 +37,7 @@ export default function HomeDashboard() {
       <div style={{ marginBottom: 24 }}>
         <h1 className="mb-h1" style={{ marginBottom: 6 }}>Welcome to Pharos Build</h1>
         <p className="mb-text-sm" style={{ margin: 0 }}>
-          Create, deploy, and explore on the fastest EVM chain
+          Create, deploy, and explore on Pharos Atlantic Testnet
         </p>
       </div>
 
@@ -133,13 +133,13 @@ export default function HomeDashboard() {
               </tr>
             </thead>
             <tbody>
-              {MONAD_KEY_DIFFERENCES.map(d => (
+              {PHAROS_KEY_DIFFERENCES.map(d => (
                 <tr key={d.aspect}>
                   <td style={{ fontWeight: 500, color: 'var(--mb-text-primary)' }}>{d.aspect}</td>
                   <td>{d.ethereum}</td>
                   <td>
                     <Badge color={d.severity === 'good' ? 'green' : d.severity === 'warning' ? 'amber' : 'blue'}>
-                      {d.monad}
+                      {d.pharos}
                     </Badge>
                   </td>
                   <td style={{ fontSize: 12 }}>{d.impact}</td>

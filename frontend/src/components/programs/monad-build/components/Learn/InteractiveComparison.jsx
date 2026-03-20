@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { MONAD_KEY_DIFFERENCES } from '../../constants/monad';
+import { PHAROS_KEY_DIFFERENCES } from '../../constants/monad';
 import Badge from '../shared/Badge';
 
 const CODE_EXAMPLES = {
@@ -82,7 +82,7 @@ export default function InteractiveComparison() {
           </tr>
         </thead>
         <tbody>
-          {MONAD_KEY_DIFFERENCES.map(d => (
+          {PHAROS_KEY_DIFFERENCES.map(d => (
             <>
               <tr
                 key={d.aspect}
@@ -101,7 +101,7 @@ export default function InteractiveComparison() {
                 </td>
                 <td>{d.ethereum}</td>
                 <td>
-                  <Badge color={severityColor[d.severity]}>{d.monad}</Badge>
+                  <Badge color={severityColor[d.severity]}>{d.pharos}</Badge>
                 </td>
                 <td style={{ fontSize: 12 }}>{d.impact}</td>
               </tr>

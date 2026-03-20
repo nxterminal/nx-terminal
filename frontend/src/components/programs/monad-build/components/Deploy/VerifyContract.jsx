@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { MONAD_MAINNET } from '../../constants/monad';
+import { PHAROS_MAINNET } from '../../constants/monad';
 
 export default function VerifyContract() {
   const { state } = useBuild();
@@ -18,7 +18,7 @@ export default function VerifyContract() {
           Upload your source code and metadata to verify via PharosScan verification.
         </div>
         <a
-          href={`${MONAD_MAINNET.explorer}/address/${state.deployedAddress || ''}#code`}
+          href={`${PHAROS_MAINNET.explorer}/address/${state.deployedAddress || ''}#code`}
           target="_blank"
           rel="noopener noreferrer"
           className="mb-btn mb-btn-secondary mb-btn-sm"

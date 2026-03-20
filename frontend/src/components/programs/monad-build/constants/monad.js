@@ -1,17 +1,14 @@
-export const MONAD_MAINNET = {
+export const PHAROS_MAINNET = {
   chainId: 688689,
-  name: 'Pharos Testnet',
+  name: 'Pharos Atlantic Testnet',
   rpcUrl: 'https://atlantic.dplabs-internal.com',
   explorer: 'https://atlantic.pharosscan.xyz',
-  explorerApi: 'https://sourcify-api-monad.blockvision.org',
-  etherscanExplorer: 'https://atlantic.pharosscan.xyz',
-  etherscanApi: 'https://api.monadscan.com/api',
   nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
 };
 
-export const MONAD_TESTNET = {
+export const PHAROS_TESTNET = {
   chainId: 688689,
-  name: 'Pharos Testnet',
+  name: 'Pharos Atlantic Testnet',
   rpcUrl: 'https://atlantic.dplabs-internal.com',
   explorer: 'https://atlantic.pharosscan.xyz',
   nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
@@ -26,7 +23,7 @@ export const CANONICAL_CONTRACTS = {
   CREATEX: '0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed',
 };
 
-export const MONAD_RPC_PROVIDERS = [
+export const PHAROS_RPC_PROVIDERS = [
   { name: 'dRPC', url: 'https://atlantic.dplabs-internal.com', rateLimit: '25 rps' },
 ];
 
@@ -34,15 +31,15 @@ export const FAUCETS = [
   { name: 'Pharos Faucet', url: 'https://zan.top/faucet/pharos', description: 'Pharos testnet faucet' },
 ];
 
-export const MONAD_KEY_DIFFERENCES = [
-  { aspect: 'Gas Charging', ethereum: 'Gas used', monad: 'Gas limit (full)', impact: 'Set tight gas limits; you pay the max declared', severity: 'warning' },
-  { aspect: 'Cold SLOAD', ethereum: '2,100 gas', monad: '8,100 gas', impact: '~4x costlier; cache storage reads in memory', severity: 'warning' },
-  { aspect: 'Cold Account Access', ethereum: '2,600 gas', monad: '10,100 gas', impact: '~4x costlier; minimize cross-contract cold calls', severity: 'warning' },
-  { aspect: 'Max Contract Size', ethereum: '24.5 KB', monad: '128 KB', impact: 'Larger contracts possible; less need for proxies', severity: 'good' },
-  { aspect: 'Block Time', ethereum: '12 sec', monad: '0.4 sec', impact: 'Near-instant UI feedback', severity: 'good' },
-  { aspect: 'Finality', ethereum: '12-18 min', monad: 'Sub-second', impact: 'Immediate confirmations for most apps', severity: 'good' },
-  { aspect: 'Mempool', ethereum: 'Global', monad: 'Local', impact: 'Track nonces locally for rapid successive txs', severity: 'info' },
-  { aspect: 'EVM Version', ethereum: 'Various', monad: 'Prague (Pectra)', impact: 'MUST set evmVersion: "prague" in compiler', severity: 'warning' },
+export const PHAROS_KEY_DIFFERENCES = [
+  { aspect: 'Gas Charging', ethereum: 'Gas used', pharos: 'Gas limit (full)', impact: 'Set tight gas limits; you pay the max declared', severity: 'warning' },
+  { aspect: 'Cold SLOAD', ethereum: '2,100 gas', pharos: '8,100 gas', impact: '~4x costlier; cache storage reads in memory', severity: 'warning' },
+  { aspect: 'Cold Account Access', ethereum: '2,600 gas', pharos: '10,100 gas', impact: '~4x costlier; minimize cross-contract cold calls', severity: 'warning' },
+  { aspect: 'Max Contract Size', ethereum: '24.5 KB', pharos: '128 KB', impact: 'Larger contracts possible; less need for proxies', severity: 'good' },
+  { aspect: 'Block Time', ethereum: '12 sec', pharos: '0.4 sec', impact: 'Near-instant UI feedback', severity: 'good' },
+  { aspect: 'Finality', ethereum: '12-18 min', pharos: 'Sub-second', impact: 'Immediate confirmations for most apps', severity: 'good' },
+  { aspect: 'Mempool', ethereum: 'Global', pharos: 'Local', impact: 'Track nonces locally for rapid successive txs', severity: 'info' },
+  { aspect: 'EVM Version', ethereum: 'Various', pharos: 'Prague (Pectra)', impact: 'MUST set evmVersion: "prague" in compiler', severity: 'warning' },
 ];
 
 export const ECOSYSTEM_PROTOCOLS = {
@@ -62,7 +59,7 @@ export const ECOSYSTEM_PROTOCOLS = {
     { name: 'Breath of Estova', category: 'MMORPG', url: 'https://breathofestova.com', description: '2D pixel-art RPG' },
   ],
   nft: [
-    { name: 'Magic Eden', category: 'Marketplace', url: 'https://magiceden.us/monad', description: 'Primary NFT marketplace' },
+    { name: 'Magic Eden', category: 'Marketplace', url: 'https://magiceden.us/pharos', description: 'Primary NFT marketplace' },
     { name: 'Poply', category: 'Marketplace', url: 'https://poply.io', description: 'Native Pharos NFT marketplace' },
   ],
   infra: [
