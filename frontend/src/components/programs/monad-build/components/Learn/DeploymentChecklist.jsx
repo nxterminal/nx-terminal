@@ -3,12 +3,12 @@ import { Check } from 'lucide-react';
 
 const ITEMS = [
   { text: 'Solidity evmVersion set to "prague"', critical: true },
-  { text: 'Gas limits tested and optimized (Monad charges full limit)', critical: true },
+  { text: 'Gas limits tested and optimized (Pharos charges full limit)', critical: true },
   { text: 'Cold storage access patterns optimized (8,100 gas per cold SLOAD)', critical: false },
-  { text: 'Contract size under 128 KB (Monad limit)', critical: false },
-  { text: 'Tested on Monad Testnet (Chain ID 10143)', critical: true },
-  { text: 'Wallet funded with MON for deployment gas', critical: true },
-  { text: 'Contract verified on MonadVision or Monadscan', critical: false },
+  { text: 'Contract size under 128 KB (Pharos limit)', critical: false },
+  { text: 'Tested on Pharos Testnet (Chain ID 688689)', critical: true },
+  { text: 'Wallet funded with PHRS for deployment gas', critical: true },
+  { text: 'Contract verified on PharosScan', critical: false },
   { text: 'Access control configured (Ownable or AccessControl)', critical: false },
   { text: 'Events emitted for all important state changes', critical: false },
   { text: 'Re-entrancy guards on external calls', critical: true },

@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 const SECTIONS = [
   {
     title: 'Parallel Execution',
-    content: 'Monad executes transactions in parallel while maintaining sequential consistency. Multiple transactions process simultaneously across different cores, then results are committed in the original block order. This gives 10,000+ TPS while preserving deterministic state transitions.',
+    content: 'Pharos executes transactions in parallel while maintaining sequential consistency. Multiple transactions process simultaneously across different cores, then results are committed in the original block order. This gives 30,000+ TPS while preserving deterministic state transitions.',
     takeaway: 'Your contracts work exactly as on Ethereum — parallelism is handled at the VM level. No code changes needed.',
     diagram: (
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '16px 0' }}>
@@ -24,8 +24,8 @@ const SECTIONS = [
     ),
   },
   {
-    title: 'MonadBFT Consensus',
-    content: 'MonadBFT is a pipelined HotStuff-based consensus protocol. While Round N\'s block is being voted on, Round N+1\'s block is already being proposed. This pipelining reduces latency to ~400ms per block.',
+    title: 'AsyncBFT Consensus',
+    content: 'AsyncBFT is a pipelined HotStuff-based consensus protocol. While Round N\'s block is being voted on, Round N+1\'s block is already being proposed. This pipelining reduces latency to ~400ms per block.',
     takeaway: 'Block time is 400ms with 800ms finality — near-instant confirmation for your users.',
     diagram: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '16px 0' }}>
@@ -48,7 +48,7 @@ const SECTIONS = [
   },
   {
     title: 'Deferred Execution',
-    content: 'In Monad, consensus and execution happen concurrently. Nodes reach consensus on transaction ordering first, then execute in parallel. This decoupling means consensus never waits for execution to complete.',
+    content: 'In Pharos, consensus and execution happen concurrently. Nodes reach consensus on transaction ordering first, then execute in parallel. This decoupling means consensus never waits for execution to complete.',
     takeaway: 'Transactions are ordered quickly, then executed — no execution bottleneck on consensus.',
     diagram: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 0' }}>
@@ -68,8 +68,8 @@ const SECTIONS = [
     ),
   },
   {
-    title: 'MonadDb',
-    content: 'MonadDb is a custom state database built from scratch for Monad. Unlike Ethereum\'s LevelDB/PebbleDB which wrap a generic key-value store around a Merkle Patricia Trie, MonadDb implements the trie natively on SSD with async I/O for maximum throughput.',
+    title: 'PharosDb',
+    content: 'PharosDb is a custom state database built from scratch for Pharos. Unlike Ethereum\'s LevelDB/PebbleDB which wrap a generic key-value store around a Merkle Patricia Trie, PharosDb implements the trie natively on SSD with async I/O for maximum throughput.',
     takeaway: 'State access is faster, enabling higher throughput — but cold SLOAD still costs more gas (8,100 vs 2,100).',
     diagram: (
       <div style={{ display: 'flex', gap: 24, padding: '16px 0' }}>
@@ -78,7 +78,7 @@ const SECTIONS = [
           <div style={{ fontSize: 11, color: 'var(--mb-text-secondary)' }}>Generic KV Store → Trie</div>
         </div>
         <div style={{ flex: 1, padding: 12, border: '1px solid var(--mb-accent-primary)', borderRadius: 8, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: 'var(--mb-accent-primary)', marginBottom: 8 }}>Monad</div>
+          <div style={{ fontSize: 12, color: 'var(--mb-accent-primary)', marginBottom: 8 }}>Pharos</div>
           <div style={{ fontSize: 11, color: 'var(--mb-text-secondary)' }}>Native Trie on SSD</div>
         </div>
       </div>
@@ -95,9 +95,9 @@ export default function MonadArchitecture() {
 
   return (
     <div>
-      <h2 className="mb-h2 mb-mb-md">Monad Architecture</h2>
+      <h2 className="mb-h2 mb-mb-md">Pharos Architecture</h2>
       <p className="mb-text-sm mb-mb-lg">
-        Monad achieves 10,000+ TPS through four key innovations. Click each section to learn more.
+        Pharos achieves 30,000+ TPS through four key innovations. Click each section to learn more.
       </p>
 
       {SECTIONS.map((section, i) => (

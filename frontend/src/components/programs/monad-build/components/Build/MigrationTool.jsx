@@ -25,7 +25,7 @@ export default function MigrationTool() {
     <div>
       <h2 className="mb-h2 mb-mb-sm">Migrate from Ethereum</h2>
       <p className="mb-text-sm mb-mb-lg">
-        Paste your existing Ethereum Solidity contract to analyze compatibility and get optimization suggestions for Monad.
+        Paste your existing Ethereum Solidity contract to analyze compatibility and get optimization suggestions for Pharos.
       </p>
 
       <textarea
@@ -38,11 +38,11 @@ export default function MigrationTool() {
 
       <div className="mb-flex mb-justify-between mb-items-center mb-mt-md">
         <Button onClick={handleAnalyze} disabled={code.trim().length < 10}>
-          <Search size={14} /> Analyze for Monad
+          <Search size={14} /> Analyze for Pharos
         </Button>
         {analyzed && (
           <Button variant="secondary" onClick={handleDeploy}>
-            Deploy to Monad <ArrowRight size={14} />
+            Deploy to Pharos <ArrowRight size={14} />
           </Button>
         )}
       </div>

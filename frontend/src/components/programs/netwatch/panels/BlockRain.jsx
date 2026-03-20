@@ -155,7 +155,7 @@ export default function BlockRain({ blockNumber }) {
       />
       {/* Invisible overlay for tooltip on "BLOCK FEED — LIVE" label */}
       <Tooltip
-        text="Block Rain \u2014 Real-time visualization of Monad blockchain activity. Characters flash cyan when a new block is confirmed."
+        text="Block Rain \u2014 Real-time visualization of Pharos blockchain activity. Characters flash cyan when a new block is confirmed."
         style={{ position: 'absolute', top: '2px', left: '2px', width: '140px', height: '18px', zIndex: 2 }}
       >
         <div style={{ width: '100%', height: '100%', cursor: 'default' }} />

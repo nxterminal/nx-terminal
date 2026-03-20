@@ -18,7 +18,7 @@ export default function DeploySuccess() {
 
   function handleShare() {
     const text = encodeURIComponent(
-      `Just deployed my contract on @monad_xyz in under 1 second! Built with #NXTerminal Monad Build.exe\n\n${config.explorer}/address/${state.deployedAddress}`
+      `Just deployed my contract on @pharos_xyz in under 1 second! Built with #NXTerminal Pharos Build.exe\n\n${config.explorer}/address/${state.deployedAddress}`
     );
     window.open(`https://x.com/intent/tweet?text=${text}`, '_blank');
   }
@@ -31,7 +31,7 @@ export default function DeploySuccess() {
 
       <h2 className="mb-h2 mb-mb-sm">Contract Deployed!</h2>
       <p className="mb-text-sm mb-mb-lg">
-        Your contract is live on {state.network === 'mainnet' ? 'Monad Mainnet' : 'Monad Testnet'}.
+        Your contract is live on {state.network === 'mainnet' ? 'Pharos Mainnet' : 'Pharos Testnet'}.
       </p>
 
       <div className="mb-card mb-mb-lg" style={{ textAlign: 'left' }}>
@@ -60,7 +60,7 @@ export default function DeploySuccess() {
           className="mb-btn mb-btn-secondary"
           style={{ textDecoration: 'none', justifyContent: 'center' }}
         >
-          View on MonadVision <ExternalLink size={14} />
+          View on PharosScan <ExternalLink size={14} />
         </a>
         {state.txHash && (
           <a

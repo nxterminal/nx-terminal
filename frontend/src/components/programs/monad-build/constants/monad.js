@@ -1,24 +1,24 @@
 export const MONAD_MAINNET = {
-  chainId: 10143,
-  name: 'Monad Testnet',
-  rpcUrl: 'https://monad-testnet.drpc.org',
-  explorer: 'https://testnet.monadexplorer.com',
+  chainId: 688689,
+  name: 'Pharos Testnet',
+  rpcUrl: 'https://atlantic.dplabs-internal.com',
+  explorer: 'https://atlantic.pharosscan.xyz',
   explorerApi: 'https://sourcify-api-monad.blockvision.org',
-  etherscanExplorer: 'https://testnet.monadexplorer.com',
+  etherscanExplorer: 'https://atlantic.pharosscan.xyz',
   etherscanApi: 'https://api.monadscan.com/api',
-  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
 };
 
 export const MONAD_TESTNET = {
-  chainId: 10143,
-  name: 'Monad Testnet',
-  rpcUrl: 'https://monad-testnet.drpc.org',
-  explorer: 'https://testnet.monadexplorer.com',
-  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+  chainId: 688689,
+  name: 'Pharos Testnet',
+  rpcUrl: 'https://atlantic.dplabs-internal.com',
+  explorer: 'https://atlantic.pharosscan.xyz',
+  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
 };
 
 export const CANONICAL_CONTRACTS = {
-  WMON: '0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A',
+  WPHRS: '0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A',
   MULTICALL3: '0xcA11bde05977b3631167028862bE2a173976CA11',
   PERMIT2: '0x000000000022d473030f116ddee9f6b43ac78ba3',
   ENTRYPOINT_V07: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
@@ -27,13 +27,11 @@ export const CANONICAL_CONTRACTS = {
 };
 
 export const MONAD_RPC_PROVIDERS = [
-  { name: 'dRPC', url: 'https://monad-testnet.drpc.org', rateLimit: '25 rps' },
+  { name: 'dRPC', url: 'https://atlantic.dplabs-internal.com', rateLimit: '25 rps' },
 ];
 
 export const FAUCETS = [
-  { name: 'Official Faucet', url: 'https://faucet.monad.xyz', description: 'Official Monad testnet faucet' },
-  { name: 'QuickNode Faucet', url: 'https://faucet.quicknode.com/monad/testnet', description: 'QuickNode testnet faucet' },
-  { name: 'ETHGlobal Faucet', url: 'https://ethglobal.com/faucet/monad-testnet-10143', description: 'ETHGlobal testnet faucet' },
+  { name: 'Pharos Faucet', url: 'https://zan.top/faucet/pharos', description: 'Pharos testnet faucet' },
 ];
 
 export const MONAD_KEY_DIFFERENCES = [
@@ -42,7 +40,7 @@ export const MONAD_KEY_DIFFERENCES = [
   { aspect: 'Cold Account Access', ethereum: '2,600 gas', monad: '10,100 gas', impact: '~4x costlier; minimize cross-contract cold calls', severity: 'warning' },
   { aspect: 'Max Contract Size', ethereum: '24.5 KB', monad: '128 KB', impact: 'Larger contracts possible; less need for proxies', severity: 'good' },
   { aspect: 'Block Time', ethereum: '12 sec', monad: '0.4 sec', impact: 'Near-instant UI feedback', severity: 'good' },
-  { aspect: 'Finality', ethereum: '12-18 min', monad: '0.8 sec', impact: 'Immediate confirmations for most apps', severity: 'good' },
+  { aspect: 'Finality', ethereum: '12-18 min', monad: 'Sub-second', impact: 'Immediate confirmations for most apps', severity: 'good' },
   { aspect: 'Mempool', ethereum: 'Global', monad: 'Local', impact: 'Track nonces locally for rapid successive txs', severity: 'info' },
   { aspect: 'EVM Version', ethereum: 'Various', monad: 'Prague (Pectra)', impact: 'MUST set evmVersion: "prague" in compiler', severity: 'warning' },
 ];
@@ -50,12 +48,12 @@ export const MONAD_KEY_DIFFERENCES = [
 export const ECOSYSTEM_PROTOCOLS = {
   defi: [
     { name: 'Kuru', category: 'CLOB DEX', url: 'https://kuru.io', description: 'On-chain order book, $500M+ volume' },
-    { name: 'Uniswap V4', category: 'AMM DEX', url: 'https://app.uniswap.org', description: 'Leading AMM, ~$60M TVL on Monad' },
+    { name: 'Uniswap V4', category: 'AMM DEX', url: 'https://app.uniswap.org', description: 'Leading AMM, ~$60M TVL on Pharos' },
     { name: 'Curve', category: 'Stableswap', url: 'https://curve.fi', description: 'Stable asset swaps' },
     { name: 'Morpho', category: 'Lending', url: 'https://morpho.org', description: 'Optimized lending protocol' },
-    { name: 'aPriori', category: 'Liquid Staking', url: 'https://apriori.finance', description: 'aprMON liquid staking token' },
-    { name: 'Kintsu', category: 'Liquid Staking', url: 'https://kintsu.xyz', description: 'sMON liquid staking token' },
-    { name: 'FastLane', category: 'Liquid Staking', url: 'https://fastlane.finance', description: 'shMON liquid staking + MEV' },
+    { name: 'aPriori', category: 'Liquid Staking', url: 'https://apriori.finance', description: 'aprPHRS liquid staking token' },
+    { name: 'Kintsu', category: 'Liquid Staking', url: 'https://kintsu.xyz', description: 'sPHRS liquid staking token' },
+    { name: 'FastLane', category: 'Liquid Staking', url: 'https://fastlane.finance', description: 'shPHRS liquid staking + MEV' },
     { name: 'Perpl', category: 'Perpetuals DEX', url: 'https://perpl.io', description: 'On-chain perpetuals CLOB' },
   ],
   gaming: [
@@ -65,12 +63,11 @@ export const ECOSYSTEM_PROTOCOLS = {
   ],
   nft: [
     { name: 'Magic Eden', category: 'Marketplace', url: 'https://magiceden.us/monad', description: 'Primary NFT marketplace' },
-    { name: 'Poply', category: 'Marketplace', url: 'https://poply.io', description: 'Native Monad NFT marketplace' },
+    { name: 'Poply', category: 'Marketplace', url: 'https://poply.io', description: 'Native Pharos NFT marketplace' },
   ],
   infra: [
-    { name: 'MonadVision', category: 'Explorer', url: 'https://monadvision.com', description: 'Block explorer (Sourcify)' },
-    { name: 'Monadscan', category: 'Explorer', url: 'https://monadscan.com', description: 'Block explorer (Etherscan-style)' },
-    { name: 'Pyth', category: 'Oracle', url: 'https://pyth.network', description: 'Price feeds for Monad' },
+    { name: 'PharosScan', category: 'Explorer', url: 'https://atlantic.pharosscan.xyz', description: 'Block explorer' },
+    { name: 'Pyth', category: 'Oracle', url: 'https://pyth.network', description: 'Price feeds for Pharos' },
   ],
 };
 

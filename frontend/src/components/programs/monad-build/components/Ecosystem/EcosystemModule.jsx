@@ -43,9 +43,9 @@ export default function EcosystemModule() {
 
   return (
     <div className="mb-animate-in">
-      <h1 className="mb-h1 mb-mb-sm">Monad Ecosystem</h1>
+      <h1 className="mb-h1 mb-mb-sm">Pharos Ecosystem</h1>
       <p className="mb-text-sm mb-mb-lg">
-        {allProtocols.length}+ projects building on Monad.
+        {allProtocols.length}+ projects building on Pharos.
       </p>
 
       <div className="mb-flex mb-items-center mb-gap-md mb-mb-lg" style={{ flexWrap: 'wrap' }}>

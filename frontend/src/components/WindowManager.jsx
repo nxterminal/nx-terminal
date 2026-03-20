@@ -23,6 +23,8 @@ import MonadCity from './programs/monad-city/MonadCity';
 import Flow from './programs/flow/Flow';
 import DevAcademy from './programs/dev-academy/DevAcademy';
 import MonadBuild from './programs/monad-build/MonadBuild';
+import NetWatch from './programs/netwatch/NetWatch';
+import PharosSDK from './programs/pharos-sdk/PharosSDK';
 import Phares from './programs/phares/Phares';
 
 const WINDOW_COMPONENTS = {
@@ -49,6 +51,8 @@ const WINDOW_COMPONENTS = {
   'flow': Flow,
   'dev-academy': DevAcademy,
   'monad-build': MonadBuild,
+  'netwatch': NetWatch,
+  'pharos-sdk': PharosSDK,
   'phares': Phares,
 };
 

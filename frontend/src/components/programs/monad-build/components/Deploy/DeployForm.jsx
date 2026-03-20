@@ -34,7 +34,7 @@ export default function DeployForm({ onDeploy }) {
       {isMainnet && (
         <div className="mb-callout mb-callout-warning mb-mb-md">
           <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span>You are deploying to <strong>Monad Mainnet</strong>. This will use real MON tokens.</span>
+          <span>You are deploying to <strong>Pharos Mainnet</strong>. This will use real PHRS tokens.</span>
         </div>
       )}
 
@@ -51,7 +51,7 @@ export default function DeployForm({ onDeploy }) {
           {!isConnected ? (
             <Button size="sm" onClick={connect}>Connect Wallet</Button>
           ) : isWrongChain ? (
-            <Button size="sm" onClick={switchToMonad}>Switch to Monad</Button>
+            <Button size="sm" onClick={switchToMonad}>Switch to Pharos</Button>
           ) : (
             <span className="mb-badge mb-badge-green">Connected</span>
           )}
@@ -61,7 +61,7 @@ export default function DeployForm({ onDeploy }) {
       <div className="mb-callout mb-callout-warning mb-mb-md">
         <AlertTriangle size={16} style={{ flexShrink: 0 }} />
         <div>
-          <strong>Monad charges the full gas LIMIT, not gas used.</strong>
+          <strong>Pharos charges the full gas LIMIT, not gas used.</strong>
           <br />
           The estimated cost reflects the maximum you will pay. Always use gas estimation.
         </div>
@@ -75,7 +75,7 @@ export default function DeployForm({ onDeploy }) {
         {!isConnected
           ? 'Connect Wallet to Deploy'
           : isWrongChain
-            ? 'Switch to Monad Network'
+            ? 'Switch to Pharos Network'
             : 'Deploy Contract'}
       </Button>
     </div>

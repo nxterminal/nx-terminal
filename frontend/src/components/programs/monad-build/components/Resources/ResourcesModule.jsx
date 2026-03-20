@@ -42,16 +42,16 @@ function Section({ title, defaultOpen = false, children }) {
 
 const VIEM_SNIPPET = `import { createPublicClient, http } from 'viem';
 
-const monad = {
-  id: 10143,
-  name: 'Monad Testnet',
-  nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-  rpcUrls: { default: { http: ['https://monad-testnet.drpc.org'] } },
-  blockExplorers: { default: { name: 'MonadExplorer', url: 'https://testnet.monadexplorer.com' } },
+const pharos = {
+  id: 688689,
+  name: 'Pharos Testnet',
+  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
+  rpcUrls: { default: { http: ['https://atlantic.dplabs-internal.com'] } },
+  blockExplorers: { default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' } },
 };
 
 const client = createPublicClient({
-  chain: monad,
+  chain: pharos,
   transport: http(),
 });`;
 
@@ -60,7 +60,7 @@ export default function ResourcesModule() {
     <div className="mb-animate-in">
       <h1 className="mb-h1 mb-mb-sm">Developer Resources</h1>
       <p className="mb-text-sm mb-mb-lg">
-        Everything you need to build on Monad — RPCs, contracts, tools, and more.
+        Everything you need to build on Pharos — RPCs, contracts, tools, and more.
       </p>
 
       <Section title="RPC Endpoints" defaultOpen>
@@ -91,8 +91,7 @@ export default function ResourcesModule() {
       <Section title="Block Explorers">
         <div className="mb-flex-col mb-gap-sm">
           {[
-            { name: 'MonadVision', url: 'https://monadvision.com', desc: 'Sourcify-powered explorer' },
-            { name: 'Monadscan', url: 'https://monadscan.com', desc: 'Etherscan-style explorer' },
+            { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz', desc: 'Block explorer' },
           ].map(e => (
             <div key={e.name} className="mb-flex mb-items-center mb-justify-between">
               <div>
@@ -162,7 +161,7 @@ export default function ResourcesModule() {
                 className="mb-btn mb-btn-primary mb-btn-sm"
                 style={{ textDecoration: 'none' }}
               >
-                Get Test MON <ExternalLink size={12} />
+                Get Test PHRS <ExternalLink size={12} />
               </a>
             </div>
           ))}
@@ -177,9 +176,9 @@ export default function ResourcesModule() {
           </div>
           <div className="mb-flex mb-gap-sm">
             {[
-              { name: 'Monad Docs', url: 'https://docs.monad.xyz' },
-              { name: 'Monad GitHub', url: 'https://github.com/monad-developers' },
-              { name: 'Discord', url: 'https://discord.gg/monad' },
+              { name: 'Pharos Docs', url: 'https://docs.pharos.xyz' },
+              { name: 'Pharos GitHub', url: 'https://github.com/pharos-developers' },
+              { name: 'Discord', url: 'https://discord.gg/pharos' },
             ].map(link => (
               <a
                 key={link.name}

@@ -7,10 +7,10 @@ import Button from '../shared/Button';
 
 const STEPS = [
   { title: 'Connect Wallet', desc: 'Connect your MetaMask or compatible wallet.' },
-  { title: 'Switch to Monad', desc: 'Make sure you\'re on the Monad network.' },
-  { title: 'Get Test MON', desc: 'Grab free testnet tokens from a faucet.' },
+  { title: 'Switch to Pharos', desc: 'Make sure you\'re on the Pharos network.' },
+  { title: 'Get Test PHRS', desc: 'Grab free testnet tokens from a faucet.' },
   { title: 'Create Your First Contract', desc: 'Use the Build wizard to generate a contract.' },
-  { title: 'Deploy', desc: 'Ship your contract to Monad.' },
+  { title: 'Deploy', desc: 'Ship your contract to Pharos.' },
 ];
 
 export default function QuickStartGuide() {
@@ -93,7 +93,7 @@ export default function QuickStartGuide() {
                     className="mb-btn mb-btn-secondary mb-btn-sm"
                     style={{ textDecoration: 'none' }}
                   >
-                    Get MON <ExternalLink size={12} />
+                    Get PHRS <ExternalLink size={12} />
                   </a>
                 )}
                 {i === 3 && (

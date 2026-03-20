@@ -5,7 +5,7 @@ import { MONAD_MAINNET, MONAD_TESTNET } from '../../constants/monad';
 const PHASES = [
   { key: 'compiling', label: 'Preparing Transaction...', desc: 'Building deployment transaction' },
   { key: 'signing', label: 'Waiting for Wallet Signature...', desc: 'Confirm in your wallet' },
-  { key: 'pending', label: 'Transaction Pending...', desc: 'Monad confirms in ~0.8 seconds' },
+  { key: 'pending', label: 'Transaction Pending...', desc: 'Pharos confirms in sub-second' },
   { key: 'confirmed', label: 'Confirmed!', desc: 'Contract deployed successfully' },
 ];
 
