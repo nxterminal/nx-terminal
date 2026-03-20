@@ -7,19 +7,19 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: {
-      evmVersion: "prague",  // MANDATORY for Monad
+      evmVersion: "prague",  // MANDATORY for Pharos
       optimizer: { enabled: true, runs: 200 },
     },
   },
   networks: {
-    monad: {
-      url: "https://monad-testnet.drpc.org",
-      chainId: 10143,
+    pharos: {
+      url: "https://atlantic.dplabs-internal.com",
+      chainId: 688689,
       accounts: [process.env.PRIVATE_KEY],
     },
-    monadTestnet: {
-      url: "https://monad-testnet.drpc.org",
-      chainId: 10143,
+    pharosTestnet: {
+      url: "https://atlantic.dplabs-internal.com",
+      chainId: 688689,
       accounts: [process.env.PRIVATE_KEY],
     },
   },
@@ -36,8 +36,8 @@ optimizer = true
 optimizer_runs = 200
 
 [rpc_endpoints]
-monad = "https://monad-testnet.drpc.org"
-monadTestnet = "https://monad-testnet.drpc.org"`;
+pharos = "https://atlantic.dplabs-internal.com"
+pharosTestnet = "https://atlantic.dplabs-internal.com"`;
 
 export default function CompileStep() {
   const [showHardhat, setShowHardhat] = useState(false);

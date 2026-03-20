@@ -9,17 +9,17 @@ Version 1.0 BETA
 ${'═'.repeat(45)}
 
 NETWATCH is a real-time network monitor for
-Monad blockchain, built as part of the
+Pharos blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
-It visualizes live data from the Monad including blocks, transactions, TPS, gas
+It visualizes live data from Pharos including blocks, transactions, TPS, gas
 throughput, and network health metrics.
 
 ${'═'.repeat(45)}
 HOW IT WORKS
 ${'═'.repeat(45)}
 
-NETWATCH connects directly to the Monad via JSON-RPC and polls for new data every
+NETWATCH connects directly to Pharos via JSON-RPC and polls for new data every
 3 seconds. All data is fetched client-side \u2014 no
 backend server required.
 
@@ -99,7 +99,7 @@ mainnet mint:
 
 \u25C6 Mainnet Mode
   Switch between testnet and mainnet
-  monitoring on Monad mainnet
+  monitoring on Pharos mainnet
 
 Mint your NX Terminal dev NFT to unlock.
 nxterminal.com/mint`,

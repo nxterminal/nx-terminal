@@ -9,13 +9,13 @@ export default function VerifyContract() {
     <div>
       <h3 className="mb-h3 mb-mb-md">Verify Contract</h3>
       <p className="mb-text-sm mb-mb-md">
-        Verify your contract source code on Monad block explorers for transparency.
+        Verify your contract source code on Pharos block explorers for transparency.
       </p>
 
       <div className="mb-card mb-mb-md">
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Sourcify (MonadVision)</div>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>PharosScan</div>
         <div className="mb-text-sm mb-mb-sm">
-          Upload your source code and metadata to verify via Sourcify verification.
+          Upload your source code and metadata to verify via PharosScan verification.
         </div>
         <a
           href={`${MONAD_MAINNET.explorer}/address/${state.deployedAddress || ''}#code`}
@@ -24,23 +24,7 @@ export default function VerifyContract() {
           className="mb-btn mb-btn-secondary mb-btn-sm"
           style={{ textDecoration: 'none' }}
         >
-          Verify on MonadVision <ExternalLink size={12} />
-        </a>
-      </div>
-
-      <div className="mb-card mb-mb-md">
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Etherscan-style (Monadscan)</div>
-        <div className="mb-text-sm mb-mb-sm">
-          Verify via the Monadscan web interface with your source code and compiler settings.
-        </div>
-        <a
-          href={`${MONAD_MAINNET.etherscanExplorer}/address/${state.deployedAddress || ''}#code`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-btn mb-btn-secondary mb-btn-sm"
-          style={{ textDecoration: 'none' }}
-        >
-          Verify on Monadscan <ExternalLink size={12} />
+          Verify on PharosScan <ExternalLink size={12} />
         </a>
       </div>
 

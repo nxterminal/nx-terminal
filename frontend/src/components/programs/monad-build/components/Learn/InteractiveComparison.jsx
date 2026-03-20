@@ -5,7 +5,7 @@ import Badge from '../shared/Badge';
 
 const CODE_EXAMPLES = {
   'Cold SLOAD': {
-    bad: `// Expensive on Monad (8,100 gas per cold SLOAD)
+    bad: `// Expensive on Pharos (8,100 gas per cold SLOAD)
 function getBalance(address user) public view returns (uint256) {
     return balances[user]; // Cold read every call
 }`,
@@ -21,10 +21,10 @@ function processBalances(address[] calldata users)
 }`,
   },
   'Gas Charging': {
-    bad: `// On Monad, you pay for the full gas LIMIT
+    bad: `// On Pharos, you pay for the full gas LIMIT
 // Gas limit: 100,000 | Gas used: 52,000
 // Ethereum charges: 52,000 gas
-// Monad charges:   100,000 gas`,
+// Pharos charges:   100,000 gas`,
     good: `// Always estimate gas and set tight limits
 const gasEstimate = await publicClient.estimateGas({...});
 const tx = await walletClient.sendTransaction({
@@ -33,7 +33,7 @@ const tx = await walletClient.sendTransaction({
 });`,
   },
   'EVM Version': {
-    bad: `// Missing evmVersion — may fail on Monad
+    bad: `// Missing evmVersion — may fail on Pharos
 // hardhat.config.js
 module.exports = {
     solidity: "0.8.28",
@@ -67,7 +67,7 @@ export default function InteractiveComparison() {
 
   return (
     <div>
-      <h2 className="mb-h2 mb-mb-md">Monad vs Ethereum</h2>
+      <h2 className="mb-h2 mb-mb-md">Pharos vs Ethereum</h2>
       <p className="mb-text-sm mb-mb-lg">
         Key differences every developer should know. Click rows for details.
       </p>
@@ -77,7 +77,7 @@ export default function InteractiveComparison() {
           <tr>
             <th>Aspect</th>
             <th>Ethereum</th>
-            <th>Monad</th>
+            <th>Pharos</th>
             <th>Developer Impact</th>
           </tr>
         </thead>

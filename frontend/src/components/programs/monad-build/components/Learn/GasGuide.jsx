@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 export default function GasGuide() {
   return (
     <div>
-      <h2 className="mb-h2 mb-mb-md">Gas on Monad</h2>
+      <h2 className="mb-h2 mb-mb-md">Gas on Pharos</h2>
       <p className="mb-text-sm mb-mb-lg">
         The most critical difference for developers. Read this before deploying.
       </p>
@@ -11,7 +11,7 @@ export default function GasGuide() {
       <div className="mb-callout mb-callout-warning mb-mb-lg" style={{ fontSize: 14 }}>
         <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
         <div>
-          <strong>Monad charges the full gas LIMIT, not gas used.</strong>
+          <strong>Pharos charges the full gas LIMIT, not gas used.</strong>
           <br />
           If you set a gas limit of 100,000 but only use 52,000, you still pay for 100,000 gas.
           Always estimate gas accurately and set tight limits.
@@ -51,7 +51,7 @@ export default function GasGuide() {
 
         <div className="mb-card" style={{ borderColor: 'rgba(245,158,11,0.3)' }}>
           <div className="mb-text-xs mb-mb-sm" style={{ color: 'var(--mb-accent-warning)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Monad
+            Pharos
           </div>
           <div style={{ marginBottom: 12 }}>
             <div className="mb-flex mb-justify-between mb-mb-sm">
@@ -85,7 +85,7 @@ export default function GasGuide() {
           <tr>
             <th>Operation</th>
             <th>Ethereum Gas</th>
-            <th>Monad Gas</th>
+            <th>Pharos Gas</th>
             <th>Multiplier</th>
           </tr>
         </thead>

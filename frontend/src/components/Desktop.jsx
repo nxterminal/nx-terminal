@@ -27,9 +27,11 @@ const DESKTOP_ICONS = [
   { id: 'nadwatch', icon: '', label: 'Nadwatch', hidden: true },
   { id: 'parallax', icon: '', label: 'Parallax', hidden: true },
   { id: 'monad-sdk', icon: '', label: 'Monad SDK', hidden: true },
-  { id: 'monad-city', icon: '', label: 'Monad City', hidden: true },
+  { id: 'monad-city', icon: '', label: 'Pharos City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
-  { id: 'monad-build', icon: '\u26A1', label: 'Monad Build', hidden: true },
+  { id: 'monad-build', icon: '\u26A1', label: 'Pharos Build' },
+  { id: 'netwatch', icon: '', label: 'Netwatch' },
+  { id: 'pharos-sdk', icon: '', label: 'Pharos SDK' },
   { id: 'phares', icon: '', label: 'PHARES' },
 ];
 

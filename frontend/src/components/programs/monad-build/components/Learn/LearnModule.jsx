@@ -8,20 +8,20 @@ import QuickStartGuide from './QuickStartGuide';
 import DeploymentChecklist from './DeploymentChecklist';
 
 const TOPICS = [
-  { id: 'architecture', icon: Cpu, title: 'What is Monad?', description: 'Architecture overview: parallel execution, MonadBFT, and more', readTime: 5, difficulty: 'Beginner', component: MonadArchitecture },
-  { id: 'comparison', icon: GitCompare, title: 'Monad vs Ethereum', description: 'Side-by-side comparison of key differences', readTime: 4, difficulty: 'Beginner', component: InteractiveComparison },
-  { id: 'gas', icon: Fuel, title: 'Gas on Monad', description: 'Critical gas differences — must read before deploying', readTime: 3, difficulty: 'Intermediate', component: GasGuide },
-  { id: 'quickstart', icon: Zap, title: '5-Minute Quick Start', description: 'Fastest path to your first deploy on Monad', readTime: 5, difficulty: 'Beginner', component: QuickStartGuide },
+  { id: 'architecture', icon: Cpu, title: 'What is Pharos?', description: 'Architecture overview: parallel execution, AsyncBFT, and more', readTime: 5, difficulty: 'Beginner', component: MonadArchitecture },
+  { id: 'comparison', icon: GitCompare, title: 'Pharos vs Ethereum', description: 'Side-by-side comparison of key differences', readTime: 4, difficulty: 'Beginner', component: InteractiveComparison },
+  { id: 'gas', icon: Fuel, title: 'Gas on Pharos', description: 'Critical gas differences — must read before deploying', readTime: 3, difficulty: 'Intermediate', component: GasGuide },
+  { id: 'quickstart', icon: Zap, title: '5-Minute Quick Start', description: 'Fastest path to your first deploy on Pharos', readTime: 5, difficulty: 'Beginner', component: QuickStartGuide },
   { id: 'checklist', icon: ClipboardCheck, title: 'Pre-Deploy Checklist', description: 'Everything to verify before mainnet deployment', readTime: 2, difficulty: 'Intermediate', component: DeploymentChecklist },
-  { id: 'solidity', icon: Code2, title: 'Solidity on Monad', description: 'What changes, what doesn\'t — EVM compatibility notes', readTime: 3, difficulty: 'Advanced', component: SolidityOnMonad },
+  { id: 'solidity', icon: Code2, title: 'Solidity on Pharos', description: 'What changes, what doesn\'t — EVM compatibility notes', readTime: 3, difficulty: 'Advanced', component: SolidityOnMonad },
 ];
 
 function SolidityOnMonad() {
   return (
     <div>
-      <h2 className="mb-h2 mb-mb-md">Solidity on Monad</h2>
+      <h2 className="mb-h2 mb-mb-md">Solidity on Pharos</h2>
       <p className="mb-text-sm mb-mb-lg">
-        Monad is fully EVM-compatible. Your Solidity code works as-is with a few important notes.
+        Pharos is fully EVM-compatible. Your Solidity code works as-is with a few important notes.
       </p>
 
       <h3 className="mb-h3 mb-mb-md">What Stays the Same</h3>
@@ -43,9 +43,9 @@ function SolidityOnMonad() {
       <h3 className="mb-h3 mb-mb-md">What You Must Change</h3>
       <div className="mb-flex-col mb-gap-sm mb-mb-lg">
         {[
-          'Set evmVersion: "prague" in compiler settings — MANDATORY',
+          'Set evmVersion: "prague" in compiler settings — MANDATORY for Pharos',
           'Use pragma solidity ^0.8.28 or later',
-          'Optimize gas limits (Monad charges the full gas limit)',
+          'Optimize gas limits (Pharos charges the full gas limit)',
           'Cache cold storage reads in memory variables',
           'Minimize cold cross-contract calls (10,100 gas per cold account)',
         ].map((item, i) => (
@@ -63,7 +63,7 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: {
-      evmVersion: "prague",  // MANDATORY for Monad
+      evmVersion: "prague",  // MANDATORY for Pharos
       optimizer: {
         enabled: true,
         runs: 200,
@@ -71,13 +71,13 @@ module.exports = {
     },
   },
   networks: {
-    monad: {
-      url: "https://monad-testnet.drpc.org",
-      chainId: 10143,
+    pharos: {
+      url: "https://atlantic.dplabs-internal.com",
+      chainId: 688689,
     },
-    monadTestnet: {
-      url: "https://monad-testnet.drpc.org",
-      chainId: 10143,
+    pharosTestnet: {
+      url: "https://atlantic.dplabs-internal.com",
+      chainId: 688689,
     },
   },
 };`}
@@ -105,7 +105,7 @@ export default function LearnModule() {
 
   return (
     <div className="mb-animate-in">
-      <h1 className="mb-h1 mb-mb-sm">Learn Monad</h1>
+      <h1 className="mb-h1 mb-mb-sm">Learn Pharos</h1>
       <p className="mb-text-sm mb-mb-lg">
         Everything you need to know to build on the fastest EVM chain.
       </p>

@@ -7,8 +7,8 @@ import Badge from '../shared/Badge';
 
 const STATS = [
   { icon: Clock, label: 'Block Time', value: '0.4s', color: '#836EF9' },
-  { icon: Zap, label: 'Finality', value: '0.8s', color: '#22C55E' },
-  { icon: Gauge, label: 'TPS', value: '10,000', color: '#38BDF8' },
+  { icon: Zap, label: 'Finality', value: 'Sub-s', color: '#22C55E' },
+  { icon: Gauge, label: 'TPS', value: '30,000+', color: '#38BDF8' },
   { icon: Users, label: 'Ecosystem', value: '300+', color: '#F59E0B' },
 ];
 
@@ -16,9 +16,9 @@ const QUICK_ACTIONS = [
   { id: 'erc20', icon: Coins, title: 'Create Token', desc: 'Deploy an ERC-20 token', module: 'build', type: 'erc20' },
   { id: 'erc721', icon: Image, title: 'Create NFT', desc: 'Launch an NFT collection', module: 'build', type: 'erc721' },
   { id: 'game', icon: Gamepad2, title: 'Game Contract', desc: 'Build game economy', module: 'build', type: 'game' },
-  { id: 'learn', icon: BookOpen, title: 'Learn Monad', desc: 'Understand the platform', module: 'learn' },
+  { id: 'learn', icon: BookOpen, title: 'Learn Pharos', desc: 'Understand the platform', module: 'learn' },
   { id: 'deploy', icon: Rocket, title: 'Deploy Contract', desc: 'Ship to mainnet/testnet', module: 'deploy' },
-  { id: 'explore', icon: Globe, title: 'Explore Ecosystem', desc: 'Discover Monad projects', module: 'ecosystem' },
+  { id: 'explore', icon: Globe, title: 'Explore Ecosystem', desc: 'Discover Pharos projects', module: 'ecosystem' },
 ];
 
 export default function HomeDashboard() {
@@ -35,7 +35,7 @@ export default function HomeDashboard() {
   return (
     <div className="mb-animate-in">
       <div style={{ marginBottom: 24 }}>
-        <h1 className="mb-h1" style={{ marginBottom: 6 }}>Welcome to Monad Build</h1>
+        <h1 className="mb-h1" style={{ marginBottom: 6 }}>Welcome to Pharos Build</h1>
         <p className="mb-text-sm" style={{ margin: 0 }}>
           Create, deploy, and explore on the fastest EVM chain
         </p>
@@ -116,7 +116,7 @@ export default function HomeDashboard() {
             padding: 0,
           }}
         >
-          Monad vs Ethereum
+          Pharos vs Ethereum
           {showComparison ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
       </div>
@@ -128,7 +128,7 @@ export default function HomeDashboard() {
               <tr>
                 <th>Aspect</th>
                 <th>Ethereum</th>
-                <th>Monad</th>
+                <th>Pharos</th>
                 <th>Developer Impact</th>
               </tr>
             </thead>
