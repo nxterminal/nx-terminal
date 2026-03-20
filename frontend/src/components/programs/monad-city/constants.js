@@ -64,7 +64,7 @@ export const PROTOCOLS = [
 ];
 
 export const SIGN_NAMES = [
-  'MON', 'DEFI', 'GMX', 'AAVE', 'UNI', 'LIDO', 'PYTH',
+  'PHRS', 'DEFI', 'GMX', 'AAVE', 'UNI', 'LIDO', 'PYTH',
   'KURU', 'LINK', 'ZK', 'NFT', 'DAO', 'APR', 'ETH',
 ];
 
@@ -159,13 +159,13 @@ export const DISTRICT_SIGNS = {
 export const DISTRICT_BILLBOARDS = {
   defi:        ['UNISWAP V4', 'AAVE V3', 'BALANCER', 'CURVE', '0x PROTOCOL'],
   nft:         ['BORED APE', 'CRYPTOPUNK', 'AZUKI', 'PUDGY', 'ART BLOCKS'],
-  yield:       ['aPRIORI', 'KINTSU', 'MAGMA', 'LIDO x MON', 'YIELD MAX'],
+  yield:       ['aPRIORI', 'KINTSU', 'MAGMA', 'LIDO x PHRS', 'YIELD MAX'],
   derivatives: ['dYdX', 'GMX PRO', 'SYNTHETIX', 'KWENTA', 'GAINS'],
-  infra:       ['MONAD RPC', 'PYTH ORACLE', 'CHAINLINK', 'THE GRAPH', 'ALCHEMY'],
+  infra:       ['PHAROS RPC', 'PYTH ORACLE', 'CHAINLINK', 'THE GRAPH', 'ALCHEMY'],
   perps:       ['100x PERP', 'LIQUIDATED', 'MOON SOON', 'REKT CITY', 'LEVERAGE'],
   bridge:      ['LAYERZERO', 'WORMHOLE', 'STARGATE', 'HOP', 'ACROSS'],
   lending:     ['CURVANCE', 'COMPOUND', 'MAKER DAO', 'SPARK', 'MORPHO'],
-  parallel:    ['10K TPS', 'MONAD EVM', 'PARALLEL', 'PIPELINE', 'CONSENSUS'],
+  parallel:    ['30K TPS', 'PHAROS EVM', 'PARALLEL', 'ASYNCBFT', 'CONSENSUS'],
 };
 
 // Preferred building types per district
@@ -182,7 +182,7 @@ export const DISTRICT_BUILDING_TYPES = {
 };
 
 export const FOOTER_BRANDS = [
-  { name: 'MONAD', color: '#836EF9' },
+  { name: 'PHAROS', color: '#00c96a' },
   { name: 'DUNE', color: '#00F0FF' },
   { name: 'LAYERZERO', color: '#B8A9FF' },
   { name: 'PYTH', color: '#FF9F1C' },

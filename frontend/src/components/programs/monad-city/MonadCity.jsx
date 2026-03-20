@@ -58,7 +58,7 @@ function generateBuildings(layout) {
     const signPool = distSigns || SIGN_NAMES;
     const sn = signPool[Math.floor(Math.random() * signPool.length)];
     // Billboard text from district or generic
-    const bbPool = distBBs || ['MONAD', 'DeFi', 'NFT', 'BRIDGE', 'YIELD'];
+    const bbPool = distBBs || ['PHAROS', 'DeFi', 'NFT', 'BRIDGE', 'YIELD'];
     const bbText = bbPool[Math.floor(Math.random() * bbPool.length)];
     bldgs.push({
       gx, gy, col, tp, h, dist,
@@ -209,7 +209,7 @@ function dDistrictDecor(c, b, p, hw, hh, h, t) {
       const ty = p.y - h * .35;
       c.fillStyle = '#001828'; c.fillRect(p.x - hw, ty - 1, hw * 2, 3.5);
       c.fillStyle = '#00F0FF'; c.globalAlpha = .5; c.font = 'bold 2px monospace';
-      c.fillText('MON +2.4% ETH -0.8%', p.x - hw + 1, ty + 1.5);
+      c.fillText('PHRS +2.4% ETH -0.8%', p.x - hw + 1, ty + 1.5);
       c.globalAlpha = 1;
     }
     // Cyan accent edges
@@ -754,9 +754,9 @@ function dAir(c, a, t, W, H) {
     c.beginPath(); c.moveTo(x + 24, y + 34); c.lineTo(x + 38, y + 15); c.stroke();
     c.beginPath(); c.moveTo(x - 8, y + 34); c.lineTo(x - 12, y + 22); c.stroke();
     c.beginPath(); c.moveTo(x + 8, y + 34); c.lineTo(x + 12, y + 22); c.stroke();
-    // MONAD text - big and glowing
+    // PHRSAD text - big and glowing
     c.fillStyle = `rgba(220,200,255,${.7 * al})`; c.shadowColor = '#836EF9'; c.shadowBlur = 18;
-    c.font = 'bold 22px Orbitron,monospace'; c.textAlign = 'center'; c.fillText('MONAD', x, y + 7);
+    c.font = 'bold 22px Orbitron,monospace'; c.textAlign = 'center'; c.fillText('PHAROS', x, y + 7);
     // Subtitle
     c.font = 'bold 9px Orbitron,monospace'; c.fillStyle = `rgba(0,240,255,${.55 * al})`; c.shadowColor = '#00F0FF'; c.shadowBlur = 10;
     c.fillText('10,000 TPS', x, y + 18);
@@ -1005,8 +1005,8 @@ export default function MonadCity() {
       const p = PROTOCOLS[Math.floor(Math.random() * PROTOCOLS.length)];
       const tc = Math.floor(3 + Math.random() * 60);
       const r = Math.random();
-      if (r < .08) h += `<span style="color:rgba(131,110,249,.25);margin:0 6px">///</span><span style="color:#FF3366">♥ BIG</span> <span style="color:#B8A9FF">${(Math.random() * 500 + 10).toFixed(0)} MON</span>`;
-      else if (r < .14) h += `<span style="color:rgba(131,110,249,.25);margin:0 6px">///</span><span style="color:#FF9F1C">WHALE</span> <span style="color:#B8A9FF">${(Math.random() * 1e5 + 5e3).toFixed(0)} MON</span>`;
+      if (r < .08) h += `<span style="color:rgba(131,110,249,.25);margin:0 6px">///</span><span style="color:#FF3366">♥ BIG</span> <span style="color:#B8A9FF">${(Math.random() * 500 + 10).toFixed(0)} PHRS</span>`;
+      else if (r < .14) h += `<span style="color:rgba(131,110,249,.25);margin:0 6px">///</span><span style="color:#FF9F1C">WHALE</span> <span style="color:#B8A9FF">${(Math.random() * 1e5 + 5e3).toFixed(0)} PHRS</span>`;
       else h += `<span style="color:rgba(131,110,249,.25);margin:0 6px">///</span><span style="color:#00F0FF">${p}</span> <span style="color:#B8A9FF">${tc} TXs</span>`;
     }
     setTickerHtml(h);
@@ -1272,7 +1272,7 @@ export default function MonadCity() {
           Help
           {openMenu === 'help' && (
             <div className="mc-dropdown">
-              <div className="mc-dropdown-item" onClick={() => setOpenMenu(null)}>About MONAD_CITY.exe</div>
+              <div className="mc-dropdown-item" onClick={() => setOpenMenu(null)}>About PHRSAD_CITY.exe</div>
             </div>
           )}
         </div>
@@ -1300,7 +1300,7 @@ export default function MonadCity() {
         <>
           {/* Price Panel */}
           <div className="mc-panel mc-price-panel">
-            <div className="mc-label">MON / USD</div>
+            <div className="mc-label">PHRS / USD</div>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
               <span className="mc-price">${price.usd.toFixed(4)}</span>
               <span className={`mc-change ${price.change >= 0 ? 'up' : 'down'}`}>
