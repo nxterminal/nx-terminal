@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
@@ -499,7 +499,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   // ── Direct RPC fallback if wagmi reads fail ──────────────
   // Try: 1) window.ethereum (wallet provider), 2) direct RPC fetch, 3) hardcoded known values
   useEffect(() => {
-    if (mintPrice != null && mintPhase != null) return;
+    if (mintPrice != null && mintPhase != null && remaining != null) return;
     let cancelled = false;
 
     const tryRead = async () => {
@@ -527,25 +527,28 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         });
       };
 
-      // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf
+      // mintPrice() = 0x6817c76c, mintPhase() = 0x17881cbf, remainingSupply() = 0xda0239a6
       const providers = [
         walletCall,
-        'https://carrot.megaeth.com/rpc',
-        'https://carrot.megaeth.com/rpc',
+        MEGAETH_RPC,
+        MEGAETH_RPC,
       ];
 
       for (const prov of providers) {
         if (cancelled) return;
         try {
-          const [priceHex, phaseHex] = await Promise.all([
-            typeof prov === 'function' ? prov('0x6817c76c') : ethCall(prov, '0x6817c76c'),
-            typeof prov === 'function' ? prov('0x17881cbf') : ethCall(prov, '0x17881cbf'),
+          const call = (sel) => typeof prov === 'function' ? prov(sel) : ethCall(prov, sel);
+          const [priceHex, phaseHex, remainHex] = await Promise.all([
+            call('0x6817c76c'),
+            call('0x17881cbf'),
+            call('0xda0239a6'),
           ]);
           if (priceHex && phaseHex && priceHex !== '0x' && phaseHex !== '0x') {
             if (!cancelled) {
               setRpcFallback({
                 mintPrice: BigInt(priceHex),
                 mintPhase: Number(BigInt(phaseHex)),
+                remaining: remainHex && remainHex !== '0x' ? Number(BigInt(remainHex)) : null,
               });
             }
             return; // success
@@ -561,13 +564,14 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         setRpcFallback({
           mintPrice: 100000000000000n,
           mintPhase: 2,
+          remaining: null,
         });
       }
     };
 
     const timer = setTimeout(tryRead, 1500);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [mintPrice, mintPhase]);
+  }, [mintPrice, mintPhase, remaining]);
 
   const { data: freeAllowance } = useReadContract({
     address: NXDEVNFT_ADDRESS,
@@ -639,7 +643,8 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   const priceDisplay = effectiveMintPrice != null ? formatEther(effectiveMintPrice) : '...';
   const totalCost = effectiveMintPrice != null ? effectiveMintPrice * BigInt(quantity) : 0n;
   const totalCostDisplay = effectiveMintPrice != null ? formatEther(totalCost) : '...';
-  const remainingDisplay = remaining != null ? Number(remaining).toLocaleString() : '...';
+  const effectiveRemaining = remaining != null ? Number(remaining) : (rpcFallback?.remaining ?? null);
+  const remainingDisplay = effectiveRemaining != null ? effectiveRemaining.toLocaleString() : '...';
 
   // Determine which mint function to call
   const getMintMethod = () => {
