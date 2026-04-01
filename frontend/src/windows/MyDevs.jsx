@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useReadContract } from 'wagmi';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
@@ -11,6 +11,33 @@ const ARCHETYPE_COLORS = {
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
+
+const LOADING_MESSAGES = [
+  'Scanning MegaETH for your developers',
+  'Establishing secure connection to dev pods',
+  'Compiling developer profiles',
+  'Decrypting personnel files',
+  'Accessing corporate database',
+  'Loading dev workstations',
+];
+
+function LoadingLore() {
+  const [dots, setDots] = useState('');
+  const [msg] = useState(() => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
+
+  useEffect(() => {
+    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary, #666)', fontSize: '11px' }}>
+      <div style={{ fontFamily: 'monospace', color: 'var(--terminal-green, #00aa00)' }}>
+        &gt; {msg}{dots}
+      </div>
+    </div>
+  );
+}
 
 function formatNumber(n) {
   if (n == null) return '0';
@@ -424,6 +451,8 @@ export default function MyDevs({ openDevProfile }) {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [activityCount, setActivityCount] = useState(0);
+  const initialLoadDone = useRef(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: ownedTokens, isLoading: tokensLoading } = useReadContract({
     address: NXDEVNFT_ADDRESS,
@@ -431,7 +460,7 @@ export default function MyDevs({ openDevProfile }) {
     functionName: 'tokensOfOwner',
     args: address ? [address] : undefined,
     chainId: MEGAETH_CHAIN_ID,
-    query: { enabled: !!address },
+    query: { enabled: !!address, staleTime: 60_000 },
   });
 
   // ── Direct RPC fallback for tokensOfOwner if wagmi fails ──
@@ -499,28 +528,38 @@ export default function MyDevs({ openDevProfile }) {
       return;
     }
 
-    setLoading(true);
+    // Only show loading spinner on initial load or manual refresh
+    if (!initialLoadDone.current) {
+      setLoading(true);
+    }
     setFetchError(null);
 
     const tokenIds = effectiveTokens.map(id => Number(id));
 
-    Promise.all(
-      tokenIds.map(id =>
-        api.getDev(id).catch((err) => {
-          console.warn(`[MyDevs] Failed to fetch dev #${id}:`, err.message);
-          return {
-            token_id: id,
-            name: `Dev #${id}`,
-            archetype: 'UNKNOWN',
-            _fetchFailed: true,
-          };
-        })
-      )
-    )
-      .then(results => setDevs(results))
+    // Fetch with retry: if first attempt fails, wait 2s and try once more
+    const fetchWithRetry = (id) =>
+      api.getDev(id).catch(() =>
+        new Promise(resolve => setTimeout(resolve, 2000))
+          .then(() => api.getDev(id))
+          .catch((err) => {
+            console.warn(`[MyDevs] Failed to fetch dev #${id}:`, err.message);
+            return {
+              token_id: id,
+              name: `Dev #${id}`,
+              archetype: 'UNKNOWN',
+              _fetchFailed: true,
+            };
+          })
+      );
+
+    Promise.all(tokenIds.map(fetchWithRetry))
+      .then(results => {
+        setDevs(results);
+        initialLoadDone.current = true;
+      })
       .catch(() => setFetchError('Failed to load developer data'))
       .finally(() => setLoading(false));
-  }, [effectiveTokens]);
+  }, [effectiveTokens, refreshKey]);
 
   // Fetch activity count for badge
   useEffect(() => {
@@ -598,7 +637,17 @@ export default function MyDevs({ openDevProfile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
-        <span>{'>'} MY DEVELOPERS ({devs.length})</span>
+        <span>
+          {'>'} MY DEVELOPERS ({devs.length})
+          {' '}
+          <button
+            className="win-btn"
+            onClick={() => { initialLoadDone.current = false; setLoading(true); setRefreshKey(k => k + 1); }}
+            style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px', cursor: 'pointer' }}
+          >
+            &#x21bb; Refresh
+          </button>
+        </span>
         <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
       </div>
 
@@ -629,7 +678,7 @@ export default function MyDevs({ openDevProfile }) {
         {tab === 'devs' && (
           <div style={{ height: '100%', overflow: 'auto', padding: '4px' }}>
             {isLoadingAny ? (
-              <div className="loading">Loading devs...</div>
+              <LoadingLore />
             ) : (
               devs.map((dev) => (
                 <DevCard
