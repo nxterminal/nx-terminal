@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
 import { api } from '../services/api';
 
 const ARCHETYPE_COLORS = {
@@ -434,8 +434,66 @@ export default function MyDevs({ openDevProfile }) {
     query: { enabled: !!address },
   });
 
+  // ── Direct RPC fallback for tokensOfOwner if wagmi fails ──
+  const [rpcTokens, setRpcTokens] = useState(null);
   useEffect(() => {
-    if (!ownedTokens || ownedTokens.length === 0) {
+    if (!address || ownedTokens != null) return;
+    if (tokensLoading) return;
+    let cancelled = false;
+
+    const tryRpc = async () => {
+      // tokensOfOwner(address) selector = 0x8462151c
+      const paddedAddr = address.slice(2).toLowerCase().padStart(64, '0');
+      const data = '0x8462151c' + paddedAddr;
+
+      // Try wallet provider first, then direct RPC
+      const providers = [];
+      if (window.ethereum) {
+        providers.push(async () => {
+          return await window.ethereum.request({
+            method: 'eth_call',
+            params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'],
+          });
+        });
+      }
+      providers.push(async () => {
+        const res = await fetch(MEGAETH_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'] }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error.message);
+        return json.result;
+      });
+
+      for (const call of providers) {
+        if (cancelled) return;
+        try {
+          const result = await call();
+          if (!result || result === '0x') continue;
+          // Decode ABI-encoded uint256[] — offset(32) + length(32) + items(32 each)
+          const hex = result.slice(2); // strip 0x
+          if (hex.length < 128) continue; // at least offset + length
+          const length = parseInt(hex.slice(64, 128), 16);
+          const ids = [];
+          for (let i = 0; i < length; i++) {
+            ids.push(parseInt(hex.slice(128 + i * 64, 128 + (i + 1) * 64), 16));
+          }
+          if (!cancelled) setRpcTokens(ids.map(BigInt));
+          return;
+        } catch { /* try next */ }
+      }
+    };
+
+    const timer = setTimeout(tryRpc, 1000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [address, ownedTokens, tokensLoading]);
+
+  const effectiveTokens = ownedTokens ?? rpcTokens;
+
+  useEffect(() => {
+    if (!effectiveTokens || effectiveTokens.length === 0) {
       setDevs([]);
       setLoading(false);
       return;
@@ -444,7 +502,7 @@ export default function MyDevs({ openDevProfile }) {
     setLoading(true);
     setFetchError(null);
 
-    const tokenIds = ownedTokens.map(id => Number(id));
+    const tokenIds = effectiveTokens.map(id => Number(id));
 
     Promise.all(
       tokenIds.map(id =>
@@ -462,7 +520,7 @@ export default function MyDevs({ openDevProfile }) {
       .then(results => setDevs(results))
       .catch(() => setFetchError('Failed to load developer data'))
       .finally(() => setLoading(false));
-  }, [ownedTokens]);
+  }, [effectiveTokens]);
 
   // Fetch activity count for badge
   useEffect(() => {
