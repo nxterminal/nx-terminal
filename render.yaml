@@ -58,7 +58,7 @@ services:
     plan: starter
     region: ohio
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: python -m backend.engine.run_engine
+    startCommand: python -m backend.engine.run_all
     envVars:
       - key: PYTHONPATH
         value: .
