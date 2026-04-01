@@ -71,7 +71,7 @@ export default function Step4Review() {
 
       <div className="mb-flex mb-gap-md mb-mb-md">
         <Badge color="purple">{state.contractType?.toUpperCase()}</Badge>
-        <Badge color="green">Pharos Optimized</Badge>
+        <Badge color="green">MegaETH Optimized</Badge>
         <Badge color="blue">pragma ^0.8.28</Badge>
       </div>
 

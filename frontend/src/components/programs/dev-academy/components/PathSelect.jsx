@@ -1,11 +1,11 @@
 import { GENERAL_PATH } from '../data/generalPath';
-import { PHAROS_PATH } from '../data/monadPath';
+import { MEGAETH_PATH } from '../data/monadPath';
 import ProgressBar from './ProgressBar';
 
 export default function PathSelect({ dev, onSelect, progress }) {
   const paths = [
     { data: GENERAL_PATH, accent: "#10b981", gradient: "linear-gradient(135deg, #10b981, #059669)", tag: "BEGINNER" },
-    { data: PHAROS_PATH, accent: "#8b5cf6", gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)", tag: "BLOCKCHAIN" },
+    { data: MEGAETH_PATH, accent: "#8b5cf6", gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)", tag: "BLOCKCHAIN" },
   ];
 
   return (

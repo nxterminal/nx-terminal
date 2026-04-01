@@ -186,7 +186,7 @@ async def verify_nft(devId: int = 0):
     if devId < 1 or devId > 35000:
         raise HTTPException(400, "Invalid Dev ID")
 
-    # In production, query NXDevNFT contract at 0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636
+    # In production, query NXDevNFT contract at 0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7
     species_list = ["Frog", "Human", "Robot", "Penguin"]
     return {
         "isOwner": True,

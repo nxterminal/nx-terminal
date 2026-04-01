@@ -1,10 +1,10 @@
-// NXDevNFT v8 & NXTToken v4 on Pharos Atlantic Testnet (chain 688689)
-export const NXDEVNFT_ADDRESS = '0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636';
+// NXDevNFT v8 & NXTToken v4 on MegaETH Mainnet (chain 4326)
+export const NXDEVNFT_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7';
 export const NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47';
-export const PHAROS_CHAIN_ID = 688689;
-export const EXPLORER_BASE = 'https://atlantic.pharosscan.xyz';
+export const MEGAETH_CHAIN_ID = 4326;
+export const EXPLORER_BASE = 'https://megaexplorer.xyz';
 // Backwards compat alias — remove once all imports updated
-export const MONAD_CHAIN_ID = PHAROS_CHAIN_ID;
+export const MONAD_CHAIN_ID = MEGAETH_CHAIN_ID;
 
 // Minimal ABI — only the functions the frontend needs
 export const NXDEVNFT_ABI = [

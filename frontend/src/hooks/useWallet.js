@@ -1,6 +1,6 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { PHAROS_CHAIN_ID } from '../services/contract';
+import { MEGAETH_CHAIN_ID } from '../services/contract';
 
 export function useWallet() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
@@ -8,34 +8,34 @@ export function useWallet() {
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
 
-  const isWrongChain = isConnected && chain?.id !== PHAROS_CHAIN_ID;
+  const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
 
   const connectWallet = () => {
     connect({ connector: injected() });
   };
 
-  const switchToPharos = async () => {
+  const switchToMegaETH = async () => {
     // Try wagmi switchChain first
     try {
-      switchChain({ chainId: PHAROS_CHAIN_ID });
+      switchChain({ chainId: MEGAETH_CHAIN_ID });
     } catch {
       // Fallback: use window.ethereum directly to add+switch
       if (window.ethereum) {
         try {
           await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xA8331' }],
+            params: [{ chainId: '0x10E6' }],
           });
         } catch (switchError) {
           if (switchError.code === 4902) {
             await window.ethereum.request({
               method: 'wallet_addEthereumChain',
               params: [{
-                chainId: '0xA8331',
-                chainName: 'Pharos Atlantic Testnet',
-                nativeCurrency: { name: 'Pharos', symbol: 'PHRS', decimals: 18 },
-                rpcUrls: ['https://atlantic.dplabs-internal.com'],
-                blockExplorerUrls: ['https://atlantic.pharosscan.xyz'],
+                chainId: '0x10E6',
+                chainName: 'MegaETH',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://carrot.megaeth.com/rpc'],
+                blockExplorerUrls: ['https://megaexplorer.xyz'],
               }],
             });
           }
@@ -58,9 +58,9 @@ export function useWallet() {
     connectError,
     connect: connectWallet,
     disconnect,
-    switchToPharos,
+    switchToMegaETH,
     // Backwards compat alias
-    switchToMonad: switchToPharos,
+    switchToMonad: switchToMegaETH,
     formatAddress,
     displayAddress: address ? formatAddress(address) : null,
   };

@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
 import { API, DEX_ID_MAP } from '../constants';
 
-const MONAD_RPC = 'https://atlantic.dplabs-internal.com';
+const MEGAETH_RPC = 'https://carrot.megaeth.com/rpc';
 
-// Top ERC20 tokens on Pharos with their contract addresses
+// Top ERC20 tokens on MegaETH — TODO: update addresses when available
+/*
 const KNOWN_TOKENS = [
   { symbol: 'WMON',  address: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a', decimals: 18 },
   { symbol: 'USDC',  address: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea', decimals: 6 },
@@ -11,6 +12,7 @@ const KNOWN_TOKENS = [
   { symbol: 'WETH',  address: '0xB5a30b0FDc5F8d7bD0C1B0BC74eDa8B3F2DB5c70', decimals: 18 },
   { symbol: 'AUSD',  address: '0x00000000efe302beaa2b3e6e1b18d08d69a9012a', decimals: 18 },
 ];
+*/
 
 // ERC20 balanceOf(address) selector
 const BALANCE_OF_SELECTOR = '0x70a08231';
@@ -19,7 +21,7 @@ async function rpcCall(method, params = []) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const res = await fetch(MONAD_RPC, {
+    const res = await fetch(MEGAETH_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params }),
@@ -67,7 +69,7 @@ export function useWalletData() {
 
   const lookup = useCallback(async (address) => {
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      setError('Invalid address — enter a 0x… Pharos address');
+      setError('Invalid address — enter a 0x… MegaETH address');
       return;
     }
 
@@ -81,7 +83,7 @@ export function useWalletData() {
     setWallet(null);
 
     try {
-      // 1) Fetch native PHRS balance
+      // 1) Fetch native ETH balance
       const monHex = await rpcCall('eth_getBalance', [address, 'latest']);
       const monBalance = hexToBigFloat(monHex, 18);
 

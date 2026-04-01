@@ -6,7 +6,7 @@ const COMPILE_STEPS = [
   { text: '> Resolving dependencies... OK', delay: 1400 },
   { text: '> Analyzing storage layout... OK', delay: 1900 },
   { text: '> Optimizing bytecode... OK', delay: 2300 },
-  { text: '> Verifying on Pharos...', delay: 2700 },
+  { text: '> Verifying on MegaETH...', delay: 2700 },
 ];
 
 const FAIL_STEPS = [

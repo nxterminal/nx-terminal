@@ -1,27 +1,27 @@
 import { EXERCISE_TYPES } from './constants';
 
 const TRACK_1 = {
-  id: 'pharos_fundamentals',
-  name: 'Pharos Fundamentals',
-  description: 'Core training for Pharos blockchain development.',
+  id: 'megaeth_fundamentals',
+  name: 'MegaETH Fundamentals',
+  description: 'Core training for MegaETH blockchain development.',
   locked: false,
   missions: [
     // ═══════════════════════════════════════════
-    // MISSION 1: Gas Mechanics on Pharos
+    // MISSION 1: Gas Mechanics on MegaETH
     // ═══════════════════════════════════════════
     {
       id: 'm01',
       number: 1,
       title: 'Gas Trap',
-      subtitle: 'Understanding gas on Pharos',
+      subtitle: 'Understanding gas on MegaETH',
       corp: 'closed_ai',
       difficulty: 1,
       type: EXERCISE_TYPES.QUIZ,
       xp: 50,
       briefing:
-        'Every transaction on Pharos consumes gas \u2014 computational fuel that ' +
+        'Every transaction on MegaETH consumes gas \u2014 computational fuel that ' +
         'keeps the network running.\n\n' +
-        'But Pharos isn\'t like other chains. With sub-second block times and parallel ' +
+        'But MegaETH isn\'t like other chains. With sub-second block times and parallel ' +
         'execution, gas dynamics work differently here. You need to understand ' +
         'the fundamentals before writing a single line of code.\n\n' +
         'Closed AI Corp requires all recruits to pass this assessment.\n' +
@@ -29,7 +29,7 @@ const TRACK_1 = {
         'Don\'t waste it."',
       questions: [
         {
-          question: 'What is "gas" in the context of Pharos?',
+          question: 'What is "gas" in the context of MegaETH?',
           options: [
             'A cryptocurrency token you can trade on exchanges',
             'A unit measuring the computational work needed to execute transactions',
@@ -37,21 +37,21 @@ const TRACK_1 = {
             'A type of smart contract programming language',
           ],
           correct: 1,
-          explanation: 'Gas measures computational effort. Every operation (transfer, contract call, storage write) costs a specific amount of gas. Users pay gas fees in PHRS to compensate validators.',
+          explanation: 'Gas measures computational effort. Every operation (transfer, contract call, storage write) costs a specific amount of gas. Users pay gas fees in ETH to compensate validators.',
         },
         {
-          question: 'On Pharos, what token is used to pay gas fees?',
+          question: 'On MegaETH, what token is used to pay gas fees?',
           options: [
-            'ETH \u2014 Pharos uses Ethereum\'s native token',
+            'MEGA \u2014 a custom MegaETH token',
             'USDC \u2014 a stablecoin for predictable fees',
-            'PHRS \u2014 the native token of Pharos',
-            'Gas tokens are not needed on Pharos',
+            'ETH \u2014 the native token of MegaETH',
+            'Gas tokens are not needed on MegaETH',
           ],
           correct: 2,
-          explanation: 'PHRS is Pharos\'s native token, used to pay for gas fees just like ETH is used on Ethereum. Despite being EVM-compatible, Pharos has its own native token.',
+          explanation: 'ETH is MegaETH\'s native token, used to pay for gas fees. MegaETH is fully EVM-compatible and uses ETH as its native currency.',
         },
         {
-          question: 'Pharos\'s block time is:',
+          question: 'MegaETH\'s block time is:',
           options: [
             '12 seconds \u2014 same as Ethereum',
             '2 seconds \u2014 like most L2s',
@@ -59,12 +59,12 @@ const TRACK_1 = {
             '1 second \u2014 a standard fast blockchain',
           ],
           correct: 2,
-          explanation: 'Pharos produces blocks in sub-second time. Combined with parallel transaction execution across 8 lanes, this enables 30,000+ TPS \u2014 orders of magnitude faster than Ethereum.',
+          explanation: 'MegaETH produces blocks in sub-second time. Combined with parallel transaction execution across 8 lanes, this enables 30,000+ TPS \u2014 orders of magnitude faster than Ethereum.',
         },
       ],
       completionMessage:
         'GAS FUNDAMENTALS ACQUIRED.\n' +
-        'You understand the fuel that powers Pharos.\n\n' +
+        'You understand the fuel that powers MegaETH.\n\n' +
         'Closed AI HR Department has noted your file.\n' +
         '"Adequate. Barely." \u2014 Scam Altwoman',
     },
@@ -76,87 +76,87 @@ const TRACK_1 = {
       id: 'm02',
       number: 2,
       title: 'Reserve Balance',
-      subtitle: 'Pharos\'s account model',
+      subtitle: 'MegaETH\'s account model',
       corp: 'misanthropic',
       difficulty: 1,
       type: EXERCISE_TYPES.QUIZ,
       xp: 50,
       briefing:
-        'Pharos introduces a concept not found on Ethereum: the reserve balance.\n\n' +
-        'Every account on Pharos maintains a small reserve of PHRS that cannot be ' +
+        'MegaETH introduces a concept not found on Ethereum: the reserve balance.\n\n' +
+        'Every account on MegaETH maintains a small reserve of ETH that cannot be ' +
         'spent. This exists to protect the network from certain attack vectors ' +
         'and ensure validators are always compensated.\n\n' +
         'Misanthropic Security requires you to understand this mechanism.\n' +
         'CEO Dario Annoyed-ei: "We reviewed this module 14 times. It\'s safe."',
       questions: [
         {
-          question: 'What is Pharos\'s reserve balance?',
+          question: 'What is MegaETH\'s reserve balance?',
           options: [
-            'A savings account that earns interest on your PHRS',
+            'A savings account that earns interest on your ETH',
             'A minimum balance held to ensure accounts can cover failed transaction costs',
-            'The total amount of PHRS locked in staking contracts',
+            'The total amount of ETH locked in staking contracts',
             'A deposit required to create a new wallet address',
           ],
           correct: 1,
-          explanation: 'The reserve balance is a small amount of PHRS that every account must maintain. It ensures that even if a transaction reverts, validators can still be compensated for the computational work performed.',
+          explanation: 'The reserve balance is a small amount of ETH that every account must maintain. It ensures that even if a transaction reverts, validators can still be compensated for the computational work performed.',
         },
         {
-          question: 'Why does Pharos require a reserve balance?',
+          question: 'Why does MegaETH require a reserve balance?',
           options: [
             'To generate yield for token holders',
             'To prevent spam and ensure validators are compensated even for reverted transactions',
-            'To fund the Pharos Foundation\'s development',
+            'To fund the MegaETH Foundation\'s development',
             'Reserve balances are optional and can be disabled',
           ],
           correct: 1,
-          explanation: 'Without a reserve, an attacker could submit transactions that intentionally revert, consuming validator resources without paying. The reserve ensures there\'s always PHRS available to cover gas costs.',
+          explanation: 'Without a reserve, an attacker could submit transactions that intentionally revert, consuming validator resources without paying. The reserve ensures there\'s always ETH available to cover gas costs.',
         },
         {
-          question: 'Pharos Testnet Chain ID is:',
+          question: 'MegaETH Testnet Chain ID is:',
           options: [
             '1 (Ethereum Mainnet)',
-            '688689',
+            '4326',
             '10 (Optimism)',
             '42161 (Arbitrum)',
           ],
           correct: 1,
-          explanation: 'Pharos Atlantic Testnet uses Chain ID 688689. You need this to add the network to MetaMask or configure your development tools.',
+          explanation: 'MegaETH Testnet uses Chain ID 4326. You need this to add the network to MetaMask or configure your development tools.',
         },
       ],
       completionMessage:
         'RESERVE BALANCE UNDERSTOOD.\n' +
-        'You now know how Pharos protects its validators.\n\n' +
+        'You now know how MegaETH protects its validators.\n\n' +
         'Misanthropic Safety Board: "Passed. After 14 reviews."',
     },
 
     // ═══════════════════════════════════════════
-    // MISSION 3: Deploy a Contract on Pharos (CODE)
+    // MISSION 3: Deploy a Contract on MegaETH (CODE)
     // ═══════════════════════════════════════════
     {
       id: 'm03',
       number: 3,
       title: 'Contract Forge',
-      subtitle: 'Deploy your first contract on Pharos',
+      subtitle: 'Deploy your first contract on MegaETH',
       corp: 'y_ai',
       difficulty: 2,
       type: EXERCISE_TYPES.CODE,
       xp: 100,
       briefing:
-        'Pharos is fully EVM-compatible. That means your Solidity contracts ' +
+        'MegaETH is fully EVM-compatible. That means your Solidity contracts ' +
         'work out of the box \u2014 no modifications needed.\n\n' +
-        'Y.AI needs a utility token deployed on Pharos. Yesterday.\n' +
+        'Y.AI needs a utility token deployed on MegaETH. Yesterday.\n' +
         'CEO FelonUsk already tweeted that the token is live. It isn\'t.\n\n' +
         'Complete the ERC-20 contract below. Fill in the blanks.\n' +
-        'Remember: Pharos supports contracts up to 128KB in size.\n' +
+        'Remember: MegaETH supports contracts up to 128KB in size.\n' +
         'This simple token is well under that limit.',
       language: 'solidity',
       codeLines: [
         { num: 1,  text: '// SPDX-License-Identifier: MIT', editable: false },
         { num: 2,  text: 'pragma solidity ^0.8.19;', editable: false },
         { num: 3,  text: '', editable: false },
-        { num: 4,  text: '// Deploying on Pharos Atlantic Testnet (Chain ID: 688689)', editable: false },
-        { num: 5,  text: 'contract PharosToken {', editable: false },
-        { num: 6,  text: '    string public name = "Pharos Token";', editable: false },
+        { num: 4,  text: '// Deploying on MegaETH Testnet (Chain ID: 4326)', editable: false },
+        { num: 5,  text: 'contract MegaETHToken {', editable: false },
+        { num: 6,  text: '    string public name = "MegaETH Token";', editable: false },
         { num: 7,  text: '    string public symbol = "MTKN";', editable: false },
         { num: 8,  text: '    uint8 public decimals = 18;', editable: false },
         { num: 9,  text: '    uint256 public totalSupply;', editable: false },
@@ -212,9 +212,9 @@ const TRACK_1 = {
       ],
       completionMessage:
         'CONTRACT COMPILED SUCCESSFULLY.\n' +
-        'PharosToken deployed at: 0x8b4c..e291\n' +
+        'MegaETHToken deployed at: 0x8b4c..e291\n' +
         'Gas used: 284,331 | Block time: sub-second\n\n' +
-        'FelonUsk tweeted: "Pharos deployment in sub-second time."\n' +
+        'FelonUsk tweeted: "MegaETH deployment in sub-second time."\n' +
         'Technically true. Nobody corrects him.',
     },
 
@@ -225,16 +225,16 @@ const TRACK_1 = {
       id: 'm04',
       number: 4,
       title: 'AsyncBFT Pipeline',
-      subtitle: 'How Pharos achieves consensus',
+      subtitle: 'How MegaETH achieves consensus',
       corp: 'shallow_mind',
       difficulty: 2,
       type: EXERCISE_TYPES.QUIZ,
       xp: 100,
       briefing:
-        'Pharos\'s consensus mechanism, AsyncBFT, is a pipelined BFT protocol.\n\n' +
-        'Unlike traditional blockchains that process one block at a time, AsyncBFT ' +
+        'MegaETH\'s consensus mechanism is a pipelined BFT protocol.\n\n' +
+        'Unlike traditional blockchains that process one block at a time, it ' +
         'runs four stages simultaneously \u2014 each processing a different block. ' +
-        'This is how Pharos achieves sub-second block times without sacrificing security.\n\n' +
+        'This is how MegaETH achieves sub-second block times without sacrificing security.\n\n' +
         'Shallow Mind Research requires you to understand this before accessing ' +
         'our validator infrastructure.\n' +
         'CEO Sundial Richy: "We published 47 papers on pipelined BFT. ' +
@@ -263,7 +263,7 @@ const TRACK_1 = {
           explanation: 'While block N is being executed, block N+1 is being finalized, N+2 is being voted on, and N+3 is being proposed. This parallelism maximizes throughput without compromising consensus safety.',
         },
         {
-          question: 'Pharos achieves finality in approximately:',
+          question: 'MegaETH achieves finality in approximately:',
           options: [
             '12 seconds (like Ethereum)',
             '6 seconds (like most L2s)',
@@ -271,10 +271,10 @@ const TRACK_1 = {
             '~5 seconds (typical BFT)',
           ],
           correct: 2,
-          explanation: 'With sub-second block times, Pharos achieves finality in roughly 800ms (2 blocks). Once finalized, a transaction cannot be reverted \u2014 much faster than Ethereum\'s ~13 minute finality.',
+          explanation: 'With sub-second block times, MegaETH achieves finality in roughly 800ms (2 blocks). Once finalized, a transaction cannot be reverted \u2014 much faster than Ethereum\'s ~13 minute finality.',
         },
         {
-          question: 'How many validators does Pharos support in its active set?',
+          question: 'How many validators does MegaETH support in its active set?',
           options: [
             '21 validators (like BNB Chain)',
             '~120 validators',
@@ -282,7 +282,7 @@ const TRACK_1 = {
             '4 validators (one per pipeline stage)',
           ],
           correct: 1,
-          explanation: 'Pharos supports approximately 120 validators in the active set, balancing decentralization with the performance requirements of sub-second block times and pipelined consensus.',
+          explanation: 'MegaETH supports approximately 120 validators in the active set, balancing decentralization with the performance requirements of sub-second block times and pipelined consensus.',
         },
       ],
       completionMessage:
@@ -306,17 +306,17 @@ const TRACK_1 = {
       type: EXERCISE_TYPES.CODE,
       xp: 100,
       briefing:
-        'Pharos\'s killer feature: optimistic parallel execution.\n\n' +
+        'MegaETH\'s killer feature: optimistic parallel execution.\n\n' +
         'Transactions are distributed across execution lanes and processed ' +
         'simultaneously. If two transactions access the same state, a conflict ' +
         'is detected and one is re-executed.\n\n' +
-        'Your mission: complete the JavaScript code that simulates Pharos\'s ' +
+        'Your mission: complete the JavaScript code that simulates MegaETH\'s ' +
         'parallel transaction distribution algorithm.\n\n' +
         'Mistrial Systems CEO Pierre-Antoine du Code: "We forked this from ' +
-        'Pharos\'s docs. The comments are... sparse. On purpose."',
+        'MegaETH\'s docs. The comments are... sparse. On purpose."',
       language: 'javascript',
       codeLines: [
-        { num: 1,  text: '// Simulate Pharos parallel transaction distribution', editable: false },
+        { num: 1,  text: '// Simulate MegaETH parallel transaction distribution', editable: false },
         { num: 2,  text: 'const NUM_LANES = 8;', editable: false },
         { num: 3,  text: '', editable: false },
         { num: 4,  text: 'function assignToLane(transaction) {', editable: false },
@@ -384,7 +384,7 @@ const TRACK_1 = {
         'Resolution: deterministic re-execution\n\n' +
         'Mistrial Systems: "Good work. We\'ll add your name to the\n' +
         'contributors list. In small font. Maybe."\n\n' +
-        '\u2550\u2550\u2550 PHAROS FUNDAMENTALS COMPLETE \u2550\u2550\u2550\n' +
+        '\u2550\u2550\u2550 MEGAETH FUNDAMENTALS COMPLETE \u2550\u2550\u2550\n' +
         'You\'ve completed all 5 missions.\n' +
         'Full version with 10+ advanced missions available\n' +
         'for NX Terminal NFT holders.',

@@ -98,7 +98,7 @@ export default function NadWatch({ onClose }) {
     statusColor = '#cc9900';
   } else {
     statusIcon = '[ONLINE]';
-    statusText = 'SURVEILLANCE MODE — PHAROS TESTNET — ALL SYSTEMS NOMINAL';
+    statusText = 'SURVEILLANCE MODE — MEGAETH — ALL SYSTEMS NOMINAL';
     statusColor = '#00aa00';
   }
 
@@ -171,8 +171,8 @@ export default function NadWatch({ onClose }) {
               <div className="ndw-dropdown-item" onClick={() => { closeMenu(); setHelpTab('Panels'); setShowHelp(true); }}>
                 How to Use
               </div>
-              <div className="ndw-dropdown-item" onClick={() => { closeMenu(); setHelpTab('Pharos'); setShowHelp(true); }}>
-                About Pharos
+              <div className="ndw-dropdown-item" onClick={() => { closeMenu(); setHelpTab('MegaETH'); setShowHelp(true); }}>
+                About MegaETH
               </div>
             </div>
           )}
@@ -196,7 +196,7 @@ export default function NadWatch({ onClose }) {
                 {'[!]'} NETWORK OFFLINE
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
-                Unable to connect to Pharos<br />RPC endpoint.
+                Unable to connect to MegaETH<br />RPC endpoint.
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
                 {retryCountdown > 0
@@ -258,7 +258,7 @@ export default function NadWatch({ onClose }) {
           <span style={{ color: statusColor, fontSize: '11px' }}>{statusText}</span>
         </div>
         <div className="ndw-statusbar-right">
-          NADWATCH v1.0 {'\u00B7'} PHAROS TESTNET {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL {'\u00D7'} PHAROS
+          NADWATCH v1.0 {'\u00B7'} MEGAETH {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL {'\u00D7'} MEGAETH
         </div>
       </div>
 

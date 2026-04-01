@@ -21,14 +21,14 @@ const FIELDS = {
     { key: 'uri', label: 'URI Pattern', placeholder: 'https://api.example.com/token/{id}.json', type: 'text' },
   ],
   staking: [
-    { key: 'contractName', label: 'Contract Name', placeholder: 'PharosStaking', type: 'text' },
+    { key: 'contractName', label: 'Contract Name', placeholder: 'MegaETHStaking', type: 'text' },
     { key: 'stakingToken', label: 'Staking Token Address', placeholder: '0x...', type: 'text' },
     { key: 'rewardToken', label: 'Reward Token Address', placeholder: '0x...', type: 'text' },
     { key: 'rewardRate', label: 'Reward Rate (per second)', placeholder: '100', type: 'number' },
     { key: 'lockPeriod', label: 'Lock Period (seconds)', placeholder: '86400', type: 'number' },
   ],
   game: [
-    { key: 'contractName', label: 'Game Name', placeholder: 'PharosGame', type: 'text' },
+    { key: 'contractName', label: 'Game Name', placeholder: 'MegaETHGame', type: 'text' },
     { key: 'currencyName', label: 'Currency Name', placeholder: 'Game Gold', type: 'text' },
     { key: 'currencySymbol', label: 'Currency Symbol', placeholder: 'GOLD', type: 'text' },
     { key: 'itemName', label: 'Item Collection Name', placeholder: 'Game Items', type: 'text' },

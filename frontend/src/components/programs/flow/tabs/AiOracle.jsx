@@ -3,7 +3,7 @@ import { API } from '../constants';
 
 const QUICK_ACTIONS = [
   { label: 'Top trending pools', query: 'trending' },
-  { label: 'PHRS price analysis', query: 'mon price' },
+  { label: 'ETH price analysis', query: 'eth price' },
   { label: 'Gas & network stats', query: 'gas' },
   { label: 'How to use FLOW', query: 'help' },
 ];
@@ -57,7 +57,7 @@ async function generateResponse(query, market) {
   if (q.includes('trending') || q.includes('hot') || q.includes('top pool')) {
     const pools = await fetchTrendingPools();
     if (pools) {
-      return `**Top Trending Pools on Pharos** (live data):\n\n${formatPoolData(pools)}\n\nGo to **Token Radar** for full safety scores on each pool.`;
+      return `**Top Trending Pools on MegaETH** (live data):\n\n${formatPoolData(pools)}\n\nGo to **Token Radar** for full safety scores on each pool.`;
     }
     return 'Unable to fetch trending pools right now. Try again in a moment, or check **Token Radar** for cached data.';
   }
@@ -65,7 +65,7 @@ async function generateResponse(query, market) {
   if (q.includes('new pool') || q.includes('latest') || q.includes('recent pool')) {
     const pools = await fetchNewPools();
     if (pools) {
-      return `**Newest Pools on Pharos** (live data):\n\n${formatPoolData(pools)}\n\nNew pools carry higher risk. Check **Token Radar** for safety scores.`;
+      return `**Newest Pools on MegaETH** (live data):\n\n${formatPoolData(pools)}\n\nNew pools carry higher risk. Check **Token Radar** for safety scores.`;
     }
     return 'Unable to fetch new pools right now. Try again shortly.';
   }
@@ -76,9 +76,9 @@ async function generateResponse(query, market) {
     if (price != null && change != null) {
       const sentiment = change > 5 ? 'strongly bullish' : change > 1 ? 'moderately bullish' : change > -1 ? 'neutral' : change > -5 ? 'moderately bearish' : 'bearish';
       const tpsStatus = market?.tps > 500 ? 'high' : market?.tps > 100 ? 'moderate' : 'low';
-      return `**PHRS Price Analysis** (live)\n\nPrice: **$${price.toFixed(4)}**\n24h Change: **${change >= 0 ? '+' : ''}${change.toFixed(2)}%**\nSentiment: **${sentiment}**\n\nNetwork Metrics:\n• TPS: ${market?.tps?.toFixed(0) || '--'} (${tpsStatus} activity)\n• Gas: ${market?.gasPrice?.toFixed(4) || '--'} Gwei\n• Block: #${(market?.blockNumber || 0).toLocaleString()}\n\nPharos's parallel execution keeps gas near zero even at high throughput.`;
+      return `**ETH Price Analysis** (live)\n\nPrice: **$${price.toFixed(4)}**\n24h Change: **${change >= 0 ? '+' : ''}${change.toFixed(2)}%**\nSentiment: **${sentiment}**\n\nNetwork Metrics:\n• TPS: ${market?.tps?.toFixed(0) || '--'} (${tpsStatus} activity)\n• Gas: ${market?.gasPrice?.toFixed(4) || '--'} Gwei\n• Block: #${(market?.blockNumber || 0).toLocaleString()}\n\nMegaETH's parallel execution keeps gas near zero even at high throughput.`;
     }
-    return 'PHRS price data is loading. Try again in a few seconds.';
+    return 'ETH price data is loading. Try again in a few seconds.';
   }
 
   if (q.includes('gas') || q.includes('fee') || q.includes('network') || q.includes('tps') || q.includes('block')) {
@@ -86,17 +86,17 @@ async function generateResponse(query, market) {
     const tps = market?.tps;
     const block = market?.blockNumber;
     if (gas != null || tps != null) {
-      return `**Pharos Network Status** (live)\n\n• Gas Price: **${gas?.toFixed(4) || '--'} Gwei** (~$0.001 per tx)\n• TPS: **${tps?.toFixed(0) || '--'}** transactions/second\n• Latest Block: **#${(block || 0).toLocaleString()}**\n• Block Time: **sub-second** (finality)\n• Chain ID: **688689**\n\nPharos's parallel EVM execution enables sub-penny gas fees at thousands of TPS.`;
+      return `**MegaETH Network Status** (live)\n\n• Gas Price: **${gas?.toFixed(4) || '--'} Gwei** (~$0.001 per tx)\n• TPS: **${tps?.toFixed(0) || '--'}** transactions/second\n• Latest Block: **#${(block || 0).toLocaleString()}**\n• Block Time: **sub-second** (finality)\n• Chain ID: **4326**\n\nMegaETH's parallel EVM execution enables sub-penny gas fees at thousands of TPS.`;
     }
     return 'Network data is still loading. Try again in a moment.';
   }
 
   if (q.includes('wallet') || q.includes('address') || q.includes('balance') || q.includes('0x')) {
-    return '**Wallet X-Ray** can analyze any Pharos address.\n\nSwitch to the **Wallet X-Ray** tab and paste a 0x address to see:\n• Native PHRS balance\n• ERC20 holdings (WMON, USDC, USDT, WETH, AUSD)\n• Transaction count\n• Recent DEX activity';
+    return '**Wallet X-Ray** can analyze any MegaETH address.\n\nSwitch to the **Wallet X-Ray** tab and paste a 0x address to see:\n• Native ETH balance\n• ERC20 holdings (WMON, USDC, USDT, WETH, AUSD)\n• Transaction count\n• Recent DEX activity';
   }
 
   if (q.includes('kuru') || q.includes('clob') || q.includes('orderbook') || q.includes('order book') || q.includes('dex')) {
-    return '**Kuru** is Pharos\'s native CLOB (Central Limit Order Book) DEX.\n\nUnlike AMMs, Kuru matches buy/sell orders directly — similar to a traditional exchange.\n\nSwitch to **CLOB Vision** to see:\n• Live bid/ask orderbook depth\n• Spread analysis\n• Recent fills\n• Depth heatmap';
+    return '**Kuru** is MegaETH\'s native CLOB (Central Limit Order Book) DEX.\n\nUnlike AMMs, Kuru matches buy/sell orders directly — similar to a traditional exchange.\n\nSwitch to **CLOB Vision** to see:\n• Live bid/ask orderbook depth\n• Spread analysis\n• Recent fills\n• Depth heatmap';
   }
 
   if (q.includes('safe') || q.includes('scam') || q.includes('rug') || q.includes('security') || q.includes('risk')) {
@@ -104,14 +104,14 @@ async function generateResponse(query, market) {
   }
 
   if (q.includes('help') || q.includes('how') || q.includes('what can') || q.includes('guide') || q.includes('tutorial')) {
-    return '**FLOW.exe Modules**\n\n• **The Stream** — real-time trade feed from all Pharos DEXs. Filter by side, value, and protocol.\n• **Wallet X-Ray** — paste any 0x address to analyze holdings and activity.\n• **Token Radar** — pool scoring engine (0-100) for safety analysis.\n• **CLOB Vision** — live orderbook visualization for Kuru DEX.\n• **AI Oracle** — that\'s me! Ask about pools, prices, gas, or safety.\n• **? Help** — full documentation for each module.\n\nTry asking: "top trending pools" or "PHRS price analysis"';
+    return '**FLOW.exe Modules**\n\n• **The Stream** — real-time trade feed from all MegaETH DEXs. Filter by side, value, and protocol.\n• **Wallet X-Ray** — paste any 0x address to analyze holdings and activity.\n• **Token Radar** — pool scoring engine (0-100) for safety analysis.\n• **CLOB Vision** — live orderbook visualization for Kuru DEX.\n• **AI Oracle** — that\'s me! Ask about pools, prices, gas, or safety.\n• **? Help** — full documentation for each module.\n\nTry asking: "top trending pools" or "ETH price analysis"';
   }
 
-  if (q.includes('pharos') || q.includes('chain')) {
-    return `**About Pharos**\n\nPharos is a high-performance EVM-compatible Layer 1 blockchain.\n\n• **Chain ID**: 688689\n• **Block Time**: sub-second\n• **Consensus**: AsyncBFT\n• **Execution**: Parallel EVM\n• **Gas**: Near-zero fees (< $0.01)\n• **TPS**: Currently ${market?.tps?.toFixed(0) || '1000+'}+ transactions per second\n\nTop DEXs: Kuru (CLOB), Uniswap, PancakeSwap, Curve, Balancer, Nad.fun`;
+  if (q.includes('megaeth') || q.includes('chain')) {
+    return `**About MegaETH**\n\nMegaETH is a high-performance EVM-compatible Layer 1 blockchain.\n\n• **Chain ID**: 4326\n• **Block Time**: sub-second\n• **Consensus**: AsyncBFT\n• **Execution**: Parallel EVM\n• **Gas**: Near-zero fees (< $0.01)\n• **TPS**: Currently ${market?.tps?.toFixed(0) || '1000+'}+ transactions per second\n\nTop DEXs: Kuru (CLOB), Uniswap, PancakeSwap, Curve, Balancer, Nad.fun`;
   }
 
-  return `I'm not sure how to answer that yet.\n\n**FLOW AI Oracle v1.0 (Beta)** — I can help with:\n• Pool data — "top trending pools" or "new pools"\n• Price analysis — "PHRS price analysis"\n• Network stats — "gas fees" or "network status"\n• Safety — "how to spot scams"\n• Guides — "how to use FLOW"\n\nThis is an early version. More capabilities are coming soon!`;
+  return `I'm not sure how to answer that yet.\n\n**FLOW AI Oracle v1.0 (Beta)** — I can help with:\n• Pool data — "top trending pools" or "new pools"\n• Price analysis — "ETH price analysis"\n• Network stats — "gas fees" or "network status"\n• Safety — "how to spot scams"\n• Guides — "how to use FLOW"\n\nThis is an early version. More capabilities are coming soon!`;
 }
 
 function renderText(text) {
@@ -183,7 +183,7 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
         {messages.length === 0 && (
           <div className="flow-ai-panel__welcome">
             <div className="flow-ai-panel__welcome-text">
-              Real-time data from Pharos DEXs.
+              Real-time data from MegaETH DEXs.
             </div>
               <div className="flow-ai-chips">
                 {QUICK_ACTIONS.map((q, i) => (
@@ -227,7 +227,7 @@ export default function AiOracleModal({ market, onMinimize, onClose }) {
         <input
           className="flow-ai-input__field"
           type="text"
-          placeholder="Ask about Pharos DeFi..."
+          placeholder="Ask about MegaETH DeFi..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={typing}

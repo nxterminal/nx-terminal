@@ -1,11 +1,11 @@
 import { Loader2, Check, X, ExternalLink } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { PHAROS_MAINNET, PHAROS_TESTNET } from '../../constants/monad';
+import { MEGAETH_MAINNET, MEGAETH_TESTNET } from '../../constants/monad';
 
 const PHASES = [
   { key: 'compiling', label: 'Preparing Transaction...', desc: 'Building deployment transaction' },
   { key: 'signing', label: 'Waiting for Wallet Signature...', desc: 'Confirm in your wallet' },
-  { key: 'pending', label: 'Transaction Pending...', desc: 'Pharos confirms in sub-second' },
+  { key: 'pending', label: 'Transaction Pending...', desc: 'MegaETH confirms in sub-second' },
   { key: 'confirmed', label: 'Confirmed!', desc: 'Contract deployed successfully' },
 ];
 
@@ -23,7 +23,7 @@ function getPhaseIndex(status) {
 export default function DeployStatus() {
   const { state } = useBuild();
   const currentPhase = getPhaseIndex(state.deployStatus);
-  const config = state.network === 'mainnet' ? PHAROS_MAINNET : PHAROS_TESTNET;
+  const config = state.network === 'mainnet' ? MEGAETH_MAINNET : MEGAETH_TESTNET;
 
   if (state.deployStatus === 'idle') return null;
 

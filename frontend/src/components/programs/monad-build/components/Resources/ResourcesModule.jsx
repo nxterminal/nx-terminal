@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import { PHAROS_RPC_PROVIDERS, CANONICAL_CONTRACTS, FAUCETS, PHAROS_MAINNET } from '../../constants/monad';
+import { MEGAETH_RPC_PROVIDERS, CANONICAL_CONTRACTS, FAUCETS, MEGAETH_MAINNET } from '../../constants/monad';
 import Button from '../shared/Button';
 
 function CopyButton({ text }) {
@@ -42,16 +42,16 @@ function Section({ title, defaultOpen = false, children }) {
 
 const VIEM_SNIPPET = `import { createPublicClient, http } from 'viem';
 
-const pharos = {
-  id: 688689,
-  name: 'Pharos Testnet',
-  nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 },
-  rpcUrls: { default: { http: ['https://atlantic.dplabs-internal.com'] } },
-  blockExplorers: { default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' } },
+const megaeth = {
+  id: 4326,
+  name: 'MegaETH',
+  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+  rpcUrls: { default: { http: ['https://carrot.megaeth.com/rpc'] } },
+  blockExplorers: { default: { name: 'MegaExplorer', url: 'https://megaexplorer.xyz' } },
 };
 
 const client = createPublicClient({
-  chain: pharos,
+  chain: megaeth,
   transport: http(),
 });`;
 
@@ -60,7 +60,7 @@ export default function ResourcesModule() {
     <div className="mb-animate-in">
       <h1 className="mb-h1 mb-mb-sm">Developer Resources</h1>
       <p className="mb-text-sm mb-mb-lg">
-        Everything you need to build on Pharos — RPCs, contracts, tools, and more.
+        Everything you need to build on MegaETH — RPCs, contracts, tools, and more.
       </p>
 
       <Section title="RPC Endpoints" defaultOpen>
@@ -74,7 +74,7 @@ export default function ResourcesModule() {
             </tr>
           </thead>
           <tbody>
-            {PHAROS_RPC_PROVIDERS.map(rpc => (
+            {MEGAETH_RPC_PROVIDERS.map(rpc => (
               <tr key={rpc.name}>
                 <td style={{ fontWeight: 500, color: 'var(--mb-text-primary)' }}>{rpc.name}</td>
                 <td>
@@ -91,7 +91,7 @@ export default function ResourcesModule() {
       <Section title="Block Explorers">
         <div className="mb-flex-col mb-gap-sm">
           {[
-            { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz', desc: 'Block explorer' },
+            { name: 'MegaExplorer', url: 'https://megaexplorer.xyz', desc: 'Block explorer' },
           ].map(e => (
             <div key={e.name} className="mb-flex mb-items-center mb-justify-between">
               <div>
@@ -132,7 +132,7 @@ export default function ResourcesModule() {
                   <div className="mb-flex mb-gap-sm">
                     <CopyButton text={addr} />
                     <a
-                      href={`${PHAROS_MAINNET.explorer}/address/${addr}`}
+                      href={`${MEGAETH_MAINNET.explorer}/address/${addr}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mb-btn mb-btn-ghost mb-btn-sm"
@@ -161,7 +161,7 @@ export default function ResourcesModule() {
                 className="mb-btn mb-btn-primary mb-btn-sm"
                 style={{ textDecoration: 'none' }}
               >
-                Get Test PHRS <ExternalLink size={12} />
+                Get Test ETH <ExternalLink size={12} />
               </a>
             </div>
           ))}
@@ -176,9 +176,9 @@ export default function ResourcesModule() {
           </div>
           <div className="mb-flex mb-gap-sm">
             {[
-              { name: 'Pharos Docs', url: 'https://docs.pharos.xyz' },
-              { name: 'Pharos GitHub', url: 'https://github.com/pharos-developers' },
-              { name: 'Discord', url: 'https://discord.gg/pharos' },
+              { name: 'MegaETH Docs', url: 'https://docs.megaeth.com' },
+              { name: 'MegaETH GitHub', url: 'https://github.com/megaeth-labs' },
+              { name: 'Discord', url: 'https://discord.gg/megaeth' },
             ].map(link => (
               <a
                 key={link.name}

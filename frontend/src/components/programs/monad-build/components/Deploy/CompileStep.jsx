@@ -7,19 +7,19 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: {
-      evmVersion: "prague",  // MANDATORY for Pharos
+      evmVersion: "prague",  // MANDATORY for MegaETH
       optimizer: { enabled: true, runs: 200 },
     },
   },
   networks: {
-    pharos: {
-      url: "https://atlantic.dplabs-internal.com",
-      chainId: 688689,
+    megaeth: {
+      url: "https://carrot.megaeth.com/rpc",
+      chainId: 4326,
       accounts: [process.env.PRIVATE_KEY],
     },
-    pharosTestnet: {
-      url: "https://atlantic.dplabs-internal.com",
-      chainId: 688689,
+    megaethTestnet: {
+      url: "https://carrot.megaeth.com/rpc",
+      chainId: 4326,
       accounts: [process.env.PRIVATE_KEY],
     },
   },
@@ -36,8 +36,8 @@ optimizer = true
 optimizer_runs = 200
 
 [rpc_endpoints]
-pharos = "https://atlantic.dplabs-internal.com"
-pharosTestnet = "https://atlantic.dplabs-internal.com"`;
+megaeth = "https://carrot.megaeth.com/rpc"
+megaethTestnet = "https://carrot.megaeth.com/rpc"`;
 
 export default function CompileStep() {
   const [showHardhat, setShowHardhat] = useState(false);

@@ -1,6 +1,6 @@
-// ═══ PHAROS TESTNET CONFIGURATION ═══
-export const MONAD_RPC = 'https://atlantic.dplabs-internal.com';
-export const CHAIN_ID = 688689;
+// ═══ MEGAETH NETWORK CONFIGURATION ═══
+export const MEGAETH_RPC = 'https://carrot.megaeth.com/rpc';
+export const CHAIN_ID = 4326;
 export const BLOCK_TIME_MS = 400;
 export const TARGET_TPS = 30000;
 export const POLL_INTERVAL = 400;
@@ -23,7 +23,7 @@ export const COLORS = {
 };
 
 // Monanimals easter egg words for BlockRain
-export const MONANIMAL_WORDS = ['CHOG', 'MOYAKI', 'MOLANDAK', 'SALMONAD', 'NAD', 'PHAROS', 'MOUCH'];
+export const MONANIMAL_WORDS = ['CHOG', 'MOYAKI', 'MOLANDAK', 'SALMONAD', 'NAD', 'MEGAETH', 'MOUCH'];
 
 // Extended character set for BlockRain
 export const RAIN_CHARS = '0123456789ABCDEFabcdef{}[]<>:;/\\|=+*&^%$#@!~ΣΩπ∆アイウエオカキクケコ';
@@ -67,11 +67,11 @@ export const CORPS = [
 
 // Boot sequence messages
 export const BOOT_MESSAGES = [
-  { text: 'NADWATCH v1.0 — PHAROS NETWORK SURVEILLANCE TERMINAL', color: '#7B2FBE', delay: 0 },
+  { text: 'NADWATCH v1.0 — MEGAETH NETWORK SURVEILLANCE TERMINAL', color: '#7B2FBE', delay: 0 },
   { text: '(C) 2026 NX TERMINAL CORP — FOR THE NADS', color: '#888', delay: 200 },
   { text: '', color: '', delay: 400 },
-  { text: 'ESTABLISHING PHAROS RPC CONNECTION...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 688689............................ OK', color: '#888', delay: 900 },
+  { text: 'ESTABLISHING MEGAETH RPC CONNECTION...', color: '#30FF60', delay: 500 },
+  { text: 'CHAIN ID: 4326............................ OK', color: '#888', delay: 900 },
   { text: 'BLOCK TIME: sub-second...................... OK', color: '#888', delay: 1200 },
   { text: 'TARGET TPS: 30,000+......................... OK', color: '#888', delay: 1500 },
   { text: '', color: '', delay: 1700 },
@@ -83,7 +83,7 @@ export const BOOT_MESSAGES = [
   { text: 'PARALLEL EXECUTION MONITOR.................. OK', color: '#30FF60', delay: 2900 },
   { text: 'CONSENSUS PIPELINE TRACKER.................. OK', color: '#30FF60', delay: 3100 },
   { text: '', color: '', delay: 3300 },
-  { text: 'PHAROS. THE NADS ARE WATCHING.', color: '#7B2FBE', delay: 3500 },
+  { text: 'MEGAETH. THE NADS ARE WATCHING.', color: '#7B2FBE', delay: 3500 },
   { text: '', color: '', delay: 3800 },
   { text: 'ENTERING SURVEILLANCE MODE...', color: '#fff', delay: 4000 },
 ];

@@ -7,7 +7,7 @@ export default function StatusBar() {
   const { blockNumber, gasPrice, isLoading } = useMonadNetwork(state.network);
   const { isConnected, displayAddress, connect } = useWallet();
 
-  const networkLabel = state.network === 'mainnet' ? 'Pharos Mainnet' : 'Pharos Testnet';
+  const networkLabel = state.network === 'mainnet' ? 'MegaETH Mainnet' : 'MegaETH Testnet';
 
   return (
     <div className="mb-statusbar">

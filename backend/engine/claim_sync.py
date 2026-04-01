@@ -15,7 +15,7 @@ REQUIREMENTS:
   - BACKEND_SIGNER_PRIVATE_KEY env var (EOA with SIGNER_ROLE on NXDevNFT)
   - web3.py >= 7.0 (pip install web3)
   - The signer address must have SIGNER_ROLE granted by contract owner
-  - Pharos RPC: https://atlantic.dplabs-internal.com
+  - MegaETH RPC: https://carrot.megaeth.com/rpc
 
 SAFETY:
   - This script does NOT execute transactions by default
@@ -39,11 +39,11 @@ from .config import (
 
 logger = logging.getLogger(__name__)
 
-# -- Contract addresses (Pharos Atlantic Testnet) --------------------------
-NXDEVNFT_ADDRESS = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
+# -- Contract addresses (MegaETH Mainnet) --------------------------
+NXDEVNFT_ADDRESS = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
 NXT_TOKEN_ADDRESS = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47"
-PHAROS_RPC = os.getenv("PHAROS_RPC_URL", "https://atlantic.dplabs-internal.com")
-PHAROS_CHAIN_ID = 688689
+MEGAETH_RPC = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
+MEGAETH_CHAIN_ID = 4326
 
 # -- Env config --------------------------------------------------------
 SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")
@@ -147,7 +147,7 @@ def _send_batch(w3, contract, account, batch_ids, batch_amounts, nonce):
     ).build_transaction({
         "from": account.address,
         "nonce": nonce,
-        "chainId": PHAROS_CHAIN_ID,
+        "chainId": MEGAETH_CHAIN_ID,
         "gas": 500_000 + (len(batch_ids) * 30_000),
     })
 
@@ -227,9 +227,9 @@ def sync_claimable_balances():
     try:
         from web3 import Web3
 
-        w3 = Web3(Web3.HTTPProvider(PHAROS_RPC))
+        w3 = Web3(Web3.HTTPProvider(MEGAETH_RPC))
         if not w3.is_connected():
-            logger.error("Cannot connect to Pharos RPC.")
+            logger.error("Cannot connect to MegaETH RPC.")
             db_conn.close()
             return
 

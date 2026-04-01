@@ -1,4 +1,4 @@
-// ═══ PARALLAX.exe — PHAROS PARALLEL EXECUTION VISUALIZER ═══
+// ═══ PARALLAX.exe — MEGAETH PARALLEL EXECUTION VISUALIZER ═══
 export { COLORS } from '../nadwatch/constants';
 
 export const NUM_LANES = 8;
@@ -18,11 +18,11 @@ export const LANE_COLORS = [
 ];
 
 export const BOOT_MESSAGES = [
-  { text: 'PARALLAX.exe v1.0 \u2014 PHAROS PARALLEL EXECUTION VISUALIZER', color: '#7B2FBE', delay: 0 },
+  { text: 'PARALLAX.exe v1.0 \u2014 MEGAETH PARALLEL EXECUTION VISUALIZER', color: '#7B2FBE', delay: 0 },
   { text: '(C) 2026 NX TERMINAL CORP \u2014 OPTIMISTIC CONCURRENCY DIVISION', color: '#888', delay: 200 },
   { text: '', color: '', delay: 400 },
-  { text: 'CONNECTING TO PHAROS RPC ENDPOINT...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 688689............................. OK', color: '#888', delay: 900 },
+  { text: 'CONNECTING TO MEGAETH RPC ENDPOINT...', color: '#30FF60', delay: 500 },
+  { text: 'CHAIN ID: 4326............................. OK', color: '#888', delay: 900 },
   { text: 'BLOCK TIME: sub-second...................... OK', color: '#888', delay: 1200 },
   { text: '', color: '', delay: 1400 },
   { text: 'INITIALIZING PARALLEL EXECUTION ENGINE...', color: '#30FF60', delay: 1600 },

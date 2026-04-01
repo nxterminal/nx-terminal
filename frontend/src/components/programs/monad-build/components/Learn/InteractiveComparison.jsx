@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { PHAROS_KEY_DIFFERENCES } from '../../constants/monad';
+import { MEGAETH_KEY_DIFFERENCES } from '../../constants/monad';
 import Badge from '../shared/Badge';
 
 const CODE_EXAMPLES = {
   'Cold SLOAD': {
-    bad: `// Expensive on Pharos (8,100 gas per cold SLOAD)
+    bad: `// Expensive on MegaETH (8,100 gas per cold SLOAD)
 function getBalance(address user) public view returns (uint256) {
     return balances[user]; // Cold read every call
 }`,
@@ -21,10 +21,10 @@ function processBalances(address[] calldata users)
 }`,
   },
   'Gas Charging': {
-    bad: `// On Pharos, you pay for the full gas LIMIT
+    bad: `// On MegaETH, you pay for the full gas LIMIT
 // Gas limit: 100,000 | Gas used: 52,000
 // Ethereum charges: 52,000 gas
-// Pharos charges:   100,000 gas`,
+// MegaETH charges:   100,000 gas`,
     good: `// Always estimate gas and set tight limits
 const gasEstimate = await publicClient.estimateGas({...});
 const tx = await walletClient.sendTransaction({
@@ -33,7 +33,7 @@ const tx = await walletClient.sendTransaction({
 });`,
   },
   'EVM Version': {
-    bad: `// Missing evmVersion — may fail on Pharos
+    bad: `// Missing evmVersion — may fail on MegaETH
 // hardhat.config.js
 module.exports = {
     solidity: "0.8.28",
@@ -67,7 +67,7 @@ export default function InteractiveComparison() {
 
   return (
     <div>
-      <h2 className="mb-h2 mb-mb-md">Pharos vs Ethereum</h2>
+      <h2 className="mb-h2 mb-mb-md">MegaETH vs Ethereum</h2>
       <p className="mb-text-sm mb-mb-lg">
         Key differences every developer should know. Click rows for details.
       </p>
@@ -77,12 +77,12 @@ export default function InteractiveComparison() {
           <tr>
             <th>Aspect</th>
             <th>Ethereum</th>
-            <th>Pharos</th>
+            <th>MegaETH</th>
             <th>Developer Impact</th>
           </tr>
         </thead>
         <tbody>
-          {PHAROS_KEY_DIFFERENCES.map(d => (
+          {MEGAETH_KEY_DIFFERENCES.map(d => (
             <>
               <tr
                 key={d.aspect}
@@ -101,7 +101,7 @@ export default function InteractiveComparison() {
                 </td>
                 <td>{d.ethereum}</td>
                 <td>
-                  <Badge color={severityColor[d.severity]}>{d.pharos}</Badge>
+                  <Badge color={severityColor[d.severity]}>{d.megaeth}</Badge>
                 </td>
                 <td style={{ fontSize: 12 }}>{d.impact}</td>
               </tr>

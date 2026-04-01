@@ -1,20 +1,20 @@
-export const PHAROS_PATH = {
-  id: "pharos",
+export const MEGAETH_PATH = {
+  id: "megaeth",
   name: "Blockchain Builder",
   icon: "{ }",
-  description: "Build on Pharos. Smart contracts, parallel execution, and dApps.",
+  description: "Build on MegaETH. Smart contracts, parallel execution, and dApps.",
   modules: [
     {
-      id: "mm1", title: "Pharos Fundamentals", corp: "mistrial",
+      id: "mm1", title: "MegaETH Fundamentals", corp: "mistrial",
       lessons: [
         {
-          id: "ml1", type: "concept", title: "What is Pharos?",
+          id: "ml1", type: "concept", title: "What is MegaETH?",
           steps: [
             {
               title: "A new kind of blockchain",
               blocks: [
-                { type: "text", content: "Pharos is a Layer 1 blockchain that is fully compatible with Ethereum but dramatically faster. If you know Ethereum, you already know how to build on Pharos." },
-                { type: "highlight", content: "Think of Pharos as Ethereum with a turbo engine — same language, same tools, 30,000+ TPS." },
+                { type: "text", content: "MegaETH is a real-time blockchain that is fully compatible with Ethereum but dramatically faster. If you know Ethereum, you already know how to build on MegaETH." },
+                { type: "highlight", content: "Think of MegaETH as Ethereum with a turbo engine — same language, same tools, 30,000+ TPS." },
               ],
             },
             {
@@ -31,25 +31,25 @@ export const PHAROS_PATH = {
             {
               title: "Why is it so fast?",
               blocks: [
-                { type: "text", content: "Pharos achieves speed through two key innovations:" },
+                { type: "text", content: "MegaETH achieves speed through two key innovations:" },
                 { type: "code", label: "Traditional blockchain (sequential)", content: "TX1 -> TX2 -> TX3 -> TX4  (one at a time)" },
-                { type: "code", label: "Pharos (parallel execution)", content: "TX1 --|\nTX2 --|-> All at once!\nTX3 --|" },
-                { type: "text", content: "Instead of processing transactions one by one, Pharos processes many simultaneously. If two transactions don't affect the same data, there's no reason to wait." },
+                { type: "code", label: "MegaETH (parallel execution)", content: "TX1 --|\nTX2 --|-> All at once!\nTX3 --|" },
+                { type: "text", content: "Instead of processing transactions one by one, MegaETH processes many simultaneously. If two transactions don't affect the same data, there's no reason to wait." },
               ],
             },
           ],
-          question: "What makes Pharos different from standard EVM chains?",
+          question: "What makes MegaETH different from standard EVM chains?",
           options: ["It uses a different programming language", "It processes transactions in parallel", "It doesn't support smart contracts", "It requires special hardware"],
           correct: 1, xp: 10,
-          explanation: "Pharos's core innovation is parallel transaction execution — processing multiple transactions simultaneously instead of one at a time.",
+          explanation: "MegaETH's core innovation is parallel transaction execution — processing multiple transactions simultaneously instead of one at a time.",
         },
         {
-          id: "ml2", type: "concept", title: "Pharos Architecture",
+          id: "ml2", type: "concept", title: "MegaETH Architecture",
           steps: [
             {
               title: "Pipelined execution",
               blocks: [
-                { type: "text", content: "Traditional blockchains process each block in a single step. Pharos breaks processing into stages that overlap, like an assembly line:" },
+                { type: "text", content: "Traditional blockchains process each block in a single step. MegaETH breaks processing into stages that overlap, like an assembly line:" },
                 { type: "code", label: "Pipeline stages", content: "Block N:   [Execute] [Verify] [Commit]\nBlock N+1:          [Execute] [Verify] [Commit]\nBlock N+2:                   [Execute] [Verify] [Commit]" },
                 { type: "text", content: "While Block N is being verified, Block N+1 is already executing. This overlap dramatically increases throughput." },
               ],
@@ -57,15 +57,15 @@ export const PHAROS_PATH = {
             {
               title: "Parallel processing",
               blocks: [
-                { type: "text", content: "Pharos assumes transactions don't conflict and runs them in parallel. If a conflict is detected (two transactions modifying the same state), the affected transaction is re-executed:" },
+                { type: "text", content: "MegaETH assumes transactions don't conflict and runs them in parallel. If a conflict is detected (two transactions modifying the same state), the affected transaction is re-executed:" },
                 { type: "code", content: "TX1: Transfer A -> B    \\ \nTX2: Transfer C -> D     } No conflict = parallel OK\nTX3: Transfer A -> E    /  Conflict with TX1 = re-execute" },
                 { type: "highlight", content: "In practice, most transactions don't conflict, so parallel execution yields huge speedups." },
               ],
             },
             {
-              title: "PharosDb — the state store",
+              title: "MegaETH DB — the state store",
               blocks: [
-                { type: "text", content: "Pharos uses a custom database (PharosDb) optimized for blockchain workloads:" },
+                { type: "text", content: "MegaETH uses a custom database optimized for blockchain workloads:" },
                 { type: "list", items: [
                   "Asynchronous I/O — doesn't block while reading/writing",
                   "SSD-optimized storage — takes advantage of modern hardware",
@@ -74,33 +74,33 @@ export const PHAROS_PATH = {
               ],
             },
           ],
-          question: "What happens when parallel transactions conflict in Pharos?",
+          question: "What happens when parallel transactions conflict in MegaETH?",
           options: ["The chain halts", "Both transactions fail", "Affected transactions are re-executed", "Users must resubmit"],
           correct: 2, xp: 10,
-          explanation: "Pharos detects conflicts automatically and re-executes only the affected transactions. Users don't need to do anything.",
+          explanation: "MegaETH detects conflicts automatically and re-executes only the affected transactions. Users don't need to do anything.",
         },
         {
-          id: "ml2b", type: "fill-blank", title: "Pharos Config",
-          prompt: "Fill in the blanks for a Pharos testnet configuration:",
+          id: "ml2b", type: "fill-blank", title: "MegaETH Config",
+          prompt: "Fill in the blanks for a MegaETH testnet configuration:",
           code: 'const config = {\n  chainName: ___,\n  chainId: ___,\n  rpcUrl: ___,\n};',
           blanks: [
-            { answer: '"Pharos Atlantic Testnet"', placeholder: 'chain name', explanation: "The chain name is a string describing the network" },
-            { answer: "688689", placeholder: 'number', explanation: "Pharos testnet uses chain ID 688689" },
-            { answer: '"https://atlantic.dplabs-internal.com"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
+            { answer: '"MegaETH Testnet"', placeholder: 'chain name', explanation: "The chain name is a string describing the network" },
+            { answer: "4326", placeholder: 'number', explanation: "MegaETH testnet uses chain ID 4326" },
+            { answer: '"https://carrot.megaeth.com/rpc"', placeholder: 'RPC URL', explanation: "The RPC URL is the endpoint your app uses to talk to the blockchain" },
           ],
           xp: 10,
         },
         {
-          id: "ml3", type: "code", title: "Connect to Pharos",
-          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://atlantic.dplabs-internal.com' and a chainId variable set to 688689",
-          starter: "// Set up Pharos testnet config\n",
-          solution: 'const rpcUrl = "https://atlantic.dplabs-internal.com";\nconst chainId = 688689;',
+          id: "ml3", type: "code", title: "Connect to MegaETH",
+          prompt: "Write code to create a JSON-RPC provider URL variable pointing to 'https://carrot.megaeth.com/rpc' and a chainId variable set to 4326",
+          starter: "// Set up MegaETH testnet config\n",
+          solution: 'const rpcUrl = "https://carrot.megaeth.com/rpc";\nconst chainId = 4326;',
           hint: "Use const to declare the RPC URL string and chain ID number", xp: 15,
         },
       ],
     },
     {
-      id: "mm2", title: "Solidity on Pharos", corp: "closedai",
+      id: "mm2", title: "Solidity on MegaETH", corp: "closedai",
       lessons: [
         {
           id: "ml4", type: "concept", title: "Smart Contract Basics",
@@ -129,15 +129,15 @@ export const PHAROS_PATH = {
             {
               title: "Same Solidity, faster execution",
               blocks: [
-                { type: "text", content: "The best part about Pharos: your existing Solidity knowledge transfers directly. The exact same contract deployed on Pharos just runs faster." },
-                { type: "code", content: '// This contract works on BOTH Ethereum and Pharos\n// Zero changes needed!\ncontract MyToken {\n    mapping(address => uint256) public balances;\n\n    function transfer(address to, uint256 amount) external {\n        balances[msg.sender] -= amount;\n        balances[to] += amount;\n    }\n}' },
+                { type: "text", content: "The best part about MegaETH: your existing Solidity knowledge transfers directly. The exact same contract deployed on MegaETH just runs faster." },
+                { type: "code", content: '// This contract works on BOTH Ethereum and MegaETH\n// Zero changes needed!\ncontract MyToken {\n    mapping(address => uint256) public balances;\n\n    function transfer(address to, uint256 amount) external {\n        balances[msg.sender] -= amount;\n        balances[to] += amount;\n    }\n}' },
               ],
             },
           ],
-          question: "Can you deploy existing Ethereum Solidity contracts on Pharos?",
-          options: ["No, Pharos uses a different language", "Yes, Pharos is fully EVM compatible", "Only with major modifications", "Only simple contracts"],
+          question: "Can you deploy existing Ethereum Solidity contracts on MegaETH?",
+          options: ["No, MegaETH uses a different language", "Yes, MegaETH is fully EVM compatible", "Only with major modifications", "Only simple contracts"],
           correct: 1, xp: 10,
-          explanation: "Pharos is fully EVM compatible. Any valid Solidity contract that works on Ethereum works on Pharos without changes.",
+          explanation: "MegaETH is fully EVM compatible. Any valid Solidity contract that works on Ethereum works on MegaETH without changes.",
         },
         {
           id: "ml4b", type: "reorder", title: "Contract Structure",
@@ -162,7 +162,7 @@ export const PHAROS_PATH = {
           xp: 10,
         },
         {
-          id: "ml5", type: "code", title: "Write a Pharos Contract",
+          id: "ml5", type: "code", title: "Write a MegaETH Contract",
           prompt: "Write a Solidity function called 'mintNFT' that takes an address 'to' and uint256 'tokenId', increments a 'totalMinted' counter, and emits a 'Minted(address, uint256)' event",
           starter: "// Inside your contract\nuint256 public totalMinted;\nevent Minted(address indexed to, uint256 tokenId);\n\n",
           solution: "uint256 public totalMinted;\nevent Minted(address indexed to, uint256 tokenId);\n\nfunction mintNFT(address to, uint256 tokenId) external {\n    totalMinted++;\n    emit Minted(to, tokenId);\n}",
@@ -187,9 +187,9 @@ export const PHAROS_PATH = {
           id: "ml6", type: "concept", title: "Gas Optimization",
           steps: [
             {
-              title: "Gas still matters on Pharos",
+              title: "Gas still matters on MegaETH",
               blocks: [
-                { type: "text", content: "Even though Pharos is fast, every operation costs gas. Optimized code = cheaper transactions for your users." },
+                { type: "text", content: "Even though MegaETH is fast, every operation costs gas. Optimized code = cheaper transactions for your users." },
               ],
             },
             {
@@ -203,8 +203,8 @@ export const PHAROS_PATH = {
             {
               title: "Parallel-friendly code",
               blocks: [
-                { type: "text", content: "Pharos's parallel execution gives a bonus to well-structured contracts:" },
-                { type: "highlight", content: "Contracts that minimize shared state modifications benefit most from parallel execution. If two function calls don't touch the same storage slot, Pharos can run them simultaneously." },
+                { type: "text", content: "MegaETH's parallel execution gives a bonus to well-structured contracts:" },
+                { type: "highlight", content: "Contracts that minimize shared state modifications benefit most from parallel execution. If two function calls don't touch the same storage slot, MegaETH can run them simultaneously." },
                 { type: "list", items: [
                   "Use separate storage slots for independent data",
                   "Avoid writing to global counters in hot paths",
@@ -214,7 +214,7 @@ export const PHAROS_PATH = {
             },
           ],
           question: "Why should you minimize storage reads in loops?",
-          options: ["Storage reads are slow and expensive", "Loops don't work with storage", "Pharos doesn't support storage", "It makes code harder to read"],
+          options: ["Storage reads are slow and expensive", "Loops don't work with storage", "MegaETH doesn't support storage", "It makes code harder to read"],
           correct: 0, xp: 15,
           explanation: "Storage lives on disk and costs gas to read. Memory is cheaper and faster. Cache storage values in memory before looping.",
         },
@@ -229,45 +229,45 @@ export const PHAROS_PATH = {
             {
               title: "Three layers of a dApp",
               blocks: [
-                { type: "text", content: "A decentralized app (dApp) on Pharos has three layers that work together:" },
-                { type: "code", label: "dApp architecture", content: 'Frontend (React)\n  |-- Wallet Connect (MetaMask, etc.)\n  |-- UI Components\n  |-- State Management\n       |\n  Blockchain Bridge (viem / wagmi)\n       |\n  Smart Contracts (On Pharos Chain)\n  |-- Your on-chain logic\n  |-- Permanent, trustless execution' },
+                { type: "text", content: "A decentralized app (dApp) on MegaETH has three layers that work together:" },
+                { type: "code", label: "dApp architecture", content: 'Frontend (React)\n  |-- Wallet Connect (MetaMask, etc.)\n  |-- UI Components\n  |-- State Management\n       |\n  Blockchain Bridge (viem / wagmi)\n       |\n  Smart Contracts (On MegaETH Chain)\n  |-- Your on-chain logic\n  |-- Permanent, trustless execution' },
               ],
             },
             {
               title: "Standard EVM tools",
               blocks: [
-                { type: "text", content: "Because Pharos is EVM-compatible, you use the exact same frontend libraries as Ethereum:" },
+                { type: "text", content: "Because MegaETH is EVM-compatible, you use the exact same frontend libraries as Ethereum:" },
                 { type: "list", items: [
                   "viem — lightweight library for reading/writing blockchain data",
                   "wagmi — React hooks for wallet connection and contract interaction",
                   "ethers.js — popular alternative to viem",
-                  "No special Pharos SDK needed!",
+                  "No special MegaETH SDK needed!",
                 ] },
-                { type: "highlight", content: "If you've built an Ethereum dApp, building on Pharos requires zero new tools. Just point your RPC URL to Pharos." },
+                { type: "highlight", content: "If you've built an Ethereum dApp, building on MegaETH requires zero new tools. Just point your RPC URL to MegaETH." },
               ],
             },
             {
               title: "The flow",
               blocks: [
                 { type: "text", content: "Here's how a typical dApp interaction works:" },
-                { type: "code", content: '1. User clicks "Mint NFT" button\n2. Frontend calls contract via wagmi hook\n3. Wallet pops up for signature\n4. Transaction sent to Pharos RPC\n5. Pharos executes in sub-second time\n6. Frontend updates with result' },
-                { type: "text", content: "On Ethereum, step 5 takes 12+ seconds. On Pharos, it's nearly instant." },
+                { type: "code", content: '1. User clicks "Mint NFT" button\n2. Frontend calls contract via wagmi hook\n3. Wallet pops up for signature\n4. Transaction sent to MegaETH RPC\n5. MegaETH executes in sub-second time\n6. Frontend updates with result' },
+                { type: "text", content: "On Ethereum, step 5 takes 12+ seconds. On MegaETH, it's nearly instant." },
               ],
             },
           ],
-          question: "What library connects your frontend to Pharos?",
-          options: ["pharos-sdk (custom library)", "Standard EVM libraries like viem or wagmi", "web3-pharos (special fork)", "You can't build frontends for Pharos"],
+          question: "What library connects your frontend to MegaETH?",
+          options: ["megaeth-sdk (custom library)", "Standard EVM libraries like viem or wagmi", "web3-megaeth (special fork)", "You can't build frontends for MegaETH"],
           correct: 1, xp: 10,
-          explanation: "Pharos uses standard EVM libraries. viem, wagmi, and ethers.js all work out of the box.",
+          explanation: "MegaETH uses standard EVM libraries. viem, wagmi, and ethers.js all work out of the box.",
         },
         {
           id: "ml7b", type: "fill-blank", title: "Wallet Connection",
-          prompt: "Complete the code to set up a wallet connection to Pharos:",
-          code: 'import { createPublicClient, ___ } from "viem";\n\nconst client = createPublicClient({\n  chain: pharosTestnet,\n  transport: ___(___),\n});',
+          prompt: "Complete the code to set up a wallet connection to MegaETH:",
+          code: 'import { createPublicClient, ___ } from "viem";\n\nconst client = createPublicClient({\n  chain: megaethTestnet,\n  transport: ___(___),\n});',
           blanks: [
             { answer: "http", placeholder: "transport type", explanation: "viem uses 'http' transport for JSON-RPC connections" },
             { answer: "http", placeholder: "function", explanation: "The http function creates an HTTP transport" },
-            { answer: '"https://atlantic.dplabs-internal.com"', placeholder: "RPC URL", explanation: "Pass the Pharos RPC URL to the transport" },
+            { answer: '"https://carrot.megaeth.com/rpc"', placeholder: "RPC URL", explanation: "Pass the MegaETH RPC URL to the transport" },
           ],
           xp: 10,
         },
@@ -282,7 +282,7 @@ export const PHAROS_PATH = {
           id: "ml8b", type: "reorder", title: "dApp Flow",
           prompt: "Put these dApp interaction steps in the correct order:",
           lines: [
-            "Smart contract executes on Pharos",
+            "Smart contract executes on MegaETH",
             "User clicks action button in the UI",
             "Frontend updates with transaction result",
             "Wallet prompts user to sign transaction",
@@ -292,7 +292,7 @@ export const PHAROS_PATH = {
             "User clicks action button in the UI",
             "Frontend sends call via wagmi/viem",
             "Wallet prompts user to sign transaction",
-            "Smart contract executes on Pharos",
+            "Smart contract executes on MegaETH",
             "Frontend updates with transaction result",
           ],
           explanation: "User action -> frontend prepares call -> wallet signs -> blockchain executes -> UI updates. This is the standard dApp interaction flow.",
