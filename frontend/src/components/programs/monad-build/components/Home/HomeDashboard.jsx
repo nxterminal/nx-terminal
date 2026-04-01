@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Coins, Image, Gamepad2, BookOpen, Rocket, Globe, Zap, Clock, Gauge, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { PHAROS_KEY_DIFFERENCES } from '../../constants/monad';
+import { MEGAETH_KEY_DIFFERENCES } from '../../constants/monad';
 import Card from '../shared/Card';
 import Badge from '../shared/Badge';
 
@@ -16,9 +16,9 @@ const QUICK_ACTIONS = [
   { id: 'erc20', icon: Coins, title: 'Create Token', desc: 'Deploy an ERC-20 token', module: 'build', type: 'erc20' },
   { id: 'erc721', icon: Image, title: 'Create NFT', desc: 'Launch an NFT collection', module: 'build', type: 'erc721' },
   { id: 'game', icon: Gamepad2, title: 'Game Contract', desc: 'Build game economy', module: 'build', type: 'game' },
-  { id: 'learn', icon: BookOpen, title: 'Learn Pharos', desc: 'Understand the platform', module: 'learn' },
+  { id: 'learn', icon: BookOpen, title: 'Learn MegaETH', desc: 'Understand the platform', module: 'learn' },
   { id: 'deploy', icon: Rocket, title: 'Deploy Contract', desc: 'Ship to mainnet/testnet', module: 'deploy' },
-  { id: 'explore', icon: Globe, title: 'Explore Ecosystem', desc: 'Discover Pharos projects', module: 'ecosystem' },
+  { id: 'explore', icon: Globe, title: 'Explore Ecosystem', desc: 'Discover MegaETH projects', module: 'ecosystem' },
 ];
 
 export default function HomeDashboard() {
@@ -35,9 +35,9 @@ export default function HomeDashboard() {
   return (
     <div className="mb-animate-in">
       <div style={{ marginBottom: 24 }}>
-        <h1 className="mb-h1" style={{ marginBottom: 6 }}>Welcome to Pharos Build</h1>
+        <h1 className="mb-h1" style={{ marginBottom: 6 }}>Welcome to MegaETH Build</h1>
         <p className="mb-text-sm" style={{ margin: 0 }}>
-          Create, deploy, and explore on Pharos Atlantic Testnet
+          Create, deploy, and explore on MegaETH Atlantic Testnet
         </p>
       </div>
 
@@ -116,7 +116,7 @@ export default function HomeDashboard() {
             padding: 0,
           }}
         >
-          Pharos vs Ethereum
+          MegaETH vs Ethereum
           {showComparison ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
       </div>
@@ -128,18 +128,18 @@ export default function HomeDashboard() {
               <tr>
                 <th>Aspect</th>
                 <th>Ethereum</th>
-                <th>Pharos</th>
+                <th>MegaETH</th>
                 <th>Developer Impact</th>
               </tr>
             </thead>
             <tbody>
-              {PHAROS_KEY_DIFFERENCES.map(d => (
+              {MEGAETH_KEY_DIFFERENCES.map(d => (
                 <tr key={d.aspect}>
                   <td style={{ fontWeight: 500, color: 'var(--mb-text-primary)' }}>{d.aspect}</td>
                   <td>{d.ethereum}</td>
                   <td>
                     <Badge color={d.severity === 'good' ? 'green' : d.severity === 'warning' ? 'amber' : 'blue'}>
-                      {d.pharos}
+                      {d.megaeth}
                     </Badge>
                   </td>
                   <td style={{ fontSize: 12 }}>{d.impact}</td>

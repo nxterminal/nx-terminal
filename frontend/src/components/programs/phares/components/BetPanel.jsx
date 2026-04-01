@@ -56,7 +56,7 @@ export default function BetPanel({ selectedMarket, selectedSide, setSelectedSide
       <div className="phares-token-selector">
         <button className="phares-token-btn phares-token-btn--active">$NXT</button>
         <button className="phares-token-btn phares-token-btn--disabled" disabled>
-          $PHRS<span className="phares-token-soon">soon</span>
+          $ETH<span className="phares-token-soon">soon</span>
         </button>
       </div>
 

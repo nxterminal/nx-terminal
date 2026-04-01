@@ -9,17 +9,17 @@ Version 1.0 BETA
 ${'═'.repeat(45)}
 
 NETWATCH is a real-time network monitor for
-Pharos blockchain, built as part of the
+MegaETH blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
-It visualizes live data from Pharos including blocks, transactions, TPS, gas
+It visualizes live data from MegaETH including blocks, transactions, TPS, gas
 throughput, and network health metrics.
 
 ${'═'.repeat(45)}
 HOW IT WORKS
 ${'═'.repeat(45)}
 
-NETWATCH connects directly to Pharos via JSON-RPC and polls for new data every
+NETWATCH connects directly to MegaETH via JSON-RPC and polls for new data every
 3 seconds. All data is fetched client-side \u2014 no
 backend server required.
 
@@ -36,10 +36,10 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Pharos Atlantic Testnet
-Chain ID:  688689
-RPC:       atlantic.dplabs-internal.com
-Explorer:  atlantic.pharosscan.xyz
+Network:   MegaETH
+Chain ID:  4326
+RPC:       carrot.megaeth.com/rpc
+Explorer:  megaexplorer.xyz
 Consensus: AsyncBFT
 Target TPS: 30,000+
 Block Time: Sub-second (~0.5-0.8s)
@@ -99,7 +99,7 @@ mainnet mint:
 
 \u25C6 Mainnet Mode
   Switch between testnet and mainnet
-  monitoring on Pharos mainnet
+  monitoring on MegaETH mainnet
 
 Mint your NX Terminal dev NFT to unlock.
 nxterminal.com/mint`,

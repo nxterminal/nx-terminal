@@ -7,15 +7,15 @@ import Button from '../shared/Button';
 
 const STEPS = [
   { title: 'Connect Wallet', desc: 'Connect your MetaMask or compatible wallet.' },
-  { title: 'Switch to Pharos', desc: 'Make sure you\'re on the Pharos network.' },
-  { title: 'Get Test PHRS', desc: 'Grab free testnet tokens from a faucet.' },
+  { title: 'Switch to MegaETH', desc: 'Make sure you\'re on the MegaETH network.' },
+  { title: 'Get Test ETH', desc: 'Grab free testnet tokens from a faucet.' },
   { title: 'Create Your First Contract', desc: 'Use the Build wizard to generate a contract.' },
-  { title: 'Deploy', desc: 'Ship your contract to Pharos.' },
+  { title: 'Deploy', desc: 'Ship your contract to MegaETH.' },
 ];
 
 export default function QuickStartGuide() {
   const [completed, setCompleted] = useState({});
-  const { isConnected, connect, isWrongChain, switchToPharos } = useWallet();
+  const { isConnected, connect, isWrongChain, switchToMegaETH } = useWallet();
   const { dispatch } = useBuild();
 
   function toggleStep(i) {
@@ -83,7 +83,7 @@ export default function QuickStartGuide() {
                   </Button>
                 )}
                 {i === 1 && isConnected && isWrongChain && (
-                  <Button size="sm" onClick={switchToPharos}>Switch Network</Button>
+                  <Button size="sm" onClick={switchToMegaETH}>Switch Network</Button>
                 )}
                 {i === 2 && (
                   <a
@@ -93,7 +93,7 @@ export default function QuickStartGuide() {
                     className="mb-btn mb-btn-secondary mb-btn-sm"
                     style={{ textDecoration: 'none' }}
                   >
-                    Get PHRS <ExternalLink size={12} />
+                    Get ETH <ExternalLink size={12} />
                   </a>
                 )}
                 {i === 3 && (

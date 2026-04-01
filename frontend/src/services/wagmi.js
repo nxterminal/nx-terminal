@@ -1,23 +1,23 @@
 import { createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 
-// Pharos Atlantic Testnet — custom chain definition
-export const pharos = {
-  id: 688689,
-  name: 'Pharos Atlantic Testnet',
-  nativeCurrency: { name: 'Pharos', symbol: 'PHRS', decimals: 18 },
+// MegaETH — custom chain definition
+export const megaeth = {
+  id: 4326,
+  name: 'MegaETH',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://atlantic.dplabs-internal.com'] },
+    default: { http: ['https://carrot.megaeth.com/rpc'] },
   },
   blockExplorers: {
-    default: { name: 'PharosScan', url: 'https://atlantic.pharosscan.xyz' },
+    default: { name: 'MegaExplorer', url: 'https://megaexplorer.xyz' },
   },
 };
 
 export const wagmiConfig = createConfig({
-  chains: [pharos],
+  chains: [megaeth],
   connectors: [injected()],
   transports: {
-    [pharos.id]: http('https://atlantic.dplabs-internal.com'),
+    [megaeth.id]: http('https://carrot.megaeth.com/rpc'),
   },
 });

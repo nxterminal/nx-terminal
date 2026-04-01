@@ -4,7 +4,7 @@ import PetMenu from './PetMenu';
 import DialogBubble from './DialogBubble';
 import { usePetState } from '../hooks/usePetState';
 import {
-  PHAROS_TIPS,
+  MEGAETH_TIPS,
   TIP_INTERVAL_MIN,
   TIP_INTERVAL_MAX,
   WALK_INTERVAL_MIN,
@@ -33,7 +33,7 @@ export default function PetOverlay({ openWindow }) {
   const overlayRef = useRef(null);
   const walkRef = useRef(null);
   const animTimeoutRef = useRef(null);
-  const tipIndexRef = useRef(Math.floor(Math.random() * PHAROS_TIPS.length));
+  const tipIndexRef = useRef(Math.floor(Math.random() * MEGAETH_TIPS.length));
 
   const spriteSize = level.spriteSize;
 
@@ -112,7 +112,7 @@ export default function PetOverlay({ openWindow }) {
   useEffect(() => {
     if (!isActive || !helperMode) return;
     const showTip = () => {
-      const tip = PHAROS_TIPS[tipIndexRef.current % PHAROS_TIPS.length];
+      const tip = MEGAETH_TIPS[tipIndexRef.current % MEGAETH_TIPS.length];
       tipIndexRef.current++;
       setBubbleText(tip);
       setBubbleVisible(true);

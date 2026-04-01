@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { COLORS } from '../constants';
 
-const TABS = ['About', 'Lanes', 'Pharos'];
+const TABS = ['About', 'Lanes', 'MegaETH'];
 
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
@@ -9,7 +9,7 @@ PARALLAX.exe — Parallel Execution Visualizer
 Version 1.0
 ${'═'.repeat(45)}
 
-PARALLAX is a real-time visualizer for Pharos's
+PARALLAX is a real-time visualizer for MegaETH's
 parallel transaction execution, built as part
 of the NX Terminal: Protocol Wars ecosystem.
 
@@ -23,11 +23,11 @@ ${'═'.repeat(45)}
 
 This is an EDUCATIONAL VISUALIZATION. Lane
 assignment is simulated by hashing the target
-address. Real Pharos uses PharosDb with read/write
+address. Real MegaETH uses MegaETHDb with read/write
 set tracking for optimistic parallel execution.
 
 The conflict detection shown here is simplified.
-Actual Pharos conflict resolution is more
+Actual MegaETH conflict resolution is more
 sophisticated and handles edge cases that this
 visualization does not model.
 
@@ -80,11 +80,11 @@ PERFORMANCE METRICS (right sidebar)
   PARALLEL GAIN shows the speedup factor.
   Lane efficiency = % of active execution.`,
 
-  'Pharos': `${'═'.repeat(45)}
-ABOUT PHAROS
+  'MegaETH': `${'═'.repeat(45)}
+ABOUT MEGAETH
 ${'═'.repeat(45)}
 
-Pharos is a high-performance EVM-compatible
+MegaETH is a high-performance EVM-compatible
 Layer 1 blockchain with parallel execution.
 
 KEY FEATURES:
@@ -92,12 +92,12 @@ KEY FEATURES:
   • Sub-second block time
   • Sub-second finality
   • AsyncBFT consensus (pipelined)
-  • PharosDb custom database for SSDs
+  • MegaETHDb custom database for SSDs
   • RaptorCast erasure-coded propagation
   • EVM bytecode compatible
 
 PARALLEL EXECUTION:
-  Pharos executes transactions in parallel
+  MegaETH executes transactions in parallel
   using optimistic concurrency. If two txs
   conflict (access same state), one is
   re-executed. Results are deterministic.
@@ -112,7 +112,7 @@ ASYNCBFT PIPELINE:
   Each stage processes a different block,
   maximizing throughput.
 
-Learn more: docs.pharos.xyz`,
+Learn more: docs.megaeth.com`,
 };
 
 export default function HelpDialog({ onClose, initialTab = 'About' }) {

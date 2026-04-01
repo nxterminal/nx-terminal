@@ -74,7 +74,7 @@ export default function NFTGate({ onVerified, onSkip }) {
               {error && <p style={{ color: "#f43f5e", fontSize: 13, margin: "0 0 4px", fontFamily: "system-ui, sans-serif" }}>{error}</p>}
               <p style={{ color: "#334155", fontSize: 12, margin: "14px 0 0", lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>
                 Hold at least one NXDev NFT to access Dev Academy.
-                Mint at <span style={{ color: "#10b981" }}>nxterminal.xyz</span> — 0.0001 PHRS per Dev.
+                Mint at <span style={{ color: "#10b981" }}>nxterminal.xyz</span> — 0.0001 ETH per Dev.
               </p>
 
               <div style={{ borderTop: "1px solid #1e293b", marginTop: 18, paddingTop: 14, textAlign: "center" }}>

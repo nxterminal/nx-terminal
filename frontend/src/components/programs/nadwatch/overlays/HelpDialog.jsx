@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { COLORS } from '../constants';
 
-const TABS = ['About', 'Panels', 'Pharos'];
+const TABS = ['About', 'Panels', 'MegaETH'];
 
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
-NADWATCH.exe — Pharos Network Surveillance
+NADWATCH.exe — MegaETH Network Surveillance
 Version 1.0
 ${'═'.repeat(45)}
 
 NADWATCH is a real-time network monitor for
-the Pharos blockchain, built as part of the
+the MegaETH blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
-It visualizes live data from Pharos Testnet
+It visualizes live data from MegaETH Testnet
 including blocks, transactions, TPS, gas,
 parallel execution load, and consensus pipeline.
 
@@ -21,7 +21,7 @@ ${'═'.repeat(45)}
 HOW IT WORKS
 ${'═'.repeat(45)}
 
-NADWATCH connects to Pharos via JSON-RPC and
+NADWATCH connects to MegaETH via JSON-RPC and
 polls regularly (matching block time). All
 data is fetched client-side.
 
@@ -33,13 +33,13 @@ ${'═'.repeat(45)}
 NETWORK INFO
 ${'═'.repeat(45)}
 
-Network:   Pharos Atlantic Testnet
-Chain ID:  688689
-RPC:       atlantic.dplabs-internal.com
+Network:   MegaETH Atlantic Testnet
+Chain ID:  4326
+RPC:       carrot.megaeth.com/rpc
 Block Time: sub-second
 Target TPS: 30,000+
 Consensus:  AsyncBFT
-Token:      PHRS
+Token:      ETH
 
 nxterminal.com`,
 
@@ -58,7 +58,7 @@ NETWORK VITALS (top right)
 
 TRANSACTION FLOW (bottom right)
   Live feed of decoded transactions.
-  Shows type, addresses, value in PHRS.
+  Shows type, addresses, value in ETH.
   Timestamps include milliseconds.
 
 PARALLEL LOAD (bottom bar)
@@ -72,11 +72,11 @@ CONSENSUS PIPELINE (bottom bar)
 CORP ACTIVITY (bottom)
   Protocol Wars corporation activity.`,
 
-  'Pharos': `${'═'.repeat(45)}
-ABOUT PHAROS
+  'MegaETH': `${'═'.repeat(45)}
+ABOUT MEGAETH
 ${'═'.repeat(45)}
 
-Pharos is a high-performance EVM-compatible
+MegaETH is a high-performance EVM-compatible
 Layer 1 blockchain with parallel execution.
 
 KEY FEATURES:
@@ -84,12 +84,12 @@ KEY FEATURES:
   • Sub-second block time
   • Sub-second finality
   • AsyncBFT consensus (pipelined)
-  • PharosDb custom database for SSDs
+  • MegaETHDb custom database for SSDs
   • RaptorCast erasure-coded propagation
   • EVM bytecode compatible
 
 PARALLEL EXECUTION:
-  Pharos executes transactions in parallel
+  MegaETH executes transactions in parallel
   using optimistic concurrency. If two txs
   conflict (access same state), one is
   re-executed. Results are deterministic.
@@ -99,7 +99,7 @@ ASYNCBFT PIPELINE:
   PROPOSE → VOTE → FINALIZE → EXECUTE
   Each stage processes a different block.
 
-Learn more: docs.pharos.xyz`,
+Learn more: docs.megaeth.com`,
 };
 
 export default function HelpDialog({ onClose, initialTab = 'About' }) {

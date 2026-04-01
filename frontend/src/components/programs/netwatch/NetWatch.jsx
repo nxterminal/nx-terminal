@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import './NetWatch.css';
-import { usePharosRPC } from './hooks/usePharosRPC';
+import { useMegaETHRPC } from './hooks/useMegaETHRPC';
 import BlockRain from './panels/BlockRain';
 import NetworkVitals from './panels/NetworkVitals';
 import TransactionFlow from './panels/TransactionFlow';
@@ -18,7 +18,7 @@ export default function NetWatch({ onClose }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [retryCountdown, setRetryCountdown] = useState(0);
 
-  const rpc = usePharosRPC();
+  const rpc = useMegaETHRPC();
 
   useEffect(() => {
     if (paused) {
@@ -172,7 +172,7 @@ export default function NetWatch({ onClose }) {
                 {'\u26A0'} NETWORK OFFLINE
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
-                Unable to connect to Pharos<br />RPC endpoint.
+                Unable to connect to MegaETH<br />RPC endpoint.
               </div>
               <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
                 {retryCountdown > 0
@@ -229,7 +229,7 @@ export default function NetWatch({ onClose }) {
           <span style={{ color: statusColor, fontSize: '11px' }}>{statusText}</span>
         </div>
         <div className="nw-statusbar-right">
-          NETWATCH BETA {'\u00B7'} PHAROS {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL
+          NETWATCH BETA {'\u00B7'} MEGAETH {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL
         </div>
       </div>
 

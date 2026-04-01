@@ -128,7 +128,7 @@ export default function TheStream({ streamFilters, setStreamFilter, isPaused, to
       <div className="flow-trade-list">
         {loading && trades.length === 0 && (
           <div className="flow-placeholder" style={{ color: COLORS.textDim }}>
-            Connecting to Pharos pools…
+            Connecting to MegaETH pools…
           </div>
         )}
 

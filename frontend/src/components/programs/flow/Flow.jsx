@@ -33,8 +33,8 @@ const BOOT_LINES = [
   { text: 'FLOW.exe v1.0 — DeFi Intelligence Terminal', color: '#8B5CF6', delay: 0 },
   { text: '(C) 2026 NX TERMINAL CORP', color: '#555D6B', delay: 150 },
   { text: '', delay: 300 },
-  { text: 'CONNECTING TO PHAROS RPC...', color: '#8B5CF6', delay: 400 },
-  { text: '  Chain ID: 688689 ................................ OK', color: '#555D6B', delay: 700 },
+  { text: 'CONNECTING TO MEGAETH RPC...', color: '#8B5CF6', delay: 400 },
+  { text: '  Chain ID: 4326 ................................ OK', color: '#555D6B', delay: 700 },
   { text: '  Block time: 400ms ............................. OK', color: '#555D6B', delay: 900 },
   { text: '', delay: 1050 },
   { text: 'LOADING MODULES', color: '#C8D6E5', delay: 1100 },
@@ -92,7 +92,7 @@ function BootScreen({ onDone }) {
   return (
     <div className="flow-boot">
       <div className="flow-boot__title">FLOW.exe</div>
-      <div className="flow-boot__subtitle">DeFi Intelligence Terminal — Pharos Network</div>
+      <div className="flow-boot__subtitle">DeFi Intelligence Terminal — MegaETH Network</div>
 
       {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
         <div key={i} className="flow-boot__line" style={{ color: line.color }}>
@@ -199,7 +199,7 @@ export default function Flow({ onClose }) {
         </div>
 
         <div className="flow-header__center">
-          <Tooltip text="Connection status to Pharos RPC node">
+          <Tooltip text="Connection status to MegaETH RPC node">
             <span className="flow-header__stat">
               <StatusDot status={connectionStatus} />
               <span style={{ color: market.isConnected ? COLORS.accent : COLORS.danger, marginLeft: 6 }}>
@@ -222,7 +222,7 @@ export default function Flow({ onClose }) {
           <span className="flow-header__dot">&middot;</span>
           <Tooltip text={TOOLTIPS.monPrice}>
             <span className="flow-header__stat">
-              PHRS <span className="flow-header__val" style={{ color: changeColor }}>
+              ETH <span className="flow-header__val" style={{ color: changeColor }}>
                 {formatPrice(market.monPrice)}
               </span>
             </span>
@@ -236,7 +236,7 @@ export default function Flow({ onClose }) {
         </div>
 
         <div className="flow-header__right">
-          Pharos Atlantic Testnet &middot; Chain 688689
+          MegaETH &middot; Chain 4326
         </div>
       </div>
 

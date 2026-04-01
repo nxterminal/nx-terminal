@@ -1,8 +1,8 @@
-// ═══ PHAROS_SDK — CONSTANTS ═══
+// ═══ MEGA_SDK — CONSTANTS ═══
 // Re-export shared game-universe data
 export { CORPORATIONS, DIFFICULTIES, EXERCISE_TYPES } from '../../pharos-sdk/data/constants';
 
-// ═══ PHAROS-THEMED RANKS ═══
+// ═══ MEGAETH-THEMED RANKS ═══
 export const RANKS = [
   { name: 'INITIATE',   xpRequired: 0,    color: '#888888' },
   { name: 'VALIDATOR',  xpRequired: 150,  color: '#30FF60' },
@@ -12,11 +12,11 @@ export const RANKS = [
   { name: 'ARCHITECT',  xpRequired: 1300, color: '#7B2FBE' },
 ];
 
-// ═══ PHAROS NETWORK INFO ═══
-export const PHAROS_INFO = {
-  CHAIN_NAME: 'Pharos Atlantic Testnet',
-  CHAIN_ID: 688689,
-  RPC_URL: 'https://atlantic.dplabs-internal.com',
+// ═══ MEGAETH NETWORK INFO ═══
+export const MEGAETH_INFO = {
+  CHAIN_NAME: 'MegaETH Testnet',
+  CHAIN_ID: 4326,
+  RPC_URL: 'https://carrot.megaeth.com/rpc',
   BLOCK_TIME: 'Sub-second',
   CONSENSUS: 'AsyncBFT',
   TPS: '30,000+',
@@ -26,15 +26,15 @@ export const PHAROS_INFO = {
 
 // ═══ BOOT SEQUENCE MESSAGES ═══
 export const BOOT_MESSAGES = [
-  { text: 'PHAROS_SDK v1.0 \u2014 Developer Training Simulator', color: '#7B2FBE', delay: 0 },
-  { text: 'Parallel Execution Training Division', color: '#888', delay: 200 },
+  { text: 'MEGA_SDK v1.0 \u2014 Developer Training Simulator', color: '#7B2FBE', delay: 0 },
+  { text: 'MegaETH Training Division', color: '#888', delay: 200 },
   { text: '', delay: 400 },
   { text: 'Initializing training environment...', color: '#30FF60', delay: 500 },
   { text: 'Loading mission database...', color: '#30FF60', delay: 900 },
-  { text: '  [OK] Track 1: Pharos Fundamentals (5 missions)', color: '#aaa', delay: 1200 },
-  { text: '  [OK] Track 2: Advanced Pharos (LOCKED)', color: '#666', delay: 1400 },
-  { text: 'Connecting to Pharos Atlantic Testnet...', color: '#30FF60', delay: 1800 },
-  { text: '  Chain ID: 688689 \u2014 Connection established', color: '#aaa', delay: 2200 },
+  { text: '  [OK] Track 1: MegaETH Fundamentals (5 missions)', color: '#aaa', delay: 1200 },
+  { text: '  [OK] Track 2: Advanced MegaETH (LOCKED)', color: '#666', delay: 1400 },
+  { text: 'Connecting to MegaETH Testnet...', color: '#30FF60', delay: 1800 },
+  { text: '  Chain ID: 4326 \u2014 Connection established', color: '#aaa', delay: 2200 },
   { text: '  Block time: Sub-second \u2014 Parallel execution: ACTIVE', color: '#aaa', delay: 2500 },
   { text: 'Loading compiler modules...', color: '#30FF60', delay: 2800 },
   { text: '  [OK] Solidity 0.8.19', color: '#aaa', delay: 3000 },
@@ -42,7 +42,7 @@ export const BOOT_MESSAGES = [
   { text: '  [OK] Mission verifier', color: '#aaa', delay: 3300 },
   { text: '', delay: 3500 },
   { text: '\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557', color: '#7B2FBE', delay: 3700 },
-  { text: '\u2551  PHAROS: WHERE PARALLEL EXECUTION MEETS          \u2551', color: '#7B2FBE', delay: 3800 },
+  { text: '\u2551  MEGAETH: WHERE REAL-TIME EXECUTION MEETS         \u2551', color: '#7B2FBE', delay: 3800 },
   { text: '\u2551  DETERMINISTIC STATE. LEARN TO BUILD ON IT.     \u2551', color: '#7B2FBE', delay: 3900 },
   { text: '\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D', color: '#7B2FBE', delay: 4000 },
   { text: '', delay: 4200 },

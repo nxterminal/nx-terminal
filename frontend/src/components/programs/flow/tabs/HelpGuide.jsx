@@ -4,7 +4,7 @@ const SECTIONS = [
   {
     title: 'The Stream',
     icon: '>>',
-    desc: 'Real-time trade feed from all Pharos DEXs (Kuru, Uniswap, PancakeSwap, Balancer, Curve, Nad.fun, Perpl).',
+    desc: 'Real-time trade feed from all MegaETH DEXs (Kuru, Uniswap, PancakeSwap, Balancer, Curve, Nad.fun, Perpl).',
     features: [
       'Filter trades by side (BUY/SELL), value ($100+, $1K+, etc.), or protocol',
       'Custom $ filter for specific minimum trade amounts',
@@ -16,9 +16,9 @@ const SECTIONS = [
   {
     title: 'Wallet X-Ray',
     icon: '{}',
-    desc: 'Analyze any Pharos wallet address to see holdings and activity.',
+    desc: 'Analyze any MegaETH wallet address to see holdings and activity.',
     features: [
-      'Paste any 0x address to view native PHRS balance',
+      'Paste any 0x address to view native ETH balance',
       'ERC20 token holdings: WMON, USDC, USDT, WETH, AUSD',
       'Transaction count and network activity',
       'Recent trade history across top DEX pools',
@@ -40,7 +40,7 @@ const SECTIONS = [
   {
     title: 'CLOB Vision',
     icon: '||',
-    desc: 'Live orderbook visualization for Kuru, Pharos\'s native CLOB DEX.',
+    desc: 'Live orderbook visualization for Kuru, MegaETH\'s native CLOB DEX.',
     features: [
       'Select any Kuru trading pair from the dropdown',
       'Visual depth bars showing bid/ask sizes',
@@ -52,9 +52,9 @@ const SECTIONS = [
   {
     title: 'AI Oracle',
     icon: '◆',
-    desc: 'Conversational assistant powered by live Pharos market data.',
+    desc: 'Conversational assistant powered by live MegaETH market data.',
     features: [
-      'Ask about trending pools, PHRS price, gas fees, or any DeFi topic',
+      'Ask about trending pools, ETH price, gas fees, or any DeFi topic',
       'Responses include real-time network stats (TPS, block, gas)',
       'Quick action chips for common questions',
       'Guides you to the right tab for deeper analysis',
@@ -66,9 +66,9 @@ const SECTIONS = [
     desc: 'Live network status strip at the top of FLOW.',
     features: [
       'Green dot = LIVE connection, red = OFFLINE',
-      'TPS: transactions per second on Pharos',
+      'TPS: transactions per second on MegaETH',
       'Block: current block number (sub-second finality)',
-      'PHRS: live price with 24h change color',
+      'ETH: live price with 24h change color',
       'Gas: current gas price in Gwei (usually < 0.01)',
     ],
   },
@@ -98,7 +98,7 @@ export default function HelpGuide() {
         color: COLORS.textDim,
         marginBottom: 20,
       }}>
-        DeFi Intelligence Terminal for Pharos Network — v1.0
+        DeFi Intelligence Terminal for MegaETH Network — v1.0
       </div>
 
       {SECTIONS.map((section, i) => (
@@ -190,7 +190,7 @@ export default function HelpGuide() {
         textAlign: 'center',
         padding: '8px 0 16px',
       }}>
-        Data provided by GeckoTerminal & CoinGecko APIs — Pharos Atlantic Testnet Chain ID 688689
+        Data provided by GeckoTerminal & CoinGecko APIs — MegaETH Chain ID 4326
       </div>
     </div>
   );

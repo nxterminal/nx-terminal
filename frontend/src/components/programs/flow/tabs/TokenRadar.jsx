@@ -55,7 +55,7 @@ export default function TokenRadar() {
       <div className="flow-radar-list">
         {loading && tokens.length === 0 && (
           <div className="flow-placeholder" style={{ color: COLORS.textDim }}>
-            Scanning Pharos token pools…
+            Scanning MegaETH token pools…
           </div>
         )}
 

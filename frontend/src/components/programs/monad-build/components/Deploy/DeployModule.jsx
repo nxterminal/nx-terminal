@@ -71,7 +71,7 @@ export default function DeployModule() {
     <div className="mb-animate-in">
       <h1 className="mb-h1 mb-mb-sm">Deploy Contract</h1>
       <p className="mb-text-sm mb-mb-lg">
-        Compile and deploy your contract to Pharos.
+        Compile and deploy your contract to MegaETH.
       </p>
 
       {/* Source Code Preview */}

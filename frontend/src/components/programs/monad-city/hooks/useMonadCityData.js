@@ -1,7 +1,7 @@
-import { usePharosRPC } from '../../netwatch/hooks/usePharosRPC';
+import { useMegaETHRPC } from '../../netwatch/hooks/useMegaETHRPC';
 
 export function useMonadCityData() {
-  const rpc = usePharosRPC();
+  const rpc = useMegaETHRPC();
 
   // Testnet — no real market price; all price fields zeroed
   const price = {

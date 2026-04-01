@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { CheckCircle2, ExternalLink, Copy, Check, Share2, Hammer } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
-import { PHAROS_MAINNET, PHAROS_TESTNET } from '../../constants/monad';
+import { MEGAETH_MAINNET, MEGAETH_TESTNET } from '../../constants/monad';
 import Button from '../shared/Button';
 import Card from '../shared/Card';
 
 export default function DeploySuccess() {
   const { state, dispatch } = useBuild();
   const [copied, setCopied] = useState(false);
-  const config = state.network === 'mainnet' ? PHAROS_MAINNET : PHAROS_TESTNET;
+  const config = state.network === 'mainnet' ? MEGAETH_MAINNET : MEGAETH_TESTNET;
 
   function handleCopy() {
     navigator.clipboard.writeText(state.deployedAddress);
@@ -18,7 +18,7 @@ export default function DeploySuccess() {
 
   function handleShare() {
     const text = encodeURIComponent(
-      `Just deployed my contract on @pharos_xyz in under 1 second! Built with #NXTerminal Pharos Build.exe\n\n${config.explorer}/address/${state.deployedAddress}`
+      `Just deployed my contract on @megaeth in under 1 second! Built with #NXTerminal Mega Build.exe\n\n${config.explorer}/address/${state.deployedAddress}`
     );
     window.open(`https://x.com/intent/tweet?text=${text}`, '_blank');
   }
@@ -31,7 +31,7 @@ export default function DeploySuccess() {
 
       <h2 className="mb-h2 mb-mb-sm">Contract Deployed!</h2>
       <p className="mb-text-sm mb-mb-lg">
-        Your contract is live on {state.network === 'mainnet' ? 'Pharos Mainnet' : 'Pharos Testnet'}.
+        Your contract is live on {state.network === 'mainnet' ? 'MegaETH Mainnet' : 'MegaETH Testnet'}.
       </p>
 
       <div className="mb-card mb-mb-lg" style={{ textAlign: 'left' }}>
@@ -60,7 +60,7 @@ export default function DeploySuccess() {
           className="mb-btn mb-btn-secondary"
           style={{ textDecoration: 'none', justifyContent: 'center' }}
         >
-          View on PharosScan <ExternalLink size={14} />
+          View on MegaExplorer <ExternalLink size={14} />
         </a>
         {state.txHash && (
           <a

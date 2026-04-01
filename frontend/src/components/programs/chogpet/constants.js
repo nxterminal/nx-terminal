@@ -1,5 +1,5 @@
-// PHAROSGOTCHI.exe — Desktop Pet Constants
-// Pharos ecosystem mascots: Chog (frog), Molandak (mole), Moyaki (firebird)
+// MEGAGOTCHI.exe — Desktop Pet Constants
+// MegaETH ecosystem mascots: Chog (frog), Molandak (mole), Moyaki (firebird)
 
 // 12x12 pixel art sprite data
 // Each frame is a 12x12 array where each value is a color key or null (transparent)
@@ -245,7 +245,7 @@ export const PET_TYPES = {
   chog: {
     name: 'Chog',
     icon: '[C]',
-    description: 'A mysterious frog from the Pharos ecosystem. Loves parallel execution.',
+    description: 'A mysterious frog from the MegaETH ecosystem. Loves parallel execution.',
     colors: {
       g: '#30FF60',  // green body
       d: '#1a8a35',  // dark green (feet/accents)
@@ -308,24 +308,24 @@ export const FEED_HUNGER = 25;
 export const PET_HAPPINESS = 10;
 export const BUBBLE_DURATION = 8000;
 
-export const PHAROS_TIPS = [
-  "Did you know? Pharos processes transactions in parallel with sub-second finality!",
-  "PHRS is the native gas token of Pharos. AsyncBFT consensus for blazing speed!",
-  "AsyncBFT uses a pipelined consensus: PROPOSE \u2192 VOTE \u2192 FINALIZE \u2192 EXECUTE",
-  "Pharos achieves ~30,000 TPS through parallel execution!",
-  "Chain ID 688689 \u2014 Pharos Atlantic Testnet is fully EVM-compatible!",
-  "Pharos uses Dual VM: EVM + WASM for maximum flexibility.",
-  "Pharos supports both Solidity and WASM smart contracts!",
-  "Pharos finality is sub-second \u2014 transactions confirm almost instantly!",
-  "Transactions on Pharos are grouped into blocks with sub-second timing. That's fast!",
-  "Pharos validators run AsyncBFT consensus for high throughput.",
-  "Pharos combines EVM compatibility with next-gen performance.",
-  "Deferred execution enables Pharos to separate consensus from execution for speed.",
-  "Pharos supports a large validator set. Decentralized AND fast!",
-  "Smart contracts on Pharos work just like on Ethereum \u2014 deploy your Solidity code directly!",
+export const MEGAETH_TIPS = [
+  "Did you know? MegaETH processes transactions in parallel with sub-second finality!",
+  "ETH is the native gas token of MegaETH. Real-time blockchain for blazing speed!",
+  "MegaETH uses a real-time blockchain architecture for ultra-low latency.",
+  "MegaETH achieves ~100,000+ TPS through parallel execution!",
+  "Chain ID 4326 \u2014 MegaETH is fully EVM-compatible!",
+  "MegaETH is a real-time blockchain with EVM compatibility.",
+  "MegaETH supports Solidity smart contracts with ultra-fast execution!",
+  "MegaETH finality is sub-second \u2014 transactions confirm almost instantly!",
+  "Transactions on MegaETH are grouped into blocks with sub-second timing. That's fast!",
+  "MegaETH validators achieve consensus for high throughput.",
+  "MegaETH combines EVM compatibility with next-gen performance.",
+  "Deferred execution enables MegaETH to separate consensus from execution for speed.",
+  "MegaETH supports a large validator set. Decentralized AND fast!",
+  "Smart contracts on MegaETH work just like on Ethereum \u2014 deploy your Solidity code directly!",
   "Parallel execution doesn't change smart contract semantics \u2014 same results, faster processing.",
-  "Pharos enables high-throughput applications with generous gas limits.",
-  "The NX Terminal ecosystem lives on Pharos \u2014 prediction markets, dev NFTs, and more!",
+  "MegaETH enables high-throughput applications with generous gas limits.",
+  "The NX Terminal ecosystem lives on MegaETH \u2014 prediction markets, dev NFTs, and more!",
 ];
 
 export const DEFAULT_PET_STATE = {

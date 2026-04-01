@@ -24,8 +24,8 @@ function Sidebar({ xp, completedMissions, currentRank }) {
   return (
     <div className="ms-sidebar">
       <div className="ms-sidebar-icon">{'</>'}</div>
-      <div className="ms-sidebar-title">PHAROS_SDK</div>
-      <div className="ms-sidebar-subtitle">Pharos Training</div>
+      <div className="ms-sidebar-title">MEGA_SDK</div>
+      <div className="ms-sidebar-subtitle">MegaETH Training</div>
 
       <div className="ms-sidebar-divider" />
 
@@ -47,7 +47,7 @@ function Sidebar({ xp, completedMissions, currentRank }) {
       <div className="ms-sidebar-missions-detail">Track 2: locked</div>
 
       <div className="ms-sidebar-footer">
-        NX TERMINAL<br />{'\u00D7'} PHAROS
+        NX TERMINAL<br />{'\u00D7'} MEGAETH
       </div>
     </div>
   );
@@ -81,7 +81,7 @@ export default function MonadSDK({ onClose }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('pharos_sdk_progress');
+      const saved = localStorage.getItem('mega_sdk_progress');
       if (saved) {
         const { completed, xp: savedXp } = JSON.parse(saved);
         setCompletedMissions(completed || []);
@@ -91,7 +91,7 @@ export default function MonadSDK({ onClose }) {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('pharos_sdk_progress', JSON.stringify({
+    localStorage.setItem('mega_sdk_progress', JSON.stringify({
       completed: completedMissions,
       xp,
     }));
@@ -142,8 +142,8 @@ export default function MonadSDK({ onClose }) {
   const handleResetProgress = useCallback(() => {
     setCompletedMissions([]);
     setXp(0);
-    localStorage.removeItem('pharos_sdk_progress');
-    sessionStorage.removeItem('pharos_sdk_boot_seen');
+    localStorage.removeItem('mega_sdk_progress');
+    sessionStorage.removeItem('mega_sdk_boot_seen');
     setShowResetConfirm(false);
     setOpenMenu(null);
     setActiveMission(null);
@@ -273,7 +273,7 @@ export default function MonadSDK({ onClose }) {
           <span className="ms-rank" style={{ color: currentRank.color }}>{currentRank.name}</span>
           <span> | XP: {xp} | MISSIONS: {completedMissions.length}/{TOTAL_MISSIONS}</span>
         </div>
-        <div className="ms-statusbar-right">PHAROS_SDK BETA | NX TERMINAL {'\u00D7'} PHAROS</div>
+        <div className="ms-statusbar-right">MEGA_SDK BETA | NX TERMINAL {'\u00D7'} MEGAETH</div>
       </div>
 
       {/* Overlays */}

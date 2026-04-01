@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GENERAL_PATH } from './data/generalPath';
-import { PHAROS_PATH } from './data/monadPath';
+import { MEGAETH_PATH } from './data/monadPath';
 import NFTGate from './components/NFTGate';
 import PathSelect from './components/PathSelect';
 import ModuleView from './components/ModuleView';
@@ -36,7 +36,7 @@ export default function DevAcademy() {
 
   const handleVerified = d => { setDev(d); setScreen("paths"); };
   const handleSkip = () => { setDev({ devId: 0, species: "Demo", demo: true }); setScreen("paths"); };
-  const handleSelectPath = id => { setSelectedPath(id === "general" ? GENERAL_PATH : PHAROS_PATH); setScreen("modules"); };
+  const handleSelectPath = id => { setSelectedPath(id === "general" ? GENERAL_PATH : MEGAETH_PATH); setScreen("modules"); };
   const handleStartLesson = (mod, lesson) => { setCurrentModule(mod); setCurrentLesson(lesson); setScreen("lesson"); };
 
   const handleLessonComplete = correct => {

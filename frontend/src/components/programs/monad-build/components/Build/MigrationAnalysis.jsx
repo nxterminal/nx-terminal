@@ -10,16 +10,16 @@ function analyzeContract(code) {
   if (pragmaMatch) {
     const version = pragmaMatch[1];
     if (version.includes('0.8')) {
-      findings.push({ severity: 'info', title: 'Solidity Version', desc: `Detected: ${version}. Recommended: ^0.8.28 for Pharos.` });
+      findings.push({ severity: 'info', title: 'Solidity Version', desc: `Detected: ${version}. Recommended: ^0.8.28 for MegaETH.` });
     } else {
-      findings.push({ severity: 'warning', title: 'Outdated Solidity', desc: `Detected: ${version}. Upgrade to ^0.8.28 for Pharos compatibility.` });
+      findings.push({ severity: 'warning', title: 'Outdated Solidity', desc: `Detected: ${version}. Upgrade to ^0.8.28 for MegaETH compatibility.` });
       score -= 10;
     }
   }
 
   // Check for evmVersion
   if (!code.includes('prague')) {
-    findings.push({ severity: 'error', title: 'Missing evmVersion', desc: 'Must set evmVersion: "prague" in compiler settings for Pharos.' });
+    findings.push({ severity: 'error', title: 'Missing evmVersion', desc: 'Must set evmVersion: "prague" in compiler settings for MegaETH.' });
     score -= 5;
   }
 
@@ -30,7 +30,7 @@ function analyzeContract(code) {
     findings.push({
       severity: 'warning',
       title: 'Multiple Storage Mappings',
-      desc: `Found ${storageReads} mappings. Cold SLOAD costs 8,100 gas on Pharos (vs 2,100 on Ethereum). Cache reads in memory variables.`,
+      desc: `Found ${storageReads} mappings. Cold SLOAD costs 8,100 gas on MegaETH (vs 2,100 on Ethereum). Cache reads in memory variables.`,
     });
     score -= 3;
   }
@@ -41,7 +41,7 @@ function analyzeContract(code) {
     findings.push({
       severity: 'warning',
       title: 'External Calls Detected',
-      desc: `Found ${externalCalls} external call(s). Cold account access costs 10,100 gas on Pharos. Ensure re-entrancy guards are in place.`,
+      desc: `Found ${externalCalls} external call(s). Cold account access costs 10,100 gas on MegaETH. Ensure re-entrancy guards are in place.`,
     });
   }
 
@@ -50,7 +50,7 @@ function analyzeContract(code) {
     findings.push({
       severity: 'info',
       title: 'No unchecked Blocks',
-      desc: 'Consider using unchecked blocks for safe arithmetic to save gas on Pharos.',
+      desc: 'Consider using unchecked blocks for safe arithmetic to save gas on MegaETH.',
     });
   }
 
@@ -59,7 +59,7 @@ function analyzeContract(code) {
   findings.push({
     severity: 'info',
     title: 'Estimated Size',
-    desc: `~${sizeKB.toFixed(1)} KB source. Pharos allows up to 128 KB (vs 24.5 KB on Ethereum).`,
+    desc: `~${sizeKB.toFixed(1)} KB source. MegaETH allows up to 128 KB (vs 24.5 KB on Ethereum).`,
   });
 
   // Check for OpenZeppelin
@@ -67,7 +67,7 @@ function analyzeContract(code) {
     findings.push({
       severity: 'info',
       title: 'OpenZeppelin Detected',
-      desc: 'OpenZeppelin contracts are fully compatible with Pharos. Ensure you use v5.x imports.',
+      desc: 'OpenZeppelin contracts are fully compatible with MegaETH. Ensure you use v5.x imports.',
     });
   }
 
@@ -106,8 +106,8 @@ export default function MigrationAnalysis({ code }) {
           </div>
           <div className="mb-text-sm">
             {score >= 90
-              ? 'Your contract is nearly ready for Pharos. Review the notes below.'
-              : 'Review the findings below and apply optimizations for Pharos.'}
+              ? 'Your contract is nearly ready for MegaETH. Review the notes below.'
+              : 'Review the findings below and apply optimizations for MegaETH.'}
           </div>
         </div>
       </div>

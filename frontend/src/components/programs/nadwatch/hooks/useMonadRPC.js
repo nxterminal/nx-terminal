@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MONAD_RPC, POLL_INTERVAL, MAX_TX_DISPLAY, TPS_HISTORY_LENGTH } from '../constants';
+import { MEGAETH_RPC, POLL_INTERVAL, MAX_TX_DISPLAY, TPS_HISTORY_LENGTH } from '../constants';
 
 const MAX_BLOCKS_PER_POLL = 3;
 
@@ -16,7 +16,7 @@ async function rpcCall(method, params = []) {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(MONAD_RPC, {
+    const response = await fetch(MEGAETH_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params }),

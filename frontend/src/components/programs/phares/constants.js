@@ -1,4 +1,4 @@
-// PHARES.exe — Prediction Markets on Pharos
+// PHARES.exe — Prediction Markets on MegaETH
 // All mock data — TODO: fetch from /api/phares/markets
 
 export const TABS = [
@@ -8,14 +8,14 @@ export const TABS = [
   { id: 'leaderboard', label: 'Leaderboard', count: null },
 ];
 
-export const CATEGORIES = ['all', 'crypto', 'tech', 'economy', 'sports', 'pharos'];
+export const CATEGORIES = ['all', 'crypto', 'tech', 'economy', 'sports', 'megaeth'];
 
 export const CATEGORY_COLORS = {
   crypto: '#d49a2a',
   tech: '#3d7ef5',
   economy: '#8b6cc7',
   sports: '#c96830',
-  pharos: '#00c96a',
+  megaeth: '#00c96a',
 };
 
 export const OPTION_COLORS = {
@@ -82,10 +82,10 @@ export const MARKETS = [
   },
   {
     id: 4,
-    category: 'pharos',
-    question: 'Will Pharos mainnet launch before April 30, 2026?',
+    category: 'megaeth',
+    question: 'Will MegaETH mainnet launch before April 30, 2026?',
     timeLeft: '24d 18h 5m',
-    source: 'Pharos Official',
+    source: 'MegaETH Official',
     pool: '45,600 NXT',
     traders: 518,
     options: [
@@ -96,7 +96,7 @@ export const MARKETS = [
 ];
 
 export const MOCK_POSITIONS = [
-  { marketId: 4, side: 'YES', amount: 500, potential: 685, question: 'Pharos mainnet before April 30?' },
+  { marketId: 4, side: 'YES', amount: 500, potential: 685, question: 'MegaETH mainnet before April 30?' },
   { marketId: 0, side: 'NO', amount: 200, potential: 512, question: 'ETH above $5K in March?' },
   { marketId: 3, side: 'YES', amount: 300, potential: 732, question: 'Fed rate cut next meeting?' },
 ];
@@ -113,7 +113,7 @@ export const MOCK_RESOLVED = [
   },
   {
     id: 101,
-    question: 'Will Pharos testnet reach 1M transactions?',
+    question: 'Will MegaETH testnet reach 1M transactions?',
     result: 'YES',
     won: true,
     settled: 'Feb 28, 2026',

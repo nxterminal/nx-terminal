@@ -23,11 +23,11 @@ function buildSparkline(data) {
 }
 
 const METRIC_TOOLTIPS = {
-  tps: 'Transactions Per Second — Rolling average. Pharos targets 30,000+ TPS with parallel execution.',
-  gas: 'Gas Throughput — Computational gas used per second. Pharos targets much higher throughput than Ethereum.',
-  blk: 'Block Height — Current block number on Pharos Testnet. Blocks are produced at sub-second intervals.',
-  blockTime: 'Block Time — Average time between blocks. Pharos targets sub-second. Green = within target.',
-  fin: 'Finality — Time to finality. Pharos achieves sub-second finality with AsyncBFT.',
+  tps: 'Transactions Per Second — Rolling average. MegaETH targets 30,000+ TPS with parallel execution.',
+  gas: 'Gas Throughput — Computational gas used per second. MegaETH targets much higher throughput than Ethereum.',
+  blk: 'Block Height — Current block number on MegaETH Testnet. Blocks are produced at sub-second intervals.',
+  blockTime: 'Block Time — Average time between blocks. MegaETH targets sub-second. Green = within target.',
+  fin: 'Finality — Time to finality. MegaETH achieves sub-second finality with AsyncBFT.',
   par: 'Parallel Load — Estimated parallel execution lanes in use. 8 lanes total.',
   val: 'Active Validators — Estimated validator count. Marked with ~ because estimated.',
   sparkline: 'TPS History (last 30 samples) — Each bar represents TPS at one polling interval.',
@@ -64,7 +64,7 @@ export default function NetworkVitals({ data }) {
 
   const fc = (field) => flashFields[field] ? 'ndw-flash' : '';
 
-  // Block time in ms for Pharos
+  // Block time in ms for MegaETH
   const blockTimeMs = data.blockTime * 1000;
   const blockTimeColor = blockTimeMs < 450 ? COLORS.green :
                           blockTimeMs < 600 ? COLORS.yellow : COLORS.red;
@@ -84,9 +84,9 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}>{'═'.repeat(3)} </span>
         <span style={{ color: COLORS.primary, textShadow: `0 0 6px ${COLORS.primaryDim}` }}>NETWORK VITALS</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#fff' }}>PHAROS TESTNET</span>
+        <span style={{ color: '#fff' }}>MEGAETH</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 688689</span>
+        <span style={{ color: '#666' }}>CHAIN 4326</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>

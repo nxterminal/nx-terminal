@@ -13,8 +13,8 @@ log = logging.getLogger("nx_api")
 router = APIRouter()
 
 # RPC for on-chain ownership check
-_RPC_URL = os.getenv("PHAROS_RPC_URL", os.getenv("MONAD_RPC_URL", "https://atlantic.dplabs-internal.com"))
-_NFT_CONTRACT = "0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636"
+_RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
+_NFT_CONTRACT = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
 
 
 @router.get("")
