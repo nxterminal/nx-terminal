@@ -97,6 +97,13 @@ WORK_ETHIC_POOL = ["Grinder", "Lazy", "Balanced", "Obsessed", "Steady"]
 # ═══════════════════════════════════════════════════════════
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+if not DATABASE_URL:
+    _host = os.getenv("NX_DB_HOST", "localhost")
+    _port = os.getenv("NX_DB_PORT", "5432")
+    _name = os.getenv("NX_DB_NAME", "nxterminal")
+    _user = os.getenv("NX_DB_USER", "postgres")
+    _pass = os.getenv("NX_DB_PASS", "postgres")
+    DATABASE_URL = f"postgresql://{_user}:{_pass}@{_host}:{_port}/{_name}"
 
 
 def get_db(autocommit=False):
@@ -366,6 +373,27 @@ def run_listener():
     log.info(f"Contract: {NFT_CONTRACT}")
     log.info(f"Poll interval: {POLL_INTERVAL}s")
     log.info("=" * 50)
+
+    # Ensure DEPLOY action exists in enum (may be missing on older DBs)
+    try:
+        conn, cur = get_db(autocommit=True)
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_enum
+                    WHERE enumlabel = 'DEPLOY'
+                      AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'action_enum')
+                ) THEN
+                    ALTER TYPE action_enum ADD VALUE 'DEPLOY';
+                END IF;
+            END
+            $$;
+        """)
+        conn.close()
+        log.info("Verified DEPLOY action enum value exists")
+    except Exception as e:
+        log.warning(f"Could not verify DEPLOY enum: {e}")
 
     # Get starting block (with retry loop instead of recursion)
     last_block = None
