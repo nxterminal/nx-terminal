@@ -6,7 +6,7 @@ export function useWallet() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
   const { connect, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync } = useSwitchChain();
 
   const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
 
@@ -17,7 +17,7 @@ export function useWallet() {
   const switchToMegaETH = async () => {
     // Try wagmi switchChain first
     try {
-      switchChain({ chainId: MEGAETH_CHAIN_ID });
+      await switchChainAsync({ chainId: MEGAETH_CHAIN_ID });
     } catch {
       // Fallback: use window.ethereum directly to add+switch
       if (window.ethereum) {
