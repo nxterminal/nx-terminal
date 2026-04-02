@@ -8,7 +8,6 @@ import BSOD from './BSOD';
 import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
-import { PROGRAM_MIN_DEVS, getTier, getNextTier, TIERS } from '../config/tiers';
 
 const DESKTOP_ICONS = [
   { id: 'nx-terminal', icon: '>_', label: 'NX Terminal' },
@@ -178,30 +177,15 @@ export default function Desktop() {
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
       <div className="desktop-icons">
-        {DESKTOP_ICONS.filter(item => {
-          if (item.hidden) return false;
-          const minDevs = PROGRAM_MIN_DEVS[item.id] || 0;
-          if (minDevs === 0) return true; // always show base programs
-          // Show if accessible OR within next tier (locked but visible)
-          const currentTierIdx = TIERS.findIndex(t => t.minDevs > devCount);
-          const programTierIdx = TIERS.findIndex(t => t.minDevs === minDevs);
-          // Show if unlocked, or within 1 tier ahead
-          return devCount >= minDevs || (programTierIdx >= 0 && programTierIdx <= currentTierIdx);
-        }).map(item => {
-          const minDevs = PROGRAM_MIN_DEVS[item.id] || 0;
-          const isLocked = devCount < minDevs;
-          return (
-            <DesktopIcon
-              key={item.id}
-              id={item.id}
-              icon={item.icon}
-              label={isLocked ? `${item.label} \u{1F512}` : item.label}
-              onDoubleClick={() => openWindowWithBSOD(item.id)}
-              locked={isLocked}
-              title={isLocked ? `Requires ${minDevs} devs to unlock` : undefined}
-            />
-          );
-        })}
+        {DESKTOP_ICONS.map(item => (
+          <DesktopIcon
+            key={item.id}
+            id={item.id}
+            icon={item.icon}
+            label={item.label}
+            onDoubleClick={() => openWindowWithBSOD(item.id)}
+          />
+        ))}
       </div>
 
       <WindowManager
