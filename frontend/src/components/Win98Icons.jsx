@@ -828,7 +828,6 @@ export const ICON_MAP = {
   'flow': IconFlow,
   'dev-academy': IconDevAcademy,
   'monad-build': IconMonadBuild,
-  'phares': IconPhares,
 };
 
 export function Win98Icon({ id, size = 32 }) {

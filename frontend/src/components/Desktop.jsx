@@ -32,7 +32,6 @@ const DESKTOP_ICONS = [
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
   { id: 'netwatch', icon: '', label: 'Netwatch' },
   { id: 'pharos-sdk', icon: '', label: 'Mega SDK' },
-  { id: 'phares', icon: '', label: 'ORACLE' },
 ];
 
 function getWallpaperStyle() {
