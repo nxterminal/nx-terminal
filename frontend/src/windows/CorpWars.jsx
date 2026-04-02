@@ -46,7 +46,7 @@ export default function CorpWars() {
   const fetchAll = () => {
     Promise.all([
       api.getCorpLeaderboard().catch(() => []),
-      api.getDevs({ limit: 200 }).catch(() => []),
+      api.getDevs({ limit: 100 }).catch(() => []),
       api.getFeed(100).catch(() => []),
     ]).then(([corps, devsResult, feed]) => {
       setCorpData(Array.isArray(corps) ? corps : corps.corporations || []);
