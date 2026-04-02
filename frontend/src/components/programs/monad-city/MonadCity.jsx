@@ -1303,10 +1303,10 @@ export default function MonadCity() {
           <div className="mc-panel mc-price-panel">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
               <div className="mc-label">ETH / USD</div>
-              <span className="mc-testnet-badge">TESTNET</span>
+              <span className="mc-testnet-badge">MAINNET</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
-              <span className="mc-price">$0.00</span>
+              <span className="mc-price">{price.usd != null ? `$${price.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A'}</span>
             </div>
             <div className="mc-gas-row">
               <div className="mc-label">GAS</div>
