@@ -1,26 +1,40 @@
 import { useState, useEffect } from 'react';
-import { useNFTVerify } from '../hooks/useNFTVerify';
+import { useDevCount } from '../../../../hooks/useDevCount';
 
-export default function NFTGate({ onVerified, onSkip }) {
-  const [inputVal, setInputVal] = useState("");
-  const [localError, setLocalError] = useState("");
+export default function NFTGate({ onVerified, openWindow }) {
+  const { devCount, isLoading } = useDevCount();
   const [show, setShow] = useState(false);
-  const { verify, verifying, error: apiError } = useNFTVerify();
   useEffect(() => { setTimeout(() => setShow(true), 200); }, []);
 
-  const error = localError || apiError;
-
-  const handleVerify = async () => {
-    if (!inputVal.trim()) { setLocalError("Dev ID is required"); return; }
-    const num = parseInt(inputVal.replace(/[^0-9]/g, ""));
-    if (isNaN(num) || num < 1 || num > 35000) { setLocalError("Invalid ID. Must be #1 to #35,000"); return; }
-    setLocalError("");
-    const result = await verify(num);
-    if (result) {
-      onVerified(result);
+  // Auto-verify: if wallet has at least 1 NFT, grant access immediately
+  useEffect(() => {
+    if (!isLoading && devCount >= 1) {
+      onVerified({ devId: 'wallet', species: 'Unknown' });
     }
-  };
+  }, [isLoading, devCount, onVerified]);
 
+  // While loading, show spinner
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "linear-gradient(160deg, #0f172a 0%, #020617 50%, #0f172a 100%)", padding: 24,
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div className="da-spinner" style={{
+            width: 44, height: 44, borderRadius: 22, margin: "0 auto 14px",
+            border: "3px solid #1e293b", borderTopColor: "#10b981",
+          }} />
+          <p style={{ color: "#94a3b8", fontSize: 14, margin: 0, fontFamily: "system-ui, sans-serif" }}>
+            Checking wallet...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If devCount >= 1, the useEffect above will call onVerified.
+  // This renders only when devCount === 0 (no NFTs).
   return (
     <div style={{
       minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center",
@@ -50,50 +64,25 @@ export default function NFTGate({ onVerified, onSkip }) {
 
         <div style={{
           background: "rgba(15,23,42,0.8)", border: "1px solid #1e293b", borderRadius: 16,
-          padding: 28, backdropFilter: "blur(8px)",
+          padding: 28, backdropFilter: "blur(8px)", textAlign: "center",
         }}>
-          {!verifying ? (
-            <>
-              <label style={{ display: "block", color: "#94a3b8", fontSize: 13, marginBottom: 8, fontFamily: "system-ui, sans-serif", fontWeight: 500 }}>
-                Enter your Dev ID to access
-              </label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                <div style={{
-                  flex: 1, display: "flex", alignItems: "center",
-                  background: "#020617", border: "1px solid #1e293b", borderRadius: 10, overflow: "hidden",
-                }}>
-                  <span style={{ color: "#475569", padding: "0 0 0 14px", fontSize: 15, fontWeight: 600, fontFamily: "system-ui, sans-serif" }}>#</span>
-                  <input value={inputVal} onChange={e => setInputVal(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleVerify()} placeholder="1 to 35000"
-                    style={{
-                      flex: 1, background: "transparent", border: "none", outline: "none",
-                      color: "#f1f5f9", fontSize: 15, padding: "12px 14px 12px 6px", fontFamily: "system-ui, sans-serif",
-                    }}
-                  />
-                </div>
-                <button onClick={handleVerify} style={{
-                  background: "linear-gradient(135deg, #10b981, #06b6d4)",
-                  color: "#fff", border: "none", borderRadius: 10, padding: "0 22px",
-                  fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "system-ui, sans-serif",
-                }}>Verify</button>
-              </div>
-              {error && <p style={{ color: "#f43f5e", fontSize: 13, margin: "0 0 4px", fontFamily: "system-ui, sans-serif" }}>{error}</p>}
-              <p style={{ color: "#334155", fontSize: 12, margin: "14px 0 0", lineHeight: 1.6, fontFamily: "system-ui, sans-serif" }}>
-                Hold at least one NXDev NFT to access Dev Academy.
-                This program requires <span style={{ color: "#10b981" }}>Indie Lab</span> rank (3 devs).
-              </p>
-            </>
-          ) : (
-            <div style={{ textAlign: "center", padding: "16px 0" }}>
-              <div className="da-spinner" style={{
-                width: 44, height: 44, borderRadius: 22, margin: "0 auto 14px",
-                border: "3px solid #1e293b", borderTopColor: "#10b981",
-              }} />
-              <p style={{ color: "#94a3b8", fontSize: 14, margin: 0, fontFamily: "system-ui, sans-serif" }}>
-                Verifying Dev #{inputVal}...
-              </p>
-            </div>
-          )}
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+          <p style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 600, margin: "0 0 8px", fontFamily: "system-ui, sans-serif" }}>
+            Dev Academy requires at least 1 NXDev NFT
+          </p>
+          <p style={{ color: "#64748b", fontSize: 14, margin: "0 0 20px", fontFamily: "system-ui, sans-serif" }}>
+            Mint a dev to start learning!
+          </p>
+          <button
+            onClick={() => openWindow?.('hire-devs')}
+            style={{
+              background: "linear-gradient(135deg, #10b981, #06b6d4)",
+              color: "#fff", border: "none", borderRadius: 10, padding: "10px 28px",
+              fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            Mint Devs
+          </button>
         </div>
       </div>
     </div>

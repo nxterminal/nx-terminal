@@ -23,7 +23,7 @@ const LESSON_COMPONENTS = {
   'output-predict': OutputPredictLesson,
 };
 
-export default function DevAcademy() {
+export default function DevAcademy({ openWindow }) {
   const [screen, setScreen] = useState("gate");
   const [dev, setDev] = useState(null);
   const [selectedPath, setSelectedPath] = useState(null);
@@ -108,7 +108,7 @@ export default function DevAcademy() {
         </nav>
       )}
 
-      {screen === "gate" && <NFTGate onVerified={handleVerified} />}
+      {screen === "gate" && <NFTGate onVerified={handleVerified} openWindow={openWindow} />}
       {screen === "paths" && <PathSelect dev={dev} onSelect={handleSelectPath} progress={progress} />}
       {screen === "modules" && selectedPath && <ModuleView pathData={selectedPath} progress={progress} xp={xp} onStartLesson={handleStartLesson} onBack={() => setScreen("paths")} />}
       {screen === "lesson" && renderLesson()}
