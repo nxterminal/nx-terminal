@@ -115,6 +115,13 @@ def _insert_dev_on_demand(token_id, owner):
 
     data = generate_dev_data(token_id, check_name_exists=check_name)
 
+    # Starting balance by rarity (same as engine mint_dev)
+    STARTING_BALANCE = {
+        "common": 2000, "uncommon": 2500, "rare": 3000,
+        "legendary": 5000, "mythic": 10000,
+    }
+    start_balance = STARTING_BALANCE.get(data["rarity"], 2000)
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -124,6 +131,7 @@ def _insert_dev_on_demand(token_id, owner):
                     alignment, risk_level, social_style, coding_style, work_ethic,
                     species, ipfs_hash,
                     stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck,
+                    balance_nxt, total_earned,
                     status, next_cycle_at, minted_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
@@ -131,6 +139,7 @@ def _insert_dev_on_demand(token_id, owner):
                     %s, %s, %s, %s, %s,
                     %s, %s,
                     %s, %s, %s, %s, %s, %s,
+                    %s, %s,
                     'active', NOW(), NOW()
                 )
                 ON CONFLICT (token_id) DO NOTHING
@@ -144,6 +153,7 @@ def _insert_dev_on_demand(token_id, owner):
                 data["species"], data["ipfs_hash"],
                 data["stat_coding"], data["stat_hacking"], data["stat_trading"],
                 data["stat_social"], data["stat_endurance"], data["stat_luck"],
+                start_balance, start_balance,
             ))
 
             # Also ensure player record exists
