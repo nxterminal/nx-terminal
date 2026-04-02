@@ -229,7 +229,7 @@ export default function NetWatch({ onClose }) {
           <span style={{ color: statusColor, fontSize: '11px' }}>{statusText}</span>
         </div>
         <div className="nw-statusbar-right">
-          NETWATCH BETA {'\u00B7'} MEGAETH {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL
+          MEGAWATCH BETA {'\u00B7'} MEGAETH {'\u00B7'} CLEARANCE: OBSERVER {'\u2502'} NX TERMINAL
         </div>
       </div>
 

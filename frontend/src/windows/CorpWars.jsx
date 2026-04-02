@@ -136,7 +136,7 @@ export default function CorpWars() {
     return feedData
       .filter(item => {
         const type = (item.action_type || '').toUpperCase();
-        return ['INVEST', 'SELL', 'CREATE_PROTOCOL', 'CREATE_AI', 'SABOTAGE', 'HACK', 'FORK'].includes(type);
+        return ['INVEST', 'SELL', 'CREATE_PROTOCOL', 'CREATE_AI', 'SABOTAGE', 'HACK', 'FORK', 'MOVE', 'CODE_REVIEW', 'DEPLOY'].includes(type);
       })
       .slice(-15)
       .reverse();
@@ -148,6 +148,16 @@ export default function CorpWars() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto', background: '#0c0c0c' }}>
+      {/* DEV COUNTER */}
+      <div style={{
+        padding: '6px 12px', textAlign: 'center',
+        fontFamily: "'VT323', monospace", fontSize: '15px',
+        color: '#33ff33', borderBottom: '1px solid #222',
+        background: 'rgba(51,255,51,0.05)',
+      }}>
+        {devs.length} DEVS IN THE PROTOCOL WARS
+      </div>
+
       {/* DOMINANCE SECTION */}
       <div className="corp-section-title">
         {'\u25B8'} CORPORATE DOMINANCE

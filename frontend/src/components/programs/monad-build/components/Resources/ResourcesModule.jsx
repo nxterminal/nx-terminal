@@ -178,6 +178,7 @@ export default function ResourcesModule() {
             {[
               { name: 'MegaETH Docs', url: 'https://docs.megaeth.com' },
               { name: 'MegaETH GitHub', url: 'https://github.com/megaeth-labs' },
+              { name: 'Bridge', url: 'https://rabbithole.megaeth.com/bridge' },
               { name: 'Discord', url: 'https://discord.gg/megaeth' },
             ].map(link => (
               <a

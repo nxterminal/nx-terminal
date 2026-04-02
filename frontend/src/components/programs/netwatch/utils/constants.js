@@ -84,7 +84,7 @@ export const VISUAL = {
 
 // ═══ BOOT SEQUENCE MESSAGES ═══
 export const BOOT_MESSAGES = [
-  { text: "NETWATCH v1.0 \u2014 Protocol Surveillance Division", color: "#00bfff", delay: 0 },
+  { text: "MEGAWATCH v1.0 \u2014 Protocol Surveillance Division", color: "#00bfff", delay: 0 },
   { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#888", delay: 200 },
   { text: "", color: "", delay: 400 },
   { text: "Initializing secure connection...", color: "#00ff41", delay: 500 },
