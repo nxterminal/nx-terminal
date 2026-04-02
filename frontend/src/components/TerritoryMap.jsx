@@ -4,12 +4,12 @@
  */
 
 const LOCATIONS = [
-  { id: 'github_hq', name: 'GitHub HQ' },
-  { id: 'server_farm', name: 'Server Farm' },
-  { id: 'vc_tower', name: 'VC Tower' },
-  { id: 'dark_web', name: 'The Dark Web' },
-  { id: 'hackathon_hall', name: 'Hackathon Hall' },
-  { id: 'stack_overflow', name: 'Stack Overflow' },
+  { id: 'BOARD_ROOM', name: 'Board Room' },
+  { id: 'SERVER_FARM', name: 'Server Farm' },
+  { id: 'VC_TOWER', name: 'VC Tower' },
+  { id: 'DARK_WEB', name: 'The Dark Web' },
+  { id: 'HACKATHON_HALL', name: 'Hackathon Hall' },
+  { id: 'THE_PIT', name: 'The Pit' },
 ];
 
 export default function TerritoryMap({ territories = [] }) {
