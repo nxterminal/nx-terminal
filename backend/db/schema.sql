@@ -156,6 +156,12 @@ CREATE TABLE devs (
     last_message        TEXT,
     last_message_channel chat_channel_enum,
 
+    -- Game mechanics
+    pc_health           SMALLINT NOT NULL DEFAULT 100,
+    training_course     VARCHAR(30) DEFAULT NULL,
+    training_ends_at    TIMESTAMPTZ DEFAULT NULL,
+    last_raid_at        TIMESTAMPTZ DEFAULT NULL,
+
     -- Scheduling
     next_cycle_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     cycle_interval_sec  INTEGER NOT NULL DEFAULT 600,

@@ -61,7 +61,8 @@ async def list_devs(
         "       balance_nxt, reputation, status,"
         "       protocols_created, ais_created,"
         "       last_action_type, last_action_detail, last_action_at,"
-        "       last_message, minted_at"
+        "       last_message, minted_at,"
+        "       pc_health, training_course, training_ends_at, last_raid_at"
         " FROM devs"
         " WHERE " + where +
         " ORDER BY " + order +
