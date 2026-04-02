@@ -288,6 +288,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
   const pcHealth = dev.pc_health ?? 100;
   const pcColor = pcHealth > 70 ? '#005500' : pcHealth > 30 ? '#7a5c00' : '#aa0000';
 
+  const energyFull = dev.energy >= (dev.max_energy || 10);
+
   return (
     <div
       className="win-raised"
@@ -298,9 +300,52 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
         border: '1px solid var(--border-dark)',
       }}
     >
-      <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
+      {/* Left column: Avatar + Action buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 80 }}>
+        <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
 
-      {/* Info */}
+        {address && !dev._fetchFailed && (
+          <>
+            {/* Food buttons — always visible, disabled when energy full */}
+            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
+                title={energyFull ? "Energy is full" : "☕ COFFEE: 5 $NXT → +2 energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                ☕5
+              </button>
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
+                title={energyFull ? "Energy is full" : "🍕 PIZZA: 25 $NXT → +5 energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                🍕25
+              </button>
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
+                title={energyFull ? "Energy is full" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                🍔50
+              </button>
+            </div>
+            {/* Hack + Repair row */}
+            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button className="win-btn" onClick={doHack}
+                title={"⚡ HACK: 15 $NXT to attack a random dev.\nSuccess (~50%): steal 20-40 $NXT."}
+                style={{ fontSize: '9px', padding: '1px 4px', border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy}>
+                ⚡Hack 15
+              </button>
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
+                title={"🔧 REPAIR PC: 10 $NXT → restore PC to 100%"}
+                style={{ fontSize: '9px', padding: '1px 4px', border: pcHealth < 50 ? '1px solid #7a5500' : undefined }} disabled={busy}>
+                🔧PC {pcHealth}%
+              </button>
+            </div>
+            {/* Bugs count */}
+            {dev.bugs_shipped > 0 && (
+              <span style={{ fontSize: '9px', color: 'var(--red-on-grey, #aa0000)' }}>🐛 Bugs: {dev.bugs_shipped}</span>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Right column: Info + Stats */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {dev._fetchFailed && (
           <div style={{
@@ -319,7 +364,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
             </button>
           </div>
         )}
-        {/* Row 1: Name + Archetype */}
+        {/* Name + Archetype + Rarity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>{dev.name}</span>
           <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
@@ -332,7 +377,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           )}
         </div>
 
-        {/* Row 2: Corporation + Species + Location */}
+        {/* Corp | Species | Location | #Token */}
         <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
           {dev.species && <span>| {dev.species}</span>}
@@ -340,7 +385,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           <span>| #{dev.token_id}</span>
         </div>
 
-        {/* Row 3: Stats bars */}
+        {/* Stats bars */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: '2px' }}>
           <StatBar label="COD" value={dev.stat_coding} />
           <StatBar label="HAK" value={dev.stat_hacking} />
@@ -350,7 +395,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           <StatBar label="LCK" value={dev.stat_luck} />
         </div>
 
-        {/* Row 4: Dynamic status + counters */}
+        {/* Energy | $NXT | Mood | Status */}
         <div style={{
           display: 'flex', gap: '6px', fontSize: '10px', marginTop: '2px',
           flexWrap: 'wrap', alignItems: 'center',
@@ -371,51 +416,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           </span>
         </div>
 
-        {/* Row 5: PC Health + Food + Actions */}
-        {address && !dev._fetchFailed && (
-          <div style={{ display: 'flex', gap: '4px', fontSize: '10px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* PC Health */}
-            <span style={{ color: pcColor, fontWeight: 'bold' }}>PC:{pcHealth}%</span>
-            {pcHealth < 50 && (
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
-                title={"🔧 REPAIR PC: Spend 10 $NXT to restore PC health.\nLow PC health (<50%) reduces productive actions like CREATE_PROTOCOL, CREATE_AI, and CODE_REVIEW."}
-                style={{ fontSize: '10px', padding: '1px 6px', border: '1px solid #7a5500' }} disabled={busy}>
-                🔧 Repair {busy ? '..' : '10'}
-              </button>
-            )}
-            {/* Food buttons (show when energy < 70%) */}
-            {energyPct < 70 && (
-              <>
-                <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                  title={"☕ COFFEE: Spend 5 $NXT to restore +2 energy.\nEnergy is used for actions like coding, trading, and hacking."}
-                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
-                  ☕ 5
-                </button>
-                <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                  title={"🍕 PIZZA: Spend 25 $NXT to restore +5 energy.\nGreat value for mid-range energy recovery."}
-                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
-                  🍕 25
-                </button>
-                <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                  title={"🍔 MEGA MEAL: Spend 50 $NXT to fully restore energy.\nBest option when energy is critically low."}
-                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
-                  🍔 50
-                </button>
-              </>
-            )}
-            {/* Hack button */}
-            <button className="win-btn" onClick={doHack}
-              title={"⚡ HACK: Spend 15 $NXT to attack a random dev from another corporation.\nSuccess (~50%): steal 20-40 $NXT. Failure: lose your 15 $NXT.\nCooldown: 1 per day."}
-              style={{
-                fontSize: '11px', padding: '2px 8px', marginLeft: 'auto',
-                border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold',
-              }} disabled={busy}>
-              ⚡ Hack 15
-            </button>
-          </div>
-        )}
-
-        {/* Row 5b: Training status */}
+        {/* Training status */}
         {dev.training_course && (
           <div style={{ fontSize: '9px', color: '#7a5c00', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
             📚 Training: {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
@@ -435,14 +436,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           </div>
         )}
 
-        {/* Row 6: Counters */}
+        {/* Counters */}
         <div style={{
           display: 'flex', gap: '8px', fontSize: '9px', marginTop: '1px',
           color: 'var(--text-muted, #888)',
         }}>
           {dev.coffee_count > 0 && <span>☕{dev.coffee_count}</span>}
           {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
-          {dev.bugs_shipped > 0 && <span>🐛{dev.bugs_shipped}</span>}
           {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
           {dev.last_action_type && (
             <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
@@ -451,7 +451,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           )}
         </div>
 
-        {/* Row 7: Quick prompt input */}
+        {/* Quick prompt input */}
         {address && (
           <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
         )}
