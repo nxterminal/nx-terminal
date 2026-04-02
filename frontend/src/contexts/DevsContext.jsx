@@ -24,7 +24,7 @@ export function useDevs() {
 export function DevsProvider({ children }) {
   const { address, isConnected } = useWallet();
   const [devs, setDevs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const initialLoadDone = useRef(false);
   const lastFetched = useRef(0);
@@ -108,7 +108,7 @@ export function DevsProvider({ children }) {
   useEffect(() => {
     if (tokenIds.length === 0) {
       setDevs([]);
-      setLoading(false);
+      setFetching(false);
       return;
     }
 
@@ -119,7 +119,7 @@ export function DevsProvider({ children }) {
     }
 
     if (!initialLoadDone.current) {
-      setLoading(true);
+      setFetching(true);
     }
     setFetchError(null);
 
@@ -145,7 +145,7 @@ export function DevsProvider({ children }) {
         lastFetched.current = Date.now();
       })
       .catch(() => setFetchError('Failed to load developer data'))
-      .finally(() => setLoading(false));
+      .finally(() => setFetching(false));
   }, [tokenKey, refreshKey, address]);
 
   // Reset when wallet disconnects
@@ -166,6 +166,10 @@ export function DevsProvider({ children }) {
   const updateDev = useCallback((fresh) => {
     setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
   }, []);
+
+  // loading = true when wallet is connected AND initial load hasn't completed yet
+  // This includes: wagmi fetching tokensOfOwner, RPC fallback, and API dev fetches
+  const loading = isConnected && !initialLoadDone.current && (tokensLoading || fetching || devs.length === 0);
 
   const value = useMemo(() => ({
     devs,
