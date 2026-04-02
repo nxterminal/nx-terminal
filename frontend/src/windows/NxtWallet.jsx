@@ -632,11 +632,10 @@ export default function NxtWallet() {
 
   const { address, isConnected, displayAddress } = useWallet();
   const wallet = isConnected ? address : null;
-  const { tokenIds: contextTokenIds, loading: devsLoading } = useDevs();
+  const { tokenIds: contextTokenIds } = useDevs();
 
   // Convert DevsContext tokenIds (numbers) to BigInt array for contract calls
-  // During loading, contextTokenIds is [] — treat as undefined (still loading)
-  const tokenIds = !devsLoading && contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
+  const tokenIds = contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
 
   // ── REST API data ────────────────────────────────────────
   useEffect(() => {
