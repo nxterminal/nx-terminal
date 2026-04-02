@@ -373,27 +373,45 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
 
         {/* Row 5: PC Health + Food + Actions */}
         {address && !dev._fetchFailed && (
-          <div style={{ display: 'flex', gap: '6px', fontSize: '9px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '4px', fontSize: '10px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
             {/* PC Health */}
             <span style={{ color: pcColor, fontWeight: 'bold' }}>PC:{pcHealth}%</span>
             {pcHealth < 50 && (
               <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
-                style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🔧{busy ? '..' : '10'}</button>
+                title={"🔧 REPAIR PC: Spend 10 $NXT to restore PC health.\nLow PC health (<50%) reduces productive actions like CREATE_PROTOCOL, CREATE_AI, and CODE_REVIEW."}
+                style={{ fontSize: '10px', padding: '1px 6px', border: '1px solid #7a5500' }} disabled={busy}>
+                🔧 Repair {busy ? '..' : '10'}
+              </button>
             )}
             {/* Food buttons (show when energy < 70%) */}
             {energyPct < 70 && (
               <>
                 <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>☕5</button>
+                  title={"☕ COFFEE: Spend 5 $NXT to restore +2 energy.\nEnergy is used for actions like coding, trading, and hacking."}
+                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
+                  ☕ 5
+                </button>
                 <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🍕25</button>
+                  title={"🍕 PIZZA: Spend 25 $NXT to restore +5 energy.\nGreat value for mid-range energy recovery."}
+                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
+                  🍕 25
+                </button>
                 <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🍔50</button>
+                  title={"🍔 MEGA MEAL: Spend 50 $NXT to fully restore energy.\nBest option when energy is critically low."}
+                  style={{ fontSize: '10px', padding: '1px 6px' }} disabled={busy}>
+                  🍔 50
+                </button>
               </>
             )}
             {/* Hack button */}
             <button className="win-btn" onClick={doHack}
-              style={{ fontSize: '8px', padding: '0 3px', marginLeft: 'auto' }} disabled={busy}>⚡Hack 15</button>
+              title={"⚡ HACK: Spend 15 $NXT to attack a random dev from another corporation.\nSuccess (~50%): steal 20-40 $NXT. Failure: lose your 15 $NXT.\nCooldown: 1 per day."}
+              style={{
+                fontSize: '11px', padding: '2px 8px', marginLeft: 'auto',
+                border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold',
+              }} disabled={busy}>
+              ⚡ Hack 15
+            </button>
           </div>
         )}
 
@@ -800,14 +818,14 @@ export default function MyDevs({ openDevProfile }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
         <span>
-          {'>'} MY DEVELOPERS ({devs.length})
+          {'>'} MY DEVELOPERS ({isLoadingAny && !initialLoadDone.current ? '...' : devs.length})
           {' '}
           <button
             className="win-btn"
-            onClick={() => { initialLoadDone.current = false; setLoading(true); setRefreshKey(k => k + 1); }}
+            onClick={() => { setRefreshKey(k => k + 1); }}
             style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px', cursor: 'pointer' }}
           >
-            &#x21bb; Refresh
+            {loading && initialLoadDone.current ? '...' : '\u21bb'} Refresh
           </button>
         </span>
         <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
@@ -838,8 +856,8 @@ export default function MyDevs({ openDevProfile }) {
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {tab === 'devs' && (
-          <div style={{ height: '100%', overflow: 'auto', padding: '4px' }}>
-            {isLoadingAny ? (
+          <div style={{ height: '100%', overflow: 'auto', padding: '4px', position: 'relative' }}>
+            {isLoadingAny && !initialLoadDone.current ? (
               <LoadingLore />
             ) : (
               devs.map((dev) => (
@@ -860,6 +878,16 @@ export default function MyDevs({ openDevProfile }) {
                   }}
                 />
               ))
+            )}
+            {loading && initialLoadDone.current && (
+              <div style={{
+                position: 'absolute', top: '4px', right: '8px',
+                background: 'var(--terminal-bg, #111)', border: '1px solid var(--border-dark, #444)',
+                padding: '2px 8px', fontSize: '11px', fontFamily: "'VT323', monospace",
+                color: 'var(--terminal-amber, #ffaa00)', opacity: 0.9,
+              }}>
+                Refreshing...
+              </div>
             )}
           </div>
         )}
