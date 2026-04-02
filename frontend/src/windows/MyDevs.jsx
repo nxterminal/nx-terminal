@@ -13,32 +13,48 @@ const ARCHETYPE_COLORS = {
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
 const BOOT_LINES = [
-  { text: 'NX TERMINAL — Developer Retrieval System v4.2', color: '#ffaa00', delay: 0 },
-  { text: 'Establishing secure connection to MegaETH...', color: '#ccc', delay: 300 },
-  { text: 'Chain ID: 4326 .......................... OK', color: '#888', delay: 600 },
-  { text: 'Scanning contract for owned tokens...', color: '#ccc', delay: 900 },
-  { text: 'Decrypting personnel files...', color: '#ccc', delay: 1300 },
-  { text: 'Compiling developer profiles...', color: '#ccc', delay: 1700 },
-  { text: 'Loading dev workstations...', color: '#ccc', delay: 2100 },
+  { text: 'NX TERMINAL — Developer Retrieval System v4.2', color: '#8B0000', delay: 0 },
+  { text: 'Establishing secure connection to MegaETH...', color: '#333', delay: 300 },
+  { text: 'Chain ID: 4326 .......................... OK', color: '#555', delay: 600 },
+  { text: 'Scanning contract for owned tokens...', color: '#333', delay: 900 },
+  { text: 'Decrypting personnel files...', color: '#333', delay: 1300 },
+  { text: 'Compiling developer profiles...', color: '#333', delay: 1700 },
+  { text: 'Loading dev workstations...', color: '#333', delay: 2100 },
 ];
+
+const PROGRESS_CAP = 65;
 
 function LoadingLore() {
   const [visibleLines, setVisibleLines] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [shake, setShake] = useState(false);
 
   useEffect(() => {
     const timers = BOOT_LINES.map((line, i) =>
       setTimeout(() => setVisibleLines(i + 1), line.delay)
     );
     const progTimer = setInterval(() => {
-      setProgress(p => p >= 100 ? 100 : p + 3);
+      setProgress(p => {
+        if (p >= PROGRESS_CAP) return PROGRESS_CAP;
+        return p + 2;
+      });
     }, 120);
     return () => { timers.forEach(clearTimeout); clearInterval(progTimer); };
   }, []);
 
+  // Shake animation when progress hits cap
+  useEffect(() => {
+    if (progress < PROGRESS_CAP) return;
+    const id = setInterval(() => setShake(s => !s), 150);
+    return () => clearInterval(id);
+  }, [progress >= PROGRESS_CAP]);
+
   const barLen = 20;
   const filled = Math.round((progress / 100) * barLen);
   const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(barLen - filled);
+  const shakeStyle = progress >= PROGRESS_CAP
+    ? { display: 'inline-block', transform: shake ? 'translateX(1px)' : 'translateX(-1px)' }
+    : {};
 
   return (
     <div style={{
@@ -50,8 +66,8 @@ function LoadingLore() {
       {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
         <div key={i} style={{ color: line.color }}>&gt; {line.text}</div>
       ))}
-      <div style={{ marginTop: '8px', color: '#ffaa00' }}>
-        [{bar}] {Math.min(progress, 99)}%
+      <div style={{ marginTop: '8px', color: '#7a5c00' }}>
+        <span style={shakeStyle}>[<span style={{ color: '#8B0000' }}>{bar}</span>]</span> {progress}%
       </div>
     </div>
   );
