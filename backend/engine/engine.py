@@ -685,8 +685,9 @@ def process_dev(conn, dev: dict, context: dict) -> dict:
 
     # Budget cap: engine can only spend up to 40% of balance on auto-actions
     # This preserves ~60% for player-initiated spending (shop, training, raids)
+    # Exempt low-balance devs (<50 $NXT) so they can start creating early
     SPENDING_ACTIONS = {"CREATE_PROTOCOL", "CREATE_AI", "INVEST"}
-    if action in SPENDING_ACTIONS:
+    if action in SPENDING_ACTIONS and dev["balance_nxt"] >= 50:
         available_budget = int(dev["balance_nxt"] * 0.4)
         action_cost = {
             "CREATE_PROTOCOL": COST_CREATE_PROTOCOL_NXT,

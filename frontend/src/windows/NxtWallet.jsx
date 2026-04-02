@@ -3,6 +3,7 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { formatUnits } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { useDevs } from '../contexts/DevsContext';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
 
 const RARITY_COLORS = {
@@ -631,16 +632,10 @@ export default function NxtWallet() {
 
   const { address, isConnected, displayAddress } = useWallet();
   const wallet = isConnected ? address : null;
+  const { tokenIds: contextTokenIds } = useDevs();
 
-  // On-chain read: tokensOfOwner (for fallback summary when API has no players record)
-  const { data: tokenIds } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'tokensOfOwner',
-    args: wallet ? [wallet] : undefined,
-    chainId: MEGAETH_CHAIN_ID,
-    query: { enabled: !!wallet },
-  });
+  // Convert DevsContext tokenIds (numbers) to BigInt array for contract calls
+  const tokenIds = contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
 
   // ── REST API data ────────────────────────────────────────
   useEffect(() => {
