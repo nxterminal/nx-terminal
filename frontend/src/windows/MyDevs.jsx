@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useReadContract } from 'wagmi';
 import { useWallet } from '../hooks/useWallet';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
 import { api } from '../services/api';
+import { useDevs } from '../contexts/DevsContext';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
@@ -617,128 +616,9 @@ function ActivityTab({ walletAddress, devs }) {
 
 export default function MyDevs({ openDevProfile }) {
   const { address, isConnected, connect, displayAddress } = useWallet();
+  const { devs, loading, fetchError, refreshDevs, updateDev, tokenIds } = useDevs();
   const [tab, setTab] = useState('devs');
-  const [devs, setDevs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState(null);
   const [activityCount, setActivityCount] = useState(0);
-  const initialLoadDone = useRef(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const { data: ownedTokens, isLoading: tokensLoading } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'tokensOfOwner',
-    args: address ? [address] : undefined,
-    chainId: MEGAETH_CHAIN_ID,
-    query: { enabled: !!address, staleTime: 300_000 },
-  });
-
-  // ── Direct RPC fallback for tokensOfOwner if wagmi fails ──
-  const [rpcTokens, setRpcTokens] = useState(null);
-  useEffect(() => {
-    if (!address || ownedTokens != null) return;
-    if (tokensLoading) return;
-    let cancelled = false;
-
-    const tryRpc = async () => {
-      // tokensOfOwner(address) selector = 0x8462151c
-      const paddedAddr = address.slice(2).toLowerCase().padStart(64, '0');
-      const data = '0x8462151c' + paddedAddr;
-
-      // Try wallet provider first, then direct RPC
-      const providers = [];
-      if (window.ethereum) {
-        providers.push(async () => {
-          return await window.ethereum.request({
-            method: 'eth_call',
-            params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'],
-          });
-        });
-      }
-      providers.push(async () => {
-        const res = await fetch(MEGAETH_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'] }),
-        });
-        const json = await res.json();
-        if (json.error) throw new Error(json.error.message);
-        return json.result;
-      });
-
-      for (const call of providers) {
-        if (cancelled) return;
-        try {
-          const result = await call();
-          if (!result || result === '0x') continue;
-          // Decode ABI-encoded uint256[] — offset(32) + length(32) + items(32 each)
-          const hex = result.slice(2); // strip 0x
-          if (hex.length < 128) continue; // at least offset + length
-          const length = parseInt(hex.slice(64, 128), 16);
-          const ids = [];
-          for (let i = 0; i < length; i++) {
-            ids.push(parseInt(hex.slice(128 + i * 64, 128 + (i + 1) * 64), 16));
-          }
-          if (!cancelled) setRpcTokens(ids.map(BigInt));
-          return;
-        } catch { /* try next */ }
-      }
-    };
-
-    const timer = setTimeout(tryRpc, 1000);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [address, ownedTokens, tokensLoading]);
-
-  // Memoize by value (stringified IDs) to prevent re-render loops
-  const tokenKey = useMemo(() => {
-    const tokens = ownedTokens ?? rpcTokens;
-    return tokens ? tokens.map(String).join(',') : '';
-  }, [ownedTokens, rpcTokens]);
-
-  const tokenIds = useMemo(() => {
-    if (!tokenKey) return [];
-    return tokenKey.split(',').map(Number);
-  }, [tokenKey]);
-
-  useEffect(() => {
-    if (tokenIds.length === 0) {
-      setDevs([]);
-      setLoading(false);
-      return;
-    }
-
-    // Only show loading spinner on initial load or manual refresh
-    if (!initialLoadDone.current) {
-      setLoading(true);
-    }
-    setFetchError(null);
-
-    // Fetch with retry: if first attempt fails, wait 2s and try once more
-    // Pass owner address so backend can skip ownerOf RPC check
-    const fetchWithRetry = (id) =>
-      api.getDev(id, address).catch(() =>
-        new Promise(resolve => setTimeout(resolve, 2000))
-          .then(() => api.getDev(id, address))
-          .catch((err) => {
-            console.warn(`[MyDevs] Failed to fetch dev #${id}:`, err.message);
-            return {
-              token_id: id,
-              name: `Dev #${id}`,
-              archetype: 'UNKNOWN',
-              _fetchFailed: true,
-            };
-          })
-      );
-
-    Promise.all(tokenIds.map(fetchWithRetry))
-      .then(results => {
-        setDevs(results);
-        initialLoadDone.current = true;
-      })
-      .catch(() => setFetchError('Failed to load developer data'))
-      .finally(() => setLoading(false));
-  }, [tokenKey, refreshKey, address]);
 
   // Fetch activity count for badge
   useEffect(() => {
@@ -752,8 +632,7 @@ export default function MyDevs({ openDevProfile }) {
       .catch(() => {});
   }, [address]);
 
-  // Only show loading if we haven't loaded yet or manual refresh triggered
-  const isLoadingAny = loading || (tokensLoading && !initialLoadDone.current);
+  const isLoadingAny = loading;
 
   const headerStyle = {
     padding: '6px 8px',
@@ -790,7 +669,7 @@ export default function MyDevs({ openDevProfile }) {
     );
   }
 
-  if (initialLoadDone.current && devs.length === 0 && !fetchError) {
+  if (!loading && devs.length === 0 && !fetchError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
@@ -818,14 +697,14 @@ export default function MyDevs({ openDevProfile }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
         <span>
-          {'>'} MY DEVELOPERS ({isLoadingAny && !initialLoadDone.current ? '...' : devs.length})
+          {'>'} MY DEVELOPERS ({isLoadingAny && devs.length === 0 ? '...' : devs.length})
           {' '}
           <button
             className="win-btn"
-            onClick={() => { setRefreshKey(k => k + 1); }}
+            onClick={() => { refreshDevs(); }}
             style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px', cursor: 'pointer' }}
           >
-            {loading && initialLoadDone.current ? '...' : '\u21bb'} Refresh
+            {loading && devs.length > 0 ? '...' : '\u21bb'} Refresh
           </button>
         </span>
         <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
@@ -857,7 +736,7 @@ export default function MyDevs({ openDevProfile }) {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {tab === 'devs' && (
           <div style={{ height: '100%', overflow: 'auto', padding: '4px', position: 'relative' }}>
-            {isLoadingAny && !initialLoadDone.current ? (
+            {isLoadingAny && devs.length === 0 ? (
               <LoadingLore />
             ) : (
               devs.map((dev) => (
@@ -869,17 +748,17 @@ export default function MyDevs({ openDevProfile }) {
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
-                        setDevs(prev => prev.map(d => d.token_id === id ? fresh : d));
+                        updateDev(fresh);
                       }
                     }).catch(() => {});
                   }}
                   onDevUpdate={(fresh) => {
-                    setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
+                    updateDev(fresh);
                   }}
                 />
               ))
             )}
-            {loading && initialLoadDone.current && (
+            {loading && devs.length > 0 && (
               <div style={{
                 position: 'absolute', top: '4px', right: '8px',
                 background: 'var(--terminal-bg, #111)', border: '1px solid var(--border-dark, #444)',
