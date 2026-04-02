@@ -26,6 +26,7 @@ export function DevsProvider({ children }) {
   const [devs, setDevs] = useState([]);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [rpcPending, setRpcPending] = useState(false);
   const initialLoadDone = useRef(false);
   const lastFetched = useRef(0);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -43,8 +44,14 @@ export function DevsProvider({ children }) {
   // ── Fallback: direct RPC if wagmi fails ──
   const [rpcTokens, setRpcTokens] = useState(null);
   useEffect(() => {
-    if (!address || ownedTokens != null) return;
+    if (!address || ownedTokens != null) {
+      setRpcPending(false);
+      return;
+    }
     if (tokensLoading) return;
+
+    // wagmi finished but returned nothing — RPC fallback needed
+    setRpcPending(true);
     let cancelled = false;
 
     const tryRpc = async () => {
@@ -83,14 +90,19 @@ export function DevsProvider({ children }) {
           for (let i = 0; i < length; i++) {
             ids.push(parseInt(hex.slice(128 + i * 64, 128 + (i + 1) * 64), 16));
           }
-          if (!cancelled) setRpcTokens(ids.map(BigInt));
+          if (!cancelled) {
+            setRpcTokens(ids.map(BigInt));
+            setRpcPending(false);
+          }
           return;
         } catch { /* try next */ }
       }
+      // All providers failed
+      if (!cancelled) setRpcPending(false);
     };
 
     const timer = setTimeout(tryRpc, 1000);
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => { cancelled = true; clearTimeout(timer); setRpcPending(false); };
   }, [address, ownedTokens, tokensLoading]);
 
   // ── Memoize token IDs ──
@@ -109,7 +121,6 @@ export function DevsProvider({ children }) {
     if (tokenIds.length === 0) {
       setDevs([]);
       setFetching(false);
-      initialLoadDone.current = true;
       return;
     }
 
@@ -156,6 +167,7 @@ export function DevsProvider({ children }) {
       initialLoadDone.current = false;
       lastFetched.current = 0;
       setRpcTokens(null);
+      setRpcPending(false);
     }
   }, [isConnected]);
 
@@ -168,9 +180,8 @@ export function DevsProvider({ children }) {
     setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
   }, []);
 
-  // loading = true when wallet is connected AND initial load hasn't completed yet
-  // This includes: wagmi fetching tokensOfOwner, RPC fallback, and API dev fetches
-  const loading = isConnected && !initialLoadDone.current && (tokensLoading || fetching || devs.length === 0);
+  // loading = true during any phase of the token→dev fetch pipeline
+  const loading = isConnected && (tokensLoading || rpcPending || fetching);
 
   const value = useMemo(() => ({
     devs,

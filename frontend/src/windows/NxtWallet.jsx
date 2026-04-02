@@ -649,9 +649,9 @@ export default function NxtWallet() {
       return;
     }
 
-    setLoadingSummary(true);
-    setLoadingHistory(true);
-    setLoadingMovements(true);
+    if (!summary) setLoadingSummary(true);
+    if (history.length === 0) setLoadingHistory(true);
+    if (movements.length === 0) setLoadingMovements(true);
 
     api.getWalletSummary(wallet)
       .then(data => {
