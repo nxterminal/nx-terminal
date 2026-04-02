@@ -25,7 +25,6 @@ import DevAcademy from './programs/dev-academy/DevAcademy';
 import MonadBuild from './programs/monad-build/MonadBuild';
 import NetWatch from './programs/netwatch/NetWatch';
 import PharosSDK from './programs/pharos-sdk/PharosSDK';
-import Phares from './programs/phares/Phares';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -53,7 +52,6 @@ const WINDOW_COMPONENTS = {
   'monad-build': MonadBuild,
   'netwatch': NetWatch,
   'pharos-sdk': PharosSDK,
-  'phares': Phares,
 };
 
 export default function WindowManager({
