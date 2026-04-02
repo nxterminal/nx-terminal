@@ -170,6 +170,20 @@ def apply_context_modifiers(weights: dict, dev: dict, context: dict) -> dict:
         if action in w:
             w[action] *= mult
 
+    # --- PC health penalty: low health reduces productive actions ---
+    pc_health = dev.get("pc_health", 100)
+    if pc_health < 50:
+        penalty = pc_health / 100.0  # 0.0 at 0 health, 0.49 at 49
+        w["CREATE_PROTOCOL"] *= penalty
+        w["CREATE_AI"] *= penalty
+        w["CODE_REVIEW"] *= penalty
+
+    # --- Training: dev is studying, reduces costly actions ---
+    if dev.get("training_course"):
+        w["CREATE_PROTOCOL"] *= 0.3
+        w["CREATE_AI"] *= 0.3
+        w["INVEST"] *= 0.3
+
     # --- Personality seed variation (±15%) ---
     seed = dev.get("personality_seed", 0)
     rng = random.Random(seed)
@@ -501,6 +515,25 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
               dev["location"] if result["chat_channel"] == "location" else None,
               result["chat_msg"]))
 
+    # --- Random bug generation (5% chance per action) ---
+    if random.random() < 0.05:
+        sev_roll = random.random()
+        if sev_roll < 0.70:
+            severity, fix_cost = "warning", 3
+        elif sev_roll < 0.95:
+            severity, fix_cost = "error", 8
+        else:
+            severity, fix_cost = "bsod", 20
+        bug_expires = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        cur.execute("""
+            INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+            VALUES (%s, %s, %s, 'GET_SABOTAGED', %s::jsonb, 0, 0)
+        """, (dev["token_id"], dev["name"], dev["archetype"],
+              json.dumps({"event": "bug_detected", "severity": severity,
+                          "fix_cost": fix_cost, "expires_at": bug_expires,
+                          "message": f"BUG DETECTED ({severity.upper()}) in {dev['name']}'s workstation"})))
+        cur.execute("UPDATE devs SET bugs_shipped = bugs_shipped + 1 WHERE token_id = %s", (dev["token_id"],))
+
     # --- Update last action + scheduling ---
     interval = calc_next_interval(dev, context)
     now = datetime.now(timezone.utc)
@@ -640,6 +673,20 @@ def process_dev(conn, dev: dict, context: dict) -> dict:
         context = apply_prompt_modifiers(context, prompt_result)
 
     action = decide_action(dev, context)
+
+    # Budget cap: engine can only spend up to 40% of balance on auto-actions
+    # This preserves ~60% for player-initiated spending (shop, training, raids)
+    SPENDING_ACTIONS = {"CREATE_PROTOCOL", "CREATE_AI", "INVEST"}
+    if action in SPENDING_ACTIONS:
+        available_budget = int(dev["balance_nxt"] * 0.4)
+        action_cost = {
+            "CREATE_PROTOCOL": COST_CREATE_PROTOCOL_NXT,
+            "CREATE_AI": COST_CREATE_AI_NXT,
+            "INVEST": max(2, min(500, dev["balance_nxt"] // 5)),
+        }.get(action, 0)
+        if action_cost > available_budget:
+            action = "REST"
+
     result = execute_action(conn, dev, action, context)
 
     # Attach prompt info to result for logging
@@ -771,8 +818,13 @@ def pay_salaries(conn):
         WHERE status = 'active'
     """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
 
+    # Degrade PC health: -2 per hour for all active devs (min 0)
+    cur.execute("""
+        UPDATE devs SET pc_health = GREATEST(0, pc_health - 2) WHERE status = 'active'
+    """)
+
     conn.commit()
-    log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen")
+    log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen + PC wear")
     return count
 
 
