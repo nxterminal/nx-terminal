@@ -6,8 +6,8 @@ so players can claim on-chain via claimNXT(tokenIds[]).
 
 FLOW:
   1. Query all active devs with unclaimed salary (balance_nxt > 0, not yet synced)
-  2. For each dev: convert balance_nxt to wei (no fee inflation — v8 has no claim fee)
-  3. Call batchSetClaimable(tokenIds[], amounts[]) on the NXDevNFT contract
+  2. For each dev: convert balance_nxt to wei (contract takes 10% fee at claim time)
+  3. Call batchSetClaimableBalance(tokenIds[], amounts[]) on the NXDevNFT contract
      IN BATCHES of BATCH_SIZE to avoid gas limits
   4. Mark synced devs in DB so they aren't double-synced
 
@@ -50,10 +50,10 @@ SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() != "false"
 BATCH_SIZE = int(os.getenv("CLAIM_SYNC_BATCH_SIZE", "200"))
 
-# -- ABI fragment for batchSetClaimable --------------------------------
+# -- ABI fragment for batchSetClaimableBalance --------------------------------
 BATCH_SET_CLAIMABLE_ABI = [
     {
-        "name": "batchSetClaimable",
+        "name": "batchSetClaimableBalance",
         "type": "function",
         "stateMutability": "nonpayable",
         "inputs": [
@@ -96,10 +96,11 @@ def get_pending_claims(db_conn):
 
 def build_sync_batch(pending_devs):
     """
-    Build arrays of (tokenIds, amounts_wei) for batchSetClaimable.
+    Build arrays of (tokenIds, amounts_wei) for batchSetClaimableBalance.
 
-    NXDevNFT v8 has no claim fee — the amount set on-chain is exactly
-    what the player receives. No gross/net inflation needed.
+    Note: The contract charges a 10% claim fee (CLAIM_FEE_BPS=1000) when
+    the player calls claimNXT(). The amount set here is the gross amount;
+    the player receives 90% of it after the fee.
     """
     token_ids = []
     amounts_wei = []
@@ -109,7 +110,7 @@ def build_sync_batch(pending_devs):
         if balance_nxt <= 0:
             continue
 
-        # Convert token units to wei (18 decimals) — 1:1, no fee adjustment
+        # Convert token units to wei (18 decimals) — gross amount (10% fee deducted at claim time)
         amount_wei = balance_nxt * (10 ** 18)
 
         token_ids.append(dev["token_id"])
@@ -138,11 +139,11 @@ def _mark_synced(db_conn, synced_token_ids):
 
 
 def _send_batch(w3, contract, account, batch_ids, batch_amounts, nonce):
-    """Send a single batchSetClaimable TX and wait for confirmation.
+    """Send a single batchSetClaimableBalance TX and wait for confirmation.
 
     Returns (success: bool, new_nonce: int).
     """
-    tx = contract.functions.batchSetClaimable(
+    tx = contract.functions.batchSetClaimableBalance(
         batch_ids, batch_amounts
     ).build_transaction({
         "from": account.address,

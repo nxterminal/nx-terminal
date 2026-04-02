@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Win98Icon } from './Win98Icons';
+import { useDevCount } from '../hooks/useDevCount';
+import { PROGRAM_MIN_DEVS } from '../config/tiers';
 
 const PROGRAMS = [
   { id: 'live-feed', label: 'Live Feed' },
@@ -24,6 +26,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
   const [showGames, setShowGames] = useState(false);
   const [shutdownMsg, setShutdownMsg] = useState(false);
   const menuRef = useRef(null);
+  const { devCount } = useDevCount();
 
   useEffect(() => {
     if (!open) {
@@ -85,16 +88,24 @@ export default function StartMenu({ open, onClose, openWindow }) {
 
               {showPrograms && (
                 <div className="start-submenu" onMouseLeave={() => setShowPrograms(false)}>
-                  {PROGRAMS.map(prog => (
-                    <div
-                      key={prog.id}
-                      className="start-menu-item"
-                      onClick={() => handleItemClick(prog.id)}
-                    >
-                      <span className="start-menu-item-icon"><Win98Icon id={prog.id} size={16} /></span>
-                      <span className="start-menu-item-label">{prog.label}</span>
-                    </div>
-                  ))}
+                  {PROGRAMS.map(prog => {
+                    const minDevs = PROGRAM_MIN_DEVS[prog.id] || 0;
+                    const isLocked = devCount < minDevs;
+                    return (
+                      <div
+                        key={prog.id}
+                        className="start-menu-item"
+                        onClick={() => handleItemClick(prog.id)}
+                        style={isLocked ? { opacity: 0.6 } : undefined}
+                        title={isLocked ? `Requires ${minDevs} devs` : undefined}
+                      >
+                        <span className="start-menu-item-icon"><Win98Icon id={prog.id} size={16} /></span>
+                        <span className="start-menu-item-label">
+                          {prog.label}{isLocked ? ' \u{1F512}' : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

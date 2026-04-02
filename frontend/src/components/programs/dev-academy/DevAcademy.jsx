@@ -35,7 +35,6 @@ export default function DevAcademy() {
   const { progress, xp, completeLesson } = useProgress(wallet, dev?.devId);
 
   const handleVerified = d => { setDev(d); setScreen("paths"); };
-  const handleSkip = () => { setDev({ devId: 0, species: "Demo", demo: true }); setScreen("paths"); };
   const handleSelectPath = id => { setSelectedPath(id === "general" ? GENERAL_PATH : MEGAETH_PATH); setScreen("modules"); };
   const handleStartLesson = (mod, lesson) => { setCurrentModule(mod); setCurrentLesson(lesson); setScreen("lesson"); };
 
@@ -98,7 +97,7 @@ export default function DevAcademy() {
           <span style={{ color: "#eab308", fontSize: 13, fontWeight: 600 }}>{xp} XP</span>
           <span style={{ color: "#64748b", fontSize: 12 }}>{Object.values(progress).filter(Boolean).length} lessons</span>
           <span style={{ background: "#1e293b", borderRadius: 6, padding: "3px 9px", color: "#94a3b8", fontSize: 12 }}>
-            {dev.demo ? "Demo" : `#${dev.devId}`}
+            #{dev.devId}
           </span>
           {screen !== "paths" && screen !== "celebration" && (
             <button onClick={() => screen === "lesson" ? setScreen("modules") : setScreen("paths")}
@@ -109,7 +108,7 @@ export default function DevAcademy() {
         </nav>
       )}
 
-      {screen === "gate" && <NFTGate onVerified={handleVerified} onSkip={handleSkip} />}
+      {screen === "gate" && <NFTGate onVerified={handleVerified} />}
       {screen === "paths" && <PathSelect dev={dev} onSelect={handleSelectPath} progress={progress} />}
       {screen === "modules" && selectedPath && <ModuleView pathData={selectedPath} progress={progress} xp={xp} onStartLesson={handleStartLesson} onBack={() => setScreen("paths")} />}
       {screen === "lesson" && renderLesson()}

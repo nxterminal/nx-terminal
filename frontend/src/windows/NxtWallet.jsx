@@ -54,7 +54,7 @@ function formatTimestamp(ts) {
 }
 
 // ── Claim Section (On-Chain) ─────────────────────────────
-function ClaimSection({ wallet, tokenIds }) {
+function ClaimSection({ wallet, tokenIds, gameBalance }) {
   const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
 
   // Read claimEnabled
@@ -66,7 +66,7 @@ function ClaimSection({ wallet, tokenIds }) {
     query: { enabled: !!wallet },
   });
 
-  // Read previewClaim to get total claimable amount (v8: no fee)
+  // Read previewClaim to get gross, fee, net amounts
   const { data: preview, refetch: refetchPreview } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
@@ -91,10 +91,14 @@ function ClaimSection({ wallet, tokenIds }) {
     }
   }, [isConfirmed, refetchPreview]);
 
-  // v8: previewClaim returns single total (no fee deduction)
-  const totalWei = preview != null ? BigInt(preview) : BigInt(0);
-  const claimDisplay = formatNxt(totalWei);
-  const hasClaimable = totalWei > BigInt(0);
+  // previewClaim returns [gross, fee, net] — contract charges 10% fee
+  const grossWei = preview ? BigInt(preview[0]) : BigInt(0);
+  const feeWei = preview ? BigInt(preview[1]) : BigInt(0);
+  const netWei = preview ? BigInt(preview[2]) : BigInt(0);
+  const grossDisplay = formatNxt(grossWei);
+  const feeDisplay = formatNxt(feeWei);
+  const netDisplay = formatNxt(netWei);
+  const hasClaimable = grossWei > BigInt(0);
 
   const handleClaim = () => {
     resetTx();
@@ -135,7 +139,12 @@ function ClaimSection({ wallet, tokenIds }) {
           fontFamily: "'VT323', monospace", fontSize: '13px',
           color: '#888', padding: '4px 0',
         }}>
-          No $NXT to claim yet. Your devs earn 200 $NXT/day.
+          No $NXT to claim yet.
+          {gameBalance > 0 && (
+            <div style={{ color: 'var(--terminal-amber)', marginTop: '2px', fontSize: '12px' }}>
+              Your devs have {formatNumber(gameBalance)} $NXT in-game. It will be synced to blockchain soon.
+            </div>
+          )}
         </div>
       )}
 
@@ -150,10 +159,17 @@ function ClaimSection({ wallet, tokenIds }) {
 
       {hasClaimable && (
         <div style={{
-          fontFamily: "'VT323', monospace", fontSize: '16px',
-          color: 'var(--gold)', padding: '4px 0',
+          fontFamily: "'VT323', monospace", padding: '4px 0',
         }}>
-          Claimable: {claimDisplay} $NXT
+          <div style={{ fontSize: '16px', color: 'var(--gold)' }}>
+            Claimable: {grossDisplay} $NXT
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--terminal-red, #ff4444)', marginTop: '2px' }}>
+            Claim fee: -{feeDisplay} $NXT (10%)
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--terminal-green)', fontWeight: 'bold', marginTop: '2px' }}>
+            You receive: {netDisplay} $NXT
+          </div>
         </div>
       )}
 
@@ -169,7 +185,7 @@ function ClaimSection({ wallet, tokenIds }) {
             color: claimDisabled ? undefined : 'var(--win-text)',
           }}
         >
-          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? claimDisplay : '0'} $NXT`}
+          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? netDisplay : '0'} $NXT`}
         </button>
 
         {/* TX status */}
@@ -189,7 +205,7 @@ function ClaimSection({ wallet, tokenIds }) {
 
         {isConfirmed && (
           <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-green)' }}>
-            Successfully claimed {claimDisplay} $NXT!{' '}
+            Successfully claimed {netDisplay} $NXT!{' '}
             <a
               href={`${EXPLORER_BASE}/tx/${txHash}`}
               target="_blank"
@@ -288,7 +304,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         fontFamily: "'VT323', monospace", fontSize: '11px',
         color: 'var(--text-muted, #888)',
       }}>
-        Balance: available funds | Spent: protocols + AIs + investments | Earned: salaries + sells + returns
+        This is what your devs have earned in-game. Syncs to blockchain periodically.
       </div>
 
       {/* Per-dev breakdown */}
@@ -327,7 +343,7 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
       <BalanceBarChart history={history} summary={summary} />
 
       {/* ── Section 2: Claim $NXT (On-Chain) ── */}
-      <ClaimSection wallet={wallet} tokenIds={tokenIds} />
+      <ClaimSection wallet={wallet} tokenIds={tokenIds} gameBalance={summary.balance_claimable} />
     </div>
   );
 }
