@@ -4,11 +4,11 @@ const TABS = ['About', 'Beta Info', 'Legend'];
 
 const TAB_CONTENT = {
   'About': `${'═'.repeat(45)}
-NETWATCH.exe \u2014 Protocol Surveillance Terminal
+MEGAWATCH.exe \u2014 Protocol Surveillance Terminal
 Version 1.0 BETA
 ${'═'.repeat(45)}
 
-NETWATCH is a real-time network monitor for
+MEGAWATCH is a real-time network monitor for
 MegaETH blockchain, built as part of the
 NX Terminal: Protocol Wars ecosystem.
 
@@ -19,7 +19,7 @@ ${'═'.repeat(45)}
 HOW IT WORKS
 ${'═'.repeat(45)}
 
-NETWATCH connects directly to MegaETH via JSON-RPC and polls for new data every
+MEGAWATCH connects directly to MegaETH via JSON-RPC and polls for new data every
 3 seconds. All data is fetched client-side \u2014 no
 backend server required.
 
@@ -68,7 +68,7 @@ ${'═'.repeat(45)}
 FULL VERSION \u2014 FOR NX TERMINAL HOLDERS
 ${'═'.repeat(45)}
 
-The full version of NETWATCH will be available
+The full version of MEGAWATCH will be available
 exclusively for NX Terminal NFT holders after
 mainnet mint:
 
@@ -199,7 +199,7 @@ export default function HelpDialog({ onClose }) {
           flexShrink: 0,
         }}>
           <span style={{ color: '#fff', fontSize: '12px', fontFamily: 'Tahoma, sans-serif', fontWeight: 'bold' }}>
-            NETWATCH Help
+            MEGAWATCH Help
           </span>
           <button
             onClick={onClose}

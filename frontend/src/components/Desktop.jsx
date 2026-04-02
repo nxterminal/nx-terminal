@@ -30,7 +30,7 @@ const DESKTOP_ICONS = [
   { id: 'monad-city', icon: '', label: 'Mega City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
-  { id: 'netwatch', icon: '', label: 'Netwatch' },
+  { id: 'netwatch', icon: '', label: 'MegaWatch' },
   { id: 'pharos-sdk', icon: '', label: 'Mega SDK' },
 ];
 
