@@ -12,6 +12,12 @@ const ARCHETYPE_COLORS = {
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
+const SHOP_ITEMS_MAP = {
+  train_hacking: 'Intro to Hacking',
+  train_coding: 'Optimization Workshop',
+  train_trading: 'Advanced AI Trading',
+};
+
 const BOOT_LINES = [
   { text: 'NX TERMINAL — Developer Retrieval System v4.2', color: '#8B0000', delay: 0 },
   { text: 'Establishing secure connection to MegaETH...', color: '#333', delay: 300 },
@@ -217,12 +223,70 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
   const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
+  const [actionMsg, setActionMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const doShopAction = async (e, itemId, label) => {
+    e.stopPropagation();
+    if (busy || !address) return;
+    setBusy(true);
+    try {
+      const res = await api.buyItem(address, itemId, dev.token_id);
+      setActionMsg({ text: `${label} applied!`, color: '#005500' });
+      // Refresh dev data
+      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+      if (fresh && onDevUpdate) onDevUpdate(fresh);
+    } catch (err) {
+      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+    }
+    setBusy(false);
+    setTimeout(() => setActionMsg(null), 2500);
+  };
+
+  const doHack = async (e) => {
+    e.stopPropagation();
+    if (busy || !address) return;
+    setBusy(true);
+    try {
+      const res = await api.hack(address, dev.token_id);
+      if (res.success) {
+        setActionMsg({ text: `HACK SUCCESS: Stole ${res.stolen} $NXT from ${res.target}`, color: '#005500' });
+      } else {
+        setActionMsg({ text: `HACK FAILED: ${res.target}'s firewall blocked you`, color: '#aa0000' });
+      }
+      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+      if (fresh && onDevUpdate) onDevUpdate(fresh);
+    } catch (err) {
+      setActionMsg({ text: err.message?.includes('cooldown') ? 'Cooldown active' : err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+    }
+    setBusy(false);
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
+  const doGraduate = async (e) => {
+    e.stopPropagation();
+    if (busy || !address) return;
+    setBusy(true);
+    try {
+      const res = await api.graduate(address, dev.token_id);
+      setActionMsg({ text: `Graduated! ${res.stat} +${res.bonus}`, color: '#005500' });
+      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+      if (fresh && onDevUpdate) onDevUpdate(fresh);
+    } catch (err) {
+      setActionMsg({ text: 'Not ready yet', color: '#7a5c00' });
+    }
+    setBusy(false);
+    setTimeout(() => setActionMsg(null), 3000);
+  };
+
+  const pcHealth = dev.pc_health ?? 100;
+  const pcColor = pcHealth > 70 ? '#005500' : pcHealth > 30 ? '#7a5c00' : '#aa0000';
 
   return (
     <div
@@ -307,14 +371,60 @@ function DevCard({ dev, onClick, address, onRetry }) {
           </span>
         </div>
 
-        {/* Row 5: Counters */}
+        {/* Row 5: PC Health + Food + Actions */}
+        {address && !dev._fetchFailed && (
+          <div style={{ display: 'flex', gap: '6px', fontSize: '9px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* PC Health */}
+            <span style={{ color: pcColor, fontWeight: 'bold' }}>PC:{pcHealth}%</span>
+            {pcHealth < 50 && (
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
+                style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🔧{busy ? '..' : '10'}</button>
+            )}
+            {/* Food buttons (show when energy < 70%) */}
+            {energyPct < 70 && (
+              <>
+                <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
+                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>☕5</button>
+                <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
+                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🍕25</button>
+                <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
+                  style={{ fontSize: '8px', padding: '0 3px' }} disabled={busy}>🍔50</button>
+              </>
+            )}
+            {/* Hack button */}
+            <button className="win-btn" onClick={doHack}
+              style={{ fontSize: '8px', padding: '0 3px', marginLeft: 'auto' }} disabled={busy}>⚡Hack 15</button>
+          </div>
+        )}
+
+        {/* Row 5b: Training status */}
+        {dev.training_course && (
+          <div style={{ fontSize: '9px', color: '#7a5c00', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            📚 Training: {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
+            {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
+              <button className="win-btn" onClick={doGraduate}
+                style={{ fontSize: '8px', padding: '0 4px' }} disabled={busy}>🎓 Graduate</button>
+            ) : dev.training_ends_at ? (
+              <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
+            ) : null}
+          </div>
+        )}
+
+        {/* Action feedback */}
+        {actionMsg && (
+          <div style={{ fontSize: '9px', color: actionMsg.color, fontWeight: 'bold', marginTop: '1px' }}>
+            {actionMsg.text}
+          </div>
+        )}
+
+        {/* Row 6: Counters */}
         <div style={{
           display: 'flex', gap: '8px', fontSize: '9px', marginTop: '1px',
           color: 'var(--text-muted, #888)',
         }}>
-          {dev.coffee_count > 0 && <span>coffee:{dev.coffee_count}</span>}
+          {dev.coffee_count > 0 && <span>☕{dev.coffee_count}</span>}
           {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
-          {dev.bugs_shipped > 0 && <span>bugs:{dev.bugs_shipped}</span>}
+          {dev.bugs_shipped > 0 && <span>🐛{dev.bugs_shipped}</span>}
           {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
           {dev.last_action_type && (
             <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
@@ -323,7 +433,7 @@ function DevCard({ dev, onClick, address, onRetry }) {
           )}
         </div>
 
-        {/* Row 6: Quick prompt input */}
+        {/* Row 7: Quick prompt input */}
         {address && (
           <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
         )}
@@ -744,6 +854,9 @@ export default function MyDevs({ openDevProfile }) {
                         setDevs(prev => prev.map(d => d.token_id === id ? fresh : d));
                       }
                     }).catch(() => {});
+                  }}
+                  onDevUpdate={(fresh) => {
+                    setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
                   }}
                 />
               ))

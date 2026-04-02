@@ -50,6 +50,24 @@ export const api = {
 
   // Shop
   getShop: () => fetchJSON(`${API_BASE}/api/shop`),
+  buyItem: (player_address, item_id, target_dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/buy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, item_id, target_dev_id }),
+    }),
+  graduate: (player_address, dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/graduate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, dev_id }),
+    }),
+  hack: (player_address, attacker_dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/hack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, attacker_dev_id }),
+    }),
 
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),
