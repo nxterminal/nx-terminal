@@ -22,39 +22,31 @@ const BOOT_LINES = [
   { text: 'Loading dev workstations...', color: '#333', delay: 2100 },
 ];
 
-const PROGRESS_CAP = 65;
-
 function LoadingLore() {
   const [visibleLines, setVisibleLines] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [shake, setShake] = useState(false);
 
   useEffect(() => {
     const timers = BOOT_LINES.map((line, i) =>
       setTimeout(() => setVisibleLines(i + 1), line.delay)
     );
+    // Asymptotic progress: fast at start, progressively slower, never stops
     const progTimer = setInterval(() => {
       setProgress(p => {
-        if (p >= PROGRESS_CAP) return PROGRESS_CAP;
-        return p + 2;
+        if (p < 60) return p + 2;
+        if (p < 85) return p + 1;
+        if (p < 95) return p + 0.5;
+        if (p < 99) return p + 0.2;
+        return p; // stays at 99.x — component unmounts when loading finishes
       });
     }, 120);
     return () => { timers.forEach(clearTimeout); clearInterval(progTimer); };
   }, []);
 
-  // Shake animation when progress hits cap
-  useEffect(() => {
-    if (progress < PROGRESS_CAP) return;
-    const id = setInterval(() => setShake(s => !s), 150);
-    return () => clearInterval(id);
-  }, [progress >= PROGRESS_CAP]);
-
   const barLen = 20;
+  const displayPct = Math.floor(progress);
   const filled = Math.round((progress / 100) * barLen);
   const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(barLen - filled);
-  const shakeStyle = progress >= PROGRESS_CAP
-    ? { display: 'inline-block', transform: shake ? 'translateX(1px)' : 'translateX(-1px)' }
-    : {};
 
   return (
     <div style={{
@@ -67,7 +59,7 @@ function LoadingLore() {
         <div key={i} style={{ color: line.color }}>&gt; {line.text}</div>
       ))}
       <div style={{ marginTop: '8px', color: '#7a5c00' }}>
-        <span style={shakeStyle}>[<span style={{ color: '#8B0000' }}>{bar}</span>]</span> {progress}%
+        [<span style={{ color: '#8B0000' }}>{bar}</span>] {displayPct}%
       </div>
     </div>
   );
@@ -670,7 +662,7 @@ export default function MyDevs({ openDevProfile }) {
     );
   }
 
-  if (!isLoadingAny && devs.length === 0 && !fetchError) {
+  if (initialLoadDone.current && devs.length === 0 && !fetchError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ ...headerStyle, color: 'var(--terminal-green)' }}>
