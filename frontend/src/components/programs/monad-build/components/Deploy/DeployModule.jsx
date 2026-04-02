@@ -1,10 +1,6 @@
 import { Code2, ArrowRight } from 'lucide-react';
 import { useBuild } from '../../BuildContext';
 import CompileStep from './CompileStep';
-import DeployForm from './DeployForm';
-import DeployStatus from './DeployStatus';
-import DeploySuccess from './DeploySuccess';
-import VerifyContract from './VerifyContract';
 import Button from '../shared/Button';
 
 export default function DeployModule() {
@@ -26,46 +22,9 @@ export default function DeployModule() {
     );
   }
 
-  // Deployed successfully
-  if (state.deployStatus === 'confirmed' && state.deployedAddress) {
-    return (
-      <div className="mb-animate-in">
-        <DeploySuccess />
-        <div className="mb-divider" />
-        <VerifyContract />
-      </div>
-    );
-  }
-
-  // Deploying in progress
-  if (state.deployStatus !== 'idle' && state.deployStatus !== 'error') {
-    return (
-      <div className="mb-animate-in">
-        <DeployStatus />
-      </div>
-    );
-  }
-
-  function handleDeploy() {
-    // Simulate deployment phases since we use the simplified approach
-    // In production, this would use wagmi's useWriteContract
-    dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'compiling' });
-
-    setTimeout(() => {
-      dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'signing' });
-    }, 1000);
-
-    setTimeout(() => {
-      dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'pending' });
-      dispatch({ type: 'SET_DEPLOYED', payload: { address: null, txHash: '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('') } });
-    }, 3000);
-
-    setTimeout(() => {
-      const fakeAddress = '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-      dispatch({ type: 'SET_DEPLOYED', payload: { address: fakeAddress, txHash: state.txHash } });
-      dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'confirmed' });
-    }, 4000);
-  }
+  const copyCode = () => {
+    navigator.clipboard.writeText(state.generatedCode).catch(() => {});
+  };
 
   return (
     <div className="mb-animate-in">
@@ -101,15 +60,26 @@ export default function DeployModule() {
         <CompileStep code={state.generatedCode} />
       </div>
 
-      {/* Deploy Form */}
+      {/* Deploy Instructions */}
       <div className="mb-divider" />
-      <DeployForm onDeploy={handleDeploy} />
-
-      {state.deployStatus === 'error' && (
-        <div className="mb-callout mb-callout-error mb-mt-md">
-          Deployment failed. Check your wallet connection and try again.
+      <div className="mb-card mb-mb-md" style={{ lineHeight: 1.8 }}>
+        <h3 className="mb-h3" style={{ marginBottom: 12 }}>Deploy on MegaETH</h3>
+        <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13 }}>
+          <li>Copy the contract code using the button below</li>
+          <li>Open <strong>remix.ethereum.org</strong> and paste it in a new file</li>
+          <li>Compile with <strong>Solidity 0.8.20</strong>, EVM version: <strong>prague</strong></li>
+          <li>Connect MetaMask to MegaETH (Chain ID <strong>4326</strong>, RPC: <code style={{ background: 'var(--mb-bg-tertiary, #1a1a2e)', padding: '1px 4px', borderRadius: 3 }}>https://carrot.megaeth.com/rpc</code>)</li>
+          <li>Deploy with gas limit: <strong>8,000,000</strong></li>
+        </ol>
+        <div className="mb-flex mb-mt-md" style={{ gap: 8 }}>
+          <Button onClick={copyCode}>
+            Copy Code
+          </Button>
+          <Button variant="ghost" onClick={() => window.open('https://remix.ethereum.org', '_blank')}>
+            Open Remix <ArrowRight size={14} />
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

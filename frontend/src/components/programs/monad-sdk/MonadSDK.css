@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   PHAROS_SDK — WIN98 WIZARD THEME (Purple/Green Pharos palette)
+   MEGA_SDK — WIN98 WIZARD THEME (Purple/Green MegaETH palette)
    All classes prefixed with ms-
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -73,7 +73,7 @@
   min-height: 0;
 }
 
-/* ═══ SIDEBAR (Purple gradient for Pharos) ═══ */
+/* ═══ SIDEBAR (Purple gradient for MegaETH) ═══ */
 .ms-sidebar {
   width: 170px;
   flex-shrink: 0;

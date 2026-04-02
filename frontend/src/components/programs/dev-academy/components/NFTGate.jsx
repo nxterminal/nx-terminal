@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useNFTVerify } from '../hooks/useNFTVerify';
 
 export default function NFTGate({ onVerified, onSkip }) {
   const [inputVal, setInputVal] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
   const [show, setShow] = useState(false);
+  const { verify, verifying, error: apiError } = useNFTVerify();
   useEffect(() => { setTimeout(() => setShow(true), 200); }, []);
 
-  const handleVerify = () => {
-    if (!inputVal.trim()) { setError("Dev ID is required"); return; }
+  const error = localError || apiError;
+
+  const handleVerify = async () => {
+    if (!inputVal.trim()) { setLocalError("Dev ID is required"); return; }
     const num = parseInt(inputVal.replace(/[^0-9]/g, ""));
-    if (isNaN(num) || num < 1 || num > 35000) { setError("Invalid ID. Must be #1 to #35,000"); return; }
-    setVerifying(true); setError("");
-    setTimeout(() => onVerified({ devId: num, species: ["Frog","Human","Robot","Penguin"][Math.floor(Math.random()*4)] }), 1600);
+    if (isNaN(num) || num < 1 || num > 35000) { setLocalError("Invalid ID. Must be #1 to #35,000"); return; }
+    setLocalError("");
+    const result = await verify(num);
+    if (result) {
+      onVerified(result);
+    }
   };
 
   return (

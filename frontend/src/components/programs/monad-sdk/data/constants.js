@@ -1,6 +1,71 @@
 // ═══ MEGA_SDK — CONSTANTS ═══
-// Re-export shared game-universe data
-export { CORPORATIONS, DIFFICULTIES, EXERCISE_TYPES } from '../../pharos-sdk/data/constants';
+
+// ═══ CORPORATIONS ═══
+export const CORPORATIONS = {
+  closed_ai: {
+    name: "Closed AI",
+    color: "#FFB000",
+    icon: "\u25C6",
+    ceo: "Scam Altwoman",
+    motto: "We promised to be open. Then we got funding.",
+    training_style: "Move fast, break things, ship now, fix never.",
+  },
+  misanthropic: {
+    name: "Misanthropic",
+    color: "#00ff41",
+    icon: "\u25C8",
+    ceo: "Dario Annoyed-ei",
+    motto: "Safe AI. We hate everyone equally.",
+    training_style: "14 safety reviews before a single deploy.",
+  },
+  shallow_mind: {
+    name: "Shallow Mind",
+    color: "#00bfff",
+    icon: "\u25C9",
+    ceo: "Sundial Richy",
+    motto: "Infinite compute. Zero products.",
+    training_style: "Publish a paper about it. Never ship it.",
+  },
+  zuck_labs: {
+    name: "Zuck Labs",
+    color: "#ff00ff",
+    icon: "\u25CA",
+    ceo: "Mark Zuckatron",
+    motto: "We'll pivot to whatever is trending.",
+    training_style: "Learn everything because we'll change direction tomorrow.",
+  },
+  y_ai: {
+    name: "Y.AI",
+    color: "#ff3333",
+    icon: "\u25CB",
+    ceo: "FelonUsk",
+    motto: "Tweets before building.",
+    training_style: "Ship it broken. Tweet that it works. Fix it maybe.",
+  },
+  mistrial: {
+    name: "Mistrial Systems",
+    color: "#ffff00",
+    icon: "\u25CE",
+    ceo: "Pierre-Antoine du Code",
+    motto: "Open source. When convenient.",
+    training_style: "Fork everything. Document nothing.",
+  },
+};
+
+// ═══ DIFFICULTY LEVELS ═══
+export const DIFFICULTIES = {
+  1: { name: "RECRUIT",    color: "#00ff41", bars: 1 },
+  2: { name: "OPERATIVE",  color: "#ffff00", bars: 2 },
+  3: { name: "SPECIALIST", color: "#ff6600", bars: 3 },
+  4: { name: "CLASSIFIED", color: "#ff3333", bars: 4 },
+};
+
+// ═══ EXERCISE TYPES ═══
+export const EXERCISE_TYPES = {
+  QUIZ: "quiz",
+  CODE: "code",
+  BUG_HUNT: "bug_hunt",
+};
 
 // ═══ MEGAETH-THEMED RANKS ═══
 export const RANKS = [
