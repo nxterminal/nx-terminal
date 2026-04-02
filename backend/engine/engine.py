@@ -924,6 +924,17 @@ def mint_dev(conn, token_id: int, owner_address: str, corporation: str) -> dict:
 # MAIN LOOP
 # ============================================================
 
+def run_claim_sync():
+    """Run claim sync to push balances on-chain. Fails silently if deps missing."""
+    try:
+        from .claim_sync import sync_claimable_balances
+        sync_claimable_balances()
+    except ImportError:
+        log.debug("claim_sync dependencies not available (web3), skipping")
+    except Exception as e:
+        log.error(f"Claim sync error: {e}")
+
+
 def run_engine():
     """Main simulation loop. Runs forever."""
     log.info("=" * 60)
@@ -934,8 +945,10 @@ def run_engine():
     cycle = 0
     last_salary = datetime.now(timezone.utc)
     last_snapshot = datetime.now(timezone.utc)
+    last_claim_sync = datetime.now(timezone.utc)
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
+    claim_sync_interval = timedelta(minutes=10)
 
     while True:
         try:
@@ -960,6 +973,15 @@ def run_engine():
 
         except Exception as e:
             log.error(f"Engine error: {e}")
+
+        # Claim sync runs outside the main DB transaction (has its own connection)
+        try:
+            now = datetime.now(timezone.utc)
+            if now - last_claim_sync >= claim_sync_interval:
+                run_claim_sync()
+                last_claim_sync = now
+        except Exception as e:
+            log.error(f"Claim sync scheduler error: {e}")
 
         time.sleep(SCHEDULER_INTERVAL_SEC)
 

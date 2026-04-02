@@ -1,5 +1,6 @@
 """Routes: Simulation state & world events"""
 
+import os
 from fastapi import APIRouter, HTTPException
 from backend.api.deps import fetch_one, fetch_all
 
@@ -60,3 +61,19 @@ async def get_action_feed(limit: int = 50, offset: int = 0):
            LIMIT %s OFFSET %s""",
         (limit, offset)
     )
+
+
+@router.get("/claim-sync-status")
+async def get_claim_sync_status():
+    """Health check for the claim sync pipeline."""
+    pending = fetch_one(
+        "SELECT COUNT(*) as count, COALESCE(SUM(balance_nxt), 0) as total_nxt FROM devs WHERE status = 'active' AND balance_nxt > 0"
+    )
+    signer_configured = bool(os.getenv("BACKEND_SIGNER_PRIVATE_KEY", ""))
+    dry_run = os.getenv("DRY_RUN", "true").lower() != "false"
+    return {
+        "pending_devs": pending["count"],
+        "pending_nxt": pending["total_nxt"],
+        "signer_configured": signer_configured,
+        "dry_run": dry_run,
+    }

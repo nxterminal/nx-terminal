@@ -112,7 +112,9 @@ export const NXDEVNFT_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'tokenIds', type: 'uint256[]' }],
     outputs: [
-      { name: 'total', type: 'uint256' },
+      { name: 'gross', type: 'uint256' },
+      { name: 'fee', type: 'uint256' },
+      { name: 'net', type: 'uint256' },
     ],
   },
   {

@@ -1,4 +1,7 @@
 import Window from './Window';
+import LockedProgram from './LockedProgram';
+import { useDevCount } from '../hooks/useDevCount';
+import { canAccessProgram } from '../config/tiers';
 import LiveFeed from '../windows/LiveFeed';
 import Leaderboard from '../windows/Leaderboard';
 import ProtocolMarket from '../windows/ProtocolMarket';
@@ -61,6 +64,8 @@ export default function WindowManager({
   openWindow,
   onBSOD,
 }) {
+  const { devCount } = useDevCount();
+
   return (
     <>
       {windows.map(w => {
@@ -72,6 +77,9 @@ export default function WindowManager({
         }
 
         if (!ContentComponent) return null;
+
+        // Tier gating: show LockedProgram if insufficient devs
+        const isLocked = !canAccessProgram(w.id, devCount);
 
         return (
           <Window
@@ -90,12 +98,22 @@ export default function WindowManager({
             onMaximize={() => maximizeWindow(w.id)}
             onMove={(pos) => moveWindow(w.id, pos)}
           >
-            <ContentComponent
-              devId={w.devId}
-              openDevProfile={openDevProfile}
-              openWindow={openWindow}
-              onClose={() => closeWindow(w.id)}
-            />
+            {isLocked ? (
+              <LockedProgram
+                programId={w.id}
+                programName={w.title}
+                devCount={devCount}
+                openWindow={openWindow}
+                onClose={() => closeWindow(w.id)}
+              />
+            ) : (
+              <ContentComponent
+                devId={w.devId}
+                openDevProfile={openDevProfile}
+                openWindow={openWindow}
+                onClose={() => closeWindow(w.id)}
+              />
+            )}
           </Window>
         );
       })}
