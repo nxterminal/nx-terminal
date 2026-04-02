@@ -631,7 +631,7 @@ export default function MyDevs({ openDevProfile }) {
     functionName: 'tokensOfOwner',
     args: address ? [address] : undefined,
     chainId: MEGAETH_CHAIN_ID,
-    query: { enabled: !!address, staleTime: 60_000 },
+    query: { enabled: !!address, staleTime: 300_000 },
   });
 
   // ── Direct RPC fallback for tokensOfOwner if wagmi fails ──
