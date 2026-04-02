@@ -807,7 +807,7 @@ def pay_salaries(conn):
     # Batch INSERT salary actions so they appear in feed & wallet movements
     cur.execute("""
         INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
-        SELECT token_id, name, archetype, 'RECEIVE_SALARY',
+        SELECT token_id, name, archetype::archetype_enum, 'RECEIVE_SALARY'::action_enum,
                jsonb_build_object(
                    'event', 'salary',
                    'amount', %s,
