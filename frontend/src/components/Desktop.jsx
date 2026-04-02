@@ -26,12 +26,10 @@ const DESKTOP_ICONS = [
   { id: 'flow', icon: '\u25C6', label: 'Flow', hidden: true },
   { id: 'nadwatch', icon: '', label: 'Nadwatch', hidden: true },
   { id: 'parallax', icon: '', label: 'Parallax', hidden: true },
-  { id: 'monad-sdk', icon: '', label: 'Mega SDK', hidden: true },
   { id: 'monad-city', icon: '', label: 'Mega City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
   { id: 'netwatch', icon: '', label: 'MegaWatch' },
-  { id: 'pharos-sdk', icon: '', label: 'Mega SDK' },
 ];
 
 function getWallpaperStyle() {

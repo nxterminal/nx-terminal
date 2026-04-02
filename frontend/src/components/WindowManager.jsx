@@ -18,13 +18,11 @@ import NxtWallet from '../windows/NxtWallet';
 import CorpWars from '../windows/CorpWars';
 import NadWatch from './programs/nadwatch/NadWatch';
 import Parallax from './programs/parallax/Parallax';
-import MonadSDK from './programs/monad-sdk/MonadSDK';
 import MonadCity from './programs/monad-city/MonadCity';
 import Flow from './programs/flow/Flow';
 import DevAcademy from './programs/dev-academy/DevAcademy';
 import MonadBuild from './programs/monad-build/MonadBuild';
 import NetWatch from './programs/netwatch/NetWatch';
-import PharosSDK from './programs/pharos-sdk/PharosSDK';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -45,13 +43,11 @@ const WINDOW_COMPONENTS = {
   'corp-wars': CorpWars,
   'nadwatch': NadWatch,
   'parallax': Parallax,
-  'monad-sdk': MonadSDK,
   'monad-city': MonadCity,
   'flow': Flow,
   'dev-academy': DevAcademy,
   'monad-build': MonadBuild,
   'netwatch': NetWatch,
-  'pharos-sdk': PharosSDK,
 };
 
 export default function WindowManager({
