@@ -973,6 +973,7 @@ export default function MonadCity() {
 
   // UI state
   const [openMenu, setOpenMenu] = useState(null);
+  const [showAbout, setShowAbout] = useState(false);
   const [showPanels, setShowPanels] = useState(true);
   const [showTicker, setShowTicker] = useState(true);
   const [highQuality, setHighQuality] = useState(() => {
@@ -1272,7 +1273,7 @@ export default function MonadCity() {
           Help
           {openMenu === 'help' && (
             <div className="mc-dropdown">
-              <div className="mc-dropdown-item" onClick={() => setOpenMenu(null)}>About MEGAAD_CITY.exe</div>
+              <div className="mc-dropdown-item" onClick={() => { setShowAbout(true); setOpenMenu(null); }}>About MEGAAD_CITY.exe</div>
             </div>
           )}
         </div>
@@ -1404,6 +1405,31 @@ export default function MonadCity() {
           <span key={b.name} className="mc-footer-brand" style={{ color: b.color }}>{b.name}</span>
         ))}
       </div>
+
+      {/* About Dialog */}
+      {showAbout && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+        }} onClick={() => setShowAbout(false)}>
+          <div className="win-raised" onClick={e => e.stopPropagation()} style={{
+            width: 340, padding: 0, background: '#c0c0c0', fontFamily: "'VT323', monospace",
+          }}>
+            <div style={{ background: 'linear-gradient(90deg, #000080, #1084d0)', color: '#fff', padding: '3px 6px', fontSize: '13px', fontWeight: 'bold' }}>
+              About MEGAAD_CITY.exe
+            </div>
+            <div style={{ padding: '20px 24px', textAlign: 'center', lineHeight: 1.8 }}>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>NX Terminal: Protocol Wars</div>
+              <div style={{ fontSize: '13px', color: '#333', marginTop: 8 }}>Running on MegaETH — The First Real-Time Blockchain</div>
+              <div style={{ fontSize: '12px', color: '#555', marginTop: 4 }}>10ms blocks | 100K TPS | Chain ID 4326</div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: 12 }}>Powered by Ember Labs</div>
+              <div style={{ marginTop: 16 }}>
+                <button className="win-btn" onClick={() => setShowAbout(false)} style={{ padding: '3px 24px', fontWeight: 'bold' }}>OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
