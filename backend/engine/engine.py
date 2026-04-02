@@ -640,6 +640,20 @@ def process_dev(conn, dev: dict, context: dict) -> dict:
         context = apply_prompt_modifiers(context, prompt_result)
 
     action = decide_action(dev, context)
+
+    # Budget cap: engine can only spend up to 40% of balance on auto-actions
+    # This preserves ~60% for player-initiated spending (shop, training, raids)
+    SPENDING_ACTIONS = {"CREATE_PROTOCOL", "CREATE_AI", "INVEST"}
+    if action in SPENDING_ACTIONS:
+        available_budget = int(dev["balance_nxt"] * 0.4)
+        action_cost = {
+            "CREATE_PROTOCOL": COST_CREATE_PROTOCOL_NXT,
+            "CREATE_AI": COST_CREATE_AI_NXT,
+            "INVEST": max(2, min(500, dev["balance_nxt"] // 5)),
+        }.get(action, 0)
+        if action_cost > available_budget:
+            action = "REST"
+
     result = execute_action(conn, dev, action, context)
 
     # Attach prompt info to result for logging
