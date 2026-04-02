@@ -109,6 +109,7 @@ export function DevsProvider({ children }) {
     if (tokenIds.length === 0) {
       setDevs([]);
       setFetching(false);
+      initialLoadDone.current = true;
       return;
     }
 
