@@ -292,16 +292,18 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         result["chat_channel"] = "trollbox"
 
         # Update dev stats
+        lines_written = random.randint(50, 300)
         cur.execute("""
             UPDATE devs SET
                 energy = energy - %s,
                 balance_nxt = balance_nxt - %s,
                 total_spent = total_spent + %s,
                 protocols_created = protocols_created + 1,
-                reputation = reputation + %s
+                reputation = reputation + %s,
+                lines_of_code = lines_of_code + %s
             WHERE token_id = %s
         """, (COST_CREATE_PROTOCOL_ENERGY, COST_CREATE_PROTOCOL_NXT,
-              COST_CREATE_PROTOCOL_NXT, quality // 10, dev["token_id"]))
+              COST_CREATE_PROTOCOL_NXT, quality // 10, lines_written, dev["token_id"]))
 
         # Notify owner
         owner = dev.get("owner_address")
@@ -451,13 +453,15 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 quality_drop = random.randint(5, 15)
                 cur.execute("UPDATE protocols SET value = GREATEST(0, value - %s), code_quality = GREATEST(0, code_quality - %s) WHERE id = %s",
                             (damage, quality_drop, proto["id"]))
-                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, bugs_found = bugs_found + 1, reputation = reputation + 5 WHERE token_id = %s",
-                            (COST_REVIEW_ENERGY, dev["token_id"]))
+                review_lines = random.randint(20, 100)
+                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, bugs_found = bugs_found + 1, reputation = reputation + 5, lines_of_code = lines_of_code + %s WHERE token_id = %s",
+                            (COST_REVIEW_ENERGY, review_lines, dev["token_id"]))
                 result["details"] = {"protocol_id": proto["id"], "name": proto["name"], "found_bug": True}
                 result["chat_msg"] = gen_chat_message(arch, "code_review_bug", name=proto["name"])
             else:
-                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, reputation = reputation + 1 WHERE token_id = %s",
-                            (COST_REVIEW_ENERGY, dev["token_id"]))
+                review_lines = random.randint(10, 50)
+                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, reputation = reputation + 1, lines_of_code = lines_of_code + %s WHERE token_id = %s",
+                            (COST_REVIEW_ENERGY, review_lines, dev["token_id"]))
                 result["details"] = {"protocol_id": proto["id"], "name": proto["name"], "found_bug": False}
                 result["chat_msg"] = gen_chat_message(arch, "code_review_clean", name=proto["name"])
             result["chat_channel"] = "location"
@@ -465,8 +469,13 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
     elif action == "REST":
         regen = random.randint(2, 4) + ENERGY_REGEN_BONUS.get(rarity, 0)
         result["details"] = {"energy_restored": regen}
-        cur.execute("UPDATE devs SET energy = LEAST(max_energy, energy + %s) WHERE token_id = %s",
+        cur.execute("UPDATE devs SET energy = LEAST(max_energy, energy + %s), hours_since_sleep = 0 WHERE token_id = %s",
                     (regen, dev["token_id"]))
+
+    # --- Post-action: increment hours_since_sleep for non-REST actions ---
+    if action != "REST":
+        cur.execute("UPDATE devs SET hours_since_sleep = hours_since_sleep + 1 WHERE token_id = %s",
+                    (dev["token_id"],))
 
     # --- Post-action: mood shift (10% chance) ---
     if random.random() < 0.10:
@@ -943,12 +952,21 @@ def run_engine():
     log.info("=" * 60)
 
     cycle = 0
-    last_salary = datetime.now(timezone.utc)
-    last_snapshot = datetime.now(timezone.utc)
-    last_claim_sync = datetime.now(timezone.utc)
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
     claim_sync_interval = timedelta(minutes=10)
+
+    # Pay salary immediately on startup so devs don't wait 1 hour after restart
+    try:
+        with get_db() as conn:
+            pay_salaries(conn)
+            log.info("💰 Initial salary paid on engine startup")
+    except Exception as e:
+        log.error(f"Initial salary payment failed: {e}")
+
+    last_salary = datetime.now(timezone.utc)
+    last_snapshot = datetime.now(timezone.utc)
+    last_claim_sync = datetime.now(timezone.utc)
 
     while True:
         try:

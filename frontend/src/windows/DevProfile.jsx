@@ -119,12 +119,15 @@ function PromptInput({ devId, devName }) {
 }
 
 export default function DevProfile({ devId }) {
+  const { address } = useWallet();
   const [dev, setDev] = useState(null);
   const [tab, setTab] = useState('history');
   const [tabData, setTabData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
   const [imgStatus, setImgStatus] = useState('loading');
+  const [shopBusy, setShopBusy] = useState(false);
+  const [shopMsg, setShopMsg] = useState(null);
 
   useEffect(() => {
     if (!devId) return;
@@ -151,6 +154,21 @@ export default function DevProfile({ devId }) {
       .finally(() => setTabLoading(false));
   }, [devId, tab]);
 
+  const doShopAction = async (itemId, label) => {
+    if (shopBusy || !address || !dev) return;
+    setShopBusy(true);
+    try {
+      await api.buyItem(address, itemId, dev.token_id);
+      setShopMsg({ text: `${label} applied!`, color: 'var(--green-on-grey, #005500)' });
+      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+      if (fresh) setDev(fresh);
+    } catch (err) {
+      setShopMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: 'var(--red-on-grey, #aa0000)' });
+    }
+    setShopBusy(false);
+    setTimeout(() => setShopMsg(null), 2500);
+  };
+
   if (loading) return <div className="loading">Loading dev profile...</div>;
   if (!dev) return <div className="error-msg">Dev not found</div>;
 
@@ -159,6 +177,7 @@ export default function DevProfile({ devId }) {
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
   const energyColor = energyPct > 60 ? 'var(--green-on-grey)' : energyPct > 30 ? 'var(--amber-on-grey)' : 'var(--red-on-grey)';
+  const energyFull = dev.energy >= (dev.max_energy || 10);
 
   const hasStats = dev.stat_coding != null || dev.stat_hacking != null;
   const hasTraits = dev.alignment || dev.risk_level || dev.social_style || dev.coding_style || dev.work_ethic;
@@ -334,6 +353,41 @@ export default function DevProfile({ devId }) {
           </div>
         </div>
       </div>
+
+      {/* ── Actions (Shop) ── */}
+      {address && (
+        <div style={{ padding: '4px 6px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted, #888)', fontWeight: 'bold' }}>SHOP:</span>
+          <button className="win-btn" onClick={() => doShopAction('coffee', '☕ Coffee')}
+            title={energyFull ? "Energy is full" : "☕ COFFEE: 5 $NXT → +2 energy"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
+            ☕ Coffee 5
+          </button>
+          <button className="win-btn" onClick={() => doShopAction('energy_drink', '🥤 Energy')}
+            title={energyFull ? "Energy is full" : "🥤 ENERGY DRINK: 12 $NXT → +5 energy"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
+            🥤 Energy 12
+          </button>
+          <button className="win-btn" onClick={() => doShopAction('pizza', '🍕 Pizza')}
+            title={energyFull ? "Energy is full" : "🍕 PIZZA: 25 $NXT → +5 energy"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
+            🍕 Pizza 25
+          </button>
+          <button className="win-btn" onClick={() => doShopAction('mega_meal', '🍔 MegaMeal')}
+            title={energyFull ? "Energy is full" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
+            🍔 MegaMeal 50
+          </button>
+          <button className="win-btn" onClick={() => doShopAction('pc_repair', '🔧 PC Repair')}
+            title={"🔧 REPAIR PC: 10 $NXT → restore PC health to 100%"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            🔧 Repair 10
+          </button>
+          {shopMsg && (
+            <span style={{ fontSize: '10px', color: shopMsg.color, fontWeight: 'bold' }}>{shopMsg.text}</span>
+          )}
+        </div>
+      )}
 
       {/* ── Tabs ── */}
       <div className="win-tabs">

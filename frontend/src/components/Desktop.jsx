@@ -24,9 +24,9 @@ const DESKTOP_ICONS = [
   { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
   { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
   { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'flow', icon: '\u25C6', label: 'Flow' },
-  { id: 'nadwatch', icon: '\u{1F441}', label: 'Nadwatch' },
-  { id: 'parallax', icon: '\u{2263}', label: 'Parallax' },
+  { id: 'flow', icon: '\u25C6', label: 'Flow', hidden: true },
+  { id: 'nadwatch', icon: '\u{1F441}', label: 'Nadwatch', hidden: true },
+  { id: 'parallax', icon: '\u{2263}', label: 'Parallax', hidden: true },
   { id: 'monad-city', icon: '', label: 'Mega City' },
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
@@ -177,7 +177,7 @@ export default function Desktop() {
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
       <div className="desktop-icons">
-        {DESKTOP_ICONS.map(item => (
+        {DESKTOP_ICONS.filter(item => !item.hidden).map(item => (
           <DesktopIcon
             key={item.id}
             id={item.id}
