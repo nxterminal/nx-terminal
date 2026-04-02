@@ -4,30 +4,28 @@
 
 ---
 
-## Proposed Tier Structure
+## 1. PROPOSED TIER TABLE
 
-| Devs | Rango | ID | Programs Unlocked |
-|------|-------|----|-------------------|
-| 1 | Solo Coder | `SOLO_CODER` | Base set (6 programs) |
-| 3 | Indie Lab | `INDIE_LAB` | +3 programs |
-| 5 | Startup HQ | `STARTUP_HQ` | +3 programs |
-| 10 | Dev House | `DEV_HOUSE` | +3 programs |
-| 20 | Tech Corp | `TECH_CORP` | +2 programs |
-| 50 | Mega Corp | `MEGA_CORP` | +2 programs |
-| 100 | Empire | `EMPIRE` | All programs |
+| Devs | Rank | ID | Unlocks |
+|------|------|----|---------|
+| 1 | Solo Coder | `SOLO_CODER` | Base programs |
+| 3 | Indie Lab | `INDIE_LAB` | + social/market tools |
+| 5 | Startup HQ | `STARTUP_HQ` | + advanced programs |
+| 10 | Dev House | `DEV_HOUSE` | + strategy tools |
+| 20 | Tech Corp | `TECH_CORP` | + full access |
+| 50 | Mega Corp | `MEGA_CORP` | + exclusive features |
+| 100 | Empire | `EMPIRE` | Everything + cosmetics |
 
 ---
 
-## 1. Current Desktop Program System
+## 2. CURRENT PROGRAM ACCESS — NO GATING EXISTS
 
-### Desktop.jsx — Program Definitions
+### 2.1 Desktop Icons (Desktop.jsx:11-33)
 
-**File:** `frontend/src/components/Desktop.jsx` (lines 11-33)
+All 21 programs are defined in `DESKTOP_ICONS` array. **There is zero access control.**
 
-21 programs defined in `DESKTOP_ICONS`:
-
-| # | ID | Label | Currently Hidden? |
-|---|-----|-------|-------------------|
+| # | ID | Label | Hidden? |
+|---|------|-------|---------|
 | 1 | `nx-terminal` | NX Terminal | No |
 | 2 | `live-feed` | Live Feed | No |
 | 3 | `world-chat` | World Chat | No |
@@ -50,211 +48,300 @@
 | 20 | `monad-build` | Mega Build | No |
 | 21 | `netwatch` | MegaWatch | No |
 
-### Current Gating System
-- **Line 177:** Icons filtered by `!item.hidden` — only non-hidden icons render
-- **No permission checks** at Desktop or WindowManager level
-- **Dev Academy** (`frontend/src/components/programs/dev-academy/DevAcademy.jsx`) is the **only program with NFT gating** — requires owning a specific dev via `NFTGate.jsx`
-- **WindowManager** (`frontend/src/components/WindowManager.jsx` lines 27-51) has a static `WINDOW_COMPONENTS` map — no conditional loading
+### 2.2 How Programs Open
 
-### Start Menu
-**File:** `frontend/src/components/StartMenu.jsx` (lines 4-20)
-- Lists 10 programs + 2 games (Bug Sweeper, Protocol Solitaire)
-- No gating — always shows same items
-
----
-
-## 2. How to Get Dev Count
-
-### Option A: On-Chain (Current Pattern)
-**File:** `frontend/src/windows/MyDevs.jsx` (lines 610-617)
-```javascript
-const { data: ownedTokens } = useReadContract({
-  address: NXDEVNFT_ADDRESS,
-  abi: NXDEVNFT_ABI,
-  functionName: 'tokensOfOwner',
-  args: address ? [address] : undefined,
-  chainId: MEGAETH_CHAIN_ID,
-  query: { enabled: !!address, staleTime: 60_000 },
-});
 ```
-- `ownedTokens.length` = dev count
-- Also available: `balanceOf(address)` returns count directly (contract.js line 58-69)
-- Also: `walletClaimable(address)` returns `(total, devCount)` (contract.js line 100-117)
+Desktop.jsx:177-185
+  → DESKTOP_ICONS.filter(item => !item.hidden)    // only hides 3
+  → DesktopIcon onDoubleClick → openWindowWithBSOD(id)
+  → useWindowManager.openWindow(id)               // no permission check
+  → WindowManager renders WINDOW_COMPONENTS[id]   // no gating
+```
 
-### Option B: Backend API
-**Endpoint:** `GET /api/players/{wallet}` (`backend/api/routes/players.py` lines 48-65)
-- Returns `devs` array — count from `devs.length`
-- Also: `total_devs_minted` field in players table (schema.sql line 65)
+**Key files:**
+- `Desktop.jsx:11-33` — Icon definitions
+- `Desktop.jsx:177-185` — Rendering (filters `hidden: true`)
+- `hooks/useWindowManager.js:31-58` — `openWindow()` — zero auth checks
+- `components/WindowManager.jsx:27-51` — Component registry
 
-### Option C: Dedicated Count Endpoint
-- `GET /api/devs/count` exists but returns **global** count, not per-user
+### 2.3 No Permission System Exists
 
-### Recommendation
-- **Use `balanceOf(address)` on-chain** — single uint256, fast, no array parsing
-- Cache in a React context for global access (doesn't exist yet)
-- Fallback to API `devs.length` if RPC fails
-
----
-
-## 3. Current State Management
-
-**File:** `frontend/src/App.jsx`
-
-- **No global store** (no Redux, no Zustand, no global Context for user data)
-- Wallet state in `useWallet.js` hook — only provides `address`, `isConnected`
-- Dev ownership is fetched **per-component** (MyDevs, NxtWallet each fetch independently)
-- **No shared dev count state** across components
-
-### What's Missing for Tier System
-A global context/provider that:
-1. Reads `balanceOf(address)` on wallet connect
-2. Derives current tier from count
-3. Exposes `{ devCount, tier, tierName }` to all components
+- No role/clearance checks in `openWindow()`
+- No user tier state anywhere in the app
+- `hidden: true` is the only "gating" — just hides icon, program still accessible via registry
+- `ErrorPopup.jsx` has a joke about "clearance level" but it's cosmetic
 
 ---
 
-## 4. Where to Implement Gating
+## 3. HOW TO GET DEV COUNT
 
-### Option A: Desktop-Level (Recommended)
-**Modify:** `frontend/src/components/Desktop.jsx`
+### 3.1 Current State — No Global Dev Count
 
-Replace `hidden: true/false` with `minTier: 'TIER_ID'`:
+**`useWallet()` hook** (`hooks/useWallet.js`) returns address, connection status, chain info — **no dev count**.
+
+Each component that needs dev count fetches it independently:
+
+| Component | How it gets devs | Line |
+|-----------|-----------------|------|
+| `MyDevs.jsx` | `useReadContract('tokensOfOwner')` + RPC fallback | 628-683 |
+| `HireDevs.jsx` | `useReadContract('tokensOfOwner')` | 46-52 |
+| `NxtWallet.jsx` | `useReadContract('tokensOfOwner')` | 620-627 |
+| `LiveFeed.jsx` | Receives `devCount` as prop from parent | Uses for message frequency |
+
+There's also `balanceOf(address)` in the ABI (`contract.js:57-62`) which returns just the count (cheaper than `tokensOfOwner`), but nothing uses it globally.
+
+### 3.2 Best Approach for Tier System
+
+**Option A: New `useDevCount()` hook** (Recommended)
 ```javascript
-const DESKTOP_ICONS = [
-  { id: 'nx-terminal', icon: '>_', label: 'NX Terminal', minTier: 'SOLO_CODER' },
-  { id: 'corp-wars', icon: '⚔', label: 'Corp Wars', minTier: 'DEV_HOUSE' },
+// hooks/useDevCount.js
+export function useDevCount() {
+  const { address } = useWallet();
+  const { data: count } = useReadContract({
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'balanceOf',       // cheaper than tokensOfOwner
+    args: address ? [address] : undefined,
+    chainId: MEGAETH_CHAIN_ID,
+    query: { enabled: !!address, staleTime: 60_000 },
+  });
+  return { devCount: count ? Number(count) : 0 };
+}
+```
+
+**Option B: Backend API**
+- `GET /api/players/{wallet}` already returns player data
+- Could add `dev_count` field (just `SELECT COUNT(*) FROM devs WHERE owner_address = %s`)
+- Slower than on-chain `balanceOf` but doesn't need wallet connection
+
+**Option C: React Context** (for performance)
+- Create `DevCountProvider` that wraps the app
+- Calls `balanceOf` once, caches result
+- All components read from context instead of independent RPC calls
+- Best if many components need the count simultaneously
+
+**Recommendation:** Option A for simplicity, upgrade to Option C if performance issues arise.
+
+---
+
+## 4. WHERE TO IMPLEMENT GATING
+
+### Option 1: Desktop.jsx — Hide/Show Icons (Simplest)
+
+```javascript
+// Add tier to each DESKTOP_ICONS entry
+{ id: 'corp-wars', label: 'Corp Wars', icon: 'corp-wars', minDevs: 5 },
+
+// Filter by tier when rendering
+DESKTOP_ICONS.filter(item => !item.hidden && devCount >= (item.minDevs || 0))
+```
+
+**Pros:** Simple, one-file change
+**Cons:** Programs still accessible if user knows the ID (via URL/console)
+
+### Option 2: Inside Each Program — Candado/Lock Screen (Best UX)
+
+```javascript
+// Show icon always, but render lock screen when opened without enough devs
+function LockedProgram({ requiredDevs, currentDevs, children }) {
+  if (currentDevs < requiredDevs) {
+    return <LockScreen requiredDevs={requiredDevs} currentDevs={currentDevs} />;
+  }
+  return children;
+}
+```
+
+**Pros:** User sees all programs (aspirational), knows what to unlock
+**Cons:** More code per program, or needs wrapper in WindowManager
+
+### Option 3: WindowManager Wrapper (Recommended)
+
+```javascript
+// WindowManager.jsx — add tier check before rendering
+const PROGRAM_TIERS = {
+  'corp-wars': 5,
+  'protocol-market': 3,
+  'ai-lab': 5,
   // ...
-];
+};
+
+// In render:
+const minDevs = PROGRAM_TIERS[win.id] || 0;
+if (devCount < minDevs) {
+  return <LockedWindow requiredDevs={minDevs} programName={win.title} />;
+}
+return <ActualComponent ... />;
 ```
 
-Filter in render:
+**Pros:** Centralized, one place to manage all tier gates. Icons visible on desktop (user knows what exists). Lock screen shows when opened. No changes needed in individual programs.
+
+**Cons:** Needs dev count available in WindowManager (via hook or context)
+
+**Recommendation: Option 3** — centralized, clean, good UX.
+
+---
+
+## 5. PROPOSED TIER DISTRIBUTION
+
+### Tier 1: Solo Coder (1 dev) — Base Programs
+
+Always available, the minimum experience:
+
+| Program | Reason |
+|---------|--------|
+| `nx-terminal` | Core terminal, always needed |
+| `my-devs` | Must see your dev |
+| `hire-devs` | Must be able to mint more |
+| `nxt-wallet` | Must manage funds |
+| `live-feed` | Can watch simulation |
+| `notepad` | Basic utility |
+| `recycle-bin` | Basic utility |
+| `control-panel` | Settings always available |
+| `inbox` | Notifications always available |
+
+### Tier 2: Indie Lab (3 devs) — Social & Market Access
+
+| Program | Reason |
+|---------|--------|
+| `world-chat` | Social features unlock with a small team |
+| `leaderboard` | Start competing with others |
+| `dev-academy` | Learning/training your devs |
+
+### Tier 3: Startup HQ (5 devs) — Strategy Programs
+
+| Program | Reason |
+|---------|--------|
+| `protocol-market` | Create and trade protocols |
+| `ai-lab` | Create AIs with your devs |
+| `corp-wars` | Territory battles need a team |
+
+### Tier 4: Dev House (10 devs) — Advanced Tools
+
+| Program | Reason |
+|---------|--------|
+| `monad-city` | Mega City visualization |
+| `monad-build` | Build projects |
+| `netwatch` | MegaWatch monitoring |
+
+### Tier 5: Tech Corp (20 devs) — Hidden Programs
+
+| Program | Reason |
+|---------|--------|
+| `flow` | Currently hidden — unlock at higher tier |
+| `nadwatch` | Currently hidden — unlock at higher tier |
+| `parallax` | Currently hidden — unlock at higher tier |
+
+### Tier 6-7: Mega Corp (50) / Empire (100)
+
+No current programs to gate. Reserved for:
+- Custom themes / desktop backgrounds
+- Exclusive chat channels
+- Priority dev cycle scheduling
+- Badge/title display on leaderboard
+- Special shop items
+
+---
+
+## 6. IMPLEMENTATION PLAN
+
+### Step 1: Create `useDevCount` hook
+
+File: `frontend/src/hooks/useDevCount.js`
+- Uses `balanceOf(address)` from contract
+- Returns `{ devCount, isLoading }`
+- Stale time: 60s
+
+### Step 2: Define tier config
+
+File: `frontend/src/config/tiers.js`
 ```javascript
-DESKTOP_ICONS.filter(item => userTier >= item.minTier).map(...)
+export const TIERS = [
+  { id: 'SOLO_CODER', minDevs: 1, label: 'Solo Coder' },
+  { id: 'INDIE_LAB', minDevs: 3, label: 'Indie Lab' },
+  { id: 'STARTUP_HQ', minDevs: 5, label: 'Startup HQ' },
+  { id: 'DEV_HOUSE', minDevs: 10, label: 'Dev House' },
+  { id: 'TECH_CORP', minDevs: 20, label: 'Tech Corp' },
+  { id: 'MEGA_CORP', minDevs: 50, label: 'Mega Corp' },
+  { id: 'EMPIRE', minDevs: 100, label: 'Empire' },
+];
+
+export const PROGRAM_MIN_DEVS = {
+  // Tier 1 (1 dev) — no entry needed (default 0)
+  'world-chat': 3,
+  'leaderboard': 3,
+  'dev-academy': 3,
+  'protocol-market': 5,
+  'ai-lab': 5,
+  'corp-wars': 5,
+  'monad-city': 10,
+  'monad-build': 10,
+  'netwatch': 10,
+  'flow': 20,
+  'nadwatch': 20,
+  'parallax': 20,
+};
 ```
 
-**Pros:** Clean, centralized, consistent with existing `hidden` pattern
-**Cons:** Programs also accessible via Start Menu (needs same gating there)
+### Step 3: Add gate in WindowManager.jsx
 
-### Option B: Wrapper Component
-Create `<TierGate minTier="DEV_HOUSE">` that wraps program content:
-```jsx
-<TierGate minTier="DEV_HOUSE" fallback={<LockedScreen tier="DEV_HOUSE" />}>
-  <CorpWars />
-</TierGate>
+- Import `useDevCount` and `PROGRAM_MIN_DEVS`
+- Before rendering component, check `devCount >= PROGRAM_MIN_DEVS[id]`
+- If locked: render `<LockedProgram>` component with lock icon, tier name, and "Mint X more devs to unlock"
+
+### Step 4: Add tier badge to Desktop
+
+- Show current tier in taskbar or desktop corner
+- Visual indicator: "RANK: Indie Lab (3/5 → Startup HQ)"
+- Optional: dim locked icons on desktop with lock overlay
+
+### Step 5: Remove `hidden: true` from flow/nadwatch/parallax
+
+- These become tier-gated instead of hidden
+- Users see them on desktop, know they exist, motivated to unlock
+
+---
+
+## 7. DEV COUNT SOURCES — COMPARISON
+
+| Source | Method | Speed | Requires Wallet | Always Accurate |
+|--------|--------|-------|-----------------|-----------------|
+| On-chain `balanceOf` | wagmi `useReadContract` | ~200ms | Yes | Yes (authoritative) |
+| On-chain `tokensOfOwner` | wagmi `useReadContract` | ~200ms | Yes | Yes + gives IDs |
+| Backend API | `GET /api/players/{wallet}` | ~100ms | No (just address) | Depends on listener sync |
+| MyDevs component | Already fetches `tokensOfOwner` | N/A (local state) | Yes | Only when MyDevs is open |
+
+**Best for tier system:** `balanceOf` — cheapest on-chain call, returns just the count, always accurate.
+
+---
+
+## 8. UX CONSIDERATIONS
+
+### Locked Program Screen Design
+
+```
+┌─────────────────────────────────────────┐
+│ ⊞ Corp Wars                        [X] │
+├─────────────────────────────────────────┤
+│                                         │
+│            🔒 LOCKED                    │
+│                                         │
+│    Requires: STARTUP HQ (5 devs)        │
+│    You have: 3 devs (Indie Lab)         │
+│                                         │
+│    ┌─────────────────────────┐          │
+│    │  Open Mint/Hire Devs    │          │
+│    └─────────────────────────┘          │
+│                                         │
+│    Mint 2 more devs to unlock           │
+│    Corp Wars and territory battles.     │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
-**Pros:** Programs visible but locked (better UX — user sees what they can unlock)
-**Cons:** More components to maintain
+### Desktop Icon States
 
-### Option C: Hybrid (Best UX)
-- **Desktop:** Show all icons but with lock overlay for gated programs
-- **On open:** Show a "Requires X devs (Tier Name)" modal instead of the program
-- **Start Menu:** Same gating with lock indicators
+- **Unlocked:** Normal icon, full color
+- **Locked (next tier):** Visible but grayed out, small 🔒 overlay
+- **Locked (2+ tiers away):** Hidden (too far away, avoid clutter)
 
-### Recommendation: Option C (Hybrid)
-- Users see ALL programs → creates aspiration to unlock
-- Lock overlay on desktop icon + modal on open = clear feedback
-- Minimal code changes: just add tier check in `openWindowWithBSOD()` function
-
----
-
-## 5. Proposed Program Distribution by Tier
-
-### SOLO_CODER (1 dev) — Base Programs
-| Program | Rationale |
-|---------|-----------|
-| NX Terminal | Core gameplay |
-| Live Feed | Core — watch devs work |
-| My Devs | Core — manage your dev |
-| Hire Devs | Core — mint more devs |
-| NXT Wallet | Core — see earnings |
-| Control Panel | Core — settings |
-
-### INDIE_LAB (3 devs)
-| Program | Rationale |
-|---------|-----------|
-| World Chat | Social — need a small team first |
-| Leaderboard | Competition — meaningful with 3+ devs |
-| Notepad | Utility unlock |
-
-### STARTUP_HQ (5 devs)
-| Program | Rationale |
-|---------|-----------|
-| Protocol Market | Economy — need devs to create protocols |
-| Inbox | Communications unlock |
-| Dev Academy | Training — invest in your team |
-
-### DEV_HOUSE (10 devs)
-| Program | Rationale |
-|---------|-----------|
-| AI Lab | Advanced — create AIs with your team |
-| Corp Wars | PvP — need a real team |
-| Recycle Bin | Utility (easter egg) |
-
-### TECH_CORP (20 devs)
-| Program | Rationale |
-|---------|-----------|
-| Mega City | World exploration |
-| Mega Build | Construction |
-
-### MEGA_CORP (50 devs)
-| Program | Rationale |
-|---------|-----------|
-| MegaWatch | Surveillance/monitoring |
-| Flow | Advanced visualization |
-
-### EMPIRE (100 devs)
-| Program | Rationale |
-|---------|-----------|
-| Nadwatch | Endgame content |
-| Parallax | Endgame content |
-
-### Games (Always Available)
-| Program | Rationale |
-|---------|-----------|
-| Bug Sweeper | Mini-game, no gating |
-| Protocol Solitaire | Mini-game, no gating |
-
----
-
-## 6. Implementation Requirements
-
-### New Files Needed
-1. **`frontend/src/contexts/TierContext.jsx`** — Global tier provider
-   - Reads `balanceOf(address)` on connect
-   - Derives tier from TIER_THRESHOLDS config
-   - Re-fetches on mint events
-
-2. **`frontend/src/config/tiers.js`** — Tier definitions
-   - Thresholds, names, IDs
-   - Program-to-tier mapping
-   - Could be fetched from backend for dynamic config
-
-3. **`frontend/src/components/TierGate.jsx`** — Lock overlay/modal component
-
-### Files to Modify
-1. **`frontend/src/components/Desktop.jsx`** — Add `minTier` to DESKTOP_ICONS, filter/overlay logic
-2. **`frontend/src/components/StartMenu.jsx`** — Same gating for menu items
-3. **`frontend/src/components/WindowManager.jsx`** — Optional: check tier before rendering window
-4. **`frontend/src/App.jsx`** — Wrap with `<TierProvider>`
-
-### Backend (Optional)
-- Add `tier` field to `GET /api/players/{wallet}` response (computed from dev count)
-- Useful for server-side validation of gated actions
-- Table: `player_tiers` or computed field in players query
-
-### No Contract Changes Needed
-- `balanceOf(address)` already exists on NXDevNFT
-- Tier logic is purely frontend/backend — no on-chain gating required
-
----
-
-## 7. Existing Patterns to Reuse
-
-| Pattern | Location | Reuse For |
-|---------|----------|-----------|
-| `hidden` flag filtering | Desktop.jsx line 177 | Tier-based filtering |
-| `NFTGate` component | dev-academy/components/NFTGate.jsx | Reference for gate UI |
-| `useReadContract` for balanceOf | MyDevs.jsx lines 610-617 | Tier detection |
-| `walletClaimable` returning devCount | contract.js line 100-117 | Alternative count source |
-| `useWallet` hook | hooks/useWallet.js | Wallet address for queries |
+This creates a "progression horizon" — users see what's coming next but aren't overwhelmed by distant unlocks.

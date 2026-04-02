@@ -1,181 +1,292 @@
-# NXT Wallet — Full Claim Flow Analysis
+# $NXT Wallet — Complete Flow Analysis
 
-> Read-only audit of the $NXT claim system across frontend, backend, and smart contracts.
-
----
-
-## 1. Frontend — NxtWallet.jsx
-
-**File:** `frontend/src/windows/NxtWallet.jsx`
-
-### Claimable Balance Display
-- **Line 69-77:** Reads `previewClaim(tokenIds)` via wagmi `useReadContract()` to get total claimable amount from the on-chain contract.
-- **Line 156:** Displays claimable amount in gold text: `Claimable: {claimDisplay} $NXT`
-- **Lines 251-273:** Three stat boxes from API wallet-summary:
-  - Balance (gold): `summary.balance_claimable`
-  - Total Spent (red): `summary.total_spent`
-  - Total Earned (cyan): `summary.balance_total_earned`
-
-### On-Chain Claim Execution
-- **Line 80-106:** Uses wagmi `useWriteContract()`:
-  ```javascript
-  writeContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'claimNXT',
-    args: [ids],  // array of token IDs
-  });
-  ```
-- **Line 83-85:** Waits for receipt via `useWaitForTransactionReceipt()`
-- **Line 109:** Button disabled when `!claimEnabled || !hasClaimable || isSending || isMining`
-
-### Contract Address
-- **NXDEVNFT_ADDRESS:** `0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7` (from `contract.js` line 6)
-- **NXTToken:** `0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47`
-
-### ABI — claimNXT
-- **contract.js line 35-40:** `claimNXT(uint256[] tokenIds)` — write, nonpayable
-- **contract.js line 110-117:** `previewClaim(uint256[] tokenIds)` — view, returns single `uint256`
-
-### Deposit
-- **NO deposit functionality exists** in NxtWallet or any other frontend component.
+> Read-only audit of the claim/wallet pipeline: Frontend → Backend → Contract
 
 ---
 
-## 2. Backend — claim_sync.py
+## 1. FRONTEND: NxtWallet.jsx
 
-**File:** `backend/engine/claim_sync.py`
+### 1.1 Displaying Claimable Balance
 
-### Synchronization Flow
-1. **Line 78-94:** `get_pending_claims()` queries DB:
-   ```sql
-   SELECT token_id, balance_nxt FROM nx.devs
-   WHERE status = 'active' AND balance_nxt > 0
-   ORDER BY token_id
-   ```
-2. **Line 97-123:** `build_sync_batch()` converts to wei: `amount_wei = balance_nxt * (10 ** 18)`
-3. **Line 140-168:** `_send_batch()` submits batches to contract
-4. **Line 126-137:** `_mark_synced()` zeros out `balance_nxt` after success
+Two separate balance views:
 
-### Contract Function Called
-- **Line 54-64:** ABI declares `batchSetClaimable(tokenIds[], amounts[])`
-- Submits in batches of `BATCH_SIZE` (default 200)
-- Gas estimate: `500_000 + (len(batch_ids) * 30_000)` per batch
+**Game Balance (virtual)** — Lines 241-274
+- Fetches from backend REST: `GET /api/players/{wallet}/wallet-summary`
+- Shows `summary.balance_claimable` (sum of all dev `balance_nxt`)
+- Per-dev breakdown table (lines 295-324) with each dev's `balance_nxt`
 
-### Backend Signer Configuration
-| Env Var | Purpose | Default |
+**On-Chain Claimable** — `ClaimSection` component (lines 57-206)
+- Reads from contract directly: `previewClaim(tokenIds)` via wagmi `useReadContract` (line 70-77)
+- Displayed as "Claimable: {amount} $NXT" (line 156)
+- Uses `formatNxt()` → `formatUnits(BigInt(wei), 18)` for wei→token conversion
+
+### 1.2 Executing Claim
+
+- Uses wagmi `useWriteContract` (line 80) — **no fallback mechanism**
+- Calls `claimNXT(tokenIds)` on NXDevNFT contract (lines 99-107)
+- Token IDs from on-chain `tokensOfOwner(wallet)` (lines 620-627)
+- TX lifecycle: SENDING → MINING → confirmed, with explorer link
+- After confirmation, refetches `previewClaim` to update display (lines 88-92)
+- Checks `claimEnabled` from contract (lines 61-67), disables button if false
+
+### 1.3 Contract Addresses
+
+```javascript
+// frontend/src/services/contract.js
+NXDEVNFT_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7'
+NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47'  // ✅ Correct
+MEGAETH_CHAIN_ID  = 4326
+```
+
+Both addresses match between frontend (`contract.js`) and backend (`claim_sync.py`).
+
+### 1.4 ABI — claimNXT
+
+**YES**, included at `contract.js:34-39`:
+```javascript
+{
+  name: 'claimNXT',
+  type: 'function',
+  stateMutability: 'nonpayable',
+  inputs: [{ name: 'tokenIds', type: 'uint256[]' }],
+  outputs: [],
+}
+```
+
+### 1.5 Deposit $NXT Option
+
+**NO.** There is no deposit functionality anywhere:
+- No deposit UI in NxtWallet.jsx
+- No deposit contract function
+- No backend API endpoint for deposit
+- Only two tabs: "Balance" and "Movements"
+
+---
+
+## 2. BACKEND: claim_sync.py
+
+### 2.1 Sync Flow
+
+1. Queries `nx.devs` for active devs with `balance_nxt > 0` (line 84-90)
+2. Converts to wei: `amount_wei = balance_nxt * (10 ** 18)` — 1:1 ratio (lines 108-113)
+3. Calls `batchSetClaimable(tokenIds[], amounts[])` in batches of 200 (lines 145-146)
+4. After confirmed TX: sets `balance_nxt = 0` in DB for synced devs (lines 131-137)
+
+### 2.2 Function Used
+
+**`batchSetClaimable()`** (line 56, 145)
+
+### 2.3 Env Vars Required
+
+| Env Var | Default | Purpose |
 |---------|---------|---------|
-| `BACKEND_SIGNER_PRIVATE_KEY` | EOA private key for TX signing | (empty) |
-| `MEGAETH_RPC_URL` | RPC endpoint | `https://carrot.megaeth.com/rpc` |
-| `DRY_RUN` | Safe mode toggle | `"true"` |
-| `CLAIM_SYNC_BATCH_SIZE` | Devs per TX | `200` |
+| `BACKEND_SIGNER_PRIVATE_KEY` | (empty) | EOA with SIGNER_ROLE on NXDevNFT |
+| `DRY_RUN` | `"true"` | Set to `"false"` for actual on-chain writes |
+| `CLAIM_SYNC_BATCH_SIZE` | `200` | Devs per batch TX |
+| `MEGAETH_RPC_URL` | `https://carrot.megaeth.com/rpc` | MegaETH RPC endpoint |
+| `DATABASE_URL` | from config.py | PostgreSQL connection |
 
-### Permission Model
-- Signer address must have `onlyBackendOrOwner` access on NXDevNFT
-- Set via `setBackendSigner(address)` on contract (owner only)
+### 2.4 Signer Configuration
+
+- Private key loaded from `BACKEND_SIGNER_PRIVATE_KEY` (line 49)
+- Signer address must match `backendSigner` stored on the NXDevNFT contract
+- Gated by `onlyBackendOrOwner` modifier (NXDevNFT_v4.sol:227-231)
+- If env var empty + DRY_RUN=false → logs error and exits (line 179-181)
 
 ---
 
-## 3. Smart Contract — NXDevNFT v4
+## 3. CONTRACT: NXDevNFT + NXTToken
 
-**File:** `contracts/NXDevNFT_v4.sol`
+### 3.1 claimNXT() — Mints New Tokens
 
-### claimNXT() — Lines 436-469
+**`claimNXT()` MINTS new $NXT — does NOT transfer from treasury.**
+
+```solidity
+// NXDevNFT_v4.sol:461
+nxtToken.mint(msg.sender, netAmount);     // 90% to player
+nxtToken.mint(treasuryWallet, feeAmount); // 10% to treasury
 ```
-1. Check claimEnabled == true
-2. Iterate tokenIds, sum claimableBalance[tokenId]
-3. Apply 10% fee: feeAmount = (grossAmount * 1000) / 10000
-4. Net to player: grossAmount - feeAmount
-5. nxtToken.mint(msg.sender, netAmount)     ← MINTS new tokens
-6. nxtToken.mint(treasuryWallet, feeAmount) ← Fee to treasury
-7. Zero out claimableBalance for each tokenId
+
+### 3.2 Claim Fee
+
+```solidity
+// NXDevNFT_v4.sol:86
+uint256 public constant CLAIM_FEE_BPS = 1000; // 10%
+
+// NXDevNFT_v4.sol:458-459
+uint256 feeAmount = (grossAmount * CLAIM_FEE_BPS) / 10_000;
+uint256 netAmount = grossAmount - feeAmount;
 ```
 
-### Key Points
-- **Mints new tokens** — does NOT transfer from treasury
-- **NXDevNFT must have MINTER role** on NXTToken (`isMinter[nxdevnft] = true`)
-- **No approve needed** — minting bypasses ERC20 allowance
-- **10% claim fee** (`CLAIM_FEE_BPS = 1000`)
+**10% fee on every claim.** Gross goes 90% player, 10% treasury.
 
-### previewClaim() — Lines 474-484
-- **Contract signature:** returns `(uint256 gross, uint256 fee, uint256 net)` — 3 values
-- Calculates what player would receive before actually claiming
+### 3.3 Minter Role
 
-### batchSetClaimableBalance() — Line 611
-- **Contract name:** `batchSetClaimableBalance` (NOT `batchSetClaimable`)
-- Access: `onlyBackendOrOwner`
-- Sets absolute claimable balance per tokenId in wei
+- NXTToken uses `mapping(address => bool) public isMinter` (NXTToken_v3.sol:73)
+- NXDevNFT must be registered as minter: `nxtToken.addMinter(nxdevnft_address)`
+- This is a **one-time admin setup** by NXTToken owner
+- NXTToken has a 1 billion max supply cap checked against `totalSupply()`
 
-### Other Relevant Functions
-| Function | Access | Purpose |
-|----------|--------|---------|
-| `setClaimableBalance(id, amount)` | `onlyBackendOrOwner` | Set single dev balance |
-| `batchAddClaimableBalance(ids[], amounts[])` | `onlyBackendOrOwner` | Increment balances |
-| `deductClaimableBalance(id, amount)` | `onlyGameOrBackend` | Deduct for shop purchases |
+### 3.4 No Approve Pattern
+
+No ERC-20 `approve` needed. NXDevNFT directly calls `nxtToken.mint()`. It's a mint operation, not a transfer.
 
 ---
 
-## 4. NXTToken v3
+## 4. CRITICAL BUGS FOUND
 
-**File:** `contracts/NXTToken_v3.sol`
+### BUG #1: `batchSetClaimable` vs `batchSetClaimableBalance` — BLOCKER
 
-- **Address:** `0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47`
-- `mint(address to, uint256 amount)` — requires `onlyMinter` (line 169)
-- `MAX_SUPPLY = 1,000,000,000 * 1e18` (1 billion, immutable)
-- Standard ERC20 with optional auto-burn on transfer
+| | Backend (claim_sync.py) | Contract (NXDevNFT_v4.sol) |
+|--|---|---|
+| ABI name | `batchSetClaimable` (line 56) | `batchSetClaimableBalance` (line 611) |
+| Called as | `contract.functions.batchSetClaimable(...)` (line 145) | N/A |
+
+**The function selector won't match.** Every sync TX will **revert** on-chain. No balances will ever be pushed to the contract.
+
+**Fix:** Rename `batchSetClaimable` → `batchSetClaimableBalance` in `claim_sync.py` lines 56 and 145.
+
+### BUG #2: `previewClaim` ABI Return Mismatch — MEDIUM
+
+| | Frontend ABI (contract.js) | Contract (NXDevNFT_v4.sol) |
+|--|---|---|
+| Returns | `(uint256 total)` — 1 value | `(uint256 gross, uint256 fee, uint256 net)` — 3 values |
+
+```javascript
+// contract.js:110-117  — declares 1 output
+outputs: [{ name: 'total', type: 'uint256' }]
+
+// NXDevNFT_v4.sol:474-477 — returns 3 values
+returns (uint256 gross, uint256 fee, uint256 net)
+```
+
+**Result:** wagmi decodes only the first return value (`gross`). The frontend shows the **pre-fee amount** (100%), but the user actually receives **90%** after the 10% claim fee.
+
+```javascript
+// NxtWallet.jsx:94-95 — treats preview as gross (no fee awareness)
+// v8: previewClaim returns single total (no fee deduction)  ← WRONG COMMENT
+const totalWei = preview != null ? BigInt(preview) : BigInt(0);
+```
+
+**Fix:** Update ABI to return 3 values, display `net` instead of `gross`. Or show both: "Gross: X, Fee: Y, You receive: Z".
+
+### BUG #3: Comment Says "No Fee" But Contract Has 10% Fee — MEDIUM
+
+```python
+# claim_sync.py:9
+# no fee inflation — v8 has no claim fee  ← WRONG
+
+# NxtWallet.jsx:69
+# Read previewClaim to get total claimable amount (v8: no fee)  ← WRONG
+```
+
+The contract has `CLAIM_FEE_BPS = 1000` (10%). This means:
+- `claim_sync.py` sets exact `balance_nxt` as claimable (no gross inflation)
+- But `claimNXT()` deducts 10% at claim time
+- **Player receives 10% less than what the game promised**
+
+**Example:** Dev earns 216 $NXT/day → sync pushes 216 $NXT on-chain → player claims → receives 194.4 $NXT (216 × 0.9). Lost 21.6 $NXT to fee that was never communicated.
+
+**Fix options:**
+- A) Inflate by 1/0.9 in claim_sync: `amount_wei = int(balance_nxt * 10**18 / 0.9)`
+- B) Set `CLAIM_FEE_BPS = 0` in contract (if owner can update — but it's `constant`, so NO)
+- C) Display fee clearly in frontend and document the 10% cut
+
+Note: `CLAIM_FEE_BPS` is `constant` in Solidity, so it **cannot be changed** without redeploying the contract. Option C is the only viable path without a new contract deployment.
 
 ---
 
-## 5. Full User Flow: Claim $NXT
+## 5. GAP ANALYSIS
 
-### What works today:
-1. Dev earns salary in-game → `balance_nxt` increases in DB
-2. Frontend shows virtual balance from API `/wallet-summary`
-3. Frontend shows on-chain claimable from `previewClaim()`
-4. User clicks "Claim" → `claimNXT(tokenIds)` mints $NXT to wallet
+### Can user SEE claimable $NXT? — PARTIALLY
 
-### What's needed for full operation:
-1. `BACKEND_SIGNER_PRIVATE_KEY` must be set in Render env
-2. `DRY_RUN` must be set to `"false"`
-3. Backend signer address must be registered via `setBackendSigner()` on contract
-4. NXDevNFT contract must have `isMinter = true` on NXTToken
-5. `claimEnabled` must be `true` on NXDevNFT
-6. `claim_sync.py` must be running (cron or manual)
+| Step | Status | Issue |
+|------|--------|-------|
+| Game balance (backend) | ✅ Works | Shows virtual balance from DB |
+| On-chain claimable | ⚠️ Shows wrong amount | Displays gross (includes fee) |
+| claim_sync pushes to chain | ❌ BLOCKED | Function name mismatch → all TXs revert |
 
-### Deposit $NXT back to game:
-- **Not implemented anywhere.** Would require:
-  - Frontend: deposit UI with `transferFrom()` or custom contract call
-  - Backend: event listener or API to credit `balance_nxt`
-  - Contract: deposit function or ERC20 approval + pull pattern
+If `claim_sync` has never run, `claimableBalance` = 0 for all devs on-chain. Frontend shows "Claimable: 0 $NXT" regardless of virtual balance.
+
+### Can user CLAIM $NXT? — BLOCKED
+
+| Prerequisite | Status | How to verify |
+|---|---|---|
+| claim_sync runs without error | ❌ Function name mismatch | Fix ABI name |
+| `claimEnabled = true` on contract | ❓ Unknown | Call `claimEnabled()` on explorer |
+| NXDevNFT is minter on NXTToken | ❓ Unknown | Call `isMinter(0x5fe9...)` on NXTToken |
+| `nxtToken` address set on NXDevNFT | ❓ Unknown | Call `nxtToken()` on explorer |
+| `treasuryWallet` set | ❓ Unknown | Call `treasuryWallet()` on explorer |
+| `BACKEND_SIGNER_PRIVATE_KEY` on Render | ❓ Unknown | Check Render env vars |
+| Signer has SIGNER_ROLE on contract | ❓ Unknown | Call `backendSigner()` on explorer |
+
+### Can user DEPOSIT $NXT back? — NOT IMPLEMENTED
+
+Would require:
+1. **Contract:** `deposit(uint256 amount)` function that calls `nxtToken.transferFrom(msg.sender, address(this), amount)` or `nxtToken.gameBurn(msg.sender, amount)` and emits event for backend
+2. **Backend:** Listener to detect deposit events + API endpoint to credit `balance_nxt`
+3. **Frontend:** Approve + Deposit UI flow in NxtWallet
 
 ---
 
-## 6. CRITICAL ISSUES FOUND
+## 6. DEPLOYMENT CHECKLIST
 
-### Issue 1: ABI Function Name Mismatch (Backend)
-- **Location:** `backend/engine/claim_sync.py` line 56
-- **Problem:** ABI declares `batchSetClaimable` but contract function is `batchSetClaimableBalance`
-- **Impact:** **claim_sync will revert every transaction** — function selector won't match
-- **Fix:** Rename in ABI to `batchSetClaimableBalance`
+Before claims can work end-to-end:
 
-### Issue 2: previewClaim Return Value Mismatch (Frontend)
-- **Location:** `frontend/src/services/contract.js` lines 110-117
-- **Problem:** ABI declares single `uint256` return, but contract returns `(uint256 gross, uint256 fee, uint256 net)`
-- **Impact:** Frontend shows gross amount as claimable, but user receives net (10% less)
-- **Fix:** Update ABI outputs to 3 values, display net amount in UI
+```
+[ ] Fix claim_sync.py: batchSetClaimable → batchSetClaimableBalance
+[ ] Fix contract.js: previewClaim outputs: 1 → 3 values (gross, fee, net)
+[ ] Fix NxtWallet.jsx: display net amount, not gross
+[ ] Decide fee strategy (inflate sync amounts or document the 10% cut)
+[ ] Verify on-chain setup:
+    [ ] claimEnabled = true
+    [ ] NXDevNFT is minter on NXTToken
+    [ ] nxtToken address set on NXDevNFT
+    [ ] treasuryWallet set
+    [ ] backendSigner matches BACKEND_SIGNER_PRIVATE_KEY
+[ ] Set BACKEND_SIGNER_PRIVATE_KEY on Render
+[ ] Set DRY_RUN=false on Render
+[ ] Test with DRY_RUN=true first to verify DB query + batch building
+[ ] Run claim_sync manually once, verify TX on explorer
+[ ] Monitor first user claim end-to-end
+```
 
-### Issue 3: Missing Fee Display
-- **Location:** `frontend/src/windows/NxtWallet.jsx` line 69
-- **Problem:** Comment says "v8: no fee" but contract charges 10% (`CLAIM_FEE_BPS = 1000`)
-- **Impact:** Users don't see the fee before claiming — unexpected 10% deduction
-- **Fix:** Show gross, fee, and net breakdown in claim UI
+---
 
-### Issue 4: Two-Tier Balance Confusion
-- **Problem:** `balance_claimable` from API (virtual in-game, integer NXT) vs `claimableBalance` on contract (wei, synced periodically) are different values shown in the same wallet
-- **Impact:** User may see different numbers for "claimable" depending on sync timing
-- **Fix:** Clearly label "In-Game Balance" vs "On-Chain Claimable" with sync status indicator
+## 7. ARCHITECTURE DIAGRAM
 
-### Issue 5: No Minter Role Verification
-- **Problem:** No startup check that NXDevNFT has minter role on NXTToken
-- **Impact:** Claims will revert silently if minter role not granted
-- **Fix:** Add health check endpoint or startup verification
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     GAME ENGINE (hourly)                     │
+│  pay_salaries() → UPDATE devs SET balance_nxt += 9          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ balance_nxt accumulates in DB
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    CLAIM_SYNC (periodic)                      │
+│  1. SELECT devs WHERE balance_nxt > 0                        │
+│  2. batchSetClaimableBalance(ids, amounts_wei) ← BUG: name  │
+│  3. UPDATE devs SET balance_nxt = 0 (after TX confirms)      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ on-chain TX via backend signer
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              NXDevNFT CONTRACT (on-chain)                     │
+│  claimableBalance[tokenId] = amount_wei                      │
+│                                                              │
+│  User calls claimNXT(tokenIds[]):                            │
+│    gross = sum(claimableBalance[id])                         │
+│    fee = gross * 10%        ← 10% CLAIM FEE                 │
+│    net = gross - fee                                         │
+│    nxtToken.mint(user, net)                                  │
+│    nxtToken.mint(treasury, fee)                              │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ $NXT minted to user wallet
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              NXTToken (ERC-20 on MegaETH)                    │
+│  0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47                 │
+│  Max supply: 1,000,000,000 · Decimals: 18                   │
+│  user.balance += net amount                                  │
+└─────────────────────────────────────────────────────────────┘
+```
