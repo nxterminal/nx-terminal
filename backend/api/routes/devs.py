@@ -81,14 +81,19 @@ async def count_devs():
 def _rpc_call(method, params=None):
     """Quick JSON-RPC call for on-chain checks."""
     import requests
-    try:
-        r = requests.post(_RPC_URL, json={
-            "jsonrpc": "2.0", "method": method, "params": params or [], "id": 1,
-        }, timeout=5)
-        data = r.json()
-        return data.get("result")
-    except Exception:
-        return None
+    for attempt in range(2):
+        try:
+            r = requests.post(_RPC_URL, json={
+                "jsonrpc": "2.0", "method": method, "params": params or [], "id": 1,
+            }, timeout=10)
+            data = r.json()
+            if data.get("error"):
+                log.warning(f"RPC error (attempt {attempt+1}): {data['error']}")
+                continue
+            return data.get("result")
+        except Exception as e:
+            log.warning(f"RPC call failed (attempt {attempt+1}): {e}")
+    return None
 
 
 def _check_token_owner(token_id):
@@ -154,20 +159,24 @@ def _insert_dev_on_demand(token_id, owner):
 
 
 @router.get("/{token_id}")
-async def get_dev(token_id: int):
-    """Get full dev profile. Auto-generates if minted on-chain but not yet in DB."""
+async def get_dev(token_id: int, owner: Optional[str] = None):
+    """Get full dev profile. Auto-generates if minted on-chain but not yet in DB.
+    Pass ?owner=0x... to skip the on-chain ownerOf check (frontend already verified)."""
     dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
     if dev:
         return dev
 
     # Not in DB — check if it exists on-chain
-    owner = _check_token_owner(token_id)
-    if not owner:
+    # If frontend passed owner address, trust it (frontend already called tokensOfOwner)
+    verified_owner = owner if (owner and owner.startswith("0x") and len(owner) == 42) else None
+    if not verified_owner:
+        verified_owner = _check_token_owner(token_id)
+    if not verified_owner:
         raise HTTPException(404, "Dev not found")
 
     # Token exists on-chain but listener missed it — generate on-demand
     try:
-        _insert_dev_on_demand(token_id, owner)
+        _insert_dev_on_demand(token_id, verified_owner)
     except Exception as e:
         log.error(f"On-demand dev generation failed for #{token_id}: {e}")
         raise HTTPException(503, "Dev generation in progress, try again shortly")

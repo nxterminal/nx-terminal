@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
@@ -12,28 +12,46 @@ const ARCHETYPE_COLORS = {
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
-const LOADING_MESSAGES = [
-  'Scanning MegaETH for your developers',
-  'Establishing secure connection to dev pods',
-  'Compiling developer profiles',
-  'Decrypting personnel files',
-  'Accessing corporate database',
-  'Loading dev workstations',
+const BOOT_LINES = [
+  { text: 'NX TERMINAL — Developer Retrieval System v4.2', color: '#ffaa00', delay: 0 },
+  { text: 'Establishing secure connection to MegaETH...', color: '#ccc', delay: 300 },
+  { text: 'Chain ID: 4326 .......................... OK', color: '#888', delay: 600 },
+  { text: 'Scanning contract for owned tokens...', color: '#ccc', delay: 900 },
+  { text: 'Decrypting personnel files...', color: '#ccc', delay: 1300 },
+  { text: 'Compiling developer profiles...', color: '#ccc', delay: 1700 },
+  { text: 'Loading dev workstations...', color: '#ccc', delay: 2100 },
 ];
 
 function LoadingLore() {
-  const [dots, setDots] = useState('');
-  const [msg] = useState(() => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
-    return () => clearInterval(id);
+    const timers = BOOT_LINES.map((line, i) =>
+      setTimeout(() => setVisibleLines(i + 1), line.delay)
+    );
+    const progTimer = setInterval(() => {
+      setProgress(p => p >= 100 ? 100 : p + 3);
+    }, 120);
+    return () => { timers.forEach(clearTimeout); clearInterval(progTimer); };
   }, []);
 
+  const barLen = 20;
+  const filled = Math.round((progress / 100) * barLen);
+  const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(barLen - filled);
+
   return (
-    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary, #666)', fontSize: '11px' }}>
-      <div style={{ fontFamily: 'monospace', color: 'var(--terminal-green, #00aa00)' }}>
-        &gt; {msg}{dots}
+    <div style={{
+      padding: '16px 20px',
+      fontFamily: "'VT323', monospace",
+      fontSize: '13px',
+      lineHeight: 1.6,
+    }}>
+      {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
+        <div key={i} style={{ color: line.color }}>&gt; {line.text}</div>
+      ))}
+      <div style={{ marginTop: '8px', color: '#ffaa00' }}>
+        [{bar}] {Math.min(progress, 99)}%
       </div>
     </div>
   );
@@ -191,7 +209,7 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address }) {
+function DevCard({ dev, onClick, address, onRetry }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -212,6 +230,23 @@ function DevCard({ dev, onClick, address }) {
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {dev._fetchFailed && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '2px 6px', marginBottom: '2px',
+            background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
+            fontSize: '10px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
+          }}>
+            [!] Profile loading from chain...
+            <button
+              className="win-btn"
+              onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
+              style={{ fontSize: '9px', padding: '0 4px', marginLeft: 'auto' }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {/* Row 1: Name + Archetype */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>{dev.name}</span>
@@ -519,10 +554,19 @@ export default function MyDevs({ openDevProfile }) {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [address, ownedTokens, tokensLoading]);
 
-  const effectiveTokens = ownedTokens ?? rpcTokens;
+  // Memoize by value (stringified IDs) to prevent re-render loops
+  const tokenKey = useMemo(() => {
+    const tokens = ownedTokens ?? rpcTokens;
+    return tokens ? tokens.map(String).join(',') : '';
+  }, [ownedTokens, rpcTokens]);
+
+  const tokenIds = useMemo(() => {
+    if (!tokenKey) return [];
+    return tokenKey.split(',').map(Number);
+  }, [tokenKey]);
 
   useEffect(() => {
-    if (!effectiveTokens || effectiveTokens.length === 0) {
+    if (tokenIds.length === 0) {
       setDevs([]);
       setLoading(false);
       return;
@@ -534,13 +578,12 @@ export default function MyDevs({ openDevProfile }) {
     }
     setFetchError(null);
 
-    const tokenIds = effectiveTokens.map(id => Number(id));
-
     // Fetch with retry: if first attempt fails, wait 2s and try once more
+    // Pass owner address so backend can skip ownerOf RPC check
     const fetchWithRetry = (id) =>
-      api.getDev(id).catch(() =>
+      api.getDev(id, address).catch(() =>
         new Promise(resolve => setTimeout(resolve, 2000))
-          .then(() => api.getDev(id))
+          .then(() => api.getDev(id, address))
           .catch((err) => {
             console.warn(`[MyDevs] Failed to fetch dev #${id}:`, err.message);
             return {
@@ -559,7 +602,7 @@ export default function MyDevs({ openDevProfile }) {
       })
       .catch(() => setFetchError('Failed to load developer data'))
       .finally(() => setLoading(false));
-  }, [effectiveTokens, refreshKey]);
+  }, [tokenKey, refreshKey, address]);
 
   // Fetch activity count for badge
   useEffect(() => {
@@ -573,7 +616,8 @@ export default function MyDevs({ openDevProfile }) {
       .catch(() => {});
   }, [address]);
 
-  const isLoadingAny = tokensLoading || loading;
+  // Only show loading if we haven't loaded yet or manual refresh triggered
+  const isLoadingAny = loading || (tokensLoading && !initialLoadDone.current);
 
   const headerStyle = {
     padding: '6px 8px',
@@ -686,6 +730,13 @@ export default function MyDevs({ openDevProfile }) {
                   dev={dev}
                   address={address}
                   onClick={() => openDevProfile?.(dev.token_id)}
+                  onRetry={(id) => {
+                    api.getDev(id, address).then(fresh => {
+                      if (fresh && !fresh._fetchFailed) {
+                        setDevs(prev => prev.map(d => d.token_id === id ? fresh : d));
+                      }
+                    }).catch(() => {});
+                  }}
                 />
               ))
             )}

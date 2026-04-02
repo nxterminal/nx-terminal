@@ -19,7 +19,7 @@ export const api = {
   // Devs
   getDevs: (params = {}) => fetchJSON(`${API_BASE}/api/devs?${new URLSearchParams(params)}`),
   getDevCount: () => fetchJSON(`${API_BASE}/api/devs/count`),
-  getDev: (id) => fetchJSON(`${API_BASE}/api/devs/${id}`),
+  getDev: (id, owner) => fetchJSON(`${API_BASE}/api/devs/${id}${owner ? `?owner=${owner}` : ''}`),
   getDevMetadata: (id) => fetchJSON(`${API_BASE}/api/devs/${id}/metadata`),
   getDevHistory: (id) => fetchJSON(`${API_BASE}/api/devs/${id}/history`),
   getDevProtocols: (id) => fetchJSON(`${API_BASE}/api/devs/${id}/protocols`),
