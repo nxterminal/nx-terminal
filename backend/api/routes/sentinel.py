@@ -465,3 +465,150 @@ async def xray_scan(contract: str = Query(..., description="Token contract addre
                 "flags": flags,
             },
         }
+
+
+# ─── FIREWALL.exe — Wallet Antivirus ─────────────────────
+
+# ERC-20 Approval event topic
+APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
+UNLIMITED_THRESHOLD = 2**128
+
+
+async def _fetch_approvals(client, wallet):
+    """Scan Approval events where wallet is the owner."""
+    wallet_padded = "0x" + _pad32(wallet.replace("0x", ""))
+
+    # Get recent block range (last ~500k blocks to avoid timeout)
+    current_block = await _rpc_block_number(client)
+    from_block = max(0, current_block - 500_000)
+
+    logs = await _rpc_get_logs(client, {
+        "fromBlock": hex(from_block),
+        "toBlock": "latest",
+        "topics": [APPROVAL_TOPIC, wallet_padded],
+    })
+
+    # Deduplicate by (token, spender) — keep latest
+    approvals = {}
+    for log_entry in logs:
+        token = log_entry.get("address", "").lower()
+        topics = log_entry.get("topics", [])
+        if len(topics) < 3:
+            continue
+        spender = "0x" + topics[2][-40:]
+        data = log_entry.get("data", "0x")
+        amount = _decode_uint(data) if data and data != "0x" else 0
+        block = int(log_entry.get("blockNumber", "0x0"), 16)
+
+        key = (token, spender)
+        if key not in approvals or block > approvals[key]["block"]:
+            approvals[key] = {
+                "token": token,
+                "spender": spender,
+                "loggedAmount": amount,
+                "block": block,
+            }
+
+    return list(approvals.values())
+
+
+async def _check_current_allowance(client, token, owner, spender):
+    """Check current allowance via eth_call."""
+    # allowance(address,address) = 0xdd62ed9e
+    data = "0xdd62ed9e" + _pad32(owner.replace("0x", "")) + _pad32(spender.replace("0x", ""))
+    result = await _rpc_call(client, token, data)
+    return _decode_uint(result) if result else 0
+
+
+async def _get_token_name_symbol(client, token):
+    """Quick fetch of name and symbol for a token."""
+    name = _decode_string(await _rpc_call(client, token, "0x06fdde03") or "0x")
+    symbol = _decode_string(await _rpc_call(client, token, "0x95d89b41") or "0x")
+    return name, symbol
+
+
+@router.get("/firewall/scan")
+async def firewall_scan(wallet: str = Query(..., description="Wallet address to scan")):
+    """FIREWALL.exe — Scan wallet for dangerous token approvals."""
+    wallet = _addr(wallet)
+    if not wallet:
+        raise HTTPException(status_code=400, detail="Invalid wallet address")
+
+    async with httpx.AsyncClient() as client:
+        raw_approvals = await _fetch_approvals(client, wallet)
+
+        results = []
+        unlimited_count = 0
+        health_score = 100
+
+        for appr in raw_approvals:
+            token = appr["token"]
+            spender = appr["spender"]
+
+            # Get current on-chain allowance
+            allowance = await _check_current_allowance(client, token, wallet, spender)
+            if allowance == 0:
+                continue  # Already revoked, skip
+
+            # Get token info
+            name, symbol = await _get_token_name_symbol(client, token)
+
+            # Check if spender is a contract
+            spender_is_contract = await _rpc_get_code(client, spender)
+
+            is_unlimited = allowance >= UNLIMITED_THRESHOLD
+
+            # Determine risk
+            if is_unlimited and not spender_is_contract:
+                risk = "CRITICAL"
+                health_score -= 25
+            elif is_unlimited:
+                risk = "WARNING"
+                health_score -= 8
+            else:
+                risk = "SAFE"
+
+            if is_unlimited:
+                unlimited_count += 1
+
+            results.append({
+                "token": {"address": token, "name": name, "symbol": symbol},
+                "spender": spender,
+                "spenderIsContract": spender_is_contract,
+                "allowance": str(allowance),
+                "isUnlimited": is_unlimited,
+                "risk": risk,
+            })
+
+        health_score = max(0, min(100, health_score))
+
+        return {
+            "wallet": wallet,
+            "approvals": results,
+            "healthScore": health_score,
+            "totalApprovals": len(results),
+            "unlimitedApprovals": unlimited_count,
+        }
+
+
+@router.post("/firewall/revoke")
+async def firewall_revoke(body: dict):
+    """Build an approve(spender, 0) transaction for the user to sign."""
+    token = _addr(body.get("token"))
+    spender = _addr(body.get("spender"))
+    wallet = _addr(body.get("wallet"))
+
+    if not token or not spender or not wallet:
+        raise HTTPException(status_code=400, detail="Missing token, spender, or wallet")
+
+    # approve(address,uint256) = 0x095ea7b3
+    data = "0x095ea7b3" + _pad32(spender.replace("0x", "")) + _pad32("0")
+
+    return {
+        "tx": {
+            "from": wallet,
+            "to": token,
+            "data": data,
+            "chainId": hex(MEGAETH_CHAIN_ID),
+        }
+    }
