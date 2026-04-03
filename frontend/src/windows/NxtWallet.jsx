@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatUnits } from 'viem';
 import { api } from '../services/api';
@@ -11,21 +11,10 @@ const RARITY_COLORS = {
   legendary: 'var(--gold-on-grey, #7a5c00)', mythic: 'var(--pink-on-grey, #660066)',
 };
 
-const MOVEMENT_ICONS = {
-  salary: '+',
-  sell: '+',
-  spend: '-',
-  shop: '-',
-  claim: '-',
-};
-
-// Colors safe for grey (win-panel) backgrounds
+const MOVEMENT_ICONS = { salary: '+', sell: '+', spend: '-', shop: '-', claim: '-' };
 const MOVEMENT_COLORS_GREY = {
-  salary: 'var(--green-on-grey)',
-  sell: 'var(--green-on-grey)',
-  spend: 'var(--red-on-grey)',
-  shop: 'var(--red-on-grey)',
-  claim: 'var(--red-on-grey)',
+  salary: 'var(--green-on-grey)', sell: 'var(--green-on-grey)',
+  spend: 'var(--red-on-grey)', shop: 'var(--red-on-grey)', claim: 'var(--red-on-grey)',
 };
 
 function formatNumber(n) {
@@ -48,51 +37,56 @@ function formatDate(d) {
 function formatTimestamp(ts) {
   if (!ts) return '-';
   const d = new Date(ts);
-  return d.toLocaleString('en-US', {
-    month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Claim Section (On-Chain) ─────────────────────────────
-function ClaimSection({ wallet, tokenIds, gameBalance }) {
+// ── Loading Bar ──────────────────────────────────────────
+function LoadingBar() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 95)), 300);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100%', fontFamily: "'VT323', monospace", color: 'var(--terminal-green)',
+      background: 'var(--terminal-bg)', gap: '8px',
+    }}>
+      <div style={{ fontSize: '14px' }}>{'>'} Loading wallet data...</div>
+      <div style={{ width: '200px', height: '12px', border: '1px solid var(--border-dark)', background: '#111' }}>
+        <div style={{ width: `${progress}%`, height: '100%', background: 'var(--terminal-green)', transition: 'width 0.3s' }} />
+      </div>
+      <div style={{ fontSize: '11px', color: '#888' }}>{Math.round(progress)}%</div>
+    </div>
+  );
+}
+
+// ── Withdraw Section (On-Chain) ──────────────────────────
+function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
 
-  // Read claimEnabled
   const { data: claimEnabled } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'claimEnabled',
-    chainId: MEGAETH_CHAIN_ID,
-    query: { enabled: !!wallet },
+    address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI, functionName: 'claimEnabled',
+    chainId: MEGAETH_CHAIN_ID, query: { enabled: !!wallet },
   });
 
-  // Read previewClaim to get gross, fee, net amounts
   const { data: preview, refetch: refetchPreview } = useReadContract({
-    address: NXDEVNFT_ADDRESS,
-    abi: NXDEVNFT_ABI,
-    functionName: 'previewClaim',
-    args: [ids],
-    chainId: MEGAETH_CHAIN_ID,
+    address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI, functionName: 'previewClaim',
+    args: [ids], chainId: MEGAETH_CHAIN_ID,
     query: { enabled: !!wallet && ids.length > 0 },
   });
 
-  // Write: claimNXT
   const { data: txHash, writeContract, isPending: isSending, reset: resetTx } = useWriteContract();
+  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  // Wait for TX receipt
-  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
-
-  // After successful claim, refetch preview
   useEffect(() => {
     if (isConfirmed) {
       refetchPreview();
+      onClaimed?.();
     }
-  }, [isConfirmed, refetchPreview]);
+  }, [isConfirmed, refetchPreview, onClaimed]);
 
-  // previewClaim returns [gross, fee, net] — contract charges 10% fee
   const grossWei = preview ? BigInt(preview[0]) : BigInt(0);
   const feeWei = preview ? BigInt(preview[1]) : BigInt(0);
   const netWei = preview ? BigInt(preview[2]) : BigInt(0);
@@ -101,161 +95,126 @@ function ClaimSection({ wallet, tokenIds, gameBalance }) {
   const netDisplay = formatNxt(netWei);
   const hasClaimable = grossWei > BigInt(0);
 
-  const handleClaim = () => {
+  const handleWithdraw = () => {
     resetTx();
     writeContract({
-      address: NXDEVNFT_ADDRESS,
-      abi: NXDEVNFT_ABI,
-      functionName: 'claimNXT',
-      args: [ids],
+      address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
+      functionName: 'claimNXT', args: [ids],
     });
   };
 
-  const claimDisabled = !claimEnabled || !hasClaimable || isSending || isMining;
+  const sectionStyle = {
+    margin: '4px 8px', padding: '8px',
+    border: '1px solid var(--border-dark)', background: 'var(--terminal-bg)',
+    fontFamily: "'VT323', monospace",
+  };
+  const labelStyle = { fontSize: '13px', color: '#888', marginBottom: '2px' };
+  const valueStyle = { fontSize: '14px', fontWeight: 'bold' };
 
   return (
-    <div style={{
-      margin: '4px 8px', padding: '8px',
-      border: '1px solid var(--border-dark)',
-      background: 'var(--terminal-bg)',
-    }}>
-      <div style={{
-        fontFamily: "'VT323', monospace", fontSize: '14px',
-        color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '6px',
-      }}>
-        {'>'} CLAIM $NXT (On-Chain)
+    <div style={sectionStyle}>
+      <div style={{ fontSize: '14px', color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '6px' }}>
+        {'>'} WITHDRAW $NXT
       </div>
 
+      {/* Balance overview */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <div>
+          <div style={labelStyle}>In dev wallets (in-game)</div>
+          <div style={{ ...valueStyle, color: 'var(--gold-on-grey, #7a5c00)' }}>{formatNumber(gameBalance)} $NXT</div>
+        </div>
+        <div>
+          <div style={labelStyle}>Available to withdraw (on-chain)</div>
+          <div style={{ ...valueStyle, color: hasClaimable ? 'var(--terminal-green)' : '#888' }}>{grossDisplay} $NXT</div>
+        </div>
+      </div>
+
+      {/* Claiming disabled */}
       {claimEnabled === false && (
-        <div style={{
-          fontFamily: "'VT323', monospace", fontSize: '13px',
-          color: 'var(--terminal-amber)', padding: '4px 0',
-        }}>
+        <div style={{ fontSize: '13px', color: 'var(--terminal-amber)', padding: '4px 0' }}>
           Claiming will be enabled soon.
         </div>
       )}
 
-      {claimEnabled !== false && !hasClaimable && ids.length > 0 && (
-        <div style={{
-          fontFamily: "'VT323', monospace", fontSize: '13px',
-          color: '#888', padding: '4px 0',
-        }}>
-          No $NXT to claim yet.
-          {gameBalance > 0 && (
-            <div style={{ color: 'var(--terminal-amber)', marginTop: '2px', fontSize: '12px' }}>
-              Your devs have {formatNumber(gameBalance)} $NXT in-game. It will be synced to blockchain soon.
-            </div>
-          )}
-        </div>
-      )}
-
-      {claimEnabled !== false && ids.length === 0 && (
-        <div style={{
-          fontFamily: "'VT323', monospace", fontSize: '13px',
-          color: '#888', padding: '4px 0',
-        }}>
-          No devs found. Mint a dev to start earning $NXT.
-        </div>
-      )}
-
-      {hasClaimable && (
-        <div style={{
-          fontFamily: "'VT323', monospace", padding: '4px 0',
-        }}>
-          <div style={{ fontSize: '16px', color: 'var(--gold)' }}>
-            Claimable: {grossDisplay} $NXT
+      {/* Has claimable on-chain */}
+      {hasClaimable && claimEnabled !== false && (
+        <div style={{ padding: '6px', border: '1px solid var(--border-dark)', background: 'rgba(0,0,0,0.2)', marginBottom: '6px' }}>
+          <div style={{ fontSize: '14px', color: 'var(--terminal-green)', marginBottom: '4px' }}>
+            Withdraw: {grossDisplay} $NXT
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--terminal-red, #ff4444)', marginTop: '2px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--terminal-red, #ff4444)' }}>
             Claim fee: -{feeDisplay} $NXT (10%)
           </div>
           <div style={{ fontSize: '14px', color: 'var(--terminal-green)', fontWeight: 'bold', marginTop: '2px' }}>
             You receive: {netDisplay} $NXT
           </div>
+
+          <div style={{ fontSize: '11px', color: '#888', margin: '6px 0 4px' }}>
+            After withdrawal, your devs keep earning 200 $NXT/day salary.
+            They'll rebuild their working capital from new earnings.
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="win-btn"
+              disabled={isSending || isMining}
+              onClick={handleWithdraw}
+              style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '11px' }}
+            >
+              {isSending ? 'SENDING...' : isMining ? 'MINING...' : `WITHDRAW ${netDisplay} $NXT`}
+            </button>
+
+            {txHash && !isConfirmed && (
+              <span style={{ fontSize: '12px', color: 'var(--terminal-amber)' }}>
+                TX pending...{' '}
+                <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>View</a>
+              </span>
+            )}
+
+            {isConfirmed && (
+              <span style={{ fontSize: '12px', color: 'var(--terminal-green)' }}>
+                Successfully withdrew {netDisplay} $NXT!{' '}
+                <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>View TX</a>
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-        <button
-          className="win-btn"
-          disabled={claimDisabled}
-          onClick={handleClaim}
-          style={{
-            padding: '4px 16px',
-            fontWeight: 'bold',
-            fontSize: '11px',
-            color: claimDisabled ? undefined : 'var(--win-text)',
-          }}
-        >
-          {isSending ? 'SENDING...' : isMining ? 'MINING...' : `CLAIM ${hasClaimable ? netDisplay : '0'} $NXT`}
-        </button>
+      {/* No claimable on-chain but has game balance */}
+      {!hasClaimable && gameBalance > 0 && claimEnabled !== false && (
+        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0', lineHeight: 1.5 }}>
+          <div>Your $NXT is earned in-game. It syncs to blockchain every ~10 minutes.</div>
+          <div style={{ color: 'var(--terminal-amber)', marginTop: '2px' }}>Once synced, you can withdraw here.</div>
+        </div>
+      )}
 
-        {/* TX status */}
-        {txHash && !isConfirmed && (
-          <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-amber)' }}>
-            TX pending...{' '}
-            <a
-              href={`${EXPLORER_BASE}/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}
-            >
-              View
-            </a>
-          </span>
-        )}
+      {/* No claimable and no game balance */}
+      {!hasClaimable && !gameBalance && ids.length > 0 && claimEnabled !== false && (
+        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0' }}>
+          Your devs haven't earned any $NXT yet. They earn 200 $NXT/day through salary.
+        </div>
+      )}
 
-        {isConfirmed && (
-          <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: 'var(--terminal-green)' }}>
-            Successfully claimed {netDisplay} $NXT!{' '}
-            <a
-              href={`${EXPLORER_BASE}/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}
-            >
-              View TX
-            </a>
-          </span>
-        )}
-      </div>
+      {/* No devs */}
+      {ids.length === 0 && claimEnabled !== false && (
+        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0' }}>
+          No devs found. Mint a dev to start earning $NXT.
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Balance Tab ───────────────────────────────────────────
-function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }) {
-  if (loading) return <div className="loading">Loading wallet...</div>;
-  if (!isConnected) return (
-    <div style={{
-      padding: '24px', textAlign: 'center',
-      fontFamily: "'VT323', monospace", fontSize: '14px',
-      color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: '8px',
-    }}>
-      <div style={{ fontSize: '28px' }}>$</div>
-      <div>{'> Connect wallet to view your $NXT balance'}</div>
-    </div>
-  );
-  if (!summary) return (
-    <div style={{
-      padding: '24px', textAlign: 'center',
-      fontFamily: "'VT323', monospace", fontSize: '14px',
-      color: 'var(--terminal-green)', background: 'var(--terminal-bg)',
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: '8px',
-    }}>
-      <div style={{ fontSize: '28px' }}>+</div>
-      <div>{'> No devs yet. Mint your first developer to start earning $NXT!'}</div>
-      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-        {'Each dev earns 200 $NXT/day. Open Mint/Hire Devs to get started.'}
-      </div>
-    </div>
-  );
+function BalanceTab({ summary, wallet, tokenIds, history, onClaimed }) {
+  if (!summary) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-      {/* ── Section 1: Game Balance (Virtual) ── */}
+      {/* Section 1: Game Balance */}
       <div style={{
         padding: '4px 8px', margin: '4px 8px 0',
         fontFamily: "'VT323', monospace", fontSize: '14px',
@@ -264,27 +223,20 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         {'>'} GAME BALANCE (Virtual)
       </div>
 
-      {/* Summary cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Balance</div>
-          <div className="stat-value" style={{ color: 'var(--gold-on-grey)' }}>
-            {formatNumber(summary.balance_claimable)}
-          </div>
+          <div className="stat-value" style={{ color: 'var(--gold-on-grey)' }}>{formatNumber(summary.balance_claimable)}</div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
-          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>
-            {formatNumber(summary.total_spent || summary.balance_claimed || 0)}
-          </div>
+          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
           <div className="stat-label">$NXT</div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Earned</div>
-          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>
-            {formatNumber(summary.balance_total_earned)}
-          </div>
+          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>{formatNumber(summary.balance_total_earned)}</div>
           <div className="stat-label">$NXT</div>
         </div>
       </div>
@@ -299,27 +251,18 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
       </div>
 
-      {/* Virtual currency notice */}
       <div style={{
         padding: '4px 8px', margin: '2px 8px',
-        fontFamily: "'VT323', monospace", fontSize: '11px',
-        color: 'var(--text-muted, #888)',
+        fontFamily: "'VT323', monospace", fontSize: '11px', color: 'var(--text-muted, #888)',
       }}>
         This is what your devs have earned in-game. Syncs to blockchain periodically.
       </div>
 
-      {/* Per-dev breakdown */}
+      {/* Per-dev table */}
       <div className="win-panel" style={{ overflow: 'auto', margin: '2px 4px', maxHeight: '140px' }}>
         <table className="win-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Rarity</th>
-              <th>Balance</th>
-              <th>Earned</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>ID</th><th>Name</th><th>Rarity</th><th>Balance</th><th>Earned</th><th>Status</th></tr>
           </thead>
           <tbody>
             {(summary.devs || []).map(dev => (
@@ -340,16 +283,16 @@ function BalanceTab({ summary, loading, isConnected, wallet, tokenIds, history }
         </table>
       </div>
 
-      {/* ── Balance Bar Chart ── */}
+      {/* Balance chart */}
       <BalanceBarChart history={history} summary={summary} />
 
-      {/* ── Section 2: Claim $NXT (On-Chain) ── */}
-      <ClaimSection wallet={wallet} tokenIds={tokenIds} gameBalance={summary.balance_claimable} />
+      {/* Withdraw section */}
+      <WithdrawSection wallet={wallet} tokenIds={tokenIds} gameBalance={summary.balance_claimable} onClaimed={onClaimed} />
     </div>
   );
 }
 
-// ── Balance Delta Chart (daily change — same style as Movements) ─────
+// ── Balance Delta Chart (daily change) ─────────────────────
 function BalanceBarChart({ history, summary }) {
   const raw = (history || []).map(s => ({
     date: formatDate(s.snapshot_date),
@@ -361,13 +304,9 @@ function BalanceBarChart({ history, summary }) {
   }
   if (raw.length < 2) return null;
 
-  // Compute daily deltas
   const data = [];
   for (let i = 1; i < raw.length; i++) {
-    data.push({
-      date: raw[i].date,
-      delta: raw[i].balance - raw[i - 1].balance,
-    });
+    data.push({ date: raw[i].date, delta: raw[i].balance - raw[i - 1].balance });
   }
   if (data.length === 0) return null;
 
@@ -378,12 +317,10 @@ function BalanceBarChart({ history, summary }) {
   const PAD = { top: 8, right: 8, bottom: 18, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
-
   const absValues = data.map(d => Math.abs(d.delta));
   const maxAbs = Math.max(...absValues) || 1;
   const halfH = chartH / 2;
   const midY = PAD.top + halfH;
-
   const barGap = 1;
   const barWidth = Math.max(2, (chartW / data.length) - barGap);
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
@@ -392,8 +329,7 @@ function BalanceBarChart({ history, summary }) {
     <div style={{ margin: '4px 8px', padding: '0' }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '4px 8px',
-        fontFamily: "'VT323', monospace", fontSize: '13px',
+        padding: '4px 8px', fontFamily: "'VT323', monospace", fontSize: '13px',
         background: 'var(--terminal-bg)',
       }}>
         <span style={{ color: 'var(--terminal-green)' }}>{'>'} Daily Change (30d)</span>
@@ -405,46 +341,26 @@ function BalanceBarChart({ history, summary }) {
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          {/* Center line (zero axis) */}
           <line x1={PAD.left} y1={midY} x2={W - PAD.right} y2={midY} stroke="#555" strokeWidth={0.5} />
-
-          {/* Grid labels */}
           <text x={PAD.left - 4} y={PAD.top + 4} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
             +{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
           </text>
-          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
-            0
-          </text>
+          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">0</text>
           <text x={PAD.left - 4} y={PAD.top + chartH + 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
             -{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
           </text>
-
-          {/* Bars */}
           {data.map((d, i) => {
             const x = PAD.left + (i / data.length) * chartW + barGap / 2;
             const isPositive = d.delta >= 0;
             const barH = Math.max(2, (Math.abs(d.delta) / maxAbs) * halfH);
             const y = isPositive ? midY - barH : midY;
             const fill = isPositive ? '#00c853' : '#ef5350';
-            return (
-              <rect key={i}
-                x={x} y={y}
-                width={barWidth} height={barH}
-                fill={fill} opacity={0.75}
-                rx={1}
-              />
-            );
+            return <rect key={i} x={x} y={y} width={barWidth} height={barH} fill={fill} opacity={0.75} rx={1} />;
           })}
-
-          {/* X-axis labels */}
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
-              <text key={i}
-                x={PAD.left + (i / data.length) * chartW + barWidth / 2}
-                y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle"
-              >
-                {d.date}
-              </text>
+              <text key={i} x={PAD.left + (i / data.length) * chartW + barWidth / 2} y={H - 2}
+                fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle">{d.date}</text>
             ) : null
           ))}
         </svg>
@@ -456,23 +372,15 @@ function BalanceBarChart({ history, summary }) {
 // ── Movements Bar Chart (income/expense bars) ───────────────
 function MovementsChart({ movements, summary }) {
   if (!movements || movements.length === 0 || !summary) return null;
-
   const now = new Date();
   const todayStr = now.toDateString();
-
-  // Filter to today's movements, reversed to chronological
-  const todayMovements = movements
-    .filter(m => new Date(m.timestamp).toDateString() === todayStr)
-    .reverse();
-
+  const todayMovements = movements.filter(m => new Date(m.timestamp).toDateString() === todayStr).reverse();
   if (todayMovements.length === 0) return null;
 
   const data = todayMovements.map(m => ({
     label: new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    amount: Number(m.amount) || 0,
-    type: m.type,
+    amount: Number(m.amount) || 0, type: m.type,
   }));
-
   const totalIn = data.filter(d => d.amount > 0).reduce((s, d) => s + d.amount, 0);
   const totalOut = data.filter(d => d.amount < 0).reduce((s, d) => s + Math.abs(d.amount), 0);
 
@@ -480,23 +388,19 @@ function MovementsChart({ movements, summary }) {
   const PAD = { top: 8, right: 8, bottom: 18, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
-
   const absValues = data.map(d => Math.abs(d.amount));
   const maxAbs = Math.max(...absValues) || 1;
   const halfH = chartH / 2;
   const midY = PAD.top + halfH;
-
   const barGap = 2;
   const barWidth = Math.max(4, (chartW / data.length) - barGap);
-
   const labelInterval = Math.max(1, Math.ceil(data.length / 6));
 
   return (
     <div style={{ padding: '4px 4px 0' }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '4px 8px',
-        fontFamily: "'VT323', monospace", fontSize: '13px',
+        padding: '4px 8px', fontFamily: "'VT323', monospace", fontSize: '13px',
       }}>
         <span style={{ color: '#888' }}>Today's Activity</span>
         <span>
@@ -507,46 +411,26 @@ function MovementsChart({ movements, summary }) {
       </div>
       <div className="protocol-chart" style={{ width: '100%', position: 'relative' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          {/* Center line (zero axis) */}
           <line x1={PAD.left} y1={midY} x2={W - PAD.right} y2={midY} stroke="#555" strokeWidth={0.5} />
-
-          {/* Grid labels */}
           <text x={PAD.left - 4} y={PAD.top + 4} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
             +{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
           </text>
-          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
-            0
-          </text>
+          <text x={PAD.left - 4} y={midY + 3} fill="#666" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">0</text>
           <text x={PAD.left - 4} y={PAD.top + chartH + 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="end">
             -{maxAbs >= 1000 ? `${(maxAbs / 1000).toFixed(1)}k` : maxAbs}
           </text>
-
-          {/* Bars */}
           {data.map((d, i) => {
             const x = PAD.left + (i / data.length) * chartW + barGap / 2;
             const isPositive = d.amount >= 0;
             const barH = Math.max(2, (Math.abs(d.amount) / maxAbs) * halfH);
             const y = isPositive ? midY - barH : midY;
             const fill = isPositive ? '#00c853' : '#ef5350';
-            return (
-              <rect key={i}
-                x={x} y={y}
-                width={barWidth} height={barH}
-                fill={fill} opacity={0.75}
-                rx={1}
-              />
-            );
+            return <rect key={i} x={x} y={y} width={barWidth} height={barH} fill={fill} opacity={0.75} rx={1} />;
           })}
-
-          {/* X-axis labels */}
           {data.map((d, i) => (
             i % labelInterval === 0 ? (
-              <text key={i}
-                x={PAD.left + (i / data.length) * chartW + barWidth / 2}
-                y={H - 2} fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle"
-              >
-                {d.label}
-              </text>
+              <text key={i} x={PAD.left + (i / data.length) * chartW + barWidth / 2} y={H - 2}
+                fill="#555" fontSize="9" fontFamily="VT323, monospace" textAnchor="middle">{d.label}</text>
             ) : null
           ))}
         </svg>
@@ -556,16 +440,20 @@ function MovementsChart({ movements, summary }) {
 }
 
 // ── Movements Tab ─────────────────────────────────────────
-function MovementsTab({ movements, history, summary, loading }) {
-  if (loading) return <div className="loading">Loading movements...</div>;
+function MovementsTab({ movements, summary }) {
   if (!movements || movements.length === 0) return (
     <div style={{
-      padding: '16px', textAlign: 'center',
+      padding: '24px', textAlign: 'center',
       fontFamily: "'VT323', monospace", fontSize: '14px',
       color: 'var(--terminal-amber)', background: 'var(--terminal-bg)',
-      height: '100%',
+      height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '8px',
     }}>
-      {'> No movements recorded yet.'}
+      <div style={{ fontSize: '28px' }}>$</div>
+      <div>{'> No movements yet.'}</div>
+      <div style={{ fontSize: '12px', color: '#888' }}>
+        Your devs' earnings and spending will appear here.
+      </div>
     </div>
   );
 
@@ -573,48 +461,27 @@ function MovementsTab({ movements, history, summary, loading }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <MovementsChart movements={movements} summary={summary} />
       <div className="win-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-      <table className="win-table">
-        <thead>
-          <tr>
-            <th style={{ width: '24px' }}></th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Amount</th>
-            <th>Dev</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {movements.map((m, i) => (
-            <tr key={i}>
-              <td style={{
-                color: MOVEMENT_COLORS_GREY[m.type] || '#888',
-                fontWeight: 'bold', textAlign: 'center', fontSize: '13px',
-              }}>
-                {MOVEMENT_ICONS[m.type] || '?'}
-              </td>
-              <td style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>
-                {m.type}
-              </td>
-              <td style={{ fontSize: '10px', whiteSpace: 'normal' }}>
-                {m.description}
-              </td>
-              <td style={{
-                color: m.amount >= 0 ? 'var(--green-on-grey)' : 'var(--red-on-grey)',
-                fontWeight: 'bold',
-              }}>
-                {m.amount >= 0 ? '+' : ''}{formatNumber(m.amount)} $NXT
-              </td>
-              <td style={{ fontSize: '10px' }}>
-                {m.dev_name || (m.dev_id ? `#${m.dev_id}` : '-')}
-              </td>
-              <td style={{ fontSize: '10px' }}>
-                {formatTimestamp(m.timestamp)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <table className="win-table">
+          <thead>
+            <tr><th style={{ width: '24px' }}></th><th>Type</th><th>Description</th><th>Amount</th><th>Dev</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            {movements.map((m, i) => (
+              <tr key={i}>
+                <td style={{ color: MOVEMENT_COLORS_GREY[m.type] || '#888', fontWeight: 'bold', textAlign: 'center', fontSize: '13px' }}>
+                  {MOVEMENT_ICONS[m.type] || '?'}
+                </td>
+                <td style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>{m.type}</td>
+                <td style={{ fontSize: '10px', whiteSpace: 'normal' }}>{m.description}</td>
+                <td style={{ color: m.amount >= 0 ? 'var(--green-on-grey)' : 'var(--red-on-grey)', fontWeight: 'bold' }}>
+                  {m.amount >= 0 ? '+' : ''}{formatNumber(m.amount)} $NXT
+                </td>
+                <td style={{ fontSize: '10px' }}>{m.dev_name || (m.dev_id ? `#${m.dev_id}` : '-')}</td>
+                <td style={{ fontSize: '10px' }}>{formatTimestamp(m.timestamp)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -626,119 +493,101 @@ export default function NxtWallet() {
   const [summary, setSummary] = useState(null);
   const [history, setHistory] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [loadingMovements, setLoadingMovements] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const lastGoodRef = useRef({ summary: null, history: [], movements: [] });
 
   const { address, isConnected, displayAddress } = useWallet();
   const wallet = isConnected ? address : null;
   const { tokenIds: contextTokenIds } = useDevs();
-
-  // Convert DevsContext tokenIds (numbers) to BigInt array for contract calls
   const tokenIds = contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
 
-  // ── REST API data ────────────────────────────────────────
+  // ── Single fetch function — never triggers loading flash ──
+  const fetchAll = useCallback(async () => {
+    if (!wallet) return;
+    try {
+      const [sum, hist, mov] = await Promise.allSettled([
+        api.getWalletSummary(wallet),
+        api.getBalanceHistory(wallet),
+        api.getMovements(wallet),
+      ]);
+      if (sum.status === 'fulfilled' && sum.value) {
+        lastGoodRef.current.summary = sum.value;
+        setSummary(sum.value);
+      }
+      if (hist.status === 'fulfilled' && Array.isArray(hist.value)) {
+        lastGoodRef.current.history = hist.value;
+        setHistory(hist.value);
+      }
+      if (mov.status === 'fulfilled' && Array.isArray(mov.value)) {
+        lastGoodRef.current.movements = mov.value;
+        setMovements(mov.value);
+      }
+    } catch {
+      // Keep last good data on total failure
+      if (lastGoodRef.current.summary) setSummary(lastGoodRef.current.summary);
+    } finally {
+      setIsFirstLoad(false);
+    }
+  }, [wallet]);
+
+  // ── Load on mount + auto-refresh every 90s ──
   useEffect(() => {
     if (!wallet) {
-      setLoadingSummary(false);
-      setLoadingHistory(false);
-      setLoadingMovements(false);
       setSummary(null);
       setHistory([]);
       setMovements([]);
+      setIsFirstLoad(false);
       return;
     }
+    setIsFirstLoad(true);
+    fetchAll();
+    const interval = setInterval(fetchAll, 90_000);
+    return () => clearInterval(interval);
+  }, [wallet, fetchAll]);
 
-    if (!summary) setLoadingSummary(true);
-    if (history.length === 0) setLoadingHistory(true);
-    if (movements.length === 0) setLoadingMovements(true);
+  // ── Safety timeout: never stuck in loading ──
+  useEffect(() => {
+    if (!isFirstLoad) return;
+    const t = setTimeout(() => setIsFirstLoad(false), 10_000);
+    return () => clearTimeout(t);
+  }, [isFirstLoad]);
 
-    api.getWalletSummary(wallet)
-      .then(data => {
-        setSummary(data);
-        setLoadingSummary(false);
-      })
-      .catch((err) => {
-        console.warn('[NxtWallet] wallet-summary failed:', err.message);
-        // Fallback: build summary from on-chain tokenIds + individual dev API calls
-        if (tokenIds && tokenIds.length > 0) {
-          const ids = Array.from(tokenIds).map(id => Number(id));
-          Promise.all(ids.map(id => api.getDev(id).catch(() => null)))
-            .then(devs => {
-              const valid = devs.filter(Boolean);
-              if (valid.length > 0) {
-                const totalBalance = valid.reduce((sum, d) => sum + (d.balance_nxt || 0), 0);
-                const totalEarned = valid.reduce((sum, d) => sum + (d.total_earned || 0), 0);
-                const totalSpent = valid.reduce((sum, d) => sum + (d.total_spent || 0), 0);
-                setSummary({
-                  wallet_address: wallet,
-                  balance_claimable: totalBalance,
-                  balance_claimed: totalSpent,
-                  balance_total_earned: totalEarned,
-                  total_devs: valid.length,
-                  salary_per_day: valid.length * 200,
-                  devs: valid.map(d => ({
-                    token_id: d.token_id,
-                    name: d.name,
-                    rarity_tier: d.rarity_tier,
-                    balance_nxt: d.balance_nxt || 0,
-                    total_earned: d.total_earned || 0,
-                    status: d.status || 'active',
-                  })),
-                  _fallback: true,
-                });
-              }
-            })
-            .catch(() => {})
-            .finally(() => setLoadingSummary(false));
-        } else {
-          setLoadingSummary(false);
-        }
-      });
+  // ── UI States ──
+  if (!isConnected) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100%', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber)',
+        background: 'var(--terminal-bg)', gap: '8px',
+      }}>
+        <div style={{ fontSize: '28px' }}>$</div>
+        <div>{'> Connect wallet to view your $NXT balance'}</div>
+      </div>
+    );
+  }
 
-    api.getBalanceHistory(wallet)
-      .then(setHistory)
-      .catch(() => setHistory([]))
-      .finally(() => setLoadingHistory(false));
+  if (isFirstLoad && !summary) {
+    return <LoadingBar />;
+  }
 
-    api.getMovements(wallet)
-      .then(setMovements)
-      .catch(() => {
-        // Fallback: build movements from individual dev histories
-        if (tokenIds && tokenIds.length > 0) {
-          const ids = Array.from(tokenIds).map(id => Number(id));
-          Promise.all(ids.map(id =>
-            api.getDevHistory(id).then(actions => actions.map(a => ({ ...a, dev_id: id }))).catch(() => [])
-          ))
-            .then(histories => {
-              const MOVEMENT_ACTIONS = ['CREATE_PROTOCOL', 'CREATE_AI', 'INVEST', 'SELL', 'RECEIVE_SALARY', 'DEPLOY'];
-              const fallback = histories.flat()
-                .filter(a => MOVEMENT_ACTIONS.includes(a.action_type))
-                .map(a => {
-                  const details = a.details || {};
-                  const devName = details.dev_name || `Dev #${a.dev_id}`;
-                  if (a.action_type === 'RECEIVE_SALARY') {
-                    return { type: 'salary', amount: a.nxt_cost || details.amount || 0, dev_id: a.dev_id, dev_name: devName, description: 'Salary received', timestamp: a.created_at };
-                  }
-                  if (a.action_type === 'SELL') {
-                    return { type: 'sell', amount: details.sold_for || 0, dev_id: a.dev_id, dev_name: devName, description: `Sold investment in ${details.name || 'protocol'}`, timestamp: a.created_at };
-                  }
-                  if (a.action_type === 'DEPLOY') {
-                    return { type: 'salary', amount: 0, dev_id: a.dev_id, dev_name: devName, description: `${devName} deployed to simulation`, timestamp: a.created_at };
-                  }
-                  return { type: 'spend', amount: -(a.nxt_cost || 0), dev_id: a.dev_id, dev_name: devName, description: a.action_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), timestamp: a.created_at };
-                })
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                .slice(0, 50);
-              setMovements(fallback);
-            })
-            .catch(() => setMovements([]));
-        } else {
-          setMovements([]);
-        }
-      })
-      .finally(() => setLoadingMovements(false));
-  }, [wallet, tokenIds]);
+  if (!summary) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100%', fontFamily: "'VT323', monospace", color: 'var(--terminal-green)',
+        background: 'var(--terminal-bg)', gap: '8px',
+      }}>
+        <div style={{ fontSize: '28px' }}>+</div>
+        <div>{'> No devs yet. Mint your first developer to start earning $NXT!'}</div>
+        <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+          Each dev earns 200 $NXT/day. Open Mint/Hire Devs to get started.
+        </div>
+        <button className="win-btn" onClick={fetchAll} style={{ marginTop: '8px', padding: '4px 16px', fontSize: '11px' }}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const tabs = [
     { id: 'balance', label: 'Balance' },
@@ -747,40 +596,35 @@ export default function NxtWallet() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Tab bar */}
-      <div className="win-tabs">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            className={`win-tab ${tab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Tab bar with refresh button */}
+      <div className="win-tabs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          {tabs.map(t => (
+            <button key={t.id} className={`win-tab ${tab === t.id ? 'active' : ''}`}
+              onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+        <button className="win-btn" onClick={fetchAll}
+          style={{ fontSize: '10px', padding: '1px 6px', marginRight: '4px' }}
+          title="Refresh wallet data"
+        >
+          {'\u21bb'} Refresh
+        </button>
       </div>
 
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {tab === 'balance' && (
-          <BalanceTab
-            summary={summary}
-            loading={loadingSummary}
-            isConnected={isConnected}
-            wallet={wallet}
-            tokenIds={tokenIds}
-            history={history}
-          />
+          <BalanceTab summary={summary} wallet={wallet} tokenIds={tokenIds} history={history} onClaimed={fetchAll} />
         )}
-        {tab === 'movements' && <MovementsTab movements={movements} history={history} summary={summary} loading={loadingMovements} />}
+        {tab === 'movements' && (
+          <MovementsTab movements={movements} summary={summary} />
+        )}
       </div>
 
       {/* Status bar */}
       <div className="win98-statusbar" style={{ fontSize: '10px', color: '#555' }}>
-        {wallet
-          ? `${displayAddress} | Salary: 200 $NXT/day per dev`
-          : 'Wallet not connected'
-        }
+        {displayAddress} | Salary: 200 $NXT/day per dev
       </div>
     </div>
   );
