@@ -75,7 +75,8 @@ async def get_claim_sync_status():
     signer_configured = bool(os.getenv("BACKEND_SIGNER_PRIVATE_KEY", ""))
     dry_run = os.getenv("DRY_RUN", "true").lower() != "false"
 
-    # Get last sync info from engine (if running in same process)
+    # Engine runs in a separate process — globals aren't shared.
+    # Try to read last sync info, but don't fail if engine module can't load.
     last_sync_at = None
     last_result = None
     try:
@@ -83,8 +84,8 @@ async def get_claim_sync_status():
         status = get_claim_sync_status()
         last_sync_at = status.get("last_sync_at")
         last_result = status.get("last_result")
-    except (ImportError, Exception):
-        pass
+    except Exception:
+        pass  # Engine module has bare imports that fail in API process — expected
 
     return {
         "signer_configured": signer_configured,
@@ -98,13 +99,23 @@ async def get_claim_sync_status():
 
 @router.post("/claim-sync/force")
 async def force_claim_sync():
-    """Force an immediate claim sync run (bypasses scheduler timer)."""
+    """Force an immediate claim sync run. Calls claim_sync directly (not via engine.py)."""
     try:
-        from backend.engine.engine import run_claim_sync, get_claim_sync_status
+        from backend.engine.claim_sync import sync_claimable_balances
         log.info("[CLAIM_SYNC] Manual force sync triggered via API")
-        run_claim_sync()
-        status = get_claim_sync_status()
-        return {"success": True, **status}
+        result = sync_claimable_balances()
+        log.info("[CLAIM_SYNC] Force sync result: %s", result)
+
+        # Read status from DB (not engine globals — different process)
+        pending = fetch_one(
+            "SELECT COUNT(*) as count, COALESCE(SUM(balance_nxt), 0) as total_nxt FROM devs WHERE status = 'active' AND balance_nxt > 0"
+        )
+        return {
+            "success": True,
+            "last_result": result or "ok",
+            "pending_claims": pending["count"],
+            "pending_nxt": pending["total_nxt"],
+        }
     except Exception as e:
-        log.error("[CLAIM_SYNC] Force sync failed: %s", e)
+        log.error("[CLAIM_SYNC] Force sync failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
