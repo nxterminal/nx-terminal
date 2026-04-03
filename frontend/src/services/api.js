@@ -94,6 +94,10 @@ export const api = {
       body: JSON.stringify({ dev_id: devId, player_address: playerAddress, prompt_text: promptText }),
     }),
 
+  // Claim Sync
+  getClaimSyncStatus: () => fetchJSON(`${API_BASE}/api/claim-sync/status`),
+  forceClaimSync: () => fetchJSON(`${API_BASE}/api/claim-sync/force`, { method: 'POST' }),
+
   // Sentinel
   sentinelHealth: () => fetchJSON(`${API_BASE}/api/sentinel/health`),
   sentinelXray: (contract) => fetchJSON(`${API_BASE}/api/sentinel/xray?contract=${contract}`),

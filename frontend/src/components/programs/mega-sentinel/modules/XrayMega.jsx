@@ -105,7 +105,8 @@ export default function XrayMega() {
       }, 300);
     } catch (e) {
       clearInterval(timer);
-      setError(e.message || 'Scan failed');
+      const msg = e.message || '';
+      setError(msg.includes('400') ? 'Token not found on MegaETH. Verify the contract address.' : msg || 'Scan failed. Check the address and try again.');
       setScanning(false);
     }
   }, []);

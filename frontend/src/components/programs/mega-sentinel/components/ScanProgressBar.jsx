@@ -1,21 +1,21 @@
 import { COLORS } from '../constants';
 
 export default function ScanProgressBar({ progress, label }) {
-  const filled = Math.floor((progress / 100) * 28);
-  const empty = 28 - filled;
-  const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
-
   return (
-    <div style={{
-      fontFamily: '"VT323", "Courier New", monospace',
-      fontSize: '13px', padding: '8px 0',
-    }}>
-      <div style={{ color: COLORS.cyan, marginBottom: '4px' }}>
-        [{bar}] {Math.round(progress)}%
+    <div style={{ padding: '8px 0' }}>
+      <div style={{
+        height: '4px', background: COLORS.border, borderRadius: '2px',
+        overflow: 'hidden', marginBottom: '6px',
+      }}>
+        <div style={{
+          width: `${Math.min(progress, 100)}%`, height: '100%',
+          background: `linear-gradient(90deg, ${COLORS.green}, ${COLORS.cyan})`,
+          borderRadius: '2px', transition: 'width 0.3s',
+        }} />
       </div>
       {label && (
-        <div style={{ color: COLORS.muted, fontSize: '12px' }}>
-          {label}
+        <div style={{ fontSize: '11px', color: COLORS.muted }}>
+          {label} ({Math.round(progress)}%)
         </div>
       )}
     </div>

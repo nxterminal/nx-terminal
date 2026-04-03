@@ -181,7 +181,8 @@ export function DevsProvider({ children }) {
   }, []);
 
   // loading = true during any phase of the token→dev fetch pipeline
-  const loading = isConnected && (tokensLoading || rpcPending || fetching);
+  // Also stays true until at least one fetch cycle completes (prevents "No devs" flash)
+  const loading = isConnected && (tokensLoading || rpcPending || fetching || !initialLoadDone.current);
 
   const value = useMemo(() => ({
     devs,

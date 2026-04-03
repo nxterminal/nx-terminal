@@ -1,8 +1,11 @@
 """Routes: Simulation state & world events"""
 
 import os
+import logging
 from fastapi import APIRouter, HTTPException
 from backend.api.deps import fetch_one, fetch_all
+
+log = logging.getLogger("nx_api")
 
 router = APIRouter()
 
@@ -91,3 +94,17 @@ async def get_claim_sync_status():
         "pending_claims": pending["count"],
         "pending_nxt": pending["total_nxt"],
     }
+
+
+@router.post("/claim-sync/force")
+async def force_claim_sync():
+    """Force an immediate claim sync run (bypasses scheduler timer)."""
+    try:
+        from backend.engine.engine import run_claim_sync, get_claim_sync_status
+        log.info("[CLAIM_SYNC] Manual force sync triggered via API")
+        run_claim_sync()
+        status = get_claim_sync_status()
+        return {"success": True, **status}
+    except Exception as e:
+        log.error("[CLAIM_SYNC] Force sync failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
