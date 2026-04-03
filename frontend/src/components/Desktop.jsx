@@ -31,6 +31,7 @@ const DESKTOP_ICONS = [
   { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
   { id: 'netwatch', icon: '', label: 'MegaWatch' },
+  { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
 ];
 
 function getWallpaperStyle() {

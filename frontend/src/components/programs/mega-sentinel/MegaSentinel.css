@@ -1,0 +1,241 @@
+/* ═══ MEGA SENTINEL v1.0 — Dark Terminal Theme ═══ */
+
+.sentinel-root {
+  --sentinel-bg: #0a0a0a;
+  --sentinel-bg-panel: #0f0f0f;
+  --sentinel-green: #33ff33;
+  --sentinel-amber: #ffb700;
+  --sentinel-red: #ff3333;
+  --sentinel-cyan: #00e5ff;
+  --sentinel-border: #1a3a1a;
+  --sentinel-muted: #555;
+  --sentinel-text: #c0c0c0;
+
+  display: flex;
+  height: 100%;
+  background: var(--sentinel-bg);
+  color: var(--sentinel-text);
+  font-family: 'VT323', 'Courier New', monospace;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── CRT Scanlines Overlay ── */
+.sentinel-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  z-index: 50;
+}
+
+/* ── Sidebar Navigation ── */
+.sentinel-nav {
+  width: 160px;
+  min-width: 160px;
+  background: #080808;
+  border-right: 1px solid var(--sentinel-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.sentinel-nav__header {
+  padding: 12px 10px 8px;
+  border-bottom: 1px solid var(--sentinel-border);
+  text-align: center;
+}
+
+.sentinel-nav__logo {
+  font-size: 24px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.sentinel-nav__title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--sentinel-green);
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(51, 255, 51, 0.3);
+}
+
+.sentinel-nav__modules {
+  flex: 1;
+  padding: 6px 0;
+  overflow-y: auto;
+}
+
+.sentinel-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  color: var(--sentinel-muted);
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sentinel-nav__item:hover {
+  background: rgba(51, 255, 51, 0.05);
+  color: var(--sentinel-green);
+}
+
+.sentinel-nav__item.active {
+  background: rgba(51, 255, 51, 0.1);
+  color: var(--sentinel-green);
+  border-left: 2px solid var(--sentinel-green);
+  text-shadow: 0 0 4px rgba(51, 255, 51, 0.3);
+}
+
+.sentinel-nav__icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.sentinel-nav__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sentinel-nav__footer {
+  padding: 8px 10px;
+  border-top: 1px solid var(--sentinel-border);
+  text-align: center;
+}
+
+/* ── Content Area ── */
+.sentinel-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.sentinel-content__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--sentinel-border);
+  background: #0c0c0c;
+  font-size: 14px;
+}
+
+.sentinel-content__title {
+  color: var(--sentinel-green);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.sentinel-content__status {
+  font-size: '11px';
+  color: var(--sentinel-muted);
+}
+
+.sentinel-content__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ── Module Panels ── */
+.sentinel-panel {
+  margin: 8px;
+  padding: 10px 12px;
+  background: var(--sentinel-bg-panel);
+  border: 1px solid var(--sentinel-border);
+}
+
+.sentinel-panel__title {
+  font-size: 14px;
+  color: var(--sentinel-green);
+  font-weight: bold;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+/* ── Result rows ── */
+.sentinel-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.sentinel-check--pass {
+  color: var(--sentinel-green);
+}
+
+.sentinel-check--fail {
+  color: var(--sentinel-red);
+}
+
+.sentinel-check--warn {
+  color: var(--sentinel-amber);
+}
+
+/* ── Tables ── */
+.sentinel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sentinel-table th {
+  text-align: left;
+  padding: 4px 8px;
+  color: var(--sentinel-muted);
+  border-bottom: 1px solid var(--sentinel-border);
+  font-weight: normal;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.sentinel-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(26, 58, 26, 0.3);
+}
+
+.sentinel-table tr:hover td {
+  background: rgba(51, 255, 51, 0.03);
+}
+
+/* ── Glow animation for scan results ── */
+@keyframes sentinel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.sentinel-scanning {
+  animation: sentinel-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── Fade-in for module transitions ── */
+@keyframes sentinel-fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sentinel-fade-in {
+  animation: sentinel-fadeIn 0.2s ease-out;
+}
