@@ -612,3 +612,228 @@ async def firewall_revoke(body: dict):
             "chainId": hex(MEGAETH_CHAIN_ID),
         }
     }
+
+
+# ─── RUG AUTOPSY — Forensic Analysis ─────────────────────
+
+# Transfer event topic
+TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+ZERO_ADDR_PADDED = "0x" + "0" * 64
+
+
+async def _find_deployer(client, contract):
+    """Find the deployer by looking at first Transfer from 0x0 (mint)."""
+    logs = await _rpc_get_logs(client, {
+        "address": contract,
+        "fromBlock": "0x0",
+        "toBlock": "latest",
+        "topics": [TRANSFER_TOPIC, ZERO_ADDR_PADDED],
+    })
+
+    if logs:
+        first_mint = logs[0]
+        topics = first_mint.get("topics", [])
+        if len(topics) >= 3:
+            return "0x" + topics[2][-40:]
+        block = int(first_mint.get("blockNumber", "0x0"), 16)
+        return None
+
+    return None
+
+
+async def _build_timeline(client, contract, dex_pair):
+    """Build event timeline from Transfer logs."""
+    events = []
+
+    # Get Transfer events (limited to last 100k blocks for performance)
+    current_block = await _rpc_block_number(client)
+    from_block = max(0, current_block - 100_000)
+
+    # Mint events (from 0x0)
+    mints = await _rpc_get_logs(client, {
+        "address": contract,
+        "fromBlock": hex(from_block) if from_block > 0 else "0x0",
+        "toBlock": "latest",
+        "topics": [TRANSFER_TOPIC, ZERO_ADDR_PADDED],
+    })
+
+    for m in mints[:20]:  # Cap to avoid huge responses
+        block = int(m.get("blockNumber", "0x0"), 16)
+        data = m.get("data", "0x")
+        amount = _decode_uint(data) if data != "0x" else 0
+        topics = m.get("topics", [])
+        to_addr = "0x" + topics[2][-40:] if len(topics) >= 3 else None
+        events.append({
+            "block": block,
+            "event": "mint",
+            "to": to_addr,
+            "amount": str(amount),
+        })
+
+    # Burns (to 0x0)
+    burns = await _rpc_get_logs(client, {
+        "address": contract,
+        "fromBlock": hex(from_block) if from_block > 0 else "0x0",
+        "toBlock": "latest",
+        "topics": [TRANSFER_TOPIC, None, ZERO_ADDR_PADDED],
+    })
+
+    for b in burns[:20]:
+        block = int(b.get("blockNumber", "0x0"), 16)
+        data = b.get("data", "0x")
+        amount = _decode_uint(data) if data != "0x" else 0
+        topics = b.get("topics", [])
+        from_addr = "0x" + topics[1][-40:] if len(topics) >= 2 else None
+        events.append({
+            "block": block,
+            "event": "burn",
+            "from": from_addr,
+            "amount": str(amount),
+        })
+
+    # Add DEX listing event if available
+    if dex_pair and dex_pair.get("pairCreatedAt"):
+        events.append({
+            "block": 0,
+            "event": "dex_listing",
+            "dex": dex_pair.get("dexId", "unknown"),
+            "pairAddress": dex_pair.get("pairAddress"),
+            "timestamp": dex_pair["pairCreatedAt"],
+        })
+
+    # Sort by block
+    events.sort(key=lambda e: e.get("block", 0))
+    return events
+
+
+async def _count_affected_wallets(client, contract):
+    """Count unique wallets that received this token."""
+    current_block = await _rpc_block_number(client)
+    from_block = max(0, current_block - 100_000)
+
+    logs = await _rpc_get_logs(client, {
+        "address": contract,
+        "fromBlock": hex(from_block),
+        "toBlock": "latest",
+        "topics": [TRANSFER_TOPIC],
+    })
+
+    wallets = set()
+    for log_entry in logs:
+        topics = log_entry.get("topics", [])
+        if len(topics) >= 3:
+            to_addr = "0x" + topics[2][-40:]
+            if to_addr != "0x" + "0" * 40:
+                wallets.add(to_addr)
+
+    return len(wallets)
+
+
+def _get_deployer_history(deployer):
+    """Look up deployer history from DB."""
+    try:
+        from backend.api.deps import fetch_all
+        rows = fetch_all(
+            "SELECT token_address, token_name, token_symbol, status, first_seen_at FROM sentinel_deployer_history WHERE deployer_address = %s ORDER BY first_seen_at DESC",
+            (deployer,),
+        )
+        return rows or []
+    except Exception:
+        return []
+
+
+def _save_deployer_token(deployer, contract, name, symbol):
+    """Save deployer+token to history table (upsert)."""
+    try:
+        from backend.api.deps import fetch_one, execute
+        existing = fetch_one(
+            "SELECT id FROM sentinel_deployer_history WHERE deployer_address = %s AND token_address = %s",
+            (deployer, contract),
+        )
+        if not existing:
+            execute(
+                "INSERT INTO sentinel_deployer_history (deployer_address, token_address, token_name, token_symbol) VALUES (%s, %s, %s, %s)",
+                (deployer, contract, name, symbol),
+            )
+    except Exception as e:
+        log.debug("save_deployer_token error: %s", e)
+
+
+@router.get("/autopsy")
+async def rug_autopsy(contract: str = Query(..., description="Token contract address")):
+    """RUG AUTOPSY — Forensic analysis of a token."""
+    contract = _addr(contract)
+    if not contract:
+        raise HTTPException(status_code=400, detail="Invalid contract address")
+
+    async with httpx.AsyncClient() as client:
+        # 1. Basic token info
+        has_code = await _rpc_get_code(client, contract)
+        token_info = await _fetch_token_info(client, contract) if has_code else {}
+
+        # 2. Find deployer
+        deployer = await _find_deployer(client, contract)
+
+        # 3. DexScreener data
+        dex_pair = await _fetch_dexscreener(client, contract)
+
+        # 4. Build event timeline
+        timeline = await _build_timeline(client, contract, dex_pair)
+
+        # 5. Count affected wallets
+        affected = await _count_affected_wallets(client, contract)
+
+        # 6. Deployer history
+        deployer_history = []
+        if deployer:
+            deployer_history = _get_deployer_history(deployer)
+            # Save this token to deployer history
+            _save_deployer_token(deployer, contract, token_info.get("name"), token_info.get("symbol"))
+
+        rug_count = sum(1 for h in deployer_history if h.get("status") == "rugged")
+        total_deployed = len(deployer_history)
+
+        # 7. Estimate damage
+        price = float(dex_pair.get("priceUsd", 0)) if dex_pair else 0
+        liq = float(dex_pair.get("liquidity", {}).get("usd", 0) if dex_pair and isinstance(dex_pair.get("liquidity"), dict) else 0)
+        estimated_loss = liq if liq > 0 else 0  # LP drained = liquidity lost
+
+        # 8. Verdict
+        if dex_pair and price == 0 and liq < 100:
+            verdict = "LIKELY_RUG"
+        elif rug_count >= 2:
+            verdict = "SERIAL_RUGGER"
+        elif liq < 500 and affected > 50:
+            verdict = "SUSPICIOUS"
+        else:
+            verdict = "INCONCLUSIVE"
+
+        return {
+            "token": {
+                "address": contract,
+                "name": token_info.get("name"),
+                "symbol": token_info.get("symbol"),
+                "hasCode": has_code,
+                "deployer": deployer,
+            },
+            "timeline": timeline[:50],
+            "deployer": {
+                "address": deployer,
+                "previousTokens": [
+                    {"name": h.get("token_name"), "symbol": h.get("token_symbol"),
+                     "address": h.get("token_address"), "status": h.get("status")}
+                    for h in deployer_history
+                    if h.get("token_address") != contract
+                ],
+                "isSerialDeployer": total_deployed > 3,
+                "totalTokensDeployed": total_deployed,
+                "rugCount": rug_count,
+            },
+            "damage": {
+                "estimatedLossUsd": estimated_loss,
+                "affectedWallets": affected,
+                "currentPrice": price,
+                "currentLiquidity": liq,
+            },
+            "verdict": verdict,
+        }
