@@ -950,7 +950,10 @@ def run_claim_sync():
     """Run claim sync to push balances on-chain."""
     global _last_claim_sync_at, _last_claim_sync_result
     try:
-        from .claim_sync import sync_claimable_balances
+        try:
+            from claim_sync import sync_claimable_balances
+        except ImportError:
+            from backend.engine.claim_sync import sync_claimable_balances
         log.info("[CLAIM_SYNC] Starting sync...")
         result = sync_claimable_balances()
         _last_claim_sync_at = datetime.now(timezone.utc).isoformat()

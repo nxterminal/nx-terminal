@@ -16,7 +16,13 @@ from eth_account import Account
 from eth_abi import encode
 from eth_utils import keccak
 
-from .config import DATABASE_URL
+try:
+    from config import DATABASE_URL
+except ImportError:
+    try:
+        from .config import DATABASE_URL
+    except ImportError:
+        from backend.engine.config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
