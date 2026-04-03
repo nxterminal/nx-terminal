@@ -1,41 +1,22 @@
 """
 NX TERMINAL: Claimable Balance Sync (Backend -> On-Chain)
 
-This module syncs each dev's claimable $NXT balance to the NXDevNFT v9 contract
+Syncs each dev's claimable $NXT balance to the NXDevNFT v9 contract
 so players can claim on-chain via claimNXT(tokenIds[]).
 
-FLOW:
-  1. Query all active devs with unclaimed salary (balance_nxt > 0, not yet synced)
-  2. For each dev: convert balance_nxt to wei (contract takes 10% fee at claim time)
-  3. Call batchSetClaimableBalance(tokenIds[], amounts[]) on the NXDevNFT contract
-     IN BATCHES of BATCH_SIZE to avoid gas limits
-  4. Mark synced devs in DB so they aren't double-synced
-
-REQUIREMENTS:
-  - BACKEND_SIGNER_PRIVATE_KEY env var (EOA with SIGNER_ROLE on NXDevNFT)
-  - web3.py >= 7.0 (pip install web3)
-  - The signer address must have SIGNER_ROLE granted by contract owner
-  - MegaETH RPC: https://carrot.megaeth.com/rpc
-
-SAFETY:
-  - This script does NOT execute transactions by default
-  - Set DRY_RUN=false env var to enable actual on-chain writes
-  - All amounts are logged before submission
-  - Failed TXs do not affect DB state (atomic)
-
-USAGE:
-  python -m backend.engine.claim_sync          # dry run (default)
-  DRY_RUN=false python -m backend.engine.claim_sync   # live sync
+Uses httpx + eth_account (NO web3.py dependency).
 """
 
 import os
 import logging
+import time
 
-from .config import (
-    DATABASE_URL,
-    SALARY_PER_DAY,
-    CLAIMABLE_AMOUNT_WEI_PER_DAY,
-)
+import httpx
+from eth_account import Account
+from eth_abi import encode
+from eth_utils import keccak
+
+from .config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -50,37 +31,31 @@ SIGNER_PRIVATE_KEY = os.getenv("BACKEND_SIGNER_PRIVATE_KEY", "")
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() != "false"
 BATCH_SIZE = int(os.getenv("CLAIM_SYNC_BATCH_SIZE", "200"))
 
-# -- ABI fragment for batchSetClaimableBalance --------------------------------
-BATCH_SET_CLAIMABLE_ABI = [
-    {
-        "name": "batchSetClaimableBalance",
-        "type": "function",
-        "stateMutability": "nonpayable",
-        "inputs": [
-            {"name": "tokenIds", "type": "uint256[]"},
-            {"name": "amounts", "type": "uint256[]"},
-        ],
-        "outputs": [],
-    },
-    {
-        "name": "setClaimableBalance",
-        "type": "function",
-        "stateMutability": "nonpayable",
-        "inputs": [
-            {"name": "tokenId", "type": "uint256"},
-            {"name": "amount", "type": "uint256"},
-        ],
-        "outputs": [],
-    },
-]
+# -- Function selector for batchSetClaimableBalance(uint256[],uint256[]) --
+BATCH_SET_SELECTOR = keccak(b"batchSetClaimableBalance(uint256[],uint256[])")[:4]
+
+
+def _rpc_call_sync(method, params):
+    """Synchronous JSON-RPC call to MegaETH."""
+    payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+    resp = httpx.post(MEGAETH_RPC, json=payload, timeout=30.0)
+    data = resp.json()
+    if "error" in data:
+        raise Exception(f"RPC error: {data['error']}")
+    return data.get("result")
+
+
+def _build_calldata(token_ids, amounts_wei):
+    """Build calldata for batchSetClaimableBalance(uint256[], uint256[])."""
+    encoded = encode(
+        ["uint256[]", "uint256[]"],
+        [token_ids, amounts_wei],
+    )
+    return BATCH_SET_SELECTOR + encoded
 
 
 def get_pending_claims(db_conn):
-    """
-    Query devs that have unsynchronized claimable balance.
-
-    Returns list of dicts: [{ token_id, balance_nxt }]
-    """
+    """Query devs with unsynchronized claimable balance."""
     query = """
         SELECT token_id, balance_nxt
         FROM nx.devs
@@ -95,32 +70,17 @@ def get_pending_claims(db_conn):
 
 
 def build_sync_batch(pending_devs):
-    """
-    Build arrays of (tokenIds, amounts_wei) for batchSetClaimableBalance.
-
-    Note: The contract charges a 10% claim fee (CLAIM_FEE_BPS=1000) when
-    the player calls claimNXT(). The amount set here is the gross amount;
-    the player receives 90% of it after the fee.
-    """
+    """Build (tokenIds, amounts_wei) arrays for the contract call."""
     token_ids = []
     amounts_wei = []
-
     for dev in pending_devs:
         balance_nxt = dev["balance_nxt"]
         if balance_nxt <= 0:
             continue
-
-        # Convert token units to wei (18 decimals) — gross amount (10% fee deducted at claim time)
         amount_wei = balance_nxt * (10 ** 18)
-
         token_ids.append(dev["token_id"])
         amounts_wei.append(amount_wei)
-
-        logger.info(
-            "Dev #%d: %d NXT (%d wei)",
-            dev["token_id"], balance_nxt, amount_wei,
-        )
-
+        logger.info("[CLAIM_SYNC] Dev #%d: %d NXT -> %d wei", dev["token_id"], balance_nxt, amount_wei)
     return token_ids, amounts_wei
 
 
@@ -135,37 +95,77 @@ def _mark_synced(db_conn, synced_token_ids):
         synced_token_ids,
     )
     db_conn.commit()
-    logger.info("Marked %d devs as synced (balance_nxt = 0).", len(synced_token_ids))
+    logger.info("[CLAIM_SYNC] Marked %d devs as synced (balance_nxt = 0)", len(synced_token_ids))
 
 
-def _send_batch(w3, contract, account, batch_ids, batch_amounts, nonce):
-    """Send a single batchSetClaimableBalance TX and wait for confirmation.
+def _send_batch(account, batch_ids, batch_amounts, nonce):
+    """Build, sign, and send a batchSetClaimableBalance TX via raw JSON-RPC.
 
-    Returns (success: bool, new_nonce: int).
+    Returns (success: bool, tx_hash: str, new_nonce: int).
     """
-    tx = contract.functions.batchSetClaimableBalance(
-        batch_ids, batch_amounts
-    ).build_transaction({
-        "from": account.address,
+    # 1. Build calldata
+    calldata = _build_calldata(batch_ids, batch_amounts)
+    logger.info("[CLAIM_SYNC] Calldata built: %d bytes, selector: 0x%s",
+                len(calldata), BATCH_SET_SELECTOR.hex())
+
+    # 2. Estimate gas (or use fixed upper bound)
+    gas_limit = 500_000 + (len(batch_ids) * 30_000)
+
+    # 3. Get gas price from RPC
+    gas_price_hex = _rpc_call_sync("eth_gasPrice", [])
+    gas_price = int(gas_price_hex, 16) if gas_price_hex else 1_000_000_000  # fallback 1 gwei
+    logger.info("[CLAIM_SYNC] Gas price: %d wei, gas limit: %d", gas_price, gas_limit)
+
+    # 4. Build transaction dict
+    tx = {
+        "to": NXDEVNFT_ADDRESS,
+        "value": 0,
+        "gas": gas_limit,
+        "gasPrice": gas_price,
         "nonce": nonce,
         "chainId": MEGAETH_CHAIN_ID,
-        "gas": 500_000 + (len(batch_ids) * 30_000),
-    })
+        "data": calldata,
+    }
 
+    # 5. Sign with eth_account
+    logger.info("[CLAIM_SYNC] Signing TX with signer %s...", account.address)
     signed = account.sign_transaction(tx)
-    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-    logger.info("TX sent: %s (%d devs)", tx_hash.hex(), len(batch_ids))
+    raw_tx_hex = "0x" + signed.raw_transaction.hex()
+    logger.info("[CLAIM_SYNC] TX signed. Raw TX length: %d bytes", len(signed.raw_transaction))
 
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-    if receipt.status == 1:
-        logger.info(
-            "TX confirmed in block %d. Gas used: %d",
-            receipt.blockNumber, receipt.gasUsed,
-        )
-        return True, nonce + 1
+    # 6. Send via eth_sendRawTransaction
+    logger.info("[CLAIM_SYNC] Sending eth_sendRawTransaction...")
+    tx_hash = _rpc_call_sync("eth_sendRawTransaction", [raw_tx_hex])
+    logger.info("[CLAIM_SYNC] TX sent! Hash: %s", tx_hash)
+
+    # 7. Wait for receipt (poll every 2s, timeout 120s)
+    logger.info("[CLAIM_SYNC] Waiting for receipt...")
+    deadline = time.time() + 120
+    receipt = None
+    while time.time() < deadline:
+        time.sleep(2)
+        try:
+            receipt = _rpc_call_sync("eth_getTransactionReceipt", [tx_hash])
+            if receipt is not None:
+                break
+        except Exception:
+            pass
+
+    if receipt is None:
+        logger.error("[CLAIM_SYNC] TX receipt timeout after 120s. Hash: %s", tx_hash)
+        return False, tx_hash, nonce + 1
+
+    status = int(receipt.get("status", "0x0"), 16)
+    block = int(receipt.get("blockNumber", "0x0"), 16)
+    gas_used = int(receipt.get("gasUsed", "0x0"), 16)
+
+    if status == 1:
+        logger.info("[CLAIM_SYNC] TX CONFIRMED! Block: %d, Gas used: %d, Hash: %s",
+                     block, gas_used, tx_hash)
+        return True, tx_hash, nonce + 1
     else:
-        logger.error("TX reverted! Hash: %s", tx_hash.hex())
-        return False, nonce + 1
+        logger.error("[CLAIM_SYNC] TX REVERTED! Block: %d, Hash: %s", block, tx_hash)
+        return False, tx_hash, nonce + 1
 
 
 def sync_claimable_balances():
@@ -175,100 +175,113 @@ def sync_claimable_balances():
 
     In DRY_RUN mode (default), only logs what would be sent.
     """
-    logger.info("[CLAIM_SYNC] === Started (DRY_RUN=%s, BATCH_SIZE=%d) ===", DRY_RUN, BATCH_SIZE)
+    logger.info("[CLAIM_SYNC] ========================================")
+    logger.info("[CLAIM_SYNC] === Claim Sync Started ===")
+    logger.info("[CLAIM_SYNC] DRY_RUN = %s", DRY_RUN)
+    logger.info("[CLAIM_SYNC] BATCH_SIZE = %d", BATCH_SIZE)
+    logger.info("[CLAIM_SYNC] RPC = %s", MEGAETH_RPC)
+    logger.info("[CLAIM_SYNC] Contract = %s", NXDEVNFT_ADDRESS)
 
     if not DRY_RUN and not SIGNER_PRIVATE_KEY:
-        logger.error("[CLAIM_SYNC] BACKEND_SIGNER_PRIVATE_KEY not set. Cannot send transactions.")
+        logger.error("[CLAIM_SYNC] BACKEND_SIGNER_PRIVATE_KEY not set!")
         return "error_no_signer_key"
 
-    # -- 1. Connect to DB ----------------------------------------------
+    if not DRY_RUN:
+        account = Account.from_key(SIGNER_PRIVATE_KEY)
+        logger.info("[CLAIM_SYNC] Signer = %s", account.address)
+
+        # Check signer ETH balance
+        try:
+            balance_hex = _rpc_call_sync("eth_getBalance", [account.address, "latest"])
+            balance_wei = int(balance_hex, 16)
+            balance_eth = balance_wei / 10**18
+            logger.info("[CLAIM_SYNC] Signer ETH balance: %.6f ETH (%d wei)", balance_eth, balance_wei)
+            if balance_wei < 10**15:  # < 0.001 ETH
+                logger.error("[CLAIM_SYNC] Signer has insufficient ETH for gas! Balance: %.6f ETH", balance_eth)
+                return f"error_no_gas: {balance_eth:.6f} ETH"
+        except Exception as e:
+            logger.error("[CLAIM_SYNC] Failed to check signer balance: %s", e)
+
+    # -- 1. Connect to DB --
     try:
         import psycopg2
         db_conn = psycopg2.connect(DATABASE_URL)
+        logger.info("[CLAIM_SYNC] DB connected")
     except ImportError:
-        logger.error("[CLAIM_SYNC] psycopg2 not installed. Run: pip install psycopg2-binary")
+        logger.error("[CLAIM_SYNC] psycopg2 not installed")
         return "error_no_psycopg2"
     except Exception as e:
         logger.error("[CLAIM_SYNC] DB connection failed: %s", e)
         return f"error_db: {e}"
 
-    # -- 2. Get pending claims -----------------------------------------
-    pending = get_pending_claims(db_conn)
+    # -- 2. Get pending claims --
+    try:
+        pending = get_pending_claims(db_conn)
+    except Exception as e:
+        logger.error("[CLAIM_SYNC] Query failed: %s", e)
+        db_conn.close()
+        return f"error_query: {e}"
+
     if not pending:
-        logger.info("[CLAIM_SYNC] No pending claims to sync.")
+        logger.info("[CLAIM_SYNC] No pending claims to sync")
         db_conn.close()
         return "no_pending"
 
-    logger.info("[CLAIM_SYNC] Found %d devs with claimable balance.", len(pending))
+    logger.info("[CLAIM_SYNC] Found %d devs with claimable balance", len(pending))
 
-    # -- 3. Build full batch -------------------------------------------
+    # -- 3. Build batch --
     token_ids, amounts_wei = build_sync_batch(pending)
     if not token_ids:
-        logger.info("[CLAIM_SYNC] No non-zero balances to sync.")
+        logger.info("[CLAIM_SYNC] No non-zero balances")
         db_conn.close()
         return "no_pending"
 
     total_nxt = sum(a // (10 ** 18) for a in amounts_wei)
-    logger.info(
-        "[CLAIM_SYNC] Total: %d devs, %d NXT to sync on-chain",
-        len(token_ids),
-        total_nxt,
-    )
+    logger.info("[CLAIM_SYNC] Total: %d devs, %d NXT to sync on-chain", len(token_ids), total_nxt)
 
-    # -- 4. Submit to contract in batches ------------------------------
+    # -- 4. DRY RUN --
     if DRY_RUN:
         for i in range(0, len(token_ids), BATCH_SIZE):
-            chunk_ids = token_ids[i:i + BATCH_SIZE]
+            chunk = token_ids[i:i + BATCH_SIZE]
             logger.info("[CLAIM_SYNC][DRY_RUN] Batch %d: %d devs (ids %d..%d)",
-                        i // BATCH_SIZE + 1, len(chunk_ids), chunk_ids[0], chunk_ids[-1])
-        logger.info("[CLAIM_SYNC][DRY_RUN] Skipping on-chain transactions. Set DRY_RUN=false to enable.")
+                        i // BATCH_SIZE + 1, len(chunk), chunk[0], chunk[-1])
+        logger.info("[CLAIM_SYNC][DRY_RUN] Set DRY_RUN=false to enable on-chain writes")
         db_conn.close()
         return f"dry_run: {len(token_ids)} devs, {total_nxt} NXT"
 
+    # -- 5. LIVE: Send transactions --
     try:
-        from web3 import Web3
+        account = Account.from_key(SIGNER_PRIVATE_KEY)
+        nonce_hex = _rpc_call_sync("eth_getTransactionCount", [account.address, "latest"])
+        nonce = int(nonce_hex, 16)
+        logger.info("[CLAIM_SYNC] Starting nonce: %d", nonce)
 
-        w3 = Web3(Web3.HTTPProvider(MEGAETH_RPC))
-        if not w3.is_connected():
-            logger.error("Cannot connect to MegaETH RPC.")
-            db_conn.close()
-            return
-
-        account = w3.eth.account.from_key(SIGNER_PRIVATE_KEY)
-        contract = w3.eth.contract(
-            address=Web3.to_checksum_address(NXDEVNFT_ADDRESS),
-            abi=BATCH_SET_CLAIMABLE_ABI,
-        )
-
-        nonce = w3.eth.get_transaction_count(account.address)
         total_synced = []
 
         for i in range(0, len(token_ids), BATCH_SIZE):
             chunk_ids = token_ids[i:i + BATCH_SIZE]
             chunk_amounts = amounts_wei[i:i + BATCH_SIZE]
+            batch_num = i // BATCH_SIZE + 1
+            total_batches = (len(token_ids) + BATCH_SIZE - 1) // BATCH_SIZE
 
-            logger.info("Sending batch %d/%d (%d devs)...",
-                        i // BATCH_SIZE + 1,
-                        (len(token_ids) + BATCH_SIZE - 1) // BATCH_SIZE,
-                        len(chunk_ids))
+            logger.info("[CLAIM_SYNC] === Batch %d/%d (%d devs) ===", batch_num, total_batches, len(chunk_ids))
 
-            success, nonce = _send_batch(w3, contract, account, chunk_ids, chunk_amounts, nonce)
+            success, tx_hash, nonce = _send_batch(account, chunk_ids, chunk_amounts, nonce)
             if success:
-                # Mark these devs as synced in DB immediately after confirmed TX
                 _mark_synced(db_conn, chunk_ids)
                 total_synced.extend(chunk_ids)
+                logger.info("[CLAIM_SYNC] Batch %d synced successfully", batch_num)
             else:
-                logger.error("Batch failed — stopping. %d devs synced so far.", len(total_synced))
+                logger.error("[CLAIM_SYNC] Batch %d failed — stopping. %d devs synced so far",
+                             batch_num, len(total_synced))
                 break
 
-        logger.info("[CLAIM_SYNC] === Complete: %d/%d devs synced ===", len(total_synced), len(token_ids))
-        return f"synced: {len(total_synced)}/{len(token_ids)} devs"
+        result = f"synced: {len(total_synced)}/{len(token_ids)} devs"
+        logger.info("[CLAIM_SYNC] === Complete: %s ===", result)
+        return result
 
-    except ImportError:
-        logger.error("[CLAIM_SYNC] web3 not installed. Run: pip install web3")
-        return "error_no_web3"
     except Exception as e:
-        logger.error("[CLAIM_SYNC] On-chain sync failed: %s", e)
+        logger.error("[CLAIM_SYNC] FATAL ERROR during on-chain sync: %s", e, exc_info=True)
         return f"error: {e}"
     finally:
         db_conn.close()

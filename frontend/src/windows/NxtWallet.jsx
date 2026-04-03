@@ -62,69 +62,6 @@ function LoadingBar() {
   );
 }
 
-// ── Sync Status Panel ────────────────────────────────────
-function SyncStatusPanel() {
-  const [syncStatus, setSyncStatus] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const s = await api.getClaimSyncStatus();
-      setSyncStatus(s);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
-
-  const handleForceSync = async () => {
-    setSyncing(true);
-    try {
-      const result = await api.forceClaimSync();
-      setSyncStatus(result);
-    } catch { /* ignore */ }
-    setSyncing(false);
-  };
-
-  const isDryRun = syncStatus?.dry_run;
-  const lastSync = syncStatus?.last_sync_at;
-  const lastResult = syncStatus?.last_result;
-
-  return (
-    <div style={{ fontSize: '13px', color: '#888', padding: '4px 0', lineHeight: 1.5 }}>
-      <div>Your $NXT is earned in-game. It syncs to blockchain every ~5 minutes.</div>
-      <div style={{ color: 'var(--terminal-amber)', marginTop: '2px' }}>Once synced, you can withdraw here.</div>
-
-      {isDryRun && (
-        <div style={{ color: 'var(--terminal-red, #ff4444)', marginTop: '4px', fontSize: '12px', padding: '4px 6px', border: '1px solid var(--terminal-red, #ff4444)', background: 'rgba(255,68,68,0.05)' }}>
-          Sync is in dry-run mode. Set DRY_RUN=false to enable on-chain writes.
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-        <button className="win-btn" onClick={handleForceSync} disabled={syncing}
-          style={{ fontSize: '10px', padding: '2px 10px' }}>
-          {syncing ? 'Syncing...' : 'Force Sync Now'}
-        </button>
-        <button className="win-btn" onClick={() => { setShowDetails(d => !d); fetchStatus(); }}
-          style={{ fontSize: '10px', padding: '2px 10px' }}>
-          {showDetails ? 'Hide' : 'Status'}
-        </button>
-      </div>
-
-      {showDetails && syncStatus && (
-        <div style={{ marginTop: '4px', fontSize: '11px', color: '#666', fontFamily: "'VT323', monospace" }}>
-          <div>Last sync: {lastSync ? new Date(lastSync).toLocaleString() : 'never'}</div>
-          <div>Result: {lastResult || 'unknown'}</div>
-          <div>Pending: {syncStatus.pending_claims} devs ({syncStatus.pending_nxt} $NXT)</div>
-          <div>Signer: {syncStatus.signer_configured ? 'configured' : 'NOT configured'}</div>
-          <div>DRY_RUN: {isDryRun ? 'true' : 'false'}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
@@ -143,12 +80,35 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   const { data: txHash, writeContract, isPending: isSending, reset: resetTx } = useWriteContract();
   const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
+  // Sync status
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState(null);
+
+  const fetchSyncStatus = useCallback(async () => {
+    try { setSyncStatus(await api.getClaimSyncStatus()); } catch {}
+  }, []);
+
+  useEffect(() => { fetchSyncStatus(); }, [fetchSyncStatus]);
+
   useEffect(() => {
-    if (isConfirmed) {
-      refetchPreview();
-      onClaimed?.();
-    }
+    if (isConfirmed) { refetchPreview(); onClaimed?.(); }
   }, [isConfirmed, refetchPreview, onClaimed]);
+
+  const handleForceSync = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const result = await api.forceClaimSync();
+      setSyncStatus(result);
+      setSyncMsg(result.last_result || 'Sync executed');
+      // Refresh on-chain preview after sync
+      setTimeout(() => refetchPreview(), 3000);
+    } catch (e) {
+      setSyncMsg('Sync failed: ' + (e.message || 'unknown'));
+    }
+    setSyncing(false);
+  };
 
   const grossWei = preview ? BigInt(preview[0]) : BigInt(0);
   const feeWei = preview ? BigInt(preview[1]) : BigInt(0);
@@ -166,64 +126,123 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
     });
   };
 
-  const sectionStyle = {
-    margin: '4px 8px', padding: '8px',
+  const box = {
+    margin: '4px 8px', padding: '10px',
     border: '1px solid var(--border-dark)', background: 'var(--terminal-bg)',
     fontFamily: "'VT323', monospace",
   };
-  const labelStyle = { fontSize: '13px', color: '#888', marginBottom: '2px' };
-  const valueStyle = { fontSize: '14px', fontWeight: 'bold' };
+  const card = {
+    padding: '8px 10px', border: '1px solid var(--border-dark)',
+    background: 'rgba(0,0,0,0.15)', marginBottom: '8px',
+  };
+  const lbl = { fontSize: '11px', color: '#888', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' };
+
+  const isDryRun = syncStatus?.dry_run;
 
   return (
-    <div style={sectionStyle}>
-      <div style={{ fontSize: '14px', color: 'var(--terminal-amber)', fontWeight: 'bold', marginBottom: '6px' }}>
-        {'>'} WITHDRAW $NXT
+    <div style={box}>
+      <div style={{ fontSize: '14px', color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold', marginBottom: '8px' }}>
+        WITHDRAW $NXT TO WALLET
       </div>
 
-      {/* Balance overview */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-        <div>
-          <div style={labelStyle}>In dev wallets (in-game)</div>
-          <div style={{ ...valueStyle, color: 'var(--gold-on-grey, #7a5c00)' }}>{formatNumber(gameBalance)} $NXT</div>
+      {/* ── Pipeline: In-Game → On-Chain → Wallet ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '10px', fontSize: '13px' }}>
+        <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'rgba(122,92,0,0.08)', border: '1px solid rgba(122,92,0,0.2)' }}>
+          <div style={lbl}>In-Game</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>{formatNumber(gameBalance)}</div>
+          <div style={{ fontSize: '10px', color: '#666' }}>your devs</div>
         </div>
-        <div>
-          <div style={labelStyle}>Available to withdraw (on-chain)</div>
-          <div style={{ ...valueStyle, color: hasClaimable ? 'var(--terminal-green)' : '#888' }}>{grossDisplay} $NXT</div>
+        <div style={{ padding: '0 4px', color: '#555', fontSize: '16px' }}>{'\u2192'}</div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: hasClaimable ? 'rgba(0,180,0,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasClaimable ? 'rgba(0,180,0,0.2)' : 'var(--border-dark)'}` }}>
+          <div style={lbl}>On-Chain</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: hasClaimable ? 'var(--terminal-green)' : '#666' }}>{grossDisplay}</div>
+          <div style={{ fontSize: '10px', color: '#666' }}>ready</div>
+        </div>
+        <div style={{ padding: '0 4px', color: '#555', fontSize: '16px' }}>{'\u2192'}</div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-dark)' }}>
+          <div style={lbl}>Your Wallet</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#666' }}>-</div>
+          <div style={{ fontSize: '10px', color: '#666' }}>claimed</div>
         </div>
       </div>
 
-      {/* Claiming disabled */}
-      {claimEnabled === false && (
-        <div style={{ fontSize: '13px', color: 'var(--terminal-amber)', padding: '4px 0' }}>
-          Claiming will be enabled soon.
-        </div>
-      )}
-
-      {/* Has claimable on-chain */}
-      {hasClaimable && claimEnabled !== false && (
-        <div style={{ padding: '6px', border: '1px solid var(--border-dark)', background: 'rgba(0,0,0,0.2)', marginBottom: '6px' }}>
-          <div style={{ fontSize: '14px', color: 'var(--terminal-green)', marginBottom: '4px' }}>
-            Withdraw: {grossDisplay} $NXT
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--terminal-red, #ff4444)' }}>
-            Claim fee: -{feeDisplay} $NXT (10%)
-          </div>
-          <div style={{ fontSize: '14px', color: 'var(--terminal-green)', fontWeight: 'bold', marginTop: '2px' }}>
-            You receive: {netDisplay} $NXT
+      {/* ── Sync to Blockchain card ── */}
+      {!hasClaimable && gameBalance > 0 && claimEnabled !== false && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--terminal-amber)' }}>SYNC TO BLOCKCHAIN</span>
+            <span style={{ fontSize: '11px', color: syncStatus?.last_sync_at ? 'var(--terminal-green)' : '#888' }}>
+              {syncStatus?.last_sync_at ? '\u25CF Active' : '\u25CB Awaiting first sync'}
+            </span>
           </div>
 
-          <div style={{ fontSize: '11px', color: '#888', margin: '6px 0 4px' }}>
-            After withdrawal, your devs keep earning 200 $NXT/day salary.
-            They'll rebuild their working capital from new earnings.
+          {isDryRun && (
+            <div style={{ fontSize: '11px', color: 'var(--terminal-red, #ff4444)', padding: '3px 6px', marginBottom: '6px',
+              border: '1px solid rgba(255,68,68,0.3)', background: 'rgba(255,68,68,0.05)' }}>
+              DRY_RUN mode active. Set DRY_RUN=false to push balances on-chain.
+            </div>
+          )}
+
+          <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>
+            Your {formatNumber(gameBalance)} $NXT syncs to blockchain automatically every ~5 min.
+            {syncStatus?.last_sync_at && (
+              <span style={{ color: '#666' }}> Last: {new Date(syncStatus.last_sync_at).toLocaleTimeString()}</span>
+            )}
+            {syncStatus?.last_result && (
+              <span style={{ color: '#666' }}> ({syncStatus.last_result})</span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              className="win-btn"
-              disabled={isSending || isMining}
-              onClick={handleWithdraw}
-              style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '11px' }}
-            >
+            <button className="win-btn" onClick={handleForceSync} disabled={syncing}
+              style={{ fontSize: '11px', padding: '3px 14px', fontWeight: 'bold' }}>
+              {syncing ? 'Syncing...' : '\u26A1 Sync Now'}
+            </button>
+            {syncMsg && (
+              <span style={{ fontSize: '11px', color: syncMsg.includes('fail') || syncMsg.includes('error') ? 'var(--terminal-red)' : 'var(--terminal-green)' }}>
+                {syncMsg}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Claiming disabled ── */}
+      {claimEnabled === false && (
+        <div style={{ ...card, borderColor: 'rgba(255,183,0,0.3)' }}>
+          <div style={{ fontSize: '13px', color: 'var(--terminal-amber)' }}>Claiming will be enabled soon.</div>
+        </div>
+      )}
+
+      {/* ── Withdraw card (has claimable on-chain) ── */}
+      {hasClaimable && claimEnabled !== false && (
+        <div style={{ ...card, borderColor: 'rgba(0,180,0,0.3)' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--terminal-green)', marginBottom: '6px' }}>
+            WITHDRAW
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}>
+            <span style={{ color: '#888' }}>Available:</span>
+            <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>{grossDisplay} $NXT</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '2px 0' }}>
+            <span style={{ color: '#888' }}>Claim fee (10%):</span>
+            <span style={{ color: 'var(--terminal-red, #ff4444)' }}>-{feeDisplay} $NXT</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '4px 0 6px', borderTop: '1px solid var(--border-dark)', marginTop: '4px' }}>
+            <span style={{ color: '#ccc', fontWeight: 'bold' }}>You receive:</span>
+            <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>{netDisplay} $NXT</span>
+          </div>
+
+          <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>
+            After withdrawal, devs keep earning 200 $NXT/day. New salary rebuilds capital.
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="win-btn" disabled={isSending || isMining} onClick={handleWithdraw}
+              style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '12px',
+                background: isSending || isMining ? undefined : '#2a5a00',
+                color: isSending || isMining ? undefined : '#fff' }}>
               {isSending ? 'SENDING...' : isMining ? 'MINING...' : `WITHDRAW ${netDisplay} $NXT`}
             </button>
 
@@ -234,11 +253,9 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
                   style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>View</a>
               </span>
             )}
-
             {isConfirmed && (
               <span style={{ fontSize: '12px', color: 'var(--terminal-green)' }}>
-                Successfully withdrew {netDisplay} $NXT!{' '}
-                <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                Withdrawn! <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>View TX</a>
               </span>
             )}
@@ -246,22 +263,22 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
         </div>
       )}
 
-      {/* No claimable on-chain but has game balance — show sync status */}
-      {!hasClaimable && gameBalance > 0 && claimEnabled !== false && (
-        <SyncStatusPanel />
-      )}
-
-      {/* No claimable and no game balance */}
-      {!hasClaimable && !gameBalance && ids.length > 0 && claimEnabled !== false && (
-        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0' }}>
-          Your devs haven't earned any $NXT yet. They earn 200 $NXT/day through salary.
+      {/* ── Withdraw card (nothing available yet) ── */}
+      {!hasClaimable && claimEnabled !== false && !(gameBalance > 0) && ids.length > 0 && (
+        <div style={card}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', marginBottom: '4px' }}>WITHDRAW</div>
+          <div style={{ fontSize: '12px', color: '#888' }}>
+            Your devs haven't earned $NXT yet. They earn 200 $NXT/day through salary.
+          </div>
         </div>
       )}
 
-      {/* No devs */}
+      {/* ── No devs ── */}
       {ids.length === 0 && claimEnabled !== false && (
-        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0' }}>
-          No devs found. Mint a dev to start earning $NXT.
+        <div style={card}>
+          <div style={{ fontSize: '12px', color: '#888' }}>
+            No devs found. Mint a dev to start earning $NXT.
+          </div>
         </div>
       )}
     </div>
