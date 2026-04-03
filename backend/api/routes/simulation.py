@@ -71,9 +71,23 @@ async def get_claim_sync_status():
     )
     signer_configured = bool(os.getenv("BACKEND_SIGNER_PRIVATE_KEY", ""))
     dry_run = os.getenv("DRY_RUN", "true").lower() != "false"
+
+    # Get last sync info from engine (if running in same process)
+    last_sync_at = None
+    last_result = None
+    try:
+        from backend.engine.engine import get_claim_sync_status
+        status = get_claim_sync_status()
+        last_sync_at = status.get("last_sync_at")
+        last_result = status.get("last_result")
+    except (ImportError, Exception):
+        pass
+
     return {
-        "pending_devs": pending["count"],
-        "pending_nxt": pending["total_nxt"],
         "signer_configured": signer_configured,
         "dry_run": dry_run,
+        "last_sync_at": last_sync_at,
+        "last_result": last_result,
+        "pending_claims": pending["count"],
+        "pending_nxt": pending["total_nxt"],
     }

@@ -85,6 +85,12 @@ async def nft_metadata(token_id: int):
     from backend.api.routes.devs import get_dev_metadata
     return await get_dev_metadata(token_id)
 
+# ── Claim Sync Status (alias for /api/simulation/claim-sync-status) ──
+@app.get("/api/claim-sync/status")
+async def claim_sync_status():
+    from backend.api.routes.simulation import get_claim_sync_status
+    return await get_claim_sync_status()
+
 # ============================================================
 # HEALTH
 # ============================================================

@@ -934,15 +934,34 @@ def mint_dev(conn, token_id: int, owner_address: str, corporation: str) -> dict:
 # MAIN LOOP
 # ============================================================
 
+_last_claim_sync_at = None   # ISO timestamp of last successful claim sync
+_last_claim_sync_result = None  # "ok" / "no_pending" / error message
+
+
+def get_claim_sync_status():
+    """Return last sync metadata (used by the API status endpoint)."""
+    return {
+        "last_sync_at": _last_claim_sync_at,
+        "last_result": _last_claim_sync_result,
+    }
+
+
 def run_claim_sync():
     """Run claim sync to push balances on-chain. Fails silently if deps missing."""
+    global _last_claim_sync_at, _last_claim_sync_result
     try:
         from .claim_sync import sync_claimable_balances
-        sync_claimable_balances()
+        log.info("[CLAIM_SYNC] Starting sync...")
+        result = sync_claimable_balances()
+        _last_claim_sync_at = datetime.now(timezone.utc).isoformat()
+        _last_claim_sync_result = result or "ok"
+        log.info("[CLAIM_SYNC] Sync completed: %s", _last_claim_sync_result)
     except ImportError:
-        log.debug("claim_sync dependencies not available (web3), skipping")
+        log.debug("[CLAIM_SYNC] Dependencies not available (web3), skipping")
+        _last_claim_sync_result = "skipped_no_web3"
     except Exception as e:
-        log.error(f"Claim sync error: {e}")
+        log.error("[CLAIM_SYNC] Error: %s", e)
+        _last_claim_sync_result = f"error: {e}"
 
 
 def run_engine():
@@ -997,10 +1016,11 @@ def run_engine():
         try:
             now = datetime.now(timezone.utc)
             if now - last_claim_sync >= claim_sync_interval:
+                log.info("[CLAIM_SYNC] Scheduler triggered (every %s)", claim_sync_interval)
                 run_claim_sync()
                 last_claim_sync = now
         except Exception as e:
-            log.error(f"Claim sync scheduler error: {e}")
+            log.error("[CLAIM_SYNC] Scheduler error: %s", e)
 
         time.sleep(SCHEDULER_INTERVAL_SEC)
 

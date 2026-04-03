@@ -175,42 +175,42 @@ def sync_claimable_balances():
 
     In DRY_RUN mode (default), only logs what would be sent.
     """
-    logger.info("=== Claim Sync Started (DRY_RUN=%s, BATCH_SIZE=%d) ===", DRY_RUN, BATCH_SIZE)
+    logger.info("[CLAIM_SYNC] === Started (DRY_RUN=%s, BATCH_SIZE=%d) ===", DRY_RUN, BATCH_SIZE)
 
     if not DRY_RUN and not SIGNER_PRIVATE_KEY:
-        logger.error("BACKEND_SIGNER_PRIVATE_KEY not set. Cannot send transactions.")
-        return
+        logger.error("[CLAIM_SYNC] BACKEND_SIGNER_PRIVATE_KEY not set. Cannot send transactions.")
+        return "error_no_signer_key"
 
     # -- 1. Connect to DB ----------------------------------------------
     try:
         import psycopg2
         db_conn = psycopg2.connect(DATABASE_URL)
     except ImportError:
-        logger.error("psycopg2 not installed. Run: pip install psycopg2-binary")
-        return
+        logger.error("[CLAIM_SYNC] psycopg2 not installed. Run: pip install psycopg2-binary")
+        return "error_no_psycopg2"
     except Exception as e:
-        logger.error("DB connection failed: %s", e)
-        return
+        logger.error("[CLAIM_SYNC] DB connection failed: %s", e)
+        return f"error_db: {e}"
 
     # -- 2. Get pending claims -----------------------------------------
     pending = get_pending_claims(db_conn)
     if not pending:
-        logger.info("No pending claims to sync.")
+        logger.info("[CLAIM_SYNC] No pending claims to sync.")
         db_conn.close()
-        return
+        return "no_pending"
 
-    logger.info("Found %d devs with claimable balance.", len(pending))
+    logger.info("[CLAIM_SYNC] Found %d devs with claimable balance.", len(pending))
 
     # -- 3. Build full batch -------------------------------------------
     token_ids, amounts_wei = build_sync_batch(pending)
     if not token_ids:
-        logger.info("No non-zero balances to sync.")
+        logger.info("[CLAIM_SYNC] No non-zero balances to sync.")
         db_conn.close()
-        return
+        return "no_pending"
 
     total_nxt = sum(a // (10 ** 18) for a in amounts_wei)
     logger.info(
-        "Total: %d devs, %d NXT to sync on-chain",
+        "[CLAIM_SYNC] Total: %d devs, %d NXT to sync on-chain",
         len(token_ids),
         total_nxt,
     )
@@ -219,11 +219,11 @@ def sync_claimable_balances():
     if DRY_RUN:
         for i in range(0, len(token_ids), BATCH_SIZE):
             chunk_ids = token_ids[i:i + BATCH_SIZE]
-            logger.info("[DRY RUN] Batch %d: %d devs (ids %d..%d)",
+            logger.info("[CLAIM_SYNC][DRY_RUN] Batch %d: %d devs (ids %d..%d)",
                         i // BATCH_SIZE + 1, len(chunk_ids), chunk_ids[0], chunk_ids[-1])
-        logger.info("[DRY RUN] Skipping on-chain transactions.")
+        logger.info("[CLAIM_SYNC][DRY_RUN] Skipping on-chain transactions. Set DRY_RUN=false to enable.")
         db_conn.close()
-        return
+        return f"dry_run: {len(token_ids)} devs, {total_nxt} NXT"
 
     try:
         from web3 import Web3
@@ -261,12 +261,15 @@ def sync_claimable_balances():
                 logger.error("Batch failed — stopping. %d devs synced so far.", len(total_synced))
                 break
 
-        logger.info("=== Claim Sync Complete: %d/%d devs synced ===", len(total_synced), len(token_ids))
+        logger.info("[CLAIM_SYNC] === Complete: %d/%d devs synced ===", len(total_synced), len(token_ids))
+        return f"synced: {len(total_synced)}/{len(token_ids)} devs"
 
     except ImportError:
-        logger.error("web3 not installed. Run: pip install web3")
+        logger.error("[CLAIM_SYNC] web3 not installed. Run: pip install web3")
+        return "error_no_web3"
     except Exception as e:
-        logger.error("On-chain sync failed: %s", e)
+        logger.error("[CLAIM_SYNC] On-chain sync failed: %s", e)
+        return f"error: {e}"
     finally:
         db_conn.close()
 
