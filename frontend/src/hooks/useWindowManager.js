@@ -26,6 +26,7 @@ const WINDOW_DEFAULTS = {
   'flow': { title: 'Flow', icon: '\u25C6', width: 1100, height: 750, x: 30, y: 15, maximized: true },
   'dev-academy': { title: 'NX Dev Academy', icon: 'DA', width: 900, height: 650, x: 100, y: 35, maximized: true },
   'monad-build': { title: 'Mega Build.exe', icon: '\u26A1', width: 1100, height: 700, x: 50, y: 20, maximized: true },
+  'mega-sentinel': { title: 'Mega Sentinel v1.0', icon: '\u{1F6E1}', width: 1000, height: 700, x: 60, y: 30, maximized: true },
 };
 
 export function useWindowManager() {

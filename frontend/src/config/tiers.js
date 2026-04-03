@@ -18,6 +18,7 @@ export const PROGRAM_MIN_DEVS = {
   'protocol-market': 5,
   'ai-lab': 5,
   'corp-wars': 5,
+  'mega-sentinel': 5,
 
   // Tier 4 — Dev House (10 devs)
   'monad-city': 10,

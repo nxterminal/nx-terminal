@@ -94,6 +94,21 @@ export const api = {
       body: JSON.stringify({ dev_id: devId, player_address: playerAddress, prompt_text: promptText }),
     }),
 
+  // Sentinel
+  sentinelHealth: () => fetchJSON(`${API_BASE}/api/sentinel/health`),
+  sentinelXray: (contract) => fetchJSON(`${API_BASE}/api/sentinel/xray?contract=${contract}`),
+  sentinelFirewallScan: (wallet) => fetchJSON(`${API_BASE}/api/sentinel/firewall/scan?wallet=${wallet}`),
+  sentinelFirewallRevoke: (token, spender, wallet) =>
+    fetchJSON(`${API_BASE}/api/sentinel/firewall/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, spender, wallet }),
+    }),
+  sentinelAutopsy: (contract) => fetchJSON(`${API_BASE}/api/sentinel/autopsy?contract=${contract}`),
+  sentinelHologram: (contract) => fetchJSON(`${API_BASE}/api/sentinel/hologram?contract=${contract}`),
+  sentinelGraduation: (filter = 'all', page = 1, limit = 20) =>
+    fetchJSON(`${API_BASE}/api/sentinel/graduation?filter=${filter}&page=${page}&limit=${limit}`),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
