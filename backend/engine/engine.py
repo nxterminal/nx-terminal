@@ -947,7 +947,7 @@ def get_claim_sync_status():
 
 
 def run_claim_sync():
-    """Run claim sync to push balances on-chain. Fails silently if deps missing."""
+    """Run claim sync to push balances on-chain."""
     global _last_claim_sync_at, _last_claim_sync_result
     try:
         from .claim_sync import sync_claimable_balances
@@ -956,11 +956,9 @@ def run_claim_sync():
         _last_claim_sync_at = datetime.now(timezone.utc).isoformat()
         _last_claim_sync_result = result or "ok"
         log.info("[CLAIM_SYNC] Sync completed: %s", _last_claim_sync_result)
-    except ImportError:
-        log.debug("[CLAIM_SYNC] Dependencies not available (web3), skipping")
-        _last_claim_sync_result = "skipped_no_web3"
     except Exception as e:
-        log.error("[CLAIM_SYNC] Error: %s", e)
+        log.error("[CLAIM_SYNC] Error: %s", e, exc_info=True)
+        _last_claim_sync_at = datetime.now(timezone.utc).isoformat()
         _last_claim_sync_result = f"error: {e}"
 
 
