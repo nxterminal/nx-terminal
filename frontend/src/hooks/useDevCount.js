@@ -81,7 +81,8 @@ export function useDevCount() {
     devCount = 0;
   }
 
-  const isLoading = wagmiLoading && rpcCount === null && !rpcFailed;
+  // Loading until at least one data source returns or fails (prevents flash of "0 devs")
+  const isLoading = isConnected && (wagmiLoading || (balanceData == null && rpcCount === null && !rpcFailed));
   const effectiveCount = isConnected ? devCount : 0;
 
   return {

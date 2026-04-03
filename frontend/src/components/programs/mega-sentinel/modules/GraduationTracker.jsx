@@ -108,7 +108,7 @@ export default function GraduationTracker() {
         </button>
       </div>
 
-      {loading && <ScanProgressBar progress={60} label="Loading tokens from DexScreener..." />}
+      {loading && <ScanProgressBar progress={60} label="Scanning MegaETH ecosystem..." />}
 
       {error && (
         <div style={{ color: COLORS.red, fontSize: '13px', padding: '8px' }}>

@@ -802,6 +802,36 @@ function IconPhares({ size = 32 }) {
   );
 }
 
+function IconMegaSentinel({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="50%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+        <linearGradient id="shieldBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1a3a6a" />
+          <stop offset="100%" stopColor="#0a1a3a" />
+        </linearGradient>
+      </defs>
+      {/* Shield body */}
+      <path d="M16 2 L27 7 L27 15 C27 22 22 27 16 30 C10 27 5 22 5 15 L5 7 Z"
+        fill="url(#shieldBg)" stroke="url(#shieldGrad)" strokeWidth="1.2" />
+      {/* Inner shield */}
+      <path d="M16 5 L24 9 L24 15 C24 20.5 20.5 25 16 27.5 C11.5 25 8 20.5 8 15 L8 9 Z"
+        fill="none" stroke="#10b981" strokeWidth="0.5" opacity="0.4" />
+      {/* Checkmark */}
+      <path d="M11 15.5 L14.5 19 L21 12" fill="none" stroke="#fff" strokeWidth="2.2"
+        strokeLinecap="round" strokeLinejoin="round" />
+      {/* Subtle keyhole */}
+      <circle cx="16" cy="22" r="1.2" fill="#10b981" opacity="0.5" />
+      <rect x="15.4" y="22" width="1.2" height="2.5" rx="0.4" fill="#10b981" opacity="0.4" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -826,6 +856,7 @@ export const ICON_MAP = {
   'flow': IconFlow,
   'dev-academy': IconDevAcademy,
   'monad-build': IconMonadBuild,
+  'mega-sentinel': IconMegaSentinel,
 };
 
 export function Win98Icon({ id, size = 32 }) {

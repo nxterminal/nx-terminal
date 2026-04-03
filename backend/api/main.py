@@ -92,6 +92,11 @@ async def claim_sync_status():
     from backend.api.routes.simulation import get_claim_sync_status
     return await get_claim_sync_status()
 
+@app.post("/api/claim-sync/force")
+async def claim_sync_force():
+    from backend.api.routes.simulation import force_claim_sync
+    return await force_claim_sync()
+
 # ============================================================
 # HEALTH
 # ============================================================

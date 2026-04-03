@@ -6,14 +6,14 @@ export default function ThreatBadge({ level, score }) {
   return (
     <span style={{
       display: 'inline-block',
-      padding: '2px 8px',
-      fontFamily: '"VT323", "Courier New", monospace',
-      fontSize: '12px',
-      fontWeight: 'bold',
+      padding: '2px 10px',
+      fontSize: '11px',
+      fontWeight: '600',
       color: risk.color,
       background: risk.bg,
       border: `1px solid ${risk.color}`,
-      letterSpacing: '1px',
+      borderRadius: '3px',
+      letterSpacing: '0.5px',
     }}>
       {risk.label}{typeof score === 'number' ? ` ${score}/100` : ''}
     </span>

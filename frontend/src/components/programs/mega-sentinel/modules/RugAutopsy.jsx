@@ -60,7 +60,8 @@ export default function RugAutopsy() {
       }, 300);
     } catch (e) {
       clearInterval(timer);
-      setError(e.message || 'Analysis failed');
+      const msg = e.message || '';
+      setError(msg.includes('400') ? 'Token not found or no on-chain data available.' : msg || 'Analysis failed. Check the address and try again.');
       setScanning(false);
     }
   }, []);

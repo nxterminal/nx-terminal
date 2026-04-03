@@ -21,12 +21,12 @@ export default function TerminalInput({ label, placeholder, onSubmit, disabled }
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '8px',
-      fontFamily: '"VT323", "Courier New", monospace',
-      fontSize: '14px', padding: '8px 12px',
-      background: COLORS.bg, border: `1px solid ${COLORS.border}`,
+      fontSize: '13px', padding: '10px 14px',
+      background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`,
+      borderRadius: '4px',
     }}>
-      <span style={{ color: COLORS.green, whiteSpace: 'nowrap' }}>
-        {'>'} {label || 'Enter address:'}
+      <span style={{ color: COLORS.muted, whiteSpace: 'nowrap', fontSize: '12px' }}>
+        {label || 'Contract address:'}
       </span>
       <input
         type="text"
@@ -38,19 +38,20 @@ export default function TerminalInput({ label, placeholder, onSubmit, disabled }
         spellCheck={false}
         style={{
           flex: 1, background: 'transparent', border: 'none', outline: 'none',
-          color: COLORS.cyan, fontFamily: '"VT323", "Courier New", monospace',
-          fontSize: '14px', caretColor: COLORS.green,
+          color: COLORS.text, fontFamily: 'monospace',
+          fontSize: '13px', caretColor: COLORS.green,
         }}
       />
       <button
         onClick={handleSubmit}
         disabled={!isValid || disabled}
         style={{
-          background: isValid && !disabled ? COLORS.dimGreen : '#222',
-          border: `1px solid ${isValid && !disabled ? COLORS.green : '#444'}`,
-          color: isValid && !disabled ? COLORS.green : '#666',
-          fontFamily: '"VT323", "Courier New", monospace',
-          fontSize: '12px', padding: '2px 12px', cursor: isValid && !disabled ? 'pointer' : 'default',
+          background: isValid && !disabled ? COLORS.green : COLORS.border,
+          border: 'none', borderRadius: '3px',
+          color: isValid && !disabled ? '#fff' : COLORS.muted,
+          fontSize: '11px', fontWeight: '600',
+          padding: '4px 14px', cursor: isValid && !disabled ? 'pointer' : 'default',
+          transition: 'all 0.15s',
         }}
       >
         SCAN

@@ -1,122 +1,132 @@
-/* ═══ MEGA SENTINEL v1.0 — Dark Terminal Theme ═══ */
+/* ═══ MEGA SENTINEL v1.0 — Modern Antivirus Theme ═══ */
 
 .sentinel-root {
-  --sentinel-bg: #0a0a0a;
-  --sentinel-bg-panel: #0f0f0f;
-  --sentinel-green: #33ff33;
-  --sentinel-amber: #ffb700;
-  --sentinel-red: #ff3333;
-  --sentinel-cyan: #00e5ff;
-  --sentinel-border: #1a3a1a;
-  --sentinel-muted: #555;
-  --sentinel-text: #c0c0c0;
+  --s-bg: #0b0b0f;
+  --s-bg-panel: #141418;
+  --s-bg-nav: #0e0e14;
+  --s-green: #10b981;
+  --s-amber: #f59e0b;
+  --s-red: #ef4444;
+  --s-cyan: #06b6d4;
+  --s-border: #1e1e2a;
+  --s-border-light: #2a2a3a;
+  --s-muted: #64748b;
+  --s-text: #e2e8f0;
+  --s-text-dim: #94a3b8;
 
   display: flex;
   height: 100%;
-  background: var(--sentinel-bg);
-  color: var(--sentinel-text);
-  font-family: 'VT323', 'Courier New', monospace;
+  background: var(--s-bg);
+  color: var(--s-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
   position: relative;
   overflow: hidden;
 }
 
-/* ── CRT Scanlines Overlay ── */
-.sentinel-root::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.08) 2px,
-    rgba(0, 0, 0, 0.08) 4px
-  );
-  z-index: 50;
-}
-
 /* ── Sidebar Navigation ── */
 .sentinel-nav {
-  width: 160px;
-  min-width: 160px;
-  background: #080808;
-  border-right: 1px solid var(--sentinel-border);
+  width: 180px;
+  min-width: 180px;
+  background: var(--s-bg-nav);
+  border-right: 1px solid var(--s-border);
   display: flex;
   flex-direction: column;
-  z-index: 1;
 }
 
 .sentinel-nav__header {
-  padding: 12px 10px 8px;
-  border-bottom: 1px solid var(--sentinel-border);
-  text-align: center;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--s-border);
 }
 
-.sentinel-nav__logo {
-  font-size: 24px;
-  line-height: 1;
-  margin-bottom: 2px;
+.sentinel-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.sentinel-nav__title {
+.sentinel-nav__shield {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--s-green), #059669);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
-  font-weight: bold;
-  color: var(--sentinel-green);
-  letter-spacing: 2px;
-  text-shadow: 0 0 6px rgba(51, 255, 51, 0.3);
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sentinel-nav__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--s-text);
+  letter-spacing: 0.5px;
+}
+
+.sentinel-nav__version {
+  font-size: 10px;
+  color: var(--s-muted);
+  font-weight: 400;
 }
 
 .sentinel-nav__modules {
   flex: 1;
-  padding: 6px 0;
+  padding: 8px 0;
   overflow-y: auto;
 }
 
 .sentinel-nav__item {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
-  color: var(--sentinel-muted);
-  font-family: 'VT323', 'Courier New', monospace;
+  border-left: 3px solid transparent;
+  color: var(--s-text-dim);
+  font-family: system-ui, -apple-system, sans-serif;
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: all 0.15s;
 }
 
 .sentinel-nav__item:hover {
-  background: rgba(51, 255, 51, 0.05);
-  color: var(--sentinel-green);
+  background: rgba(16, 185, 129, 0.04);
+  color: var(--s-text);
 }
 
 .sentinel-nav__item.active {
-  background: rgba(51, 255, 51, 0.1);
-  color: var(--sentinel-green);
-  border-left: 2px solid var(--sentinel-green);
-  text-shadow: 0 0 4px rgba(51, 255, 51, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--s-green);
+  border-left-color: var(--s-green);
 }
 
-.sentinel-nav__icon {
-  font-size: 14px;
-  width: 20px;
-  text-align: center;
+.sentinel-nav__item-label {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.3px;
 }
 
-.sentinel-nav__label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.sentinel-nav__item-desc {
+  font-size: 10px;
+  color: var(--s-muted);
+  margin-top: 1px;
+  font-weight: 400;
+}
+
+.sentinel-nav__item.active .sentinel-nav__item-desc {
+  color: rgba(16, 185, 129, 0.6);
 }
 
 .sentinel-nav__footer {
-  padding: 8px 10px;
-  border-top: 1px solid var(--sentinel-border);
-  text-align: center;
+  padding: 10px 16px;
+  border-top: 1px solid var(--s-border);
+  font-size: 10px;
+  color: var(--s-muted);
 }
 
 /* ── Content Area ── */
@@ -126,28 +136,50 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 1;
 }
 
 .sentinel-content__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--sentinel-border);
-  background: #0c0c0c;
-  font-size: 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--s-border);
+  background: var(--s-bg-panel);
+}
+
+.sentinel-content__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
 
 .sentinel-content__title {
-  color: var(--sentinel-green);
-  font-weight: bold;
-  letter-spacing: 1px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--s-text);
+  letter-spacing: 0.5px;
+}
+
+.sentinel-content__subtitle {
+  font-size: 12px;
+  color: var(--s-muted);
+  font-weight: 500;
 }
 
 .sentinel-content__status {
-  font-size: '11px';
-  color: var(--sentinel-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--s-muted);
+}
+
+.sentinel-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--s-green);
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
 }
 
 .sentinel-content__body {
@@ -158,18 +190,20 @@
 
 /* ── Module Panels ── */
 .sentinel-panel {
-  margin: 8px;
-  padding: 10px 12px;
-  background: var(--sentinel-bg-panel);
-  border: 1px solid var(--sentinel-border);
+  margin: 8px 12px;
+  padding: 12px 14px;
+  background: var(--s-bg-panel);
+  border: 1px solid var(--s-border);
+  border-radius: 4px;
 }
 
 .sentinel-panel__title {
-  font-size: 14px;
-  color: var(--sentinel-green);
-  font-weight: bold;
-  margin-bottom: 8px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--s-green);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 /* ── Result rows ── */
@@ -177,20 +211,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  padding: 4px 0;
   font-size: 13px;
 }
 
 .sentinel-check--pass {
-  color: var(--sentinel-green);
+  color: var(--s-green);
 }
 
 .sentinel-check--fail {
-  color: var(--sentinel-red);
+  color: var(--s-red);
 }
 
 .sentinel-check--warn {
-  color: var(--sentinel-amber);
+  color: var(--s-amber);
 }
 
 /* ── Tables ── */
@@ -202,25 +236,35 @@
 
 .sentinel-table th {
   text-align: left;
-  padding: 4px 8px;
-  color: var(--sentinel-muted);
-  border-bottom: 1px solid var(--sentinel-border);
-  font-weight: normal;
-  text-transform: uppercase;
+  padding: 6px 10px;
+  color: var(--s-muted);
+  border-bottom: 1px solid var(--s-border);
+  font-weight: 500;
   font-size: 11px;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .sentinel-table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid rgba(26, 58, 26, 0.3);
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(30, 30, 42, 0.5);
 }
 
 .sentinel-table tr:hover td {
-  background: rgba(51, 255, 51, 0.03);
+  background: rgba(16, 185, 129, 0.03);
 }
 
-/* ── Glow animation for scan results ── */
+/* ── Fade-in for module transitions ── */
+@keyframes sentinel-fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sentinel-fade-in {
+  animation: sentinel-fadeIn 0.15s ease-out;
+}
+
+/* ── Scanning pulse ── */
 @keyframes sentinel-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
@@ -228,14 +272,4 @@
 
 .sentinel-scanning {
   animation: sentinel-pulse 1.5s ease-in-out infinite;
-}
-
-/* ── Fade-in for module transitions ── */
-@keyframes sentinel-fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.sentinel-fade-in {
-  animation: sentinel-fadeIn 0.2s ease-out;
 }

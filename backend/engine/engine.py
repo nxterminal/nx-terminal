@@ -974,7 +974,7 @@ def run_engine():
     cycle = 0
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
-    claim_sync_interval = timedelta(minutes=10)
+    claim_sync_interval = timedelta(minutes=5)
 
     # Pay salary immediately on startup so devs don't wait 1 hour after restart
     try:

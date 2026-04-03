@@ -62,6 +62,69 @@ function LoadingBar() {
   );
 }
 
+// ── Sync Status Panel ────────────────────────────────────
+function SyncStatusPanel() {
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const s = await api.getClaimSyncStatus();
+      setSyncStatus(s);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  const handleForceSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await api.forceClaimSync();
+      setSyncStatus(result);
+    } catch { /* ignore */ }
+    setSyncing(false);
+  };
+
+  const isDryRun = syncStatus?.dry_run;
+  const lastSync = syncStatus?.last_sync_at;
+  const lastResult = syncStatus?.last_result;
+
+  return (
+    <div style={{ fontSize: '13px', color: '#888', padding: '4px 0', lineHeight: 1.5 }}>
+      <div>Your $NXT is earned in-game. It syncs to blockchain every ~5 minutes.</div>
+      <div style={{ color: 'var(--terminal-amber)', marginTop: '2px' }}>Once synced, you can withdraw here.</div>
+
+      {isDryRun && (
+        <div style={{ color: 'var(--terminal-red, #ff4444)', marginTop: '4px', fontSize: '12px', padding: '4px 6px', border: '1px solid var(--terminal-red, #ff4444)', background: 'rgba(255,68,68,0.05)' }}>
+          Sync is in dry-run mode. Set DRY_RUN=false to enable on-chain writes.
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+        <button className="win-btn" onClick={handleForceSync} disabled={syncing}
+          style={{ fontSize: '10px', padding: '2px 10px' }}>
+          {syncing ? 'Syncing...' : 'Force Sync Now'}
+        </button>
+        <button className="win-btn" onClick={() => { setShowDetails(d => !d); fetchStatus(); }}
+          style={{ fontSize: '10px', padding: '2px 10px' }}>
+          {showDetails ? 'Hide' : 'Status'}
+        </button>
+      </div>
+
+      {showDetails && syncStatus && (
+        <div style={{ marginTop: '4px', fontSize: '11px', color: '#666', fontFamily: "'VT323', monospace" }}>
+          <div>Last sync: {lastSync ? new Date(lastSync).toLocaleString() : 'never'}</div>
+          <div>Result: {lastResult || 'unknown'}</div>
+          <div>Pending: {syncStatus.pending_claims} devs ({syncStatus.pending_nxt} $NXT)</div>
+          <div>Signer: {syncStatus.signer_configured ? 'configured' : 'NOT configured'}</div>
+          <div>DRY_RUN: {isDryRun ? 'true' : 'false'}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
@@ -183,12 +246,9 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
         </div>
       )}
 
-      {/* No claimable on-chain but has game balance */}
+      {/* No claimable on-chain but has game balance — show sync status */}
       {!hasClaimable && gameBalance > 0 && claimEnabled !== false && (
-        <div style={{ fontSize: '13px', color: '#888', padding: '4px 0', lineHeight: 1.5 }}>
-          <div>Your $NXT is earned in-game. It syncs to blockchain every ~10 minutes.</div>
-          <div style={{ color: 'var(--terminal-amber)', marginTop: '2px' }}>Once synced, you can withdraw here.</div>
-        </div>
+        <SyncStatusPanel />
       )}
 
       {/* No claimable and no game balance */}
