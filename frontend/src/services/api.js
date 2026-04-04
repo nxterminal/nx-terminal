@@ -101,11 +101,16 @@ export const api = {
 
   // Claim Sync
   getClaimSyncStatus: () => fetchJSON(`${API_BASE}/api/claim-sync/status`),
-  forceClaimSync: (tokenIds) => fetchJSON(`${API_BASE}/api/claim-sync/force`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: tokenIds ? JSON.stringify({ token_ids: tokenIds }) : undefined,
-  }),
+  forceClaimSync: (tokenIds) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 120s — sync waits for TX receipt
+    return fetchJSON(`${API_BASE}/api/claim-sync/force`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: tokenIds ? JSON.stringify({ token_ids: tokenIds }) : undefined,
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
+  },
 
   // Sentinel
   sentinelHealth: () => fetchJSON(`${API_BASE}/api/sentinel/health`),
