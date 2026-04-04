@@ -69,6 +69,9 @@ def get_pending_claims(db_conn):
     cursor = db_conn.cursor()
     cursor.execute(query)
     rows = cursor.fetchall()
+    # Support both tuple cursors (engine) and RealDictCursor (API pool)
+    if rows and isinstance(rows[0], dict):
+        return [{"token_id": r["token_id"], "balance_nxt": r["balance_nxt"]} for r in rows]
     return [{"token_id": r[0], "balance_nxt": r[1]} for r in rows]
 
 
@@ -171,12 +174,14 @@ def _send_batch(account, batch_ids, batch_amounts, nonce):
         return False, tx_hash, nonce + 1
 
 
-def sync_claimable_balances():
+def sync_claimable_balances(db_conn=None):
     """
     Main sync function. Reads pending claims from DB and submits to contract
     in batches of BATCH_SIZE.
 
-    In DRY_RUN mode (default), only logs what would be sent.
+    If db_conn is provided (e.g. from the API pool), uses it instead of
+    creating a new connection.  In DRY_RUN mode (default), only logs what
+    would be sent.
     """
     logger.info("[CLAIM_SYNC] ========================================")
     logger.info("[CLAIM_SYNC] === Claim Sync Started ===")
@@ -184,6 +189,8 @@ def sync_claimable_balances():
     logger.info("[CLAIM_SYNC] BATCH_SIZE = %d", BATCH_SIZE)
     logger.info("[CLAIM_SYNC] RPC = %s", MEGAETH_RPC)
     logger.info("[CLAIM_SYNC] Contract = %s", NXDEVNFT_ADDRESS)
+
+    own_conn = db_conn is None  # track if we created the connection
 
     if not DRY_RUN and not SIGNER_PRIVATE_KEY:
         logger.error("[CLAIM_SYNC] BACKEND_SIGNER_PRIVATE_KEY not set!")
@@ -205,44 +212,47 @@ def sync_claimable_balances():
         except Exception as e:
             logger.error("[CLAIM_SYNC] Failed to check signer balance: %s", e)
 
-    # -- 1. Connect to DB --
-    try:
-        import psycopg2
-        from urllib.parse import urlparse
-        _parsed = urlparse(DATABASE_URL)
-        _host = _parsed.hostname or "localhost"
-        _is_external = "render.com" in _host
-        _sslmode = "require" if _is_external else "prefer"
-        # Parse URL into components (like deps.py) — avoids SSL issues
-        # when passing the full URL string to psycopg2
-        db_conn = psycopg2.connect(
-            host=_host,
-            port=_parsed.port or 5432,
-            dbname=(_parsed.path or "").lstrip("/"),
-            user=_parsed.username,
-            password=_parsed.password,
-            sslmode=_sslmode,
-            options="-c search_path=nx",
-        )
-        logger.info("[CLAIM_SYNC] DB connected (host=%s, ssl=%s)", _host, _sslmode)
-    except ImportError:
-        logger.error("[CLAIM_SYNC] psycopg2 not installed")
-        return "error_no_psycopg2"
-    except Exception as e:
-        logger.error("[CLAIM_SYNC] DB connection failed: %s", e)
-        return f"error_db: {e}"
+    # -- 1. Connect to DB (only if no connection was passed in) --
+    if db_conn is None:
+        try:
+            import psycopg2
+            from urllib.parse import urlparse
+            _parsed = urlparse(DATABASE_URL)
+            _host = _parsed.hostname or "localhost"
+            _is_external = "render.com" in _host
+            _sslmode = "require" if _is_external else "prefer"
+            db_conn = psycopg2.connect(
+                host=_host,
+                port=_parsed.port or 5432,
+                dbname=(_parsed.path or "").lstrip("/"),
+                user=_parsed.username,
+                password=_parsed.password,
+                sslmode=_sslmode,
+                options="-c search_path=nx",
+            )
+            logger.info("[CLAIM_SYNC] DB connected (host=%s, ssl=%s)", _host, _sslmode)
+        except ImportError:
+            logger.error("[CLAIM_SYNC] psycopg2 not installed")
+            return "error_no_psycopg2"
+        except Exception as e:
+            logger.error("[CLAIM_SYNC] DB connection failed: %s", e)
+            return f"error_db: {e}"
+    else:
+        logger.info("[CLAIM_SYNC] Using provided DB connection (API pool)")
 
     # -- 2. Get pending claims --
     try:
         pending = get_pending_claims(db_conn)
     except Exception as e:
         logger.error("[CLAIM_SYNC] Query failed: %s", e)
-        db_conn.close()
+        if own_conn:
+            db_conn.close()
         return f"error_query: {e}"
 
     if not pending:
         logger.info("[CLAIM_SYNC] No pending claims to sync")
-        db_conn.close()
+        if own_conn:
+            db_conn.close()
         return "no_pending"
 
     logger.info("[CLAIM_SYNC] Found %d devs with claimable balance", len(pending))
@@ -251,7 +261,8 @@ def sync_claimable_balances():
     token_ids, amounts_wei = build_sync_batch(pending)
     if not token_ids:
         logger.info("[CLAIM_SYNC] No non-zero balances")
-        db_conn.close()
+        if own_conn:
+            db_conn.close()
         return "no_pending"
 
     total_nxt = sum(a // (10 ** 18) for a in amounts_wei)
@@ -264,7 +275,8 @@ def sync_claimable_balances():
             logger.info("[CLAIM_SYNC][DRY_RUN] Batch %d: %d devs (ids %d..%d)",
                         i // BATCH_SIZE + 1, len(chunk), chunk[0], chunk[-1])
         logger.info("[CLAIM_SYNC][DRY_RUN] Set DRY_RUN=false to enable on-chain writes")
-        db_conn.close()
+        if own_conn:
+            db_conn.close()
         return f"dry_run: {len(token_ids)} devs, {total_nxt} NXT"
 
     # -- 5. LIVE: Send transactions --
@@ -309,7 +321,8 @@ def sync_claimable_balances():
         logger.error("[CLAIM_SYNC] FATAL ERROR during on-chain sync: %s", e, exc_info=True)
         return f"error: {e}"
     finally:
-        db_conn.close()
+        if own_conn:
+            db_conn.close()
 
 
 if __name__ == "__main__":
