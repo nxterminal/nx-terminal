@@ -100,11 +100,10 @@ async def get_claim_sync_status():
 async def force_claim_sync():
     """Force an immediate claim sync run (bypasses scheduler timer)."""
     try:
-        from backend.engine.engine import run_claim_sync, get_claim_sync_status
+        from backend.engine.claim_sync import sync_claimable_balances
         log.info("[CLAIM_SYNC] Manual force sync triggered via API")
-        run_claim_sync()
-        status = get_claim_sync_status()
-        return {"success": True, **status}
+        result = sync_claimable_balances()
+        return {"success": True, "result": result or "ok"}
     except Exception as e:
         log.error("[CLAIM_SYNC] Force sync failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
