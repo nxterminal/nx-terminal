@@ -62,6 +62,16 @@ function LoadingBar() {
   );
 }
 
+// ── Pay Stub Deductions ─────────────────────────────────
+const DEDUCTIONS = [
+  { label: 'Health Insurance (MegaETH)', pct: 3 },
+  { label: 'Digital Life Insurance', pct: 2 },
+  { label: 'Dev Union Fee', pct: 2.5 },
+  { label: 'Anti-Hack Fund', pct: 1.5 },
+  { label: 'Income Tax', pct: 1 },
+];
+const TOTAL_DEDUCTION_PCT = DEDUCTIONS.reduce((s, d) => s + d.pct, 0); // 10
+
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   const ids = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
@@ -93,33 +103,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
     }
   }, [isConfirmed, refetchPreview, onClaimed]);
 
-  // Track writeContract pending → signing step
-  useEffect(() => {
-    if (isSending) setClaimStep('signing');
-  }, [isSending]);
-  useEffect(() => {
-    if (isMining) setClaimStep('mining');
-  }, [isMining]);
+  useEffect(() => { if (isSending) setClaimStep('signing'); }, [isSending]);
+  useEffect(() => { if (isMining) setClaimStep('mining'); }, [isMining]);
 
   const grossWei = preview ? BigInt(preview[0]) : BigInt(0);
-  const feeWei = preview ? BigInt(preview[1]) : BigInt(0);
   const netWei = preview ? BigInt(preview[2]) : BigInt(0);
-  const grossDisplay = formatNxt(grossWei);
-  const feeDisplay = formatNxt(feeWei);
-  const netDisplay = formatNxt(netWei);
   const hasClaimable = grossWei > BigInt(0);
 
-  // Use game balance for fee estimate when nothing is on-chain yet
-  const estimatedNet = gameBalance > 0 ? Math.floor(gameBalance * 0.9) : 0;
-  const estimatedFee = gameBalance > 0 ? gameBalance - estimatedNet : 0;
+  // Use game balance or on-chain gross for pay stub calculations
+  const gross = hasClaimable ? Number(formatUnits(grossWei, 18)) : gameBalance;
+  const net = hasClaimable ? Number(formatUnits(netWei, 18)) : Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
+  const totalDeduction = gross - net;
 
-  // ── Single CLAIM button: sync → wait → withdraw ──
+  // ── Single COLLECT button: sync → wait → withdraw ──
   const handleClaim = async () => {
     setClaimStep('syncing');
     setClaimError(null);
     resetTx();
 
-    // Step 1: Force sync to push in-game balance on-chain
     try {
       await api.forceClaimSync();
     } catch (e) {
@@ -128,17 +129,13 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
       return;
     }
 
-    // Step 2: Wait for on-chain state to update, then re-read previewClaim
-    await new Promise(r => setTimeout(r, 4000));
+    await new Promise(r => setTimeout(r, 3000));
     let retries = 3;
     let claimable = false;
     while (retries > 0) {
       try {
         const { data: fresh } = await refetchPreview();
-        if (fresh && BigInt(fresh[0]) > BigInt(0)) {
-          claimable = true;
-          break;
-        }
+        if (fresh && BigInt(fresh[0]) > BigInt(0)) { claimable = true; break; }
       } catch {}
       retries--;
       if (retries > 0) await new Promise(r => setTimeout(r, 3000));
@@ -150,7 +147,6 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
       return;
     }
 
-    // Step 3: Call claimNXT via MetaMask
     setClaimStep('signing');
     try {
       writeContract({
@@ -163,7 +159,6 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
     }
   };
 
-  // ── Direct withdraw (already on-chain) ──
   const handleWithdrawDirect = () => {
     setClaimStep('signing');
     setClaimError(null);
@@ -174,23 +169,19 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
     });
   };
 
-  const handleRetry = () => {
-    setClaimStep('idle');
-    setClaimError(null);
-  };
-
-  const busy = claimStep !== 'idle' && claimStep !== 'success' && claimStep !== 'error';
+  const handleRetry = () => { setClaimStep('idle'); setClaimError(null); };
 
   const box = {
     margin: '4px 8px', padding: '10px',
     border: '1px solid var(--border-dark)', background: 'var(--terminal-bg)',
     fontFamily: "'VT323', monospace",
   };
-  const card = {
+  const stubBorder = {
     padding: '10px 12px', border: '1px solid var(--border-dark)',
     background: 'rgba(0,0,0,0.15)', marginBottom: '8px',
   };
-  const row = { display: 'flex', justifyContent: 'space-between', padding: '2px 0' };
+  const row = { display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '13px' };
+  const divider = { borderTop: '1px dashed var(--border-dark)', margin: '6px 0' };
 
   return (
     <div style={box}>
@@ -206,88 +197,104 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
         </div>
         <div>
           <div style={{ fontSize: '11px', color: '#888' }}>On-Chain</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: hasClaimable ? 'var(--terminal-green)' : '#666' }}>{grossDisplay} $NXT</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: hasClaimable ? 'var(--terminal-green)' : '#666' }}>{formatNxt(grossWei)} $NXT</div>
         </div>
       </div>
 
-      {/* ── No devs ── */}
+      {/* No devs */}
       {ids.length === 0 && (
-        <div style={{ ...card, fontSize: '12px', color: '#888' }}>
+        <div style={{ ...stubBorder, fontSize: '12px', color: '#888' }}>
           No devs found. Mint a dev to start earning $NXT.
         </div>
       )}
 
-      {/* ── No balance yet ── */}
+      {/* No balance yet */}
       {ids.length > 0 && !gameBalance && !hasClaimable && (
-        <div style={{ ...card, fontSize: '12px', color: '#888' }}>
-          Your devs haven't earned $NXT yet. They earn 200 $NXT/day through salary.
+        <div style={{ ...stubBorder, fontSize: '12px', color: '#888' }}>
+          Your devs haven&apos;t earned $NXT yet. They earn 200 $NXT/day through salary.
         </div>
       )}
 
-      {/* ── Claim card: has game balance OR on-chain claimable ── */}
+      {/* ── PAY STUB ── */}
       {ids.length > 0 && (gameBalance > 0 || hasClaimable) && claimEnabled !== false && (
-        <div style={{ ...card, borderColor: hasClaimable ? 'rgba(0,180,0,0.3)' : 'rgba(122,92,0,0.3)' }}>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)', marginBottom: '6px' }}>
-            CLAIM $NXT
+        <div style={{ ...stubBorder, borderColor: hasClaimable ? 'rgba(0,180,0,0.3)' : 'rgba(122,92,0,0.3)' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)', marginBottom: '6px', letterSpacing: '1px' }}>
+            PAY STUB
           </div>
 
-          {/* Fee breakdown */}
-          <div style={{ fontSize: '13px', marginBottom: '8px' }}>
-            <div style={row}>
-              <span style={{ color: '#888' }}>Amount to claim:</span>
-              <span style={{ color: 'var(--gold-on-grey)' }}>
-                {hasClaimable ? grossDisplay : formatNumber(gameBalance)} $NXT
-              </span>
-            </div>
-            <div style={row}>
-              <span style={{ color: '#888' }}>Protocol fee (10%):</span>
-              <span style={{ color: 'var(--terminal-red, #ff4444)' }}>
-                -{hasClaimable ? feeDisplay : formatNumber(estimatedFee)} $NXT
-              </span>
-            </div>
-            <div style={{ ...row, borderTop: '1px solid var(--border-dark)', marginTop: '4px', paddingTop: '4px', fontSize: '14px' }}>
-              <span style={{ color: '#ccc', fontWeight: 'bold' }}>You receive:</span>
-              <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>
-                {hasClaimable ? netDisplay : '~' + formatNumber(estimatedNet)} $NXT
-              </span>
-            </div>
+          {/* Gross salary */}
+          <div style={row}>
+            <span style={{ color: '#ccc' }}>Gross salary:</span>
+            <span style={{ color: 'var(--gold-on-grey)' }}>{formatNumber(Math.round(gross))} $NXT</span>
+          </div>
+
+          <div style={divider} />
+
+          {/* Deductions */}
+          <div style={{ fontSize: '12px', color: '#888', marginBottom: '2px' }}>Deductions:</div>
+          {DEDUCTIONS.map(d => {
+            const amt = Math.round(gross * d.pct / 100);
+            return (
+              <div key={d.label} style={{ ...row, fontSize: '12px' }}>
+                <span style={{ color: '#999', paddingLeft: '8px' }}>{d.label}</span>
+                <span style={{ color: 'var(--terminal-red, #ff4444)' }}>-{formatNumber(amt)} ({d.pct}%)</span>
+              </div>
+            );
+          })}
+
+          <div style={divider} />
+
+          {/* Total deductions */}
+          <div style={{ ...row, fontSize: '13px' }}>
+            <span style={{ color: '#ccc' }}>Total deductions:</span>
+            <span style={{ color: 'var(--terminal-red, #ff4444)' }}>-{formatNumber(Math.round(totalDeduction))} ({TOTAL_DEDUCTION_PCT}%)</span>
+          </div>
+
+          {/* Net pay */}
+          <div style={{ ...row, fontSize: '14px', marginTop: '4px' }}>
+            <span style={{ color: '#ccc', fontWeight: 'bold' }}>Net pay:</span>
+            <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>
+              {hasClaimable ? formatNxt(netWei) : '~' + formatNumber(Math.round(net))} $NXT
+            </span>
           </div>
 
           {/* Wrong chain warning */}
           {isWrongChain && (
-            <div style={{ fontSize: '12px', color: 'var(--terminal-red)', marginBottom: '6px' }}>
-              Switch to MegaETH network to claim.
+            <div style={{ fontSize: '12px', color: 'var(--terminal-red)', margin: '8px 0 4px' }}>
+              Switch to MegaETH network to collect.
             </div>
           )}
 
-          {/* Claim button */}
+          {/* COLLECT button */}
           {claimStep === 'idle' && (
-            <button className="win-btn" onClick={hasClaimable ? handleWithdrawDirect : handleClaim}
-              disabled={isWrongChain}
-              style={{ padding: '5px 20px', fontWeight: 'bold', fontSize: '12px',
-                background: isWrongChain ? undefined : '#2a5a00', color: isWrongChain ? undefined : '#fff',
-                width: '100%', textAlign: 'center' }}>
-              CLAIM {hasClaimable ? netDisplay : '~' + formatNumber(estimatedNet)} $NXT
-            </button>
+            <>
+              <button className="win-btn" onClick={hasClaimable ? handleWithdrawDirect : handleClaim}
+                disabled={isWrongChain}
+                style={{ padding: '6px 20px', fontWeight: 'bold', fontSize: '13px', marginTop: '10px',
+                  background: isWrongChain ? undefined : '#2a5a00', color: isWrongChain ? undefined : '#fff',
+                  width: '100%', textAlign: 'center' }}>
+                {'\uD83D\uDCB0'} COLLECT ~{hasClaimable ? formatNxt(netWei) : formatNumber(Math.round(net))} $NXT
+              </button>
+              <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>
+                Devs keep earning salary after withdrawal. Working capital rebuilds automatically.
+              </div>
+            </>
           )}
 
-          {/* Syncing state */}
           {claimStep === 'syncing' && (
-            <div style={{ textAlign: 'center', padding: '6px', color: 'var(--terminal-amber)', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
               Syncing to blockchain...
             </div>
           )}
 
-          {/* Signing state */}
           {claimStep === 'signing' && (
-            <div style={{ textAlign: 'center', padding: '6px', color: 'var(--terminal-amber)', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
               Sign in MetaMask...
             </div>
           )}
 
-          {/* Mining state */}
           {claimStep === 'mining' && (
-            <div style={{ textAlign: 'center', padding: '6px', color: 'var(--terminal-amber)', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
               Transaction pending...
               {txHash && (
                 <span>{' '}<a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
@@ -296,38 +303,26 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
             </div>
           )}
 
-          {/* Success */}
           {claimStep === 'success' && (
-            <div style={{ textAlign: 'center', padding: '6px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', marginTop: '8px' }}>
               <div style={{ color: 'var(--terminal-green)', fontSize: '13px', fontWeight: 'bold' }}>
-                Claimed!
+                Collected! {txHash && <>TX: <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>
+                  {txHash.slice(0, 10)}...
+                </a></>}
               </div>
-              {txHash && (
-                <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '11px' }}>
-                  View transaction
-                </a>
-              )}
             </div>
           )}
 
-          {/* Error */}
           {claimStep === 'error' && (
-            <div style={{ textAlign: 'center', padding: '6px' }}>
+            <div style={{ textAlign: 'center', padding: '8px', marginTop: '8px' }}>
               <div style={{ color: 'var(--terminal-red, #ff4444)', fontSize: '12px', marginBottom: '6px' }}>
-                {claimError}
+                Failed: {claimError}
               </div>
               <button className="win-btn" onClick={handleRetry}
-                style={{ fontSize: '11px', padding: '3px 14px' }}>
+                style={{ fontSize: '11px', padding: '3px 14px', color: 'var(--terminal-red)' }}>
                 Try Again
               </button>
-            </div>
-          )}
-
-          {/* Note */}
-          {claimStep === 'idle' && (
-            <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>
-              Devs keep earning salary after withdrawal. Working capital rebuilds automatically.
             </div>
           )}
         </div>
@@ -335,7 +330,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
 
       {/* Claiming disabled */}
       {claimEnabled === false && (
-        <div style={{ ...card, borderColor: 'rgba(255,183,0,0.3)' }}>
+        <div style={{ ...stubBorder, borderColor: 'rgba(255,183,0,0.3)' }}>
           <div style={{ fontSize: '13px', color: 'var(--terminal-amber)' }}>Claiming will be enabled soon.</div>
         </div>
       )}

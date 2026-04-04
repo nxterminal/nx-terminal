@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # -- Contract addresses (MegaETH Mainnet) --------------------------
 NXDEVNFT_ADDRESS = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
 NXT_TOKEN_ADDRESS = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47"
-MEGAETH_RPC = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
+MEGAETH_RPC = os.getenv("MEGAETH_RPC_URL", "https://mainnet.megaeth.com/rpc")
 MEGAETH_CHAIN_ID = 4326
 
 # -- Env config --------------------------------------------------------
