@@ -975,7 +975,7 @@ def run_engine():
     cycle = 0
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
-    claim_sync_interval = timedelta(minutes=5)
+    claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
 
     # Pay salary immediately on startup so devs don't wait 1 hour after restart
     try:
@@ -987,7 +987,6 @@ def run_engine():
 
     last_salary = datetime.now(timezone.utc)
     last_snapshot = datetime.now(timezone.utc)
-    last_claim_sync = datetime.now(timezone.utc)
 
     while True:
         try:
@@ -1012,16 +1011,6 @@ def run_engine():
 
         except Exception as e:
             log.error(f"Engine error: {e}")
-
-        # Claim sync runs outside the main DB transaction (has its own connection)
-        try:
-            now = datetime.now(timezone.utc)
-            if now - last_claim_sync >= claim_sync_interval:
-                log.info("[CLAIM_SYNC] Scheduler triggered (every %s)", claim_sync_interval)
-                run_claim_sync()
-                last_claim_sync = now
-        except Exception as e:
-            log.error("[CLAIM_SYNC] Scheduler error: %s", e)
 
         time.sleep(SCHEDULER_INTERVAL_SEC)
 
