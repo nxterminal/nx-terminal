@@ -3,7 +3,7 @@
 import os
 import logging
 from fastapi import APIRouter, HTTPException
-from backend.api.deps import fetch_one, fetch_all
+from backend.api.deps import fetch_one, fetch_all, get_db
 
 log = logging.getLogger("nx_api")
 
@@ -106,7 +106,11 @@ async def force_claim_sync():
     try:
         from backend.engine.claim_sync import sync_claimable_balances
         log.info("[CLAIM_SYNC] Manual force sync triggered via API")
-        result = sync_claimable_balances()
+        # Pass a connection from the API pool — avoids SSL issues
+        # that occur when claim_sync creates its own connection from
+        # within the uvicorn process
+        with get_db() as conn:
+            result = sync_claimable_balances(db_conn=conn)
 
         # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
         if isinstance(result, dict):
