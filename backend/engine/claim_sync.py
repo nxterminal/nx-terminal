@@ -210,9 +210,21 @@ def sync_claimable_balances():
         import psycopg2
         from urllib.parse import urlparse
         _parsed = urlparse(DATABASE_URL)
-        _sslmode = "require" if "render.com" in (_parsed.hostname or "") else "prefer"
-        db_conn = psycopg2.connect(DATABASE_URL, sslmode=_sslmode)
-        logger.info("[CLAIM_SYNC] DB connected (ssl=%s)", _sslmode)
+        _host = _parsed.hostname or "localhost"
+        _is_external = "render.com" in _host
+        _sslmode = "require" if _is_external else "prefer"
+        # Parse URL into components (like deps.py) — avoids SSL issues
+        # when passing the full URL string to psycopg2
+        db_conn = psycopg2.connect(
+            host=_host,
+            port=_parsed.port or 5432,
+            dbname=(_parsed.path or "").lstrip("/"),
+            user=_parsed.username,
+            password=_parsed.password,
+            sslmode=_sslmode,
+            options="-c search_path=nx",
+        )
+        logger.info("[CLAIM_SYNC] DB connected (host=%s, ssl=%s)", _host, _sslmode)
     except ImportError:
         logger.error("[CLAIM_SYNC] psycopg2 not installed")
         return "error_no_psycopg2"
