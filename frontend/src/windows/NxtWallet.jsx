@@ -128,37 +128,56 @@ async function sendClaimNXT(fromAddress, tokenIds) {
 
   if (!window.ethereum) throw new Error('MetaMask not found. Install MetaMask extension.');
 
-  // Verify we have accounts access
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-  console.log('[COLLECT] eth_accounts:', accounts);
-  if (!accounts || accounts.length === 0) {
-    // Request connection
+  // ALWAYS reconnect — eth_accounts returns stale data when session expires
+  console.log('[COLLECT] Reconnecting MetaMask...');
+  try {
     await window.ethereum.request({ method: 'eth_requestAccounts' });
+  } catch (e) {
+    throw new Error('Please unlock MetaMask and try again');
+  }
+
+  // Verify chain is MegaETH (4326 = 0x10e6)
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  console.log('[COLLECT] Current chainId:', chainId);
+  if (chainId !== '0x10e6') {
+    console.log('[COLLECT] Wrong chain, switching to MegaETH...');
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x10e6' }],
+      });
+    } catch (switchErr) {
+      // Chain not added — try to add it
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x10e6',
+            chainName: 'MegaETH',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.megaeth.com/rpc'],
+            blockExplorerUrls: ['https://megaexplorer.xyz'],
+          }],
+        });
+      } else {
+        throw new Error('Please switch to MegaETH network in MetaMask');
+      }
+    }
   }
 
   // Build calldata for claimNXT(uint256[])
-  let calldata;
-  try {
-    const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
-    console.log('[COLLECT] claimAbi found:', !!claimAbi);
-    // Convert all IDs to BigInt to be safe
-    const bigIds = tokenIds.map(id => BigInt(id));
-    calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
-    console.log('[COLLECT] calldata built OK, length:', calldata.length, 'selector:', calldata.slice(0, 10));
-  } catch (encodeErr) {
-    console.error('[COLLECT] encodeFunctionData FAILED:', encodeErr);
-    throw new Error('Failed to encode claimNXT calldata: ' + encodeErr.message);
-  }
+  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
+  const bigIds = tokenIds.map(id => BigInt(id));
+  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
+  console.log('[COLLECT] calldata OK, selector:', calldata.slice(0, 10), 'length:', calldata.length);
 
   const from = fromAddress.toLowerCase();
-  const txParams = { from, to: NXDEVNFT_ADDRESS, data: calldata };
-  console.log('[COLLECT] Sending eth_sendTransaction:', JSON.stringify(txParams).slice(0, 200));
-
+  console.log('[COLLECT] Sending eth_sendTransaction...');
   const txHash = await window.ethereum.request({
     method: 'eth_sendTransaction',
-    params: [txParams],
+    params: [{ from, to: NXDEVNFT_ADDRESS, data: calldata }],
   });
-  console.log('[COLLECT] TX hash received:', txHash);
+  console.log('[COLLECT] TX hash:', txHash);
   return txHash;
 }
 
