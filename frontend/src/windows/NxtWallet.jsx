@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
@@ -123,6 +122,35 @@ function AddTokenButton() {
   );
 }
 
+// ── Send TX via MetaMask directly (no wagmi) ────────────
+async function sendClaimNXT(fromAddress, tokenIds) {
+  if (!window.ethereum) throw new Error('MetaMask not found');
+  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
+  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [tokenIds] });
+  console.log('[COLLECT] Sending eth_sendTransaction, from:', fromAddress, 'data length:', calldata.length);
+  const txHash = await window.ethereum.request({
+    method: 'eth_sendTransaction',
+    params: [{
+      from: fromAddress,
+      to: NXDEVNFT_ADDRESS,
+      data: calldata,
+    }],
+  });
+  console.log('[COLLECT] TX hash:', txHash);
+  return txHash;
+}
+
+async function waitForReceipt(txHash, maxWait = 60) {
+  for (let i = 0; i < maxWait; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const receipt = await rpcCall('eth_getTransactionReceipt', [txHash]);
+      if (receipt) return receipt;
+    } catch {}
+  }
+  return null; // timeout — TX may still be pending
+}
+
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const allIds = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
@@ -131,11 +159,9 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
   const [claimEnabled, setClaimEnabled] = useState(null);
   const [pendingOnChain, setPendingOnChain] = useState(null); // { gross, fee, net } from previewClaim
-  const { data: txHash, writeContractAsync, isPending: isSending, error: writeError, reset: resetTx } = useWriteContract();
-  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
-
   const [claimStep, setClaimStep] = useState('idle'); // idle | syncing | signing | mining | success | error
   const [claimError, setClaimError] = useState(null);
+  const [claimTxHash, setClaimTxHash] = useState(null);
   const [syncTxHash, setSyncTxHash] = useState(null);
   const [pct, setPct] = useState(100); // percentage selector
 
@@ -147,32 +173,6 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       fetchPreviewClaim(allIds).then(setPendingOnChain).catch(() => {});
     }
   }, [wallet, allIds.length]);
-
-  useEffect(() => {
-    if (isConfirmed) {
-      setClaimStep('success');
-      setPendingOnChain(null);
-      // Record claim in backend for movements history
-      api.recordClaim(wallet, {
-        amount_gross: gross,
-        amount_net: net,
-        fee_amount: totalDeduction,
-        tx_hash: txHash || '',
-      }).catch(() => {}); // best-effort
-      onClaimed?.();
-    }
-  }, [isConfirmed, onClaimed]);
-
-  useEffect(() => { if (isSending) setClaimStep('signing'); }, [isSending]);
-  useEffect(() => { if (isMining) setClaimStep('mining'); }, [isMining]);
-  useEffect(() => {
-    if (writeError && claimStep === 'signing') {
-      console.error('[COLLECT] writeContract error:', writeError);
-      setClaimStep('error');
-      const msg = writeError.shortMessage || writeError.message || 'Transaction failed';
-      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
-    }
-  }, [writeError, claimStep]);
 
   // Calculate based on percentage: claim is per-dev, so we select a subset of dev IDs
   // Sort devs by balance descending so partial claims take the richest devs first
@@ -197,15 +197,57 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const net = Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
   const totalDeduction = gross - net;
 
+  // ── Shared claim logic: send TX via MetaMask, poll receipt ──
+  const doClaimNXT = async (ids) => {
+    setClaimStep('signing');
+    console.log('[COLLECT] Requesting MetaMask signature, IDs:', ids.map(Number));
+    let txHash;
+    try {
+      txHash = await sendClaimNXT(wallet, ids);
+    } catch (e) {
+      console.error('[COLLECT] MetaMask error:', e);
+      const msg = e?.message || String(e);
+      if (e?.code === 4001 || msg.includes('rejected') || msg.includes('denied')) {
+        setClaimStep('error');
+        setClaimError('Transaction rejected in MetaMask');
+      } else {
+        setClaimStep('error');
+        setClaimError(msg);
+      }
+      return;
+    }
+
+    setClaimTxHash(txHash);
+    setClaimStep('mining');
+    console.log('[COLLECT] TX sent, waiting for receipt:', txHash);
+
+    const receipt = await waitForReceipt(txHash, 60);
+    if (receipt && receipt.status === '0x1') {
+      console.log('[COLLECT] TX confirmed!');
+      setClaimStep('success');
+      setPendingOnChain(null);
+      api.recordClaim(wallet, {
+        amount_gross: gross, amount_net: net, fee_amount: totalDeduction, tx_hash: txHash,
+      }).catch(() => {});
+      onClaimed?.();
+    } else if (receipt && receipt.status === '0x0') {
+      setClaimStep('error');
+      setClaimError('Transaction reverted on-chain');
+    } else {
+      // No receipt after 60s — TX may still be pending
+      setClaimStep('success');
+      onClaimed?.();
+    }
+  };
+
   // ── Single COLLECT button: sync → claim via MetaMask ──
   const handleClaim = async () => {
     if (selectedIds.length === 0) return;
     setClaimStep('syncing');
     setClaimError(null);
     setSyncTxHash(null);
-    resetTx();
+    setClaimTxHash(null);
 
-    // Pass selected token IDs so backend only syncs these devs
     const idsToSync = selectedIds.map(id => Number(id));
     let syncResult;
     try {
@@ -213,7 +255,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     } catch (e) {
       setClaimStep('error');
       const msg = e.name === 'AbortError'
-        ? 'Sync timed out (>2 min). The TX may still be pending — check the explorer.'
+        ? 'Sync timed out. The TX may still be pending — check the explorer.'
         : 'Sync failed: ' + (e.message || 'unknown error');
       setClaimError(msg);
       return;
@@ -224,9 +266,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     if (!syncResult.success) {
       setClaimStep('error');
       const detail = syncResult.result || 'unknown';
-      if (syncResult.tx_hash) {
-        setClaimError(`Sync TX reverted (${detail})`);
-      } else if (detail === 'no_pending') {
+      if (detail === 'no_pending') {
         setClaimError('No balance to sync. Devs may still be earning.');
       } else {
         setClaimError(`Sync failed: ${detail}`);
@@ -234,97 +274,20 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       return;
     }
 
-    // Wait a moment for on-chain state to settle after sync TX
+    // Wait for sync TX to settle on-chain
     await new Promise(r => setTimeout(r, 3000));
-
-    // Pre-flight checks
-    console.log('[COLLECT] Sync success. Pre-flight checks...');
-    console.log('[COLLECT] writeContractAsync:', typeof writeContractAsync);
-    console.log('[COLLECT] selectedIds:', selectedIds.length, selectedIds.map(Number));
-    console.log('[COLLECT] chain:', chain?.id, 'expected:', MEGAETH_CHAIN_ID);
-    console.log('[COLLECT] isConnected:', isConnected, 'isWrongChain:', isWrongChain);
-
-    if (!isConnected) {
-      setClaimStep('error');
-      setClaimError('Wallet not connected');
-      return;
-    }
-    if (isWrongChain) {
-      setClaimStep('error');
-      setClaimError('Switch to MegaETH network (chain 4326)');
-      return;
-    }
-    if (selectedIds.length === 0) {
-      setClaimStep('error');
-      setClaimError('No token IDs to claim');
-      return;
-    }
-
-    setClaimStep('signing');
-
-    // Safety timeout — if MetaMask never responds in 60s, unblock UI
-    const safetyTimer = setTimeout(() => {
-      setClaimStep('error');
-      setClaimError('MetaMask not responding. Open MetaMask manually or try again.');
-    }, 60000);
-
-    try {
-      console.log('[COLLECT] Calling writeContractAsync for claimNXT...');
-      const hash = await writeContractAsync({
-        address: NXDEVNFT_ADDRESS,
-        abi: NXDEVNFT_ABI,
-        functionName: 'claimNXT',
-        args: [selectedIds],
-      });
-      clearTimeout(safetyTimer);
-      console.log('[COLLECT] claimNXT TX submitted:', hash);
-    } catch (e) {
-      clearTimeout(safetyTimer);
-      console.error('[COLLECT] claimNXT error:', e);
-      console.error('[COLLECT] error name:', e?.name, 'code:', e?.code);
-      console.error('[COLLECT] error details:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      setClaimStep('error');
-      const msg = e?.shortMessage || e?.message || String(e);
-      if (msg.includes('User rejected') || msg.includes('user rejected') || e?.code === 4001) {
-        setClaimError('Transaction rejected in MetaMask');
-      } else if (msg.includes('exceeds balance') || msg.includes('insufficient')) {
-        setClaimError('Insufficient funds or gas for transaction');
-      } else if (msg.includes('reverted') || msg.includes('revert')) {
-        setClaimError('Contract reverted — balance may not be synced yet. Wait 30s and try again.');
-      } else {
-        setClaimError(msg);
-      }
-    }
+    await doClaimNXT(selectedIds);
   };
 
   // Direct claim of pending on-chain balance (no sync needed)
   const handleClaimPending = async () => {
-    setClaimStep('signing');
     setClaimError(null);
     setSyncTxHash(null);
-    resetTx();
-    console.log('[COLLECT] Claiming pending on-chain, IDs:', allIds.length);
-    const safetyTimer = setTimeout(() => {
-      setClaimStep('error');
-      setClaimError('MetaMask not responding. Open MetaMask manually or try again.');
-    }, 60000);
-    try {
-      const hash = await writeContractAsync({
-        address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
-        functionName: 'claimNXT', args: [allIds],
-      });
-      clearTimeout(safetyTimer);
-      console.log('[COLLECT] Pending claim TX submitted:', hash);
-    } catch (e) {
-      clearTimeout(safetyTimer);
-      console.error('[COLLECT] Pending claim error:', e);
-      setClaimStep('error');
-      const msg = e?.shortMessage || e?.message || String(e);
-      setClaimError(msg.includes('rejected') ? 'Transaction rejected in MetaMask' : msg);
-    }
+    setClaimTxHash(null);
+    await doClaimNXT(allIds);
   };
 
-  const handleRetry = () => { setClaimStep('idle'); setClaimError(null); setSyncTxHash(null); };
+  const handleRetry = () => { setClaimStep('idle'); setClaimError(null); setSyncTxHash(null); setClaimTxHash(null); };
 
   const box = {
     margin: '4px 8px', padding: '10px',
@@ -481,10 +444,10 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {claimStep === 'mining' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
               Processing...
-              {txHash && (
-                <span>{' '}<a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+              {claimTxHash && (
+                <span>{' '}<a href={`${EXPLORER_BASE}/tx/${claimTxHash}`} target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '11px' }}>
-                  TX: {txHash.slice(0, 10)}...
+                  TX: {claimTxHash.slice(0, 10)}...
                 </a></span>
               )}
             </div>
@@ -493,9 +456,9 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {claimStep === 'success' && (
             <div style={{ textAlign: 'center', padding: '8px', marginTop: '8px' }}>
               <div style={{ color: 'var(--terminal-green)', fontSize: '13px', fontWeight: 'bold' }}>
-                {'\u2705'} Collected! {txHash && <>TX: <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                {'\u2705'} Collected! {claimTxHash && <>TX: <a href={`${EXPLORER_BASE}/tx/${claimTxHash}`} target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>
-                  {txHash.slice(0, 10)}...
+                  {claimTxHash.slice(0, 10)}...
                 </a></>}
               </div>
               <button className="win-btn" onClick={() => {
@@ -514,9 +477,9 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
               <div style={{ color: 'var(--terminal-red, #ff4444)', fontSize: '12px', marginBottom: '6px' }}>
                 {'\u274C'} {claimError}
               </div>
-              {(syncTxHash || txHash) && (
+              {(syncTxHash || claimTxHash) && (
                 <div style={{ fontSize: '11px', marginBottom: '6px' }}>
-                  <a href={`${EXPLORER_BASE}/tx/${txHash || syncTxHash}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`${EXPLORER_BASE}/tx/${claimTxHash || syncTxHash}`} target="_blank" rel="noopener noreferrer"
                     style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>
                     View TX on explorer
                   </a>
