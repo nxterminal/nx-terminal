@@ -4,7 +4,7 @@ import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { useDevs } from '../contexts/DevsContext';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
 
@@ -319,6 +319,14 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
                   {txHash.slice(0, 10)}...
                 </a></>}
               </div>
+              <button className="win-btn" onClick={() => {
+                window.ethereum?.request({
+                  method: 'wallet_watchAsset',
+                  params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
+                });
+              }} style={{ fontSize: '11px', padding: '3px 14px', marginTop: '8px' }}>
+                Add $NXT to MetaMask
+              </button>
             </div>
           )}
 

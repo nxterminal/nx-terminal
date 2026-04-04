@@ -1,11 +1,13 @@
 """Routes: Players — registration, profile, devs, wallet"""
 
+import logging
 from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -127,21 +129,29 @@ async def get_balance_history(wallet: str, days: int = Query(default=30, le=90))
     if not player:
         raise HTTPException(404, "Player not found")
 
-    snapshots = fetch_all(
-        """SELECT snapshot_date, balance_claimable, balance_claimed, balance_total_earned
-           FROM balance_snapshots
-           WHERE wallet_address = %s
-           ORDER BY snapshot_date DESC
-           LIMIT %s""",
-        (addr, days)
-    )
+    try:
+        snapshots = fetch_all(
+            """SELECT snapshot_date, balance_claimable, balance_claimed, balance_total_earned
+               FROM balance_snapshots
+               WHERE wallet_address = %s
+               ORDER BY snapshot_date DESC
+               LIMIT %s""",
+            (addr, days)
+        )
+    except Exception as e:
+        log.warning("[BALANCE_HISTORY] snapshot query failed (table may not exist): %s", e)
+        snapshots = []
 
     if len(snapshots) >= 7:
         snapshots.reverse()
         return snapshots
 
     # Not enough snapshots — reconstruct from current balance + movements
-    return _reconstruct_balance_history(addr, days)
+    try:
+        return _reconstruct_balance_history(addr, days)
+    except Exception as e:
+        log.warning("[BALANCE_HISTORY] reconstruction failed: %s", e)
+        return []
 
 
 _SALARY_PER_DAY = 200  # per dev — must match engine config
