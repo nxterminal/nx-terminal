@@ -174,7 +174,7 @@ def _send_batch(account, batch_ids, batch_amounts, nonce):
         return False, tx_hash, nonce + 1
 
 
-def sync_claimable_balances(db_conn=None):
+def sync_claimable_balances(db_conn=None, filter_token_ids=None):
     """
     Main sync function. Reads pending claims from DB and submits to contract
     in batches of BATCH_SIZE.
@@ -254,6 +254,17 @@ def sync_claimable_balances(db_conn=None):
         if own_conn:
             db_conn.close()
         return "no_pending"
+
+    # Filter to specific token IDs if requested (partial claims)
+    if filter_token_ids:
+        filter_set = set(filter_token_ids)
+        pending = [d for d in pending if d["token_id"] in filter_set]
+        if not pending:
+            logger.info("[CLAIM_SYNC] None of the requested %d token IDs have pending balance", len(filter_set))
+            if own_conn:
+                db_conn.close()
+            return "no_pending"
+        logger.info("[CLAIM_SYNC] Filtered to %d of %d requested devs", len(pending), len(filter_set))
 
     logger.info("[CLAIM_SYNC] Found %d devs with claimable balance", len(pending))
 

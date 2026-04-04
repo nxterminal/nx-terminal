@@ -18,6 +18,6 @@ export const wagmiConfig = createConfig({
   chains: [megaeth],
   connectors: [injected()],
   transports: {
-    [megaeth.id]: http('https://carrot.megaeth.com/rpc'),
+    [megaeth.id]: http('https://mainnet.megaeth.com/rpc'),
   },
 });

@@ -74,21 +74,47 @@ const DEDUCTIONS = [
 ];
 const TOTAL_DEDUCTION_PCT = DEDUCTIONS.reduce((s, d) => s + d.pct, 0); // 10
 
-// ── Check claimEnabled via direct mainnet RPC ──────────
+// ── Direct mainnet RPC helpers ──────────────────────────
+async function rpcCall(method, params) {
+  const res = await fetch(MAINNET_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message || 'RPC error');
+  return json.result;
+}
+
 async function fetchClaimEnabled() {
   try {
     const abi = NXDEVNFT_ABI.find(f => f.name === 'claimEnabled');
     const calldata = encodeFunctionData({ abi: [abi], functionName: 'claimEnabled' });
-    const res = await fetch(MAINNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest'], id: 1 }),
-    });
-    const json = await res.json();
-    if (json.error) return true;
-    const decoded = decodeFunctionResult({ abi: [abi], functionName: 'claimEnabled', data: json.result });
+    const data = await rpcCall('eth_call', [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest']);
+    const decoded = decodeFunctionResult({ abi: [abi], functionName: 'claimEnabled', data });
     return Boolean(decoded);
   } catch { return true; }
+}
+
+async function fetchPreviewClaim(tokenIds) {
+  const abi = NXDEVNFT_ABI.find(f => f.name === 'previewClaim');
+  const calldata = encodeFunctionData({ abi: [abi], functionName: 'previewClaim', args: [tokenIds] });
+  const data = await rpcCall('eth_call', [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest']);
+  const decoded = decodeFunctionResult({ abi: [abi], functionName: 'previewClaim', data });
+  return { gross: BigInt(decoded[0]), fee: BigInt(decoded[1]), net: BigInt(decoded[2]) };
+}
+
+function AddTokenButton() {
+  return (
+    <button className="win-btn" onClick={() => {
+      window.ethereum?.request({
+        method: 'wallet_watchAsset',
+        params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
+      });
+    }} style={{ fontSize: '10px', padding: '2px 8px', fontFamily: "'VT323', monospace" }}>
+      Add $NXT to MetaMask
+    </button>
+  );
 }
 
 // ── Withdraw Section (On-Chain) ──────────────────────────
@@ -98,6 +124,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
 
   const [claimEnabled, setClaimEnabled] = useState(null);
+  const [pendingOnChain, setPendingOnChain] = useState(null); // { gross, fee, net } from previewClaim
   const { data: txHash, writeContract, isPending: isSending, reset: resetTx } = useWriteContract();
   const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -106,12 +133,28 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const [syncTxHash, setSyncTxHash] = useState(null);
   const [pct, setPct] = useState(100); // percentage selector
 
+  // Check claimEnabled + pending on-chain balance on mount
   useEffect(() => {
-    if (wallet) fetchClaimEnabled().then(setClaimEnabled);
-  }, [wallet]);
+    if (!wallet) return;
+    fetchClaimEnabled().then(setClaimEnabled);
+    if (allIds.length > 0) {
+      fetchPreviewClaim(allIds).then(setPendingOnChain).catch(() => {});
+    }
+  }, [wallet, allIds.length]);
 
   useEffect(() => {
-    if (isConfirmed) { setClaimStep('success'); onClaimed?.(); }
+    if (isConfirmed) {
+      setClaimStep('success');
+      setPendingOnChain(null);
+      // Record claim in backend for movements history
+      api.recordClaim(wallet, {
+        amount_gross: gross,
+        amount_net: net,
+        fee_amount: totalDeduction,
+        tx_hash: txHash || '',
+      }).catch(() => {}); // best-effort
+      onClaimed?.();
+    }
   }, [isConfirmed, onClaimed]);
 
   useEffect(() => { if (isSending) setClaimStep('signing'); }, [isSending]);
@@ -148,9 +191,11 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setSyncTxHash(null);
     resetTx();
 
+    // Pass selected token IDs so backend only syncs these devs
+    const idsToSync = selectedIds.map(id => Number(id));
     let syncResult;
     try {
-      syncResult = await api.forceClaimSync();
+      syncResult = await api.forceClaimSync(idsToSync);
     } catch (e) {
       setClaimStep('error');
       setClaimError('Sync failed: ' + (e.message || 'unknown error'));
@@ -177,6 +222,23 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       writeContract({
         address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
         functionName: 'claimNXT', args: [selectedIds],
+      });
+    } catch (e) {
+      setClaimStep('error');
+      setClaimError(e.code === 4001 ? 'Transaction rejected in MetaMask' : (e.message || 'unknown'));
+    }
+  };
+
+  // Direct claim of pending on-chain balance (no sync needed)
+  const handleClaimPending = () => {
+    setClaimStep('signing');
+    setClaimError(null);
+    setSyncTxHash(null);
+    resetTx();
+    try {
+      writeContract({
+        address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
+        functionName: 'claimNXT', args: [allIds],
       });
     } catch (e) {
       setClaimStep('error');
@@ -223,6 +285,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       {allIds.length > 0 && !gameBalance && (
         <div style={{ ...stubBorder, fontSize: '12px', color: '#888' }}>
           Your devs haven&apos;t earned $NXT yet. They earn 200 $NXT/day through salary.
+        </div>
+      )}
+
+      {/* ── Pending on-chain from previous sync ── */}
+      {pendingOnChain && pendingOnChain.gross > BigInt(0) && claimStep === 'idle' && (
+        <div style={{ ...stubBorder, borderColor: 'rgba(0,180,0,0.3)', background: 'rgba(0,80,0,0.08)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
+            {'\u26A0'} You have <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>{formatNxt(pendingOnChain.net)} $NXT</span> pending on-chain
+          </div>
+          <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>
+            From a previous sync. Collect it directly — no new sync needed.
+          </div>
+          <button className="win-btn" onClick={handleClaimPending}
+            disabled={isWrongChain}
+            style={{ padding: '4px 16px', fontSize: '12px', fontWeight: 'bold',
+              background: '#2a5a00', color: '#fff', width: '100%', textAlign: 'center' }}>
+            {'\uD83D\uDCB0'} Collect Pending {formatNxt(pendingOnChain.net)} $NXT
+          </button>
         </div>
       )}
 
@@ -408,14 +488,18 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
         </div>
       </div>
 
-      {/* Salary info */}
+      {/* Salary info + Add token */}
       <div style={{
         padding: '4px 8px', margin: '0 8px',
         fontFamily: "'VT323', monospace", fontSize: '14px',
         color: 'var(--terminal-green)', background: 'var(--terminal-bg)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        {'>'} Salary: <span style={{ color: 'var(--gold)' }}>200 $NXT/day</span> per dev
-        {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
+        <span>
+          {'>'} Salary: <span style={{ color: 'var(--gold)' }}>200 $NXT/day</span> per dev
+          {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
+        </span>
+        <AddTokenButton />
       </div>
 
       {/* Per-dev table */}
