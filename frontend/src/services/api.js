@@ -72,6 +72,11 @@ export const api = {
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),
   getClaimHistory: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/claim-history`),
+  recordClaim: (wallet, data) => fetchJSON(`${API_BASE}/api/players/${wallet}/record-claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
 
   // Wallet
   getWalletSummary: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/wallet-summary`),
@@ -96,7 +101,11 @@ export const api = {
 
   // Claim Sync
   getClaimSyncStatus: () => fetchJSON(`${API_BASE}/api/claim-sync/status`),
-  forceClaimSync: () => fetchJSON(`${API_BASE}/api/claim-sync/force`, { method: 'POST' }),
+  forceClaimSync: (tokenIds) => fetchJSON(`${API_BASE}/api/claim-sync/force`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: tokenIds ? JSON.stringify({ token_ids: tokenIds }) : undefined,
+  }),
 
   // Sentinel
   sentinelHealth: () => fetchJSON(`${API_BASE}/api/sentinel/health`),

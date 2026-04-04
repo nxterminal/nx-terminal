@@ -2,7 +2,8 @@
 
 import os
 import logging
-from fastapi import APIRouter, HTTPException
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Request
 from backend.api.deps import fetch_one, fetch_all, get_db
 
 log = logging.getLogger("nx_api")
@@ -97,20 +98,30 @@ async def get_claim_sync_status():
 
 
 @router.post("/claim-sync/force")
-async def force_claim_sync():
+async def force_claim_sync(request: Request):
     """Force an immediate claim sync run (bypasses scheduler timer).
 
-    Returns structured result with tx_hash when available so the frontend
-    can trust the receipt instead of polling previewClaim.
+    Accepts optional { token_ids: [29572, 13535, ...] } to sync only
+    specific devs (for partial claims).  Returns structured result with
+    tx_hash when available.
     """
     try:
         from backend.engine.claim_sync import sync_claimable_balances
-        log.info("[CLAIM_SYNC] Manual force sync triggered via API")
-        # Pass a connection from the API pool — avoids SSL issues
-        # that occur when claim_sync creates its own connection from
-        # within the uvicorn process
+
+        # Parse optional token_ids from request body
+        filter_ids = None
+        try:
+            body = await request.json()
+            if body and isinstance(body.get("token_ids"), list):
+                filter_ids = [int(t) for t in body["token_ids"]]
+                log.info("[CLAIM_SYNC] Manual force sync for %d specific devs", len(filter_ids))
+            else:
+                log.info("[CLAIM_SYNC] Manual force sync triggered via API (all devs)")
+        except Exception:
+            log.info("[CLAIM_SYNC] Manual force sync triggered via API (all devs)")
+
         with get_db() as conn:
-            result = sync_claimable_balances(db_conn=conn)
+            result = sync_claimable_balances(db_conn=conn, filter_token_ids=filter_ids)
 
         # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
         if isinstance(result, dict):

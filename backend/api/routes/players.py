@@ -2,10 +2,10 @@
 
 import logging
 from datetime import date, timedelta
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional
-from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
+from backend.api.deps import fetch_one, fetch_all, execute, get_db, validate_wallet
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -74,6 +74,36 @@ async def get_claim_history(wallet: str):
         "SELECT * FROM claim_history WHERE player_address = %s ORDER BY claimed_at DESC",
         (wallet.lower(),)
     )
+
+
+@router.post("/{wallet}/record-claim")
+async def record_claim(wallet: str, request: Request):
+    """Record a successful $NXT claim in claim_history.
+
+    Called by the frontend after a successful claimNXT transaction.
+    Body: { amount_gross, amount_net, fee_amount, tx_hash }
+    """
+    addr = wallet.lower()
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body")
+
+    gross = int(body.get("amount_gross", 0))
+    net = int(body.get("amount_net", 0))
+    fee = int(body.get("fee_amount", 0))
+    tx_hash = body.get("tx_hash", "")
+
+    if gross <= 0:
+        raise HTTPException(400, "amount_gross must be positive")
+
+    execute(
+        """INSERT INTO claim_history (player_address, amount_gross, fee_amount, amount_net, tx_hash)
+           VALUES (%s, %s, %s, %s, %s)""",
+        (addr, gross, fee, net, tx_hash)
+    )
+    log.info("[CLAIM] Recorded claim for %s: gross=%d net=%d tx=%s", addr, gross, net, tx_hash)
+    return {"ok": True}
 
 
 @router.get("/{wallet}/wallet-summary")
