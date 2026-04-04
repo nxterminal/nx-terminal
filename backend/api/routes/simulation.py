@@ -98,12 +98,34 @@ async def get_claim_sync_status():
 
 @router.post("/claim-sync/force")
 async def force_claim_sync():
-    """Force an immediate claim sync run (bypasses scheduler timer)."""
+    """Force an immediate claim sync run (bypasses scheduler timer).
+
+    Returns structured result with tx_hash when available so the frontend
+    can trust the receipt instead of polling previewClaim.
+    """
     try:
         from backend.engine.claim_sync import sync_claimable_balances
         log.info("[CLAIM_SYNC] Manual force sync triggered via API")
         result = sync_claimable_balances()
-        return {"success": True, "result": result or "ok"}
+
+        # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
+        if isinstance(result, dict):
+            ok = result.get("status") == "ok"
+            return {
+                "success": ok,
+                "synced": result.get("synced", 0),
+                "total": result.get("total", 0),
+                "tx_hash": result.get("tx_hash"),
+                "result": result.get("status", "unknown"),
+            }
+
+        # String results (dry_run, no_pending, error_*)
+        is_error = isinstance(result, str) and result.startswith("error")
+        return {
+            "success": not is_error,
+            "result": result or "ok",
+            "tx_hash": None,
+        }
     except Exception as e:
         log.error("[CLAIM_SYNC] Force sync failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

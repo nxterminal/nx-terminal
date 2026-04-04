@@ -4,7 +4,7 @@ import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { useDevs } from '../contexts/DevsContext';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
 
@@ -74,33 +74,21 @@ const DEDUCTIONS = [
 ];
 const TOTAL_DEDUCTION_PCT = DEDUCTIONS.reduce((s, d) => s + d.pct, 0); // 10
 
-// ── Direct RPC call to mainnet for previewClaim ─────────
-async function fetchPreviewClaim(tokenIds) {
-  const previewAbi = NXDEVNFT_ABI.find(f => f.name === 'previewClaim');
-  const calldata = encodeFunctionData({ abi: [previewAbi], functionName: 'previewClaim', args: [tokenIds] });
-  const res = await fetch(MAINNET_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest'], id: 1 }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message || 'RPC error');
-  const decoded = decodeFunctionResult({ abi: [previewAbi], functionName: 'previewClaim', data: json.result });
-  return { gross: BigInt(decoded[0]), fee: BigInt(decoded[1]), net: BigInt(decoded[2]) };
-}
-
+// ── Check claimEnabled via direct mainnet RPC ──────────
 async function fetchClaimEnabled() {
-  const abi = NXDEVNFT_ABI.find(f => f.name === 'claimEnabled');
-  const calldata = encodeFunctionData({ abi: [abi], functionName: 'claimEnabled' });
-  const res = await fetch(MAINNET_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest'], id: 1 }),
-  });
-  const json = await res.json();
-  if (json.error) return true; // assume enabled on error
-  const decoded = decodeFunctionResult({ abi: [abi], functionName: 'claimEnabled', data: json.result });
-  return Boolean(decoded);
+  try {
+    const abi = NXDEVNFT_ABI.find(f => f.name === 'claimEnabled');
+    const calldata = encodeFunctionData({ abi: [abi], functionName: 'claimEnabled' });
+    const res = await fetch(MAINNET_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: NXDEVNFT_ADDRESS, data: calldata }, 'latest'], id: 1 }),
+    });
+    const json = await res.json();
+    if (json.error) return true;
+    const decoded = decodeFunctionResult({ abi: [abi], functionName: 'claimEnabled', data: json.result });
+    return Boolean(decoded);
+  } catch { return true; }
 }
 
 // ── Withdraw Section (On-Chain) ──────────────────────────
@@ -115,8 +103,8 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
 
   const [claimStep, setClaimStep] = useState('idle'); // idle | syncing | signing | mining | success | error
   const [claimError, setClaimError] = useState(null);
+  const [syncTxHash, setSyncTxHash] = useState(null);
 
-  // Check claimEnabled via mainnet RPC on mount
   useEffect(() => {
     if (wallet) fetchClaimEnabled().then(setClaimEnabled);
   }, [wallet]);
@@ -128,49 +116,45 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
   useEffect(() => { if (isSending) setClaimStep('signing'); }, [isSending]);
   useEffect(() => { if (isMining) setClaimStep('mining'); }, [isMining]);
 
-  // Pay stub always uses game balance (on-chain preview happens inside handleClaim)
   const gross = gameBalance || 0;
   const net = Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
   const totalDeduction = gross - net;
 
-  // ── Single COLLECT button: sync → wait → preview → sign ──
+  // ── Single COLLECT button: sync (backend waits for receipt) → claim via MetaMask ──
   const handleClaim = async () => {
     setClaimStep('syncing');
     setClaimError(null);
+    setSyncTxHash(null);
     resetTx();
 
-    // Step 1: Force sync to push in-game balance on-chain
+    // Step 1: Force sync — backend waits for TX confirmation before responding
+    let syncResult;
     try {
-      await api.forceClaimSync();
+      syncResult = await api.forceClaimSync();
     } catch (e) {
       setClaimStep('error');
       setClaimError('Sync failed: ' + (e.message || 'unknown error'));
       return;
     }
 
-    // Step 2: Wait for on-chain state to settle
-    await new Promise(r => setTimeout(r, 3000));
+    // Store sync tx_hash for display
+    if (syncResult.tx_hash) setSyncTxHash(syncResult.tx_hash);
 
-    // Step 3: Read previewClaim via direct mainnet RPC
-    let retries = 3;
-    let preview = null;
-    while (retries > 0) {
-      try {
-        preview = await fetchPreviewClaim(ids);
-        if (preview.gross > BigInt(0)) break;
-        preview = null;
-      } catch {}
-      retries--;
-      if (retries > 0) await new Promise(r => setTimeout(r, 3000));
-    }
-
-    if (!preview || preview.gross === BigInt(0)) {
+    // Check sync result — backend already waited for receipt confirmation
+    if (!syncResult.success) {
       setClaimStep('error');
-      setClaimError('Sync completed but balance not yet reflected on-chain. Try again in 1 minute.');
+      const detail = syncResult.result || 'unknown';
+      if (syncResult.tx_hash) {
+        setClaimError(`Sync TX reverted (${detail})`);
+      } else if (detail === 'no_pending') {
+        setClaimError('No balance to sync. Devs may still be earning.');
+      } else {
+        setClaimError(`Sync failed: ${detail}`);
+      }
       return;
     }
 
-    // Step 4: Sign claimNXT via MetaMask
+    // Step 2: Sync confirmed on-chain — call claimNXT via MetaMask
     setClaimStep('signing');
     try {
       writeContract({
@@ -179,11 +163,11 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
       });
     } catch (e) {
       setClaimStep('error');
-      setClaimError('Transaction rejected: ' + (e.message || 'unknown'));
+      setClaimError(e.code === 4001 ? 'Transaction rejected in MetaMask' : (e.message || 'unknown'));
     }
   };
 
-  const handleRetry = () => { setClaimStep('idle'); setClaimError(null); };
+  const handleRetry = () => { setClaimStep('idle'); setClaimError(null); setSyncTxHash(null); };
 
   const box = {
     margin: '4px 8px', padding: '10px',
@@ -291,22 +275,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
 
           {claimStep === 'syncing' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
-              Syncing to blockchain...
+              Syncing your earnings...
             </div>
           )}
 
           {claimStep === 'signing' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
-              Sign in MetaMask...
+              Confirm in MetaMask...
             </div>
           )}
 
           {claimStep === 'mining' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: '13px', marginTop: '8px' }}>
-              Transaction pending...
+              Processing...
               {txHash && (
                 <span>{' '}<a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '11px' }}>View TX</a></span>
+                  style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline', fontSize: '11px' }}>
+                  TX: {txHash.slice(0, 10)}...
+                </a></span>
               )}
             </div>
           )}
@@ -314,19 +300,35 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, onClaimed }) {
           {claimStep === 'success' && (
             <div style={{ textAlign: 'center', padding: '8px', marginTop: '8px' }}>
               <div style={{ color: 'var(--terminal-green)', fontSize: '13px', fontWeight: 'bold' }}>
-                Collected! {txHash && <>TX: <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+                {'\u2705'} Collected! {txHash && <>TX: <a href={`${EXPLORER_BASE}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
                   style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>
                   {txHash.slice(0, 10)}...
                 </a></>}
               </div>
+              <button className="win-btn" onClick={() => {
+                window.ethereum?.request({
+                  method: 'wallet_watchAsset',
+                  params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
+                });
+              }} style={{ fontSize: '11px', padding: '3px 14px', marginTop: '8px' }}>
+                Add $NXT to MetaMask
+              </button>
             </div>
           )}
 
           {claimStep === 'error' && (
             <div style={{ textAlign: 'center', padding: '8px', marginTop: '8px' }}>
               <div style={{ color: 'var(--terminal-red, #ff4444)', fontSize: '12px', marginBottom: '6px' }}>
-                Failed: {claimError}
+                {'\u274C'} {claimError}
               </div>
+              {(syncTxHash || txHash) && (
+                <div style={{ fontSize: '11px', marginBottom: '6px' }}>
+                  <a href={`${EXPLORER_BASE}/tx/${txHash || syncTxHash}`} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--terminal-cyan)', textDecoration: 'underline' }}>
+                    View TX on explorer
+                  </a>
+                </div>
+              )}
               <button className="win-btn" onClick={handleRetry}
                 style={{ fontSize: '11px', padding: '3px 14px', color: 'var(--terminal-red)' }}>
                 Try Again
