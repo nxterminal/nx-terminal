@@ -124,19 +124,41 @@ function AddTokenButton() {
 
 // ── Send TX via MetaMask directly (no wagmi) ────────────
 async function sendClaimNXT(fromAddress, tokenIds) {
-  if (!window.ethereum) throw new Error('MetaMask not found');
-  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
-  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [tokenIds] });
-  console.log('[COLLECT] Sending eth_sendTransaction, from:', fromAddress, 'data length:', calldata.length);
+  console.log('[COLLECT] sendClaimNXT called. from:', fromAddress, 'ids:', tokenIds.map(Number));
+
+  if (!window.ethereum) throw new Error('MetaMask not found. Install MetaMask extension.');
+
+  // Verify we have accounts access
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  console.log('[COLLECT] eth_accounts:', accounts);
+  if (!accounts || accounts.length === 0) {
+    // Request connection
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+  }
+
+  // Build calldata for claimNXT(uint256[])
+  let calldata;
+  try {
+    const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
+    console.log('[COLLECT] claimAbi found:', !!claimAbi);
+    // Convert all IDs to BigInt to be safe
+    const bigIds = tokenIds.map(id => BigInt(id));
+    calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
+    console.log('[COLLECT] calldata built OK, length:', calldata.length, 'selector:', calldata.slice(0, 10));
+  } catch (encodeErr) {
+    console.error('[COLLECT] encodeFunctionData FAILED:', encodeErr);
+    throw new Error('Failed to encode claimNXT calldata: ' + encodeErr.message);
+  }
+
+  const from = fromAddress.toLowerCase();
+  const txParams = { from, to: NXDEVNFT_ADDRESS, data: calldata };
+  console.log('[COLLECT] Sending eth_sendTransaction:', JSON.stringify(txParams).slice(0, 200));
+
   const txHash = await window.ethereum.request({
     method: 'eth_sendTransaction',
-    params: [{
-      from: fromAddress,
-      to: NXDEVNFT_ADDRESS,
-      data: calldata,
-    }],
+    params: [txParams],
   });
-  console.log('[COLLECT] TX hash:', txHash);
+  console.log('[COLLECT] TX hash received:', txHash);
   return txHash;
 }
 
@@ -199,15 +221,19 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
   // ── Shared claim logic: send TX via MetaMask, poll receipt ──
   const doClaimNXT = async (ids) => {
+    console.log('[COLLECT] doClaimNXT start. wallet:', wallet, 'ids count:', ids.length);
+    if (!wallet) { setClaimStep('error'); setClaimError('Wallet not connected'); return; }
+    if (!ids || ids.length === 0) { setClaimStep('error'); setClaimError('No token IDs to claim'); return; }
+
     setClaimStep('signing');
-    console.log('[COLLECT] Requesting MetaMask signature, IDs:', ids.map(Number));
     let txHash;
     try {
       txHash = await sendClaimNXT(wallet, ids);
     } catch (e) {
-      console.error('[COLLECT] MetaMask error:', e);
+      console.error('[COLLECT] sendClaimNXT threw:', e);
+      console.error('[COLLECT] error code:', e?.code, 'message:', e?.message);
       const msg = e?.message || String(e);
-      if (e?.code === 4001 || msg.includes('rejected') || msg.includes('denied')) {
+      if (e?.code === 4001 || msg.includes('reject') || msg.includes('denied') || msg.includes('cancel')) {
         setClaimStep('error');
         setClaimError('Transaction rejected in MetaMask');
       } else {
