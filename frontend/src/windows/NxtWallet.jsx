@@ -235,21 +235,65 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     }
 
     // Wait a moment for on-chain state to settle after sync TX
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Pre-flight checks
+    console.log('[COLLECT] Sync success. Pre-flight checks...');
+    console.log('[COLLECT] writeContractAsync:', typeof writeContractAsync);
+    console.log('[COLLECT] selectedIds:', selectedIds.length, selectedIds.map(Number));
+    console.log('[COLLECT] chain:', chain?.id, 'expected:', MEGAETH_CHAIN_ID);
+    console.log('[COLLECT] isConnected:', isConnected, 'isWrongChain:', isWrongChain);
+
+    if (!isConnected) {
+      setClaimStep('error');
+      setClaimError('Wallet not connected');
+      return;
+    }
+    if (isWrongChain) {
+      setClaimStep('error');
+      setClaimError('Switch to MegaETH network (chain 4326)');
+      return;
+    }
+    if (selectedIds.length === 0) {
+      setClaimStep('error');
+      setClaimError('No token IDs to claim');
+      return;
+    }
 
     setClaimStep('signing');
-    console.log('[COLLECT] Sync success, calling claimNXT with', selectedIds.length, 'token IDs');
-    try {
-      await writeContractAsync({
-        address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
-        functionName: 'claimNXT', args: [selectedIds],
-      });
-      console.log('[COLLECT] claimNXT TX submitted');
-    } catch (e) {
-      console.error('[COLLECT] claimNXT error:', e);
+
+    // Safety timeout — if MetaMask never responds in 60s, unblock UI
+    const safetyTimer = setTimeout(() => {
       setClaimStep('error');
-      const msg = e.shortMessage || e.message || 'unknown';
-      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
+      setClaimError('MetaMask not responding. Open MetaMask manually or try again.');
+    }, 60000);
+
+    try {
+      console.log('[COLLECT] Calling writeContractAsync for claimNXT...');
+      const hash = await writeContractAsync({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'claimNXT',
+        args: [selectedIds],
+      });
+      clearTimeout(safetyTimer);
+      console.log('[COLLECT] claimNXT TX submitted:', hash);
+    } catch (e) {
+      clearTimeout(safetyTimer);
+      console.error('[COLLECT] claimNXT error:', e);
+      console.error('[COLLECT] error name:', e?.name, 'code:', e?.code);
+      console.error('[COLLECT] error details:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      setClaimStep('error');
+      const msg = e?.shortMessage || e?.message || String(e);
+      if (msg.includes('User rejected') || msg.includes('user rejected') || e?.code === 4001) {
+        setClaimError('Transaction rejected in MetaMask');
+      } else if (msg.includes('exceeds balance') || msg.includes('insufficient')) {
+        setClaimError('Insufficient funds or gas for transaction');
+      } else if (msg.includes('reverted') || msg.includes('revert')) {
+        setClaimError('Contract reverted — balance may not be synced yet. Wait 30s and try again.');
+      } else {
+        setClaimError(msg);
+      }
     }
   };
 
@@ -259,18 +303,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimError(null);
     setSyncTxHash(null);
     resetTx();
-    console.log('[COLLECT] Claiming pending on-chain balance, token IDs:', allIds.length);
+    console.log('[COLLECT] Claiming pending on-chain, IDs:', allIds.length);
+    const safetyTimer = setTimeout(() => {
+      setClaimStep('error');
+      setClaimError('MetaMask not responding. Open MetaMask manually or try again.');
+    }, 60000);
     try {
-      await writeContractAsync({
+      const hash = await writeContractAsync({
         address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
         functionName: 'claimNXT', args: [allIds],
       });
-      console.log('[COLLECT] Pending claim TX submitted');
+      clearTimeout(safetyTimer);
+      console.log('[COLLECT] Pending claim TX submitted:', hash);
     } catch (e) {
+      clearTimeout(safetyTimer);
       console.error('[COLLECT] Pending claim error:', e);
       setClaimStep('error');
-      const msg = e.shortMessage || e.message || 'unknown';
-      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
+      const msg = e?.shortMessage || e?.message || String(e);
+      setClaimError(msg.includes('rejected') ? 'Transaction rejected in MetaMask' : msg);
     }
   };
 
