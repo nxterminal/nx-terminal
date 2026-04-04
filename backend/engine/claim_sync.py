@@ -199,7 +199,7 @@ def sync_claimable_balances():
             balance_wei = int(balance_hex, 16)
             balance_eth = balance_wei / 10**18
             logger.info("[CLAIM_SYNC] Signer ETH balance: %.6f ETH (%d wei)", balance_eth, balance_wei)
-            if balance_wei < 10**15:  # < 0.001 ETH
+            if balance_wei < 10**13:  # < 0.00001 ETH (MegaETH gas is near-zero)
                 logger.error("[CLAIM_SYNC] Signer has insufficient ETH for gas! Balance: %.6f ETH", balance_eth)
                 return f"error_no_gas: {balance_eth:.6f} ETH"
         except Exception as e:
