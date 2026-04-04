@@ -6,7 +6,7 @@ FastAPI + WebSocket + PostgreSQL
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis
@@ -93,9 +93,9 @@ async def claim_sync_status():
     return await get_claim_sync_status()
 
 @app.post("/api/claim-sync/force")
-async def claim_sync_force():
+async def claim_sync_force(request: Request):
     from backend.api.routes.simulation import force_claim_sync
-    return await force_claim_sync()
+    return await force_claim_sync(request)
 
 # ============================================================
 # HEALTH

@@ -121,7 +121,13 @@ async def force_claim_sync(request: Request):
             log.info("[CLAIM_SYNC] Manual force sync triggered via API (all devs)")
 
         with get_db() as conn:
-            result = sync_claimable_balances(db_conn=conn, filter_token_ids=filter_ids)
+            # wait_for_receipt=False: return immediately after TX is sent
+            # MegaETH confirms in <1s, and Render has a 30s HTTP timeout
+            result = sync_claimable_balances(
+                db_conn=conn,
+                filter_token_ids=filter_ids,
+                wait_for_receipt=False,
+            )
 
         # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
         if isinstance(result, dict):
