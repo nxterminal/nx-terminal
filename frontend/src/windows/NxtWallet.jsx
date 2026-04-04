@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
+import { writeContract as wagmiWriteContract } from 'wagmi/actions';
+import { wagmiConfig } from '../services/wagmi';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { useDevs } from '../contexts/DevsContext';
@@ -122,60 +124,19 @@ function AddTokenButton() {
   );
 }
 
-// ── Send TX via MetaMask directly (no wagmi) ────────────
+// ── Send claimNXT TX via wagmi action (uses active connector session) ──
 async function sendClaimNXT(fromAddress, tokenIds) {
   console.log('[COLLECT] sendClaimNXT called. from:', fromAddress, 'ids:', tokenIds.map(Number));
-
-  if (!window.ethereum) throw new Error('MetaMask not found. Install MetaMask extension.');
-
-  // ALWAYS reconnect — eth_accounts returns stale data when session expires
-  console.log('[COLLECT] Reconnecting MetaMask...');
-  try {
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-  } catch (e) {
-    throw new Error('Please unlock MetaMask and try again');
-  }
-
-  // Verify chain is MegaETH (4326 = 0x10e6)
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  console.log('[COLLECT] Current chainId:', chainId);
-  if (chainId !== '0x10e6') {
-    console.log('[COLLECT] Wrong chain, switching to MegaETH...');
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x10e6' }],
-      });
-    } catch (switchErr) {
-      // Chain not added — try to add it
-      if (switchErr.code === 4902) {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: '0x10e6',
-            chainName: 'MegaETH',
-            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-            rpcUrls: ['https://mainnet.megaeth.com/rpc'],
-            blockExplorerUrls: ['https://megaexplorer.xyz'],
-          }],
-        });
-      } else {
-        throw new Error('Please switch to MegaETH network in MetaMask');
-      }
-    }
-  }
-
-  // Build calldata for claimNXT(uint256[])
-  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
   const bigIds = tokenIds.map(id => BigInt(id));
-  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
-  console.log('[COLLECT] calldata OK, selector:', calldata.slice(0, 10), 'length:', calldata.length);
 
-  const from = fromAddress.toLowerCase();
-  console.log('[COLLECT] Sending eth_sendTransaction...');
-  const txHash = await window.ethereum.request({
-    method: 'eth_sendTransaction',
-    params: [{ from, to: NXDEVNFT_ADDRESS, data: calldata }],
+  // wagmi/actions writeContract uses the active connector (MetaMask)
+  // It handles chain switching, gas estimation, and session management
+  console.log('[COLLECT] Calling wagmi writeContract...');
+  const txHash = await wagmiWriteContract(wagmiConfig, {
+    address: NXDEVNFT_ADDRESS,
+    abi: NXDEVNFT_ABI,
+    functionName: 'claimNXT',
+    args: [bigIds],
   });
   console.log('[COLLECT] TX hash:', txHash);
   return txHash;
