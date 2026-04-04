@@ -263,6 +263,7 @@ def sync_claimable_balances():
         logger.info("[CLAIM_SYNC] Starting nonce: %d", nonce)
 
         total_synced = []
+        last_tx_hash = None
 
         for i in range(0, len(token_ids), BATCH_SIZE):
             chunk_ids = token_ids[i:i + BATCH_SIZE]
@@ -273,6 +274,7 @@ def sync_claimable_balances():
             logger.info("[CLAIM_SYNC] === Batch %d/%d (%d devs) ===", batch_num, total_batches, len(chunk_ids))
 
             success, tx_hash, nonce = _send_batch(account, chunk_ids, chunk_amounts, nonce)
+            last_tx_hash = tx_hash
             if success:
                 _mark_synced(db_conn, chunk_ids)
                 total_synced.extend(chunk_ids)
@@ -282,7 +284,12 @@ def sync_claimable_balances():
                              batch_num, len(total_synced))
                 break
 
-        result = f"synced: {len(total_synced)}/{len(token_ids)} devs"
+        result = {
+            "synced": len(total_synced),
+            "total": len(token_ids),
+            "tx_hash": last_tx_hash,
+            "status": "ok" if len(total_synced) == len(token_ids) else "partial",
+        }
         logger.info("[CLAIM_SYNC] === Complete: %s ===", result)
         return result
 
