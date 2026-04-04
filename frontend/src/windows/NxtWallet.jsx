@@ -124,14 +124,59 @@ function AddTokenButton() {
   );
 }
 
+// ── Ensure wallet extension is alive (EIP-6963 + retry) ──
+async function ensureWalletReady() {
+  // Strategy 1: EIP-6963 — dispatch requestProvider event to wake extensions
+  console.log('[WALLET] Waking wallet via EIP-6963...');
+  const eip6963Provider = await new Promise((resolve) => {
+    const handler = (e) => {
+      window.removeEventListener('eip6963:announceProvider', handler);
+      resolve(e.detail?.provider);
+    };
+    window.addEventListener('eip6963:announceProvider', handler);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    setTimeout(() => {
+      window.removeEventListener('eip6963:announceProvider', handler);
+      resolve(null);
+    }, 1500);
+  });
+
+  if (eip6963Provider) {
+    try {
+      await eip6963Provider.request({ method: 'eth_accounts' });
+      console.log('[WALLET] EIP-6963 provider alive');
+      return eip6963Provider;
+    } catch {}
+  }
+
+  // Strategy 2: eth_requestAccounts with retries + exponential backoff
+  if (!window.ethereum) throw new Error('No wallet found. Install a wallet extension.');
+  console.log('[WALLET] Trying eth_requestAccounts with retries...');
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await Promise.race([
+        window.ethereum.request({ method: 'eth_requestAccounts' }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), 5000)),
+      ]);
+      console.log('[WALLET] Wallet alive (attempt', attempt + ')');
+      return window.ethereum;
+    } catch (e) {
+      if (e.message !== 'TIMEOUT') throw e;
+      console.log('[WALLET] Attempt', attempt, 'timed out, retrying...');
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+  }
+
+  throw new Error('Wallet not responding. Refresh the page and try again.');
+}
+
 // ── Send claimNXT TX ─────────────────────────────────────
 async function sendClaimNXT(fromAddress, tokenIds) {
-  console.log('[COLLECT] sendClaimNXT called. from:', fromAddress, 'ids:', tokenIds.map(Number));
+  console.log('[COLLECT] sendClaimNXT. from:', fromAddress, 'count:', tokenIds.length);
   const bigIds = tokenIds.map(id => BigInt(id));
 
-  // Strategy 1: wagmi writeContract (fastest if connector is alive)
+  // Try wagmi first (should work since ensureWalletReady pre-woke the extension)
   try {
-    console.log('[COLLECT] Trying wagmi writeContract...');
     const txHash = await wagmiWriteContract(wagmiConfig, {
       address: NXDEVNFT_ADDRESS,
       abi: NXDEVNFT_ABI,
@@ -141,37 +186,17 @@ async function sendClaimNXT(fromAddress, tokenIds) {
     console.log('[COLLECT] wagmi OK, hash:', txHash);
     return txHash;
   } catch (e) {
-    console.warn('[COLLECT] wagmi failed:', e?.message);
+    console.warn('[COLLECT] wagmi failed, using direct:', e?.message);
   }
 
-  // Strategy 2: direct window.ethereum — with 8s timeout to detect dead MetaMask
-  if (!window.ethereum) {
-    throw new Error('MetaMask not found. Install MetaMask extension.');
-  }
-  console.log('[COLLECT] Waking MetaMask (eth_requestAccounts with timeout)...');
-  try {
-    await Promise.race([
-      window.ethereum.request({ method: 'eth_requestAccounts' }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('MM_TIMEOUT')), 8000)),
-    ]);
-  } catch (e) {
-    if (e.message === 'MM_TIMEOUT') {
-      throw new Error(
-        'MetaMask is asleep. Click the MetaMask fox icon in your browser toolbar to wake it up, then press Try Again.'
-      );
-    }
-    throw new Error('Please unlock MetaMask and try again.');
-  }
-
-  // MetaMask is alive — encode and send
+  // Direct fallback (wallet is guaranteed alive by ensureWalletReady)
   const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
   const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
-  console.log('[COLLECT] Sending via window.ethereum, calldata:', calldata.slice(0, 10));
   const txHash = await window.ethereum.request({
     method: 'eth_sendTransaction',
     params: [{ from: fromAddress.toLowerCase(), to: NXDEVNFT_ADDRESS, data: calldata }],
   });
-  console.log('[COLLECT] TX hash:', txHash);
+  console.log('[COLLECT] direct OK, hash:', txHash);
   return txHash;
 }
 
@@ -279,13 +304,25 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     }
   };
 
-  // ── Single COLLECT button: sync → claim via MetaMask ──
+  // ── Single COLLECT button: wake wallet → sync → claim ──
   const handleClaim = async () => {
     if (selectedIds.length === 0) return;
-    setClaimStep('syncing');
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
+
+    // Step 0: Ensure wallet is alive BEFORE wasting time on sync
+    setClaimStep('signing');
+    try {
+      await ensureWalletReady();
+    } catch (e) {
+      setClaimStep('error');
+      setClaimError(e.message);
+      return;
+    }
+
+    // Step 1: Sync (wallet is confirmed alive)
+    setClaimStep('syncing');
 
     const idsToSync = selectedIds.map(id => Number(id));
     let syncResult;
@@ -323,6 +360,14 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
+    // Ensure wallet is alive before claiming
+    try {
+      await ensureWalletReady();
+    } catch (e) {
+      setClaimStep('error');
+      setClaimError(e.message);
+      return;
+    }
     await doClaimNXT(allIds);
   };
 
