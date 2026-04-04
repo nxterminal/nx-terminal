@@ -131,7 +131,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
   const [claimEnabled, setClaimEnabled] = useState(null);
   const [pendingOnChain, setPendingOnChain] = useState(null); // { gross, fee, net } from previewClaim
-  const { data: txHash, writeContract, isPending: isSending, reset: resetTx } = useWriteContract();
+  const { data: txHash, writeContractAsync, isPending: isSending, error: writeError, reset: resetTx } = useWriteContract();
   const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [claimStep, setClaimStep] = useState('idle'); // idle | syncing | signing | mining | success | error
@@ -165,6 +165,14 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
   useEffect(() => { if (isSending) setClaimStep('signing'); }, [isSending]);
   useEffect(() => { if (isMining) setClaimStep('mining'); }, [isMining]);
+  useEffect(() => {
+    if (writeError && claimStep === 'signing') {
+      console.error('[COLLECT] writeContract error:', writeError);
+      setClaimStep('error');
+      const msg = writeError.shortMessage || writeError.message || 'Transaction failed';
+      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
+    }
+  }, [writeError, claimStep]);
 
   // Calculate based on percentage: claim is per-dev, so we select a subset of dev IDs
   // Sort devs by balance descending so partial claims take the richest devs first
@@ -226,32 +234,43 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       return;
     }
 
+    // Wait a moment for on-chain state to settle after sync TX
+    await new Promise(r => setTimeout(r, 2000));
+
     setClaimStep('signing');
+    console.log('[COLLECT] Sync success, calling claimNXT with', selectedIds.length, 'token IDs');
     try {
-      writeContract({
+      await writeContractAsync({
         address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
         functionName: 'claimNXT', args: [selectedIds],
       });
+      console.log('[COLLECT] claimNXT TX submitted');
     } catch (e) {
+      console.error('[COLLECT] claimNXT error:', e);
       setClaimStep('error');
-      setClaimError(e.code === 4001 ? 'Transaction rejected in MetaMask' : (e.message || 'unknown'));
+      const msg = e.shortMessage || e.message || 'unknown';
+      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
     }
   };
 
   // Direct claim of pending on-chain balance (no sync needed)
-  const handleClaimPending = () => {
+  const handleClaimPending = async () => {
     setClaimStep('signing');
     setClaimError(null);
     setSyncTxHash(null);
     resetTx();
+    console.log('[COLLECT] Claiming pending on-chain balance, token IDs:', allIds.length);
     try {
-      writeContract({
+      await writeContractAsync({
         address: NXDEVNFT_ADDRESS, abi: NXDEVNFT_ABI,
         functionName: 'claimNXT', args: [allIds],
       });
+      console.log('[COLLECT] Pending claim TX submitted');
     } catch (e) {
+      console.error('[COLLECT] Pending claim error:', e);
       setClaimStep('error');
-      setClaimError(e.code === 4001 ? 'Transaction rejected in MetaMask' : (e.message || 'unknown'));
+      const msg = e.shortMessage || e.message || 'unknown';
+      setClaimError(msg.includes('User rejected') ? 'Transaction rejected in MetaMask' : msg);
     }
   };
 
