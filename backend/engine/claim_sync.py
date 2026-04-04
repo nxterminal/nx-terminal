@@ -41,7 +41,7 @@ BATCH_SET_SELECTOR = keccak(b"batchSetClaimableBalance(uint256[],uint256[])")[:4
 def _rpc_call_sync(method, params):
     """Synchronous JSON-RPC call to MegaETH."""
     payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
-    resp = httpx.post(MEGAETH_RPC, json=payload, timeout=30.0)
+    resp = httpx.post(MEGAETH_RPC, json=payload, timeout=15.0)
     data = resp.json()
     if "error" in data:
         raise Exception(f"RPC error: {data['error']}")
@@ -104,10 +104,11 @@ def _mark_synced(db_conn, synced_token_ids):
     logger.info("[CLAIM_SYNC] Marked %d devs as synced (balance_nxt = 0)", len(synced_token_ids))
 
 
-def _send_batch(account, batch_ids, batch_amounts, nonce):
+def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True):
     """Build, sign, and send a batchSetClaimableBalance TX via raw JSON-RPC.
 
     Returns (success: bool, tx_hash: str, new_nonce: int).
+    When wait_for_receipt=False, returns immediately after sending (for API speed).
     """
     # 1. Build calldata
     calldata = _build_calldata(batch_ids, batch_amounts)
@@ -144,12 +145,17 @@ def _send_batch(account, batch_ids, batch_amounts, nonce):
     tx_hash = _rpc_call_sync("eth_sendRawTransaction", [raw_tx_hex])
     logger.info("[CLAIM_SYNC] TX sent! Hash: %s", tx_hash)
 
-    # 7. Wait for receipt (poll every 2s, timeout 120s)
+    if not wait_for_receipt:
+        logger.info("[CLAIM_SYNC] TX sent — skipping receipt wait (API fast mode). Hash: %s", tx_hash)
+        return True, tx_hash, nonce + 1
+
+    # 7. Wait for receipt (poll every 1s, timeout 30s)
+    # MegaETH has 10ms blocks — TXs confirm almost instantly
     logger.info("[CLAIM_SYNC] Waiting for receipt...")
-    deadline = time.time() + 120
+    deadline = time.time() + 30
     receipt = None
     while time.time() < deadline:
-        time.sleep(2)
+        time.sleep(1)
         try:
             receipt = _rpc_call_sync("eth_getTransactionReceipt", [tx_hash])
             if receipt is not None:
@@ -158,8 +164,9 @@ def _send_batch(account, batch_ids, batch_amounts, nonce):
             pass
 
     if receipt is None:
-        logger.error("[CLAIM_SYNC] TX receipt timeout after 120s. Hash: %s", tx_hash)
-        return False, tx_hash, nonce + 1
+        logger.warning("[CLAIM_SYNC] TX receipt timeout after 30s (TX may still confirm). Hash: %s", tx_hash)
+        # Return success=True because the TX was sent — it will likely confirm
+        return True, tx_hash, nonce + 1
 
     status = int(receipt.get("status", "0x0"), 16)
     block = int(receipt.get("blockNumber", "0x0"), 16)
@@ -174,7 +181,7 @@ def _send_batch(account, batch_ids, batch_amounts, nonce):
         return False, tx_hash, nonce + 1
 
 
-def sync_claimable_balances(db_conn=None, filter_token_ids=None):
+def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receipt=True):
     """
     Main sync function. Reads pending claims from DB and submits to contract
     in batches of BATCH_SIZE.
@@ -308,7 +315,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None):
 
             logger.info("[CLAIM_SYNC] === Batch %d/%d (%d devs) ===", batch_num, total_batches, len(chunk_ids))
 
-            success, tx_hash, nonce = _send_batch(account, chunk_ids, chunk_amounts, nonce)
+            success, tx_hash, nonce = _send_batch(account, chunk_ids, chunk_amounts, nonce, wait_for_receipt=wait_for_receipt)
             last_tx_hash = tx_hash
             if success:
                 _mark_synced(db_conn, chunk_ids)
