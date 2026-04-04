@@ -86,6 +86,12 @@ async function rpcCall(method, params) {
   return json.result;
 }
 
+async function fetchNxtBalance(walletAddress) {
+  const padded = walletAddress.slice(2).toLowerCase().padStart(64, '0');
+  const data = await rpcCall('eth_call', [{ to: NXT_TOKEN_ADDRESS, data: '0x70a08231' + padded }, 'latest']);
+  return BigInt(data);
+}
+
 async function fetchClaimEnabled() {
   try {
     const abi = NXDEVNFT_ABI.find(f => f.name === 'claimEnabled');
@@ -198,7 +204,10 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
       syncResult = await api.forceClaimSync(idsToSync);
     } catch (e) {
       setClaimStep('error');
-      setClaimError('Sync failed: ' + (e.message || 'unknown error'));
+      const msg = e.name === 'AbortError'
+        ? 'Sync timed out (>2 min). The TX may still be pending — check the explorer.'
+        : 'Sync failed: ' + (e.message || 'unknown error');
+      setClaimError(msg);
       return;
     }
 
@@ -465,17 +474,56 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
 // ── Balance Tab ───────────────────────────────────────────
 function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
+  const [walletNxt, setWalletNxt] = useState(null);
+
+  useEffect(() => {
+    if (wallet) fetchNxtBalance(wallet).then(setWalletNxt).catch(() => {});
+  }, [wallet]);
+
+  // Refresh wallet balance when onClaimed triggers a re-render
+  const refreshWalletBalance = useCallback(() => {
+    if (wallet) fetchNxtBalance(wallet).then(setWalletNxt).catch(() => {});
+  }, [wallet]);
+
   if (!summary) return null;
+
+  const handleClaimed = () => {
+    refreshWalletBalance();
+    onClaimed?.();
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-      {/* Balance summary cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="stat-box win-panel">
-          <div className="stat-label">In-Game</div>
-          <div className="stat-value" style={{ color: 'var(--gold-on-grey)' }}>{formatNumber(summary.balance_claimable)}</div>
-          <div className="stat-label">$NXT</div>
+      {/* Balance header: In-Game + Wallet */}
+      <div style={{
+        display: 'flex', gap: '12px', padding: '8px 8px 4px', margin: '4px 8px 0',
+        fontFamily: "'VT323', monospace", background: 'var(--terminal-bg)',
+        border: '1px solid var(--border-dark)',
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '11px', color: '#888' }}>IN-GAME BALANCE</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
+            {formatNumber(summary.balance_claimable)} $NXT
+          </div>
+          <div style={{ fontSize: '10px', color: '#666' }}>(earned by devs)</div>
         </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '11px', color: '#888' }}>WALLET BALANCE</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
+            {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
+          </div>
+          <div style={{ fontSize: '10px', color: '#666' }}>(in MetaMask)</div>
+        </div>
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', margin: '0 8px',
+        fontFamily: "'VT323', monospace",
+      }}>
+        <AddTokenButton />
+      </div>
+
+      {/* Summary stats */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
           <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
@@ -493,13 +541,9 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
         padding: '4px 8px', margin: '0 8px',
         fontFamily: "'VT323', monospace", fontSize: '14px',
         color: 'var(--terminal-green)', background: 'var(--terminal-bg)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <span>
-          {'>'} Salary: <span style={{ color: 'var(--gold)' }}>200 $NXT/day</span> per dev
-          {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
-        </span>
-        <AddTokenButton />
+        {'>'} Salary: <span style={{ color: 'var(--gold)' }}>200 $NXT/day</span> per dev
+        {' \u00D7 '}{summary.total_devs} devs = <span style={{ color: 'var(--gold)' }}>{formatNumber(summary.salary_per_day)} $NXT/day</span>
       </div>
 
       {/* Per-dev table */}
@@ -528,7 +572,7 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
       </div>
 
       {/* Withdraw section */}
-      <WithdrawSection wallet={wallet} tokenIds={tokenIds} gameBalance={summary.balance_claimable} devs={summary.devs} onClaimed={onClaimed} />
+      <WithdrawSection wallet={wallet} tokenIds={tokenIds} gameBalance={summary.balance_claimable} devs={summary.devs} onClaimed={handleClaimed} />
     </div>
   );
 }
