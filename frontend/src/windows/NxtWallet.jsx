@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
-import { writeContract as wagmiWriteContract, reconnect, getAccount } from 'wagmi/actions';
-import { injected } from 'wagmi/connectors';
+import { writeContract as wagmiWriteContract } from 'wagmi/actions';
 import { wagmiConfig } from '../services/wagmi';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
@@ -129,62 +128,50 @@ function AddTokenButton() {
 async function sendClaimNXT(fromAddress, tokenIds) {
   console.log('[COLLECT] sendClaimNXT called. from:', fromAddress, 'ids:', tokenIds.map(Number));
   const bigIds = tokenIds.map(id => BigInt(id));
-  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
-  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
-  console.log('[COLLECT] calldata OK, selector:', calldata.slice(0, 10));
 
-  // Strategy 1: wagmi writeContract (if connector is healthy)
-  const account = getAccount(wagmiConfig);
-  console.log('[COLLECT] wagmi account status:', account.status, 'connector:', account.connector?.name);
-  if (account.status === 'connected' && account.connector) {
-    try {
-      console.log('[COLLECT] Trying wagmi writeContract...');
-      const txHash = await wagmiWriteContract(wagmiConfig, {
-        address: NXDEVNFT_ADDRESS,
-        abi: NXDEVNFT_ABI,
-        functionName: 'claimNXT',
-        args: [bigIds],
-      });
-      console.log('[COLLECT] wagmi TX hash:', txHash);
-      return txHash;
-    } catch (wagmiErr) {
-      console.warn('[COLLECT] wagmi writeContract failed:', wagmiErr?.message);
-      // Fall through to strategy 2
-    }
-  }
-
-  // Strategy 2: reconnect wagmi connector, then retry
-  console.log('[COLLECT] Reconnecting wagmi connector...');
+  // Strategy 1: wagmi writeContract (fastest if connector is alive)
   try {
-    await reconnect(wagmiConfig, { connectors: [injected()] });
-    console.log('[COLLECT] Reconnected. Retrying wagmi writeContract...');
+    console.log('[COLLECT] Trying wagmi writeContract...');
     const txHash = await wagmiWriteContract(wagmiConfig, {
       address: NXDEVNFT_ADDRESS,
       abi: NXDEVNFT_ABI,
       functionName: 'claimNXT',
       args: [bigIds],
     });
-    console.log('[COLLECT] wagmi TX hash (after reconnect):', txHash);
+    console.log('[COLLECT] wagmi OK, hash:', txHash);
     return txHash;
-  } catch (reconnectErr) {
-    console.warn('[COLLECT] wagmi reconnect+write failed:', reconnectErr?.message);
-    // Fall through to strategy 3
+  } catch (e) {
+    console.warn('[COLLECT] wagmi failed:', e?.message);
   }
 
-  // Strategy 3: direct window.ethereum as last resort
-  console.log('[COLLECT] Falling back to direct window.ethereum...');
-  if (!window.ethereum) throw new Error('No wallet found. Please install MetaMask.');
-  try {
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-  } catch {
-    throw new Error('Please unlock MetaMask and try again');
+  // Strategy 2: direct window.ethereum — with 8s timeout to detect dead MetaMask
+  if (!window.ethereum) {
+    throw new Error('MetaMask not found. Install MetaMask extension.');
   }
-  const from = fromAddress.toLowerCase();
+  console.log('[COLLECT] Waking MetaMask (eth_requestAccounts with timeout)...');
+  try {
+    await Promise.race([
+      window.ethereum.request({ method: 'eth_requestAccounts' }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('MM_TIMEOUT')), 8000)),
+    ]);
+  } catch (e) {
+    if (e.message === 'MM_TIMEOUT') {
+      throw new Error(
+        'MetaMask is asleep. Click the MetaMask fox icon in your browser toolbar to wake it up, then press Try Again.'
+      );
+    }
+    throw new Error('Please unlock MetaMask and try again.');
+  }
+
+  // MetaMask is alive — encode and send
+  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
+  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
+  console.log('[COLLECT] Sending via window.ethereum, calldata:', calldata.slice(0, 10));
   const txHash = await window.ethereum.request({
     method: 'eth_sendTransaction',
-    params: [{ from, to: NXDEVNFT_ADDRESS, data: calldata }],
+    params: [{ from: fromAddress.toLowerCase(), to: NXDEVNFT_ADDRESS, data: calldata }],
   });
-  console.log('[COLLECT] direct TX hash:', txHash);
+  console.log('[COLLECT] TX hash:', txHash);
   return txHash;
 }
 
