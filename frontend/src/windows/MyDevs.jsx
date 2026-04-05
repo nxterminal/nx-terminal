@@ -296,14 +296,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
     setBusy(true);
     try {
       await api.claimMission(address, mission.player_mission_id);
-      setActionMsg({ text: `Mission complete! +${mission.reward_nxt} $NXT`, color: '#005500' });
+      setActionMsg({ text: `+${mission.reward_nxt} $NXT \u2192 ${dev.name}'s balance! Collect in NXT Wallet`, color: '#005500' });
       const fresh = await api.getDev(dev.token_id, address);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
       setActionMsg({ text: err.message || 'Claim failed', color: '#aa0000' });
     }
     setBusy(false);
-    setTimeout(() => setActionMsg(null), 4000);
+    setTimeout(() => setActionMsg(null), 5000);
   };
 
   return (

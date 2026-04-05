@@ -38,8 +38,8 @@ async def get_available_missions(wallet: str = Query(...)):
 
     with get_db() as conn:
         with conn.cursor() as cur:
-            # Player dev count
-            cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE owner_address = %s", (addr,))
+            # Player dev count (LOWER for defensive case-insensitive match)
+            cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE LOWER(owner_address) = %s", (addr,))
             dev_count = cur.fetchone()["cnt"]
 
             # Active mission IDs for this wallet (can't start same mission twice)
@@ -54,7 +54,7 @@ async def get_available_missions(wallet: str = Query(...)):
                 "SELECT token_id, name, archetype, corporation, rarity_tier, ipfs_hash, "
                 "       stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck, "
                 "       energy, max_energy, pc_health, balance_nxt "
-                "FROM devs WHERE owner_address = %s AND status = 'active'",
+                "FROM devs WHERE LOWER(owner_address) = %s AND status = 'active'",
                 (addr,)
             )
             available_devs = cur.fetchall()
@@ -182,8 +182,16 @@ async def start_mission(req: MissionStartRequest):
             if dev["status"] != 'active':
                 raise HTTPException(400, f"Dev is not available (status: {dev['status']})")
 
+            # Belt-and-suspenders: check player_missions table directly
+            cur.execute(
+                "SELECT id FROM player_missions WHERE dev_token_id = %s AND status = 'in_progress'",
+                (req.dev_token_id,)
+            )
+            if cur.fetchone():
+                raise HTTPException(400, "This dev is already on a mission")
+
             # Check player dev count for min_devs_owned
-            cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE owner_address = %s", (addr,))
+            cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE LOWER(owner_address) = %s", (addr,))
             dev_count = cur.fetchone()["cnt"]
             if dev_count < mission["min_devs_owned"]:
                 raise HTTPException(400, f"Need at least {mission['min_devs_owned']} devs for this mission")
@@ -306,7 +314,7 @@ async def claim_mission(req: MissionClaimRequest):
     return {
         "success": True,
         "reward_nxt": reward,
-        "message": f"Mission complete! {dev['name'] if dev else 'Dev'} earned {reward} $NXT"
+        "message": f"Mission complete! +{reward} $NXT added to {dev['name'] if dev else 'Dev'}'s in-game balance. Withdraw anytime from NXT Wallet."
     }
 
 
