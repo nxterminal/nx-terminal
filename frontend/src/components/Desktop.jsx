@@ -189,6 +189,27 @@ export default function Desktop() {
         ))}
       </div>
 
+      {/* Tier badge — fixed top-right corner */}
+      {tier && devCount > 0 && (
+        <div style={{
+          position: 'fixed', top: 8, right: 8, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '3px', padding: '4px 10px',
+          fontSize: '11px', fontFamily: "'VT323', monospace",
+          color: '#e0e0e0', display: 'flex', alignItems: 'center', gap: '6px',
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          <span>{tier.icon}</span>
+          <span style={{ fontWeight: 'bold' }}>{tier.label.toUpperCase()}</span>
+          <span style={{ color: '#aaa' }}>({devCount} devs)</span>
+          {nextTier && (
+            <span style={{ color: '#888', fontSize: '10px' }}>
+              → {nextTier.label} at {nextTier.minDevs}
+            </span>
+          )}
+        </div>
+      )}
+
       <WindowManager
         windows={windows}
         closeWindow={closeWindow}
@@ -211,9 +232,6 @@ export default function Desktop() {
         onWindowClick={handleTaskbarClick}
         openWindow={openWindowWithBSOD}
         unreadCount={unreadCount}
-        devCount={devCount}
-        tier={tier}
-        nextTier={nextTier}
       />
     </div>
   );

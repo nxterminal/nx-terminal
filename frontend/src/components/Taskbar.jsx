@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import StartMenu from './StartMenu';
 
-export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0, devCount = 0, tier, nextTier }) {
+export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0 }) {
   const [cycle, setCycle] = useState(null);
   const [startOpen, setStartOpen] = useState(false);
   const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError } = useWallet();
@@ -170,25 +170,6 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
       </div>
 
       <div className="taskbar-tray">
-        {tier && devCount > 0 && (
-          <span
-            className="tray-icon"
-            style={{
-              fontSize: '10px', fontWeight: 'bold', cursor: 'default', padding: '0 4px',
-              color: 'var(--text-primary)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '2px',
-            }}
-            title={nextTier ? `${devCount}/${nextTier.minDevs} devs to ${nextTier.label}` : 'Max rank!'}
-          >
-            <span>{tier.icon}</span>
-            <span>{tier.label}</span>
-            {nextTier && (
-              <span style={{ color: '#888', fontSize: '9px' }}>
-                {devCount}/{nextTier.minDevs}
-              </span>
-            )}
-          </span>
-        )}
-
         <button
           className="tray-icon"
           onClick={toggleAssistant}
