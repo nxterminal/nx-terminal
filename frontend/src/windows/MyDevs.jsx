@@ -222,12 +222,14 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
   const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   const energyHigh = energyPct >= 70;
+  const onMission = dev.status === 'on_mission';
+  const missionCompleted = onMission && mission && new Date(mission.ends_at) <= new Date();
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -288,6 +290,22 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
   const pcHealth = dev.pc_health ?? 100;
   const pcColor = pcHealth > 70 ? '#005500' : pcHealth >= 40 ? '#b8860b' : '#aa0000';
 
+  const doClaimMission = async (e) => {
+    e.stopPropagation();
+    if (!mission) return;
+    setBusy(true);
+    try {
+      await api.claimMission(address, mission.player_mission_id);
+      setActionMsg({ text: `Mission complete! +${mission.reward_nxt} $NXT`, color: '#005500' });
+      const fresh = await api.getDev(dev.token_id, address);
+      if (fresh && onDevUpdate) onDevUpdate(fresh);
+    } catch (err) {
+      setActionMsg({ text: err.message || 'Claim failed', color: '#aa0000' });
+    }
+    setBusy(false);
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
   return (
     <div
       className="win-raised"
@@ -296,13 +314,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
         display: 'flex', gap: '10px', padding: '8px',
         cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
+        filter: onMission ? 'grayscale(100%)' : 'none',
+        opacity: onMission ? 0.7 : 1,
       }}
     >
       {/* Left column: Avatar + Action buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 80 }}>
         <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
 
-        {address && !dev._fetchFailed && (
+        {address && !dev._fetchFailed && !onMission && (
           <>
             {/* Food buttons — disabled when energy >= 70% */}
             <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -354,6 +374,45 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
               <span style={{ fontSize: '9px', color: 'var(--red-on-grey, #aa0000)' }}>🐛 Bugs: {dev.bugs_shipped}</span>
             )}
           </>
+        )}
+        {/* On Mission overlay */}
+        {onMission && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+            padding: '4px', textAlign: 'center',
+          }}>
+            <span style={{
+              fontSize: '10px', fontWeight: 'bold', color: '#b8860b',
+              background: 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '2px',
+            }}>
+              ON MISSION
+            </span>
+            {mission && (
+              <>
+                <span style={{ fontSize: '8px', color: '#666', maxWidth: 80 }}>
+                  {mission.title}
+                </span>
+                <span style={{ fontSize: '9px', color: missionCompleted ? '#005500' : '#888', fontWeight: 'bold' }}>
+                  {missionCompleted ? 'DONE!' : `Returns in ${(() => {
+                    const diff = new Date(mission.ends_at) - new Date();
+                    if (diff <= 0) return 'now';
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+                  })()}`}
+                </span>
+              </>
+            )}
+            {missionCompleted && (
+              <button className="win-btn" onClick={doClaimMission} disabled={busy}
+                style={{
+                  fontSize: '9px', padding: '2px 8px', fontWeight: 'bold',
+                  color: '#005500', border: '2px solid #005500',
+                }}>
+                CLAIM REWARD
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -421,7 +480,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
           </span>
           <span>{dev.mood || '-'}</span>
           <span style={{
-            color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+            color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
             textTransform: 'uppercase', fontWeight: 'bold',
           }}>
             {dev.status || 'active'}
@@ -632,6 +691,19 @@ export default function MyDevs({ openDevProfile }) {
   const { devs, loading, fetchError, refreshDevs, updateDev, tokenIds } = useDevs();
   const [tab, setTab] = useState('devs');
   const [activityCount, setActivityCount] = useState(0);
+  const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
+
+  // Fetch active missions to show on-mission state in DevCards
+  useEffect(() => {
+    if (!address) return;
+    api.getMissionsActive(address).then(missions => {
+      const map = {};
+      for (const m of (missions || [])) {
+        map[m.dev_token_id] = m;
+      }
+      setMissionMap(map);
+    }).catch(() => {});
+  }, [address]);
 
   // Fetch activity count for badge
   useEffect(() => {
@@ -757,6 +829,7 @@ export default function MyDevs({ openDevProfile }) {
                   key={dev.token_id}
                   dev={dev}
                   address={address}
+                  mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
@@ -767,6 +840,12 @@ export default function MyDevs({ openDevProfile }) {
                   }}
                   onDevUpdate={(fresh) => {
                     updateDev(fresh);
+                    // Refresh missions after claiming
+                    api.getMissionsActive(address).then(missions => {
+                      const map = {};
+                      for (const m of (missions || [])) map[m.dev_token_id] = m;
+                      setMissionMap(map);
+                    }).catch(() => {});
                   }}
                 />
               ))
