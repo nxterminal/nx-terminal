@@ -227,6 +227,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
   const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
+  const energyHigh = energyPct >= 70;
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -285,9 +286,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
   };
 
   const pcHealth = dev.pc_health ?? 100;
-  const pcColor = pcHealth > 70 ? '#005500' : pcHealth > 30 ? '#7a5c00' : '#aa0000';
-
-  const energyFull = dev.energy >= (dev.max_energy || 10);
+  const pcColor = pcHealth > 70 ? '#005500' : pcHealth >= 40 ? '#b8860b' : '#aa0000';
 
   return (
     <div
@@ -305,35 +304,49 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate }) {
 
         {address && !dev._fetchFailed && (
           <>
-            {/* Food buttons — always visible, disabled when energy full */}
+            {/* Food buttons — disabled when energy >= 70% */}
             <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                title={energyFull ? "Energy is full" : "☕ COFFEE: 5 $NXT → +2 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +2 energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 ☕5
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                title={energyFull ? "Energy is full" : "🍕 PIZZA: 25 $NXT → +5 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +5 energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 🍕25
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                title={energyFull ? "Energy is full" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyFull}>
+                title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
+                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 🍔50
               </button>
             </div>
+            {/* Energy status indicator */}
+            <span style={{
+              fontSize: '8px', fontWeight: 'bold', textAlign: 'center',
+              color: energyPct >= 70 ? '#005500' : energyPct >= 30 ? '#b8860b' : '#aa0000',
+              animation: energyPct < 30 ? 'blink 1s step-end infinite' : 'none',
+            }}>
+              {energyPct >= 70 ? 'ENERGY OK' : energyPct >= 30 ? 'LOW ENERGY' : 'CRITICAL'}
+            </span>
             {/* Hack + Repair row */}
             <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="win-btn" onClick={doHack}
-                title={"⚡ HACK: 15 $NXT to attack a random dev.\nSuccess (~50%): steal 20-40 $NXT."}
+                title={"Spend 15 $NXT to hack a rival. ~50% success."}
                 style={{ fontSize: '9px', padding: '1px 4px', border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy}>
                 ⚡Hack 15
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
                 title={"🔧 REPAIR PC: 10 $NXT → restore PC to 100%"}
-                style={{ fontSize: '9px', padding: '1px 4px', border: pcHealth < 50 ? '1px solid #7a5500' : undefined }} disabled={busy}>
-                🔧PC {pcHealth}%
+                style={{
+                  fontSize: '9px', padding: '1px 4px',
+                  border: pcHealth < 40 ? '2px solid #aa0000' : pcHealth <= 70 ? '1px solid #b8860b' : undefined,
+                  color: pcHealth < 40 ? '#aa0000' : undefined,
+                  fontWeight: pcHealth < 40 ? 'bold' : undefined,
+                  animation: pcHealth < 40 ? 'blink 1s step-end infinite' : 'none',
+                }} disabled={busy}>
+                🔧PC {pcHealth}%{pcHealth < 40 ? ' CRITICAL' : pcHealth <= 70 ? ' ⚠' : ''}
               </button>
             </div>
             {/* Bugs count */}
