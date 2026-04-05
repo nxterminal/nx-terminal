@@ -27,6 +27,7 @@ const WINDOW_DEFAULTS = {
   'dev-academy': { title: 'NX Dev Academy', icon: 'DA', width: 900, height: 650, x: 100, y: 35, maximized: true },
   'monad-build': { title: 'Mega Build.exe', icon: '\u26A1', width: 1100, height: 700, x: 50, y: 20, maximized: true },
   'mega-sentinel': { title: 'Mega Sentinel v1.0', icon: '\u{1F6E1}', width: 1000, height: 700, x: 60, y: 30, maximized: true },
+  'mission-control': { title: 'Mission Control', icon: '\u{1F4CB}', width: 800, height: 600, x: 80, y: 35 },
 };
 
 export function useWindowManager() {

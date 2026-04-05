@@ -27,6 +27,7 @@ import DevAcademy from './programs/dev-academy/DevAcademy';
 import MonadBuild from './programs/monad-build/MonadBuild';
 import NetWatch from './programs/netwatch/NetWatch';
 import MegaSentinel from './programs/mega-sentinel/MegaSentinel';
+import MissionControl from './programs/mission-control/MissionControl';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -53,6 +54,7 @@ const WINDOW_COMPONENTS = {
   'monad-build': MonadBuild,
   'netwatch': NetWatch,
   'mega-sentinel': MegaSentinel,
+  'mission-control': MissionControl,
 };
 
 export default function WindowManager({

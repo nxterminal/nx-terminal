@@ -32,6 +32,7 @@ const DESKTOP_ICONS = [
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
   { id: 'netwatch', icon: '', label: 'MegaWatch' },
   { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
+  { id: 'mission-control', icon: '\u{1F4CB}', label: 'Mission Control' },
 ];
 
 function getWallpaperStyle() {
@@ -189,6 +190,27 @@ export default function Desktop() {
         ))}
       </div>
 
+      {/* Tier badge — fixed top-right corner */}
+      {tier && devCount > 0 && (
+        <div style={{
+          position: 'fixed', top: 8, right: 8, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '3px', padding: '4px 10px',
+          fontSize: '11px', fontFamily: "'VT323', monospace",
+          color: '#e0e0e0', display: 'flex', alignItems: 'center', gap: '6px',
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          <span>{tier.icon}</span>
+          <span style={{ fontWeight: 'bold' }}>{tier.label.toUpperCase()}</span>
+          <span style={{ color: '#aaa' }}>({devCount} devs)</span>
+          {nextTier && (
+            <span style={{ color: '#888', fontSize: '10px' }}>
+              → {nextTier.label} at {nextTier.minDevs}
+            </span>
+          )}
+        </div>
+      )}
+
       <WindowManager
         windows={windows}
         closeWindow={closeWindow}
@@ -211,9 +233,6 @@ export default function Desktop() {
         onWindowClick={handleTaskbarClick}
         openWindow={openWindowWithBSOD}
         unreadCount={unreadCount}
-        devCount={devCount}
-        tier={tier}
-        nextTier={nextTier}
       />
     </div>
   );
