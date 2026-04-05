@@ -241,9 +241,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
     try {
       const res = await api.buyItem(address, itemId, dev.token_id);
       setActionMsg({ text: `${label} applied!`, color: '#005500' });
-      // Refresh dev data
-      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
-      if (fresh && onDevUpdate) onDevUpdate(fresh);
+      // Use updated dev from response directly (avoids GET cache issues)
+      if (res.updated_dev && onDevUpdate) {
+        onDevUpdate(res.updated_dev);
+      } else {
+        const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+        if (fresh && onDevUpdate) onDevUpdate(fresh);
+      }
     } catch (err) {
       setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
     }
@@ -282,6 +286,26 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
       setActionMsg({ text: 'Not ready yet', color: '#7a5c00' });
+    }
+    setBusy(false);
+    setTimeout(() => setActionMsg(null), 3000);
+  };
+
+  const doFixBug = async (e) => {
+    e.stopPropagation();
+    if (busy || !address) return;
+    setBusy(true);
+    try {
+      const res = await api.fixBug(address, dev.token_id);
+      setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
+      if (res.updated_dev && onDevUpdate) {
+        onDevUpdate(res.updated_dev);
+      } else {
+        const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+        if (fresh && onDevUpdate) onDevUpdate(fresh);
+      }
+    } catch (err) {
+      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Fix failed', color: '#aa0000' });
     }
     setBusy(false);
     setTimeout(() => setActionMsg(null), 3000);
@@ -328,17 +352,17 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
             {/* Food buttons — disabled when energy >= 70% */}
             <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +2 energy"}
+                title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +3 energy"}
                 style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 ☕5
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +5 energy"}
+                title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +7 energy"}
                 style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 🍕25
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
+                title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → +10 energy"}
                 style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 🍔50
               </button>
@@ -370,9 +394,21 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
                 🔧PC {pcHealth}%{pcHealth < 40 ? ' CRITICAL' : pcHealth <= 70 ? ' ⚠' : ''}
               </button>
             </div>
-            {/* Bugs count */}
+            {/* Bugs — fix button when bugs > 0 */}
             {dev.bugs_shipped > 0 && (
-              <span style={{ fontSize: '9px', color: 'var(--red-on-grey, #aa0000)' }}>🐛 Bugs: {dev.bugs_shipped}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '9px', color: '#aa0000', fontWeight: 'bold' }}>
+                  🐛 BUGS: {dev.bugs_shipped}
+                </span>
+                <button className="win-btn" onClick={doFixBug}
+                  title={`Fix 1 bug for 5 $NXT (${dev.bugs_shipped} remaining)`}
+                  style={{
+                    fontSize: '8px', padding: '0 4px', fontWeight: 'bold',
+                    color: '#005500', border: '1px solid #005500',
+                  }} disabled={busy}>
+                  🔧 Fix: 5 $NXT
+                </button>
+              </div>
             )}
           </>
         )}
@@ -435,7 +471,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
           color: 'var(--text-secondary, #666)',
         }}>
           <span style={{ color: energyColor, fontWeight: 'bold' }}>
-            E:{dev.energy ?? 0}/{dev.max_energy ?? 10}
+            ⚡ ENERGY: {dev.energy ?? 0}/{dev.max_energy ?? 10}
           </span>
           <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
             {formatNumber(dev.balance_nxt)} $NXT

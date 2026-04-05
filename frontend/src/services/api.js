@@ -68,6 +68,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, attacker_dev_id }),
     }),
+  fixBug: (player_address, dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/fix-bug`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, dev_id }),
+    }),
 
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),

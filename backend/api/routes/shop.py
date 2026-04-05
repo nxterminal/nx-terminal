@@ -200,12 +200,78 @@ async def buy_item(req: PurchaseRequest):
                     (req.item_id, ends_at, req.target_dev_id)
                 )
 
+            # Re-fetch dev with updated values so frontend can use directly
+            cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.target_dev_id,))
+            updated_dev = cur.fetchone()
+
     return {
         "purchase_id": purchase["id"],
         "item": req.item_id,
         "cost": item["cost_nxt"],
         "dev": dev["name"],
         "status": "applied",
+        "updated_dev": dict(updated_dev) if updated_dev else None,
+    }
+
+
+# ── Fix Bug ────────────────────────────────────────────────
+
+FIX_BUG_COST = 5  # flat NXT per bug
+
+class FixBugRequest(BaseModel):
+    player_address: str
+    dev_id: int
+
+
+@router.post("/fix-bug")
+async def fix_bug(req: FixBugRequest):
+    """Fix one bug on a dev. Costs 5 $NXT per bug."""
+    addr = validate_wallet(req.player_address)
+    shop_limiter.check(f"fixbug:{addr}")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT token_id, owner_address, balance_nxt, name, bugs_shipped FROM devs WHERE token_id = %s FOR UPDATE",
+                (req.dev_id,)
+            )
+            dev = cur.fetchone()
+            if not dev:
+                raise HTTPException(404, "Dev not found")
+            if dev["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own this dev")
+            if dev["bugs_shipped"] <= 0:
+                raise HTTPException(400, "No bugs to fix")
+            if dev["balance_nxt"] < FIX_BUG_COST:
+                raise HTTPException(400, f"Not enough $NXT. Need {FIX_BUG_COST}, have {dev['balance_nxt']}")
+
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s, "
+                "bugs_shipped = bugs_shipped - 1, bugs_fixed = COALESCE(bugs_fixed, 0) + 1 "
+                "WHERE token_id = %s",
+                (FIX_BUG_COST, FIX_BUG_COST, req.dev_id)
+            )
+
+            cur.execute(
+                """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+                   VALUES (%s, %s, %s, 'FIX_BUG', %s::jsonb, 0, %s)""",
+                (req.dev_id, dev["name"], "unknown",
+                 json.dumps({"event": "bug_fixed", "remaining": dev["bugs_shipped"] - 1}),
+                 FIX_BUG_COST)
+            )
+
+            # Return updated dev
+            cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.dev_id,))
+            updated_dev = cur.fetchone()
+
+    remaining = dev["bugs_shipped"] - 1
+    return {
+        "dev": dev["name"],
+        "cost": FIX_BUG_COST,
+        "bugs_remaining": remaining,
+        "status": "fixed",
+        "message": f"Bug fixed! {remaining} bug{'s' if remaining != 1 else ''} remaining." if remaining > 0 else "All bugs fixed!",
+        "updated_dev": dict(updated_dev) if updated_dev else None,
     }
 
 
