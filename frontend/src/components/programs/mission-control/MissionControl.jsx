@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../services/api';
 import { useDevCount } from '../../../hooks/useDevCount';
+import { useWallet } from '../../../hooks/useWallet';
 
 // ── Difficulty config ───────────────────────────────────────
 const DIFF_COLORS = {
@@ -284,7 +285,7 @@ export default function MissionControl() {
   const [confirmDev, setConfirmDev] = useState(null);
 
   const { devCount, tier } = useDevCount();
-  const address = localStorage.getItem('nx-wallet');
+  const { address, isConnected } = useWallet();
 
   // ── Fetch data ──────────────────────────────────────────
   const fetchAvailable = useCallback(async () => {
@@ -390,7 +391,7 @@ export default function MissionControl() {
     missionsByDiff[m.difficulty].push(m);
   }
 
-  if (!address) {
+  if (!isConnected || !address) {
     return (
       <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: '13px' }}>
         Connect your wallet to access Mission Control.
