@@ -228,7 +228,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                   })}
                 </div>
                 <div style={{ fontSize: '11px', color: T.textDim, marginTop: '2px' }}>
-                  E: {dev.energy}/{dev.max_energy} | PC: {dev.pc_health ?? 100}%
+                  ENERGY: {dev.energy}/{dev.max_energy} | PC: {dev.pc_health ?? 100}%
                 </div>
               </div>
               <div style={{

@@ -134,6 +134,7 @@ CREATE TABLE devs (
     coffee_count        INTEGER NOT NULL DEFAULT 0,
     lines_of_code       INTEGER NOT NULL DEFAULT 0,
     bugs_shipped        INTEGER NOT NULL DEFAULT 0,
+    bugs_fixed          INTEGER NOT NULL DEFAULT 0,
     hours_since_sleep   INTEGER NOT NULL DEFAULT 0,
 
     -- Stats acumulados
