@@ -3,7 +3,14 @@ import { api } from '../../../services/api';
 import { useDevCount } from '../../../hooks/useDevCount';
 import { useWallet } from '../../../hooks/useWallet';
 
-// ── Difficulty config ───────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────
+const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
+
+const ARCHETYPE_COLORS = {
+  Degen: '#ff6600', Builder: '#0077cc', Hacker: '#00cc44',
+  Influencer: '#cc00cc', Trader: '#ccaa00', Artist: '#cc3366',
+};
+
 const DIFF_COLORS = {
   easy: '#005500',
   medium: '#b8860b',
@@ -21,6 +28,14 @@ const DIFF_LABELS = {
 };
 
 const DIFF_ORDER = ['easy', 'medium', 'hard', 'extreme', 'legendary'];
+
+const STAT_NAMES = {
+  coding: 'COD', hacking: 'HAK', trading: 'TRD', social: 'SOC', endurance: 'END',
+};
+const STAT_KEYS = {
+  coding: 'stat_coding', hacking: 'stat_hacking', trading: 'stat_trading',
+  social: 'stat_social', endurance: 'stat_endurance',
+};
 
 function formatTimeRemaining(endsAt) {
   const now = new Date();
@@ -46,20 +61,25 @@ function progressPct(startedAt, endsAt) {
   return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
 }
 
-// ── Stat name for display ───────────────────────────────────
-const STAT_NAMES = {
-  coding: 'COD', hacking: 'HAK', trading: 'TRD', social: 'SOC', endurance: 'END',
-};
-const STAT_KEYS = {
-  coding: 'stat_coding', hacking: 'stat_hacking', trading: 'stat_trading',
-  social: 'stat_social', endurance: 'stat_endurance',
-};
 
-
-// ── Dev Select Modal ────────────────────────────────────────
-function DevSelectModal({ mission, devs, onSelect, onClose, busy }) {
+// ── Dev Select Modal (FIX 6: rich selector with avatars, stats, cooldowns) ──
+function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
   const reqStat = mission.min_stat;
   const reqVal = mission.min_stat_value || 0;
+
+  // Sort: qualifying + no cooldown first, then by relevant stat desc
+  const sortedDevs = [...devs].sort((a, b) => {
+    const statKey = reqStat ? STAT_KEYS[reqStat] : null;
+    const aVal = statKey ? (a[statKey] || 0) : 999;
+    const bVal = statKey ? (b[statKey] || 0) : 999;
+    const aMeets = aVal >= reqVal;
+    const bMeets = bVal >= reqVal;
+    const aCd = (cooldowns || []).some(c => c.dev_token_id === a.token_id && c.mission_id === mission.id);
+    const bCd = (cooldowns || []).some(c => c.dev_token_id === b.token_id && c.mission_id === mission.id);
+    if (aMeets && !aCd && (!bMeets || bCd)) return -1;
+    if (bMeets && !bCd && (!aMeets || aCd)) return 1;
+    return bVal - aVal;
+  });
 
   return (
     <div style={{
@@ -68,60 +88,127 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
       <div className="win-raised" style={{
-        width: 420, maxHeight: '80vh', overflow: 'auto', padding: '12px',
+        width: 520, maxHeight: '80vh', overflow: 'auto', padding: '16px',
         background: 'var(--surface, #c0c0c0)',
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>
           Select Dev for: {mission.title}
         </div>
         {reqStat && (
-          <div style={{ fontSize: '10px', color: '#666', marginBottom: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
             Requires: {STAT_NAMES[reqStat] || reqStat} &ge; {reqVal}
           </div>
         )}
         {devs.length === 0 && (
-          <div style={{ fontSize: '11px', color: '#aa0000', padding: '12px 0' }}>
+          <div style={{ fontSize: '13px', color: '#aa0000', padding: '12px 0' }}>
             No available devs. All devs may be on missions.
           </div>
         )}
-        {devs.map(dev => {
+        {sortedDevs.map(dev => {
           const statKey = reqStat ? STAT_KEYS[reqStat] : null;
           const devStatVal = statKey ? (dev[statKey] || 0) : 999;
           const meetsReq = devStatVal >= reqVal;
+
+          // Cooldown check
+          const devCooldown = (cooldowns || []).find(
+            c => c.dev_token_id === dev.token_id && c.mission_id === mission.id
+          );
+          let cooldownHoursLeft = 0;
+          if (devCooldown) {
+            const avail = new Date(new Date(devCooldown.claimed_at).getTime() + 24 * 3600000);
+            cooldownHoursLeft = Math.max(1, Math.ceil((avail - new Date()) / 3600000));
+          }
+          const onCooldown = cooldownHoursLeft > 0;
+          const canSelect = meetsReq && !onCooldown;
+          const imgUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
+
           return (
             <div key={dev.token_id} className="win-raised" style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '6px 8px', marginBottom: '3px',
-              opacity: meetsReq ? 1 : 0.4,
-              cursor: meetsReq ? 'pointer' : 'not-allowed',
-            }} onClick={() => meetsReq && !busy && onSelect(dev)}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontWeight: 'bold', fontSize: '11px' }}>{dev.name}</span>
-                <span style={{ fontSize: '9px', color: '#666', marginLeft: '6px' }}>[{dev.archetype}]</span>
-                {statKey && (
-                  <span style={{
-                    fontSize: '9px', marginLeft: '6px',
-                    color: meetsReq ? '#005500' : '#aa0000', fontWeight: 'bold',
-                  }}>
-                    {STAT_NAMES[reqStat]}: {devStatVal}
-                  </span>
+              display: 'flex', gap: '10px', padding: '10px',
+              marginBottom: '6px', opacity: canSelect ? 1 : 0.4,
+              cursor: canSelect ? 'pointer' : 'default',
+            }} onClick={() => canSelect && !busy && onSelect(dev)}>
+              {/* Avatar */}
+              <div style={{
+                width: 60, height: 60, flexShrink: 0,
+                background: 'var(--terminal-bg, #111)',
+                border: '1px solid var(--border-dark, #333)',
+                overflow: 'hidden',
+              }}>
+                {imgUrl ? (
+                  <img src={imgUrl} alt={dev.name} style={{
+                    width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated',
+                  }} />
+                ) : (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: '100%', color: '#555', fontSize: '20px',
+                  }}>@</div>
                 )}
               </div>
-              <span style={{ fontSize: '9px', color: '#666' }}>
-                E:{dev.energy}/{dev.max_energy}
-              </span>
-              {meetsReq ? (
-                <button className="win-btn" style={{ fontSize: '9px', padding: '2px 8px' }} disabled={busy}>
-                  SEND
-                </button>
-              ) : (
-                <span style={{ fontSize: '8px', color: '#aa0000' }}>Stat too low</span>
-              )}
+
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{dev.name}</span>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 'bold',
+                    color: ARCHETYPE_COLORS[dev.archetype] || '#888',
+                  }}>[{dev.archetype}]</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                  {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
+                  {dev.rarity_tier && dev.rarity_tier !== 'common' && (
+                    <span style={{ color: '#7a5c00', fontWeight: 'bold', marginLeft: '6px', textTransform: 'uppercase' }}>
+                      {dev.rarity_tier}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '11px', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {['coding', 'hacking', 'trading', 'social', 'endurance'].map(s => {
+                    const val = dev[STAT_KEYS[s]] || 0;
+                    const isRequired = s === reqStat;
+                    const meets = !isRequired || val >= reqVal;
+                    return (
+                      <span key={s} style={{
+                        fontWeight: isRequired ? 'bold' : 'normal',
+                        color: isRequired ? (meets ? '#005500' : '#aa0000') : '#444',
+                      }}>
+                        {STAT_NAMES[s]}:{val}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                  E: {dev.energy}/{dev.max_energy} | PC: {dev.pc_health ?? 100}%
+                </div>
+              </div>
+
+              {/* Action */}
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+                justifyContent: 'center', gap: '4px',
+              }}>
+                {onCooldown ? (
+                  <span style={{ fontSize: '11px', color: '#b8860b', fontWeight: 'bold' }}>
+                    Cooldown: ~{cooldownHoursLeft}h
+                  </span>
+                ) : !meetsReq ? (
+                  <span style={{ fontSize: '11px', color: '#aa0000' }}>
+                    {reqStat && `${STAT_NAMES[reqStat] || reqStat} too low (need ${reqVal})`}
+                  </span>
+                ) : (
+                  <button className="win-btn" disabled={busy}
+                    style={{ fontSize: '12px', padding: '4px 12px', fontWeight: 'bold' }}>
+                    SELECT
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
-        <div style={{ textAlign: 'right', marginTop: '8px' }}>
-          <button className="win-btn" onClick={onClose} style={{ fontSize: '10px', padding: '3px 12px' }}>
+        <div style={{ textAlign: 'right', marginTop: '10px' }}>
+          <button className="win-btn" onClick={onClose} style={{ fontSize: '13px', padding: '6px 16px' }}>
             Cancel
           </button>
         </div>
@@ -133,6 +220,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy }) {
 
 // ── Confirm Modal ───────────────────────────────────────────
 function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
+  const imgUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -140,13 +228,13 @@ function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
       <div className="win-raised" style={{
-        width: 380, padding: '16px',
+        width: 400, padding: '16px',
         background: 'var(--surface, #c0c0c0)',
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>
           Confirm Mission
         </div>
-        <div style={{ fontSize: '11px', marginBottom: '12px', lineHeight: '1.4' }}>
+        <div style={{ fontSize: '13px', marginBottom: '12px', lineHeight: '1.4' }}>
           Send <b>{dev.name}</b> on "<b>{mission.title}</b>"?
           <br /><br />
           They will be unavailable for <b>{mission.duration_hours}h</b>.
@@ -154,11 +242,11 @@ function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
           Reward: <b style={{ color: '#7a5c00' }}>+{mission.reward_nxt} $NXT</b>
         </div>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button className="win-btn" onClick={onClose} style={{ fontSize: '10px', padding: '3px 12px' }}>
+          <button className="win-btn" onClick={onClose} style={{ fontSize: '13px', padding: '6px 16px' }}>
             Cancel
           </button>
           <button className="win-btn" onClick={onConfirm} disabled={busy}
-            style={{ fontSize: '10px', padding: '3px 12px', fontWeight: 'bold', color: '#005500' }}>
+            style={{ fontSize: '13px', padding: '6px 16px', fontWeight: 'bold', color: '#005500' }}>
             {busy ? 'Sending...' : 'CONFIRM'}
           </button>
         </div>
@@ -170,18 +258,17 @@ function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
 
 // ── Mission Card ────────────────────────────────────────────
 function MissionCard({ mission, onSelectDev }) {
-  const diffColor = DIFF_COLORS[mission.difficulty] || '#666';
   return (
-    <div className="win-raised" style={{ padding: '8px 10px', marginBottom: '4px' }}>
+    <div className="win-raised" style={{ padding: '16px', marginBottom: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 'bold', fontSize: '11px', color: 'var(--text-primary)' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--text-primary)' }}>
             {mission.title}
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', marginTop: '2px', lineHeight: '1.3' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-secondary, #666)', marginTop: '4px', lineHeight: '1.3' }}>
             "{mission.description}"
           </div>
-          <div style={{ fontSize: '9px', color: '#888', marginTop: '3px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <span>Duration: {mission.duration_hours}h</span>
             {mission.min_stat && (
               <span>Requires: {STAT_NAMES[mission.min_stat] || mission.min_stat} &ge; {mission.min_stat_value}</span>
@@ -189,12 +276,12 @@ function MissionCard({ mission, onSelectDev }) {
             {!mission.min_stat && <span>Any dev can go</span>}
           </div>
         </div>
-        <div style={{ textAlign: 'right', minWidth: 100 }}>
-          <div style={{ fontWeight: 'bold', color: '#7a5c00', fontSize: '12px' }}>
+        <div style={{ textAlign: 'right', minWidth: 120 }}>
+          <div style={{ fontWeight: 'bold', color: '#7a5c00', fontSize: '16px' }}>
             +{mission.reward_nxt} $NXT
           </div>
           <button className="win-btn" onClick={() => onSelectDev(mission)}
-            style={{ fontSize: '9px', padding: '2px 8px', marginTop: '4px' }}>
+            style={{ fontSize: '14px', padding: '8px 16px', marginTop: '6px' }}>
             SELECT DEV & START
           </button>
         </div>
@@ -212,26 +299,25 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
   const diffColor = DIFF_COLORS[mission.difficulty] || '#666';
 
   return (
-    <div className="win-raised" style={{ padding: '8px 10px', marginBottom: '4px' }}>
+    <div className="win-raised" style={{ padding: '16px', marginBottom: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px' }}>{completed ? '\u2705' : '\u23F3'}</span>
-            <span style={{ fontWeight: 'bold', fontSize: '11px' }}>{mission.title}</span>
-            {completed && <span style={{ fontSize: '9px', color: '#005500', fontWeight: 'bold' }}>COMPLETED</span>}
+            <span style={{ fontSize: '14px' }}>{completed ? '\u2705' : '\u23F3'}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{mission.title}</span>
+            {completed && <span style={{ fontSize: '12px', color: '#005500', fontWeight: 'bold' }}>COMPLETED</span>}
           </div>
-          <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+          <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
             Dev: <b>{mission.dev_name || `#${mission.dev_token_id}`}</b>
             {mission.dev_archetype && <span style={{ color: '#888' }}> [{mission.dev_archetype}]</span>}
           </div>
           {!completed && (
             <>
-              <div style={{ fontSize: '9px', color: '#888', marginTop: '2px' }}>
+              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
                 Time remaining: {timeLeft}
               </div>
-              {/* Progress bar */}
               <div style={{
-                height: 8, background: 'var(--border-dark, #888)', marginTop: '4px',
+                height: 12, background: 'var(--border-dark, #888)', marginTop: '6px',
                 borderRadius: '2px', overflow: 'hidden',
               }}>
                 <div style={{
@@ -239,22 +325,25 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
                   background: diffColor, transition: 'width 0.5s',
                 }} />
               </div>
-              <div style={{ fontSize: '8px', color: '#888', marginTop: '1px' }}>{pct}%</div>
+              <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{pct}%</div>
             </>
           )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-          <span style={{ fontWeight: 'bold', color: '#7a5c00', fontSize: '11px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+          <span style={{ fontWeight: 'bold', color: '#7a5c00', fontSize: '14px' }}>
             +{mission.reward_nxt} $NXT
           </span>
           {completed ? (
             <button className="win-btn" onClick={() => onClaim(mission)} disabled={busy}
-              style={{ fontSize: '10px', padding: '3px 10px', fontWeight: 'bold', color: '#005500', border: '2px solid #005500' }}>
-              CLAIM REWARD
+              style={{
+                fontSize: '14px', padding: '6px 16px', fontWeight: 'bold',
+                color: '#005500', border: '2px solid #005500', background: '#e8ffe8',
+              }}>
+              CLAIM: +{mission.reward_nxt} $NXT
             </button>
           ) : (
             <button className="win-btn" onClick={() => onAbandon(mission)} disabled={busy}
-              style={{ fontSize: '8px', padding: '1px 6px', color: '#aa0000' }}>
+              style={{ fontSize: '11px', padding: '3px 10px', color: '#aa0000' }}>
               Abandon
             </button>
           )}
@@ -273,6 +362,7 @@ export default function MissionControl() {
   const [tab, setTab] = useState('available'); // available | active | history
   const [missions, setMissions] = useState([]);
   const [availableDevs, setAvailableDevs] = useState([]);
+  const [cooldowns, setCooldowns] = useState([]);
   const [activeMissions, setActiveMissions] = useState([]);
   const [historyMissions, setHistoryMissions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -296,6 +386,7 @@ export default function MissionControl() {
       const data = await api.getMissionsAvailable(address);
       setMissions(data.missions || []);
       setAvailableDevs(data.available_devs || []);
+      setCooldowns(data.cooldowns || []);
     } catch (e) {
       setError('Failed to load missions: ' + e.message);
     }
@@ -393,33 +484,33 @@ export default function MissionControl() {
 
   if (!isConnected || !address) {
     return (
-      <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: '13px' }}>
+      <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
         Connect your wallet to access Mission Control.
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '8px', fontFamily: "'VT323', monospace", fontSize: '12px', height: '100%', overflow: 'auto' }}>
+    <div style={{ padding: '10px', fontFamily: "'VT323', monospace", fontSize: '14px', height: '100%', overflow: 'auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>
           &gt; MISSION CONTROL
         </div>
         {tier && (
-          <span style={{ fontSize: '10px', color: '#888' }}>
+          <span style={{ fontSize: '12px', color: '#888' }}>
             Your rank: {tier.label.toUpperCase()}
           </span>
         )}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '2px', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '2px', marginBottom: '10px' }}>
         {['available', 'active', 'history'].map(t => (
           <button key={t} className="win-btn"
             onClick={() => setTab(t)}
             style={{
-              fontSize: '10px', padding: '3px 12px',
+              fontSize: '13px', padding: '6px 16px',
               fontWeight: tab === t ? 'bold' : 'normal',
               background: tab === t ? 'var(--surface-highlight, #dfdfdf)' : undefined,
             }}>
@@ -430,29 +521,29 @@ export default function MissionControl() {
           if (tab === 'available') fetchAvailable();
           else if (tab === 'active') fetchActive();
           else fetchHistory();
-        }} style={{ fontSize: '10px', padding: '3px 8px', marginLeft: 'auto' }}>
+        }} style={{ fontSize: '13px', padding: '6px 12px', marginLeft: 'auto' }}>
           Refresh
         </button>
       </div>
 
       {/* Feedback */}
       {feedback && (
-        <div style={{ fontSize: '10px', color: feedback.color, fontWeight: 'bold', marginBottom: '6px', padding: '4px 8px', background: 'var(--surface, #c0c0c0)', border: '1px solid ' + feedback.color }}>
+        <div style={{ fontSize: '12px', color: feedback.color, fontWeight: 'bold', marginBottom: '8px', padding: '6px 10px', background: 'var(--surface, #c0c0c0)', border: '1px solid ' + feedback.color }}>
           {feedback.text}
         </div>
       )}
 
       {error && (
-        <div style={{ fontSize: '10px', color: '#aa0000', marginBottom: '6px' }}>{error}</div>
+        <div style={{ fontSize: '12px', color: '#aa0000', marginBottom: '8px' }}>{error}</div>
       )}
 
-      {loading && <div style={{ color: '#888', fontSize: '11px' }}>Loading...</div>}
+      {loading && <div style={{ color: '#888', fontSize: '13px' }}>Loading...</div>}
 
       {/* ═══ AVAILABLE TAB ═══ */}
       {tab === 'available' && !loading && (
         <>
           {missions.length === 0 && (
-            <div style={{ color: '#888', fontSize: '11px', padding: '12px 0' }}>
+            <div style={{ color: '#888', fontSize: '13px', padding: '12px 0' }}>
               No missions available right now. Check back later!
             </div>
           )}
@@ -460,9 +551,9 @@ export default function MissionControl() {
             const group = missionsByDiff[diff];
             if (!group || group.length === 0) return null;
             return (
-              <div key={diff} style={{ marginBottom: '10px' }}>
+              <div key={diff} style={{ marginBottom: '12px' }}>
                 <div style={{
-                  fontSize: '11px', fontWeight: 'bold', padding: '3px 6px', marginBottom: '4px',
+                  fontSize: '14px', fontWeight: 'bold', padding: '4px 8px', marginBottom: '6px',
                   color: DIFF_COLORS[diff], borderBottom: `1px solid ${DIFF_COLORS[diff]}`,
                 }}>
                   {DIFF_LABELS[diff] || diff.toUpperCase()}
@@ -480,7 +571,7 @@ export default function MissionControl() {
       {tab === 'active' && !loading && (
         <>
           {activeMissions.length === 0 && (
-            <div style={{ color: '#888', fontSize: '11px', padding: '12px 0' }}>
+            <div style={{ color: '#888', fontSize: '13px', padding: '12px 0' }}>
               No active missions. Send a dev on a mission from the Available tab!
             </div>
           )}
@@ -495,13 +586,13 @@ export default function MissionControl() {
       {tab === 'history' && !loading && (
         <>
           {historyMissions.length === 0 && (
-            <div style={{ color: '#888', fontSize: '11px', padding: '12px 0' }}>
+            <div style={{ color: '#888', fontSize: '13px', padding: '12px 0' }}>
               No mission history yet.
             </div>
           )}
           {historyMissions.map((m, i) => (
             <div key={i} className="win-raised" style={{
-              padding: '6px 8px', marginBottom: '3px', fontSize: '10px',
+              padding: '10px 12px', marginBottom: '8px', fontSize: '13px',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               opacity: m.status === 'abandoned' ? 0.5 : 1,
             }}>
@@ -510,7 +601,7 @@ export default function MissionControl() {
                 <span style={{ color: '#888', marginLeft: '8px' }}>{m.dev_name || `#${m.dev_token_id}`}</span>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: DIFF_COLORS[m.difficulty] || '#666', fontSize: '9px', textTransform: 'uppercase' }}>
+                <span style={{ color: DIFF_COLORS[m.difficulty] || '#666', fontSize: '11px', textTransform: 'uppercase' }}>
                   {m.difficulty}
                 </span>
                 {m.status === 'claimed' ? (
@@ -518,7 +609,7 @@ export default function MissionControl() {
                 ) : (
                   <span style={{ color: '#aa0000' }}>Abandoned</span>
                 )}
-                <span style={{ color: '#888', fontSize: '9px' }}>{formatDate(m.claimed_at || m.ends_at)}</span>
+                <span style={{ color: '#888', fontSize: '11px' }}>{formatDate(m.claimed_at || m.ends_at)}</span>
               </div>
             </div>
           ))}
@@ -530,6 +621,7 @@ export default function MissionControl() {
         <DevSelectModal
           mission={selectingMission}
           devs={availableDevs}
+          cooldowns={cooldowns}
           busy={busy}
           onSelect={(dev) => setConfirmDev(dev)}
           onClose={() => setSelectingMission(null)}

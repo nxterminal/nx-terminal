@@ -314,8 +314,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
         display: 'flex', gap: '10px', padding: '8px',
         cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
-        filter: onMission ? 'grayscale(100%)' : 'none',
-        opacity: onMission ? 0.7 : 1,
+        position: 'relative',
+        filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
+        opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
       {/* Left column: Avatar + Action buttons */}
@@ -374,45 +375,6 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
               <span style={{ fontSize: '9px', color: 'var(--red-on-grey, #aa0000)' }}>🐛 Bugs: {dev.bugs_shipped}</span>
             )}
           </>
-        )}
-        {/* On Mission overlay */}
-        {onMission && (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-            padding: '4px', textAlign: 'center',
-          }}>
-            <span style={{
-              fontSize: '10px', fontWeight: 'bold', color: '#b8860b',
-              background: 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '2px',
-            }}>
-              ON MISSION
-            </span>
-            {mission && (
-              <>
-                <span style={{ fontSize: '8px', color: '#666', maxWidth: 80 }}>
-                  {mission.title}
-                </span>
-                <span style={{ fontSize: '9px', color: missionCompleted ? '#005500' : '#888', fontWeight: 'bold' }}>
-                  {missionCompleted ? 'DONE!' : `Returns in ${(() => {
-                    const diff = new Date(mission.ends_at) - new Date();
-                    if (diff <= 0) return 'now';
-                    const h = Math.floor(diff / 3600000);
-                    const m = Math.floor((diff % 3600000) / 60000);
-                    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-                  })()}`}
-                </span>
-              </>
-            )}
-            {missionCompleted && (
-              <button className="win-btn" onClick={doClaimMission} disabled={busy}
-                style={{
-                  fontSize: '9px', padding: '2px 8px', fontWeight: 'bold',
-                  color: '#005500', border: '2px solid #005500',
-                }}>
-                CLAIM REWARD
-              </button>
-            )}
-          </div>
         )}
       </div>
 
@@ -527,6 +489,54 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
           <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
         )}
       </div>
+
+      {/* On Mission overlay — full-card centered (FIX 3+4) */}
+      {onMission && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: '6px', zIndex: 2,
+        }} onClick={e => e.stopPropagation()}>
+          <span style={{
+            fontSize: '16px', fontWeight: 'bold', color: '#ff4444',
+            textTransform: 'uppercase', letterSpacing: '2px',
+            textShadow: '0 0 6px rgba(255, 68, 68, 0.5)',
+          }}>
+            ON MISSION
+          </span>
+          {mission && (
+            <>
+              <span style={{ fontSize: '11px', color: '#ccc', maxWidth: '80%', textAlign: 'center' }}>
+                {mission.title}
+              </span>
+              <span style={{
+                fontSize: '11px', fontWeight: 'bold',
+                color: missionCompleted ? '#44ff44' : '#ffcc00',
+              }}>
+                {missionCompleted ? 'MISSION COMPLETE!' : `Returns in ${(() => {
+                  const diff = new Date(mission.ends_at) - new Date();
+                  if (diff <= 0) return 'now';
+                  const h = Math.floor(diff / 3600000);
+                  const m = Math.floor((diff % 3600000) / 60000);
+                  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+                })()}`}
+              </span>
+            </>
+          )}
+          {missionCompleted && (
+            <button className="win-btn" onClick={doClaimMission} disabled={busy}
+              style={{
+                fontSize: '14px', padding: '6px 16px', fontWeight: 'bold',
+                color: '#005500', border: '2px solid #005500',
+                background: '#e8ffe8', cursor: 'pointer',
+              }}>
+              CLAIM: +{mission.reward_nxt} $NXT
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -692,6 +702,7 @@ export default function MyDevs({ openDevProfile }) {
   const [tab, setTab] = useState('devs');
   const [activityCount, setActivityCount] = useState(0);
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
+  const [, setRefreshTick] = useState(0);
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -704,6 +715,21 @@ export default function MyDevs({ openDevProfile }) {
       setMissionMap(map);
     }).catch(() => {});
   }, [address]);
+
+  // Auto-refresh every 30s to detect completed missions (FIX 2)
+  const hasMissions = Object.keys(missionMap).length > 0;
+  useEffect(() => {
+    if (!address || !hasMissions) return;
+    const interval = setInterval(() => {
+      setRefreshTick(t => t + 1);
+      api.getMissionsActive(address).then(missions => {
+        const map = {};
+        for (const m of (missions || [])) map[m.dev_token_id] = m;
+        setMissionMap(map);
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [address, hasMissions]);
 
   // Fetch activity count for badge
   useEffect(() => {

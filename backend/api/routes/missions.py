@@ -3,6 +3,7 @@
 import json
 import logging
 import random
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
@@ -50,7 +51,9 @@ async def get_available_missions(wallet: str = Query(...)):
 
             # Devs NOT on mission (available to send)
             cur.execute(
-                "SELECT token_id, name, archetype, stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, energy, max_energy "
+                "SELECT token_id, name, archetype, corporation, rarity_tier, ipfs_hash, "
+                "       stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck, "
+                "       energy, max_energy, pc_health, balance_nxt "
                 "FROM devs WHERE owner_address = %s AND status = 'active'",
                 (addr,)
             )
@@ -62,6 +65,15 @@ async def get_available_missions(wallet: str = Query(...)):
                 (dev_count,)
             )
             all_missions = cur.fetchall()
+
+            # Cooldowns: recent claims for this wallet (24h window)
+            cur.execute(
+                "SELECT dev_token_id, mission_id, claimed_at FROM player_missions "
+                "WHERE wallet_address = %s AND status = 'claimed' "
+                "AND claimed_at > NOW() - INTERVAL '24 hours'",
+                (addr,)
+            )
+            cooldown_rows = cur.fetchall()
 
     # Filter out already-active missions
     active_set = set(active_mission_ids)
@@ -87,6 +99,11 @@ async def get_available_missions(wallet: str = Query(...)):
         "missions": selected,
         "available_devs": available_devs,
         "dev_count": dev_count,
+        "cooldowns": [
+            {"dev_token_id": r["dev_token_id"], "mission_id": r["mission_id"],
+             "claimed_at": r["claimed_at"].isoformat()}
+            for r in cooldown_rows
+        ],
     }
 
 
@@ -186,6 +203,21 @@ async def start_mission(req: MissionStartRequest):
             )
             if cur.fetchone():
                 raise HTTPException(400, "You already have this mission active")
+
+            # Check 24h cooldown — same dev + same mission
+            cur.execute(
+                "SELECT claimed_at FROM player_missions "
+                "WHERE dev_token_id = %s AND mission_id = %s AND status = 'claimed' "
+                "AND claimed_at > NOW() - INTERVAL '24 hours' "
+                "ORDER BY claimed_at DESC LIMIT 1",
+                (req.dev_token_id, req.mission_id)
+            )
+            cooldown_row = cur.fetchone()
+            if cooldown_row:
+                remaining = cooldown_row['claimed_at'] + timedelta(hours=24) - datetime.now(cooldown_row['claimed_at'].tzinfo)
+                hours_left = max(1, int(remaining.total_seconds() / 3600))
+                raise HTTPException(400,
+                    f"This dev completed this mission recently. Available again in ~{hours_left}h.")
 
             # Start mission
             cur.execute(
