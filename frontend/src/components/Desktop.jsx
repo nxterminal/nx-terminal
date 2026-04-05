@@ -32,6 +32,7 @@ const DESKTOP_ICONS = [
   { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
   { id: 'netwatch', icon: '', label: 'MegaWatch' },
   { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
+  { id: 'mission-control', icon: '\u{1F4CB}', label: 'Mission Control' },
 ];
 
 function getWallpaperStyle() {

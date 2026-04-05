@@ -832,6 +832,29 @@ function IconMegaSentinel({ size = 32 }) {
   );
 }
 
+function IconMissionControl({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      {/* Clipboard body */}
+      <rect x="6" y="4" width="20" height="25" rx="2" fill="#e8e0d0" stroke="#555" strokeWidth="1" />
+      {/* Clipboard clip */}
+      <rect x="11" y="2" width="10" height="5" rx="1.5" fill="#888" stroke="#555" strokeWidth="0.8" />
+      <rect x="13" y="3" width="6" height="3" rx="1" fill="#c0c0c0" />
+      {/* Radar circle */}
+      <circle cx="16" cy="17" r="7" fill="none" stroke="#2a7a2a" strokeWidth="1" />
+      <circle cx="16" cy="17" r="4" fill="none" stroke="#2a7a2a" strokeWidth="0.7" opacity="0.6" />
+      <circle cx="16" cy="17" r="1" fill="#2a7a2a" />
+      {/* Radar sweep */}
+      <line x1="16" y1="17" x2="22" y2="13" stroke="#4adc4a" strokeWidth="1.2" opacity="0.8" />
+      {/* Target blip */}
+      <circle cx="19" cy="14" r="1.2" fill="#ff4444" opacity="0.9" />
+      {/* Checklist lines */}
+      <line x1="9" y1="8" x2="14" y2="8" stroke="#666" strokeWidth="0.7" />
+      <line x1="9" y1="10" x2="12" y2="10" stroke="#666" strokeWidth="0.7" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -857,6 +880,7 @@ export const ICON_MAP = {
   'dev-academy': IconDevAcademy,
   'monad-build': IconMonadBuild,
   'mega-sentinel': IconMegaSentinel,
+  'mission-control': IconMissionControl,
 };
 
 export function Win98Icon({ id, size = 32 }) {

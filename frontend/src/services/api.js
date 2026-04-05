@@ -127,6 +127,29 @@ export const api = {
   sentinelGraduation: (filter = 'all', page = 1, limit = 20) =>
     fetchJSON(`${API_BASE}/api/sentinel/graduation?filter=${filter}&page=${page}&limit=${limit}`),
 
+  // Missions
+  getMissionsAvailable: (wallet) => fetchJSON(`${API_BASE}/api/missions/available?wallet=${wallet}`),
+  getMissionsActive: (wallet) => fetchJSON(`${API_BASE}/api/missions/active?wallet=${wallet}`),
+  getMissionsHistory: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/missions/history?wallet=${wallet}&limit=${limit}`),
+  startMission: (wallet, mission_id, dev_token_id) =>
+    fetchJSON(`${API_BASE}/api/missions/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, mission_id, dev_token_id }),
+    }),
+  claimMission: (wallet, player_mission_id) =>
+    fetchJSON(`${API_BASE}/api/missions/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, player_mission_id }),
+    }),
+  abandonMission: (wallet, player_mission_id) =>
+    fetchJSON(`${API_BASE}/api/missions/abandon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, player_mission_id }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
