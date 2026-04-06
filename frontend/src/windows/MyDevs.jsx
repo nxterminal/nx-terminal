@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { formatUnits } from 'viem';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
+import { NXT_TOKEN_ADDRESS } from '../services/contract';
+
+const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
+const TREASURY_ADDRESS = '0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
@@ -222,7 +227,358 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
+// ── RPC helper for wallet balance ──────────────────────────
+async function rpcCall(method, params) {
+  const res = await fetch(MAINNET_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result;
+}
+
+async function fetchWalletNxtBalance(walletAddress) {
+  const padded = walletAddress.slice(2).toLowerCase().padStart(64, '0');
+  const data = await rpcCall('eth_call', [{ to: NXT_TOKEN_ADDRESS, data: '0x70a08231' + padded }, 'latest']);
+  return BigInt(data);
+}
+
+async function waitForReceipt(txHash, maxWait = 60) {
+  for (let i = 0; i < maxWait; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const receipt = await rpcCall('eth_getTransactionReceipt', [txHash]);
+      if (receipt) return receipt;
+    } catch {}
+  }
+  throw new Error('Transaction not confirmed in time');
+}
+
+// ── Fund Modal ────────────────────────────────────────────
+function FundModal({ dev, address, onClose, onDevUpdate }) {
+  const [amount, setAmount] = useState('');
+  const [walletBal, setWalletBal] = useState(null);
+  const [stage, setStage] = useState('idle'); // idle | signing | mining | success | error
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (!address) return;
+    fetchWalletNxtBalance(address)
+      .then(wei => setWalletBal(Number(formatUnits(wei, 18))))
+      .catch(() => setWalletBal(null));
+  }, [address]);
+
+  const amountNum = parseInt(amount, 10) || 0;
+  const canFund = amountNum > 0 && walletBal !== null && amountNum <= walletBal && stage === 'idle';
+
+  const doFund = async () => {
+    if (!canFund) return;
+    setStage('signing');
+    setErrorMsg('');
+    try {
+      // Build ERC-20 transfer(address,uint256) calldata
+      // selector: 0xa9059cbb
+      const toAddr = TREASURY_ADDRESS.slice(2).toLowerCase().padStart(64, '0');
+      const amountWei = BigInt(amountNum) * BigInt(10 ** 18);
+      const amountHex = amountWei.toString(16).padStart(64, '0');
+      const calldata = '0xa9059cbb' + toAddr + amountHex;
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: address.toLowerCase(),
+          to: NXT_TOKEN_ADDRESS,
+          data: calldata,
+        }],
+      });
+
+      setStage('mining');
+      const receipt = await waitForReceipt(txHash);
+      if (receipt.status !== '0x1') throw new Error('Transaction reverted');
+
+      // Report to backend
+      const res = await api.fundDev(address, dev.token_id, amountNum, txHash);
+      setStage('success');
+      if (res.updated_dev && onDevUpdate) onDevUpdate(res.updated_dev);
+      setTimeout(() => onClose(), 2500);
+    } catch (err) {
+      setStage('error');
+      const msg = err?.message || 'Unknown error';
+      if (msg.includes('User denied') || msg.includes('rejected')) {
+        setErrorMsg('Transaction rejected by user');
+      } else {
+        setErrorMsg(msg.length > 80 ? msg.slice(0, 80) + '...' : msg);
+      }
+    }
+  };
+
+  const presets = [25, 50, 100];
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.6)', zIndex: 10010,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div className="win-raised" style={{
+        width: '320px', background: 'var(--win-bg, #c0c0c0)',
+        fontFamily: "'VT323', monospace",
+      }}>
+        {/* Title bar */}
+        <div style={{
+          background: 'linear-gradient(90deg, #000080, #1084d0)',
+          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span>Fund Dev</span>
+          <button onClick={onClose} style={{
+            background: '#c0c0c0', border: '1px outset #fff',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            padding: '0 4px', lineHeight: 1,
+          }}>X</button>
+        </div>
+
+        <div style={{ padding: '12px', fontSize: '13px' }}>
+          <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
+            "Every startup needs a seed round."
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Your wallet:</span>
+            <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {walletBal !== null ? `${Math.floor(walletBal)} $NXT` : '...'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span>{dev.name} balance:</span>
+            <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {formatNumber(dev.balance_nxt)} $NXT
+            </span>
+          </div>
+
+          {/* Amount input */}
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{ fontSize: '11px', color: '#555' }}>Amount:</label>
+            <input
+              type="number"
+              min="1"
+              max={walletBal ? Math.floor(walletBal) : 999999}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              disabled={stage !== 'idle'}
+              style={{
+                width: '100%', padding: '4px 6px', fontSize: '14px',
+                fontFamily: "'VT323', monospace",
+                background: '#fff', border: '2px inset #888',
+              }}
+              placeholder="0"
+            />
+          </div>
+
+          {/* Preset buttons */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+            {presets.map(v => (
+              <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
+                disabled={stage !== 'idle'}
+                style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
+            ))}
+            <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
+              disabled={stage !== 'idle' || !walletBal}
+              style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
+          </div>
+
+          {/* Action button */}
+          <button className="win-btn" onClick={doFund}
+            disabled={!canFund}
+            style={{
+              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+              color: canFund ? '#005500' : '#888',
+              border: canFund ? '2px outset #aaa' : undefined,
+            }}>
+            {stage === 'idle' && `\uD83D\uDCB0 FUND ${dev.name}`}
+            {stage === 'signing' && 'Confirm in MetaMask...'}
+            {stage === 'mining' && 'Processing...'}
+            {stage === 'success' && '\u2705 Funded!'}
+            {stage === 'error' && '\u274C Failed — Try Again'}
+          </button>
+
+          {stage === 'error' && errorMsg && (
+            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+          )}
+          {stage === 'error' && (
+            <button className="win-btn" onClick={() => setStage('idle')}
+              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+              Try Again
+            </button>
+          )}
+
+          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+            Transfers $NXT from your MetaMask to your dev's in-game balance.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Transfer Modal ────────────────────────────────────────
+function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
+  const [toDevId, setToDevId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [stage, setStage] = useState('idle'); // idle | sending | success | error
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const otherDevs = (allDevs || []).filter(d => d.token_id !== dev.token_id && !d._fetchFailed);
+  const selectedDev = otherDevs.find(d => d.token_id === Number(toDevId));
+  const amountNum = parseInt(amount, 10) || 0;
+  const canTransfer = amountNum > 0 && amountNum <= dev.balance_nxt && toDevId && stage === 'idle'
+    && selectedDev && selectedDev.status !== 'on_mission' && dev.status !== 'on_mission';
+
+  const doTransfer = async () => {
+    if (!canTransfer) return;
+    setStage('sending');
+    setErrorMsg('');
+    try {
+      const res = await api.transferNxt(address, dev.token_id, Number(toDevId), amountNum);
+      setStage('success');
+      if (res.updated_from && onDevUpdate) onDevUpdate(res.updated_from);
+      if (res.updated_to && onDevUpdate) onDevUpdate(res.updated_to);
+      setTimeout(() => onClose(), 2500);
+    } catch (err) {
+      setStage('error');
+      setErrorMsg(err?.message || 'Transfer failed');
+    }
+  };
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.6)', zIndex: 10010,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div className="win-raised" style={{
+        width: '320px', background: 'var(--win-bg, #c0c0c0)',
+        fontFamily: "'VT323', monospace",
+      }}>
+        {/* Title bar */}
+        <div style={{
+          background: 'linear-gradient(90deg, #000080, #1084d0)',
+          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span>Transfer Funds</span>
+          <button onClick={onClose} style={{
+            background: '#c0c0c0', border: '1px outset #fff',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            padding: '0 4px', lineHeight: 1,
+          }}>X</button>
+        </div>
+
+        <div style={{ padding: '12px', fontSize: '13px' }}>
+          <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
+            "Reallocating the budget. Standard corporate procedure."
+          </div>
+
+          <div style={{ marginBottom: '6px' }}>
+            <span style={{ fontWeight: 'bold' }}>From:</span>{' '}
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {dev.name} ({formatNumber(dev.balance_nxt)} $NXT)
+            </span>
+          </div>
+
+          {/* Dev selector */}
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>To:</label>
+            <select
+              value={toDevId}
+              onChange={e => setToDevId(e.target.value)}
+              disabled={stage !== 'idle'}
+              style={{
+                width: '100%', padding: '4px', fontSize: '13px',
+                fontFamily: "'VT323', monospace",
+                background: '#fff', border: '2px inset #888',
+              }}
+            >
+              <option value="">Select dev...</option>
+              {otherDevs.map(d => {
+                const onMission = d.status === 'on_mission';
+                return (
+                  <option key={d.token_id} value={d.token_id} disabled={onMission}>
+                    {d.name} ({formatNumber(d.balance_nxt)} $NXT){d.balance_nxt === 0 ? ' \u2190 needs funds!' : ''}{onMission ? ' [ON MISSION]' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Amount input */}
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{ fontSize: '11px', color: '#555' }}>Amount:</label>
+            <input
+              type="number"
+              min="1"
+              max={dev.balance_nxt}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              disabled={stage !== 'idle'}
+              style={{
+                width: '100%', padding: '4px 6px', fontSize: '14px',
+                fontFamily: "'VT323', monospace",
+                background: '#fff', border: '2px inset #888',
+              }}
+              placeholder="0"
+            />
+          </div>
+
+          {/* Percentage preset buttons */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+            {[25, 50, 75].map(pct => (
+              <button key={pct} className="win-btn"
+                onClick={() => setAmount(String(Math.floor(dev.balance_nxt * pct / 100)))}
+                disabled={stage !== 'idle'}
+                style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{pct}%</button>
+            ))}
+            <button className="win-btn" onClick={() => setAmount(String(dev.balance_nxt))}
+              disabled={stage !== 'idle'}
+              style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
+          </div>
+
+          {/* Action button */}
+          <button className="win-btn" onClick={doTransfer}
+            disabled={!canTransfer}
+            style={{
+              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+              color: canTransfer ? '#005500' : '#888',
+              border: canTransfer ? '2px outset #aaa' : undefined,
+            }}>
+            {stage === 'idle' && '\uD83D\uDCBC TRANSFER'}
+            {stage === 'sending' && 'Processing...'}
+            {stage === 'success' && '\u2705 Transferred!'}
+            {stage === 'error' && '\u274C Failed'}
+          </button>
+
+          {stage === 'error' && errorMsg && (
+            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+          )}
+          {stage === 'error' && (
+            <button className="win-btn" onClick={() => setStage('idle')}
+              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+              Try Again
+            </button>
+          )}
+
+          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+            Moves $NXT between your devs. No blockchain transaction needed.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -233,6 +589,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   const doShopAction = async (e, itemId, label) => {
     e.stopPropagation();
@@ -410,6 +768,21 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
                 </button>
               </div>
             )}
+            {/* Fund + Transfer row */}
+            <div style={{ display: 'flex', gap: '2px', justifyContent: 'center', marginTop: '2px' }}>
+              <button className="win-btn" onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+                title="Deposit $NXT from wallet to this dev"
+                style={{ fontSize: '9px', padding: '1px 4px', color: '#0d47a1', fontWeight: 'bold' }} disabled={busy}>
+                🏦 FUND
+              </button>
+              {allDevs && allDevs.length > 1 && (
+                <button className="win-btn" onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
+                  title="Transfer $NXT to another dev"
+                  style={{ fontSize: '9px', padding: '1px 4px', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy || dev.balance_nxt <= 0}>
+                  💼 TRANSFER
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -525,6 +898,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
           <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
         )}
       </div>
+
+      {/* Fund / Transfer modals */}
+      {showFundModal && (
+        <FundModal dev={dev} address={address} onClose={() => setShowFundModal(false)} onDevUpdate={onDevUpdate} />
+      )}
+      {showTransferModal && (
+        <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />
+      )}
 
       {/* On Mission overlay — full-card centered (FIX 3+4) */}
       {onMission && (
@@ -891,6 +1272,7 @@ export default function MyDevs({ openDevProfile }) {
                   key={dev.token_id}
                   dev={dev}
                   address={address}
+                  allDevs={devs}
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
                   onRetry={(id) => {
