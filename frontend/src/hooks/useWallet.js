@@ -35,7 +35,7 @@ export function useWallet() {
                 chainName: 'MegaETH',
                 nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
                 rpcUrls: ['https://carrot.megaeth.com/rpc'],
-                blockExplorerUrls: ['https://megaexplorer.xyz'],
+                blockExplorerUrls: ['https://mega.etherscan.io'],
               }],
             });
           }

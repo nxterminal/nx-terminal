@@ -109,7 +109,7 @@ export const MEGAETH_INFO = {
   CHAIN_NAME: "MegaETH Testnet",
   CHAIN_ID: 4326,
   RPC_URL: "https://carrot.megaeth.com/rpc",
-  EXPLORER: "https://megaexplorer.xyz",
+  EXPLORER: "https://mega.etherscan.io",
   CONSENSUS: "AsyncBFT",
   TPS: "30,000+",
   FINALITY: "Sub-second",

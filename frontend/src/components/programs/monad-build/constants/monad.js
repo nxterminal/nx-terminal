@@ -2,7 +2,7 @@ export const MEGAETH_MAINNET = {
   chainId: 4326,
   name: 'MegaETH',
   rpcUrl: 'https://carrot.megaeth.com/rpc',
-  explorer: 'https://megaexplorer.xyz',
+  explorer: 'https://mega.etherscan.io',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
 };
 
@@ -10,7 +10,7 @@ export const MEGAETH_TESTNET = {
   chainId: 4326,
   name: 'MegaETH',
   rpcUrl: 'https://carrot.megaeth.com/rpc',
-  explorer: 'https://megaexplorer.xyz',
+  explorer: 'https://mega.etherscan.io',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
 };
 
@@ -63,7 +63,7 @@ export const ECOSYSTEM_PROTOCOLS = {
     { name: 'Poply', category: 'Marketplace', url: 'https://poply.io', description: 'Native MegaETH NFT marketplace' },
   ],
   infra: [
-    { name: 'MegaExplorer', category: 'Explorer', url: 'https://megaexplorer.xyz', description: 'Block explorer' },
+    { name: 'MegaEtherscan', category: 'Explorer', url: 'https://mega.etherscan.io', description: 'Block explorer' },
     { name: 'Pyth', category: 'Oracle', url: 'https://pyth.network', description: 'Price feeds for MegaETH' },
   ],
 };

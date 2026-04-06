@@ -13,7 +13,7 @@
 | Chain ID (hex) | 0xA8331 | 0x10E6 |
 | Network Name | Pharos Atlantic Testnet | MegaETH |
 | RPC URL | https://atlantic.dplabs-internal.com | https://carrot.megaeth.com/rpc |
-| Explorer | https://atlantic.pharosscan.xyz | https://megaexplorer.xyz |
+| Explorer | https://atlantic.pharosscan.xyz | https://mega.etherscan.io |
 | Native Currency | PHRS | ETH |
 | NXDevNFT | 0x5DeAB0Ab650D9c241105B6cb567Dd41045C44636 | 0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7 |
 | NXTToken | 0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47 | 0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47 (same) |
