@@ -8,7 +8,7 @@ export const MEGAETH_CONFIG = {
   POLL_INTERVAL: 3000,
   MAX_TX_DISPLAY: 15,
   TPS_HISTORY_LENGTH: 40,
-  EXPLORER_URL: "https://megaexplorer.xyz",
+  EXPLORER_URL: "https://mega.etherscan.io",
 };
 // Backwards compat alias
 export const MONAD_CONFIG = MEGAETH_CONFIG;

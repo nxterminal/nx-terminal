@@ -10,7 +10,7 @@ export const megaeth = {
     default: { http: ['https://carrot.megaeth.com/rpc'] },
   },
   blockExplorers: {
-    default: { name: 'MegaExplorer', url: 'https://megaexplorer.xyz' },
+    default: { name: 'MegaEtherscan', url: 'https://mega.etherscan.io' },
   },
 };
 
