@@ -31,4 +31,4 @@ class RateLimiter:
 # Shared instances — import where needed
 prompt_limiter = RateLimiter(cooldown_seconds=60)    # 1 prompt per dev per 60s
 chat_limiter = RateLimiter(cooldown_seconds=10)      # 1 chat msg per wallet per 10s
-shop_limiter = RateLimiter(cooldown_seconds=5)       # 1 purchase per wallet per 5s
+shop_limiter = RateLimiter(cooldown_seconds=1)       # 1 purchase per wallet per 1s

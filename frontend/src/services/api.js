@@ -1,11 +1,17 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
 const WS_BASE = API_BASE.replace('https', 'wss').replace('http', 'ws');
 
-function fetchJSON(url, options) {
-  return fetch(url, options).then(r => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
+async function fetchJSON(url, options) {
+  const r = await fetch(url, options);
+  if (!r.ok) {
+    let detail = '';
+    try {
+      const body = await r.json();
+      detail = body.detail || body.message || '';
+    } catch {}
+    throw new Error(detail || `HTTP ${r.status}`);
+  }
+  return r.json();
 }
 
 export const api = {
