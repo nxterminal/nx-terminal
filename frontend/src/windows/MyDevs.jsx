@@ -589,17 +589,30 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false); // synchronous guard against double-clicks
   const [showFundModal, setShowFundModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
+  const lockBusy = () => { if (busyRef.current) return false; busyRef.current = true; setBusy(true); return true; };
+  const unlockBusy = (cooldownMs = 1000) => {
+    setTimeout(() => { busyRef.current = false; setBusy(false); }, cooldownMs);
+  };
+
+  const parseError = (err) => {
+    const msg = err?.message || '';
+    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#7a5c00' };
+    if (msg.includes('Not enough')) return { text: msg, color: '#aa0000' };
+    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#7a5c00' };
+    if (msg) return { text: msg, color: '#aa0000' };
+    return { text: 'Failed', color: '#aa0000' };
+  };
+
   const doShopAction = async (e, itemId, label) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.buyItem(address, itemId, dev.token_id);
       setActionMsg({ text: `${label} applied!`, color: '#005500' });
-      // Use updated dev from response directly (avoids GET cache issues)
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -607,16 +620,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         if (fresh && onDevUpdate) onDevUpdate(fresh);
       }
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 2500);
   };
 
   const doHack = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.hack(address, dev.token_id);
       if (res.success) {
@@ -627,32 +639,30 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('cooldown') ? 'Cooldown active' : err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
   };
 
   const doGraduate = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.graduate(address, dev.token_id);
       setActionMsg({ text: `Graduated! ${res.stat} +${res.bonus}`, color: '#005500' });
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: 'Not ready yet', color: '#7a5c00' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 3000);
   };
 
   const doFixBug = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.fixBug(address, dev.token_id);
       setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
@@ -663,9 +673,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         if (fresh && onDevUpdate) onDevUpdate(fresh);
       }
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Fix failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 3000);
   };
 
@@ -674,17 +684,16 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
   const doClaimMission = async (e) => {
     e.stopPropagation();
-    if (!mission) return;
-    setBusy(true);
+    if (!mission || !lockBusy()) return;
     try {
       await api.claimMission(address, mission.player_mission_id);
       setActionMsg({ text: `+${mission.reward_nxt} $NXT \u2192 ${dev.name}'s balance! Collect in NXT Wallet`, color: '#005500' });
       const fresh = await api.getDev(dev.token_id, address);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: err.message || 'Claim failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 5000);
   };
 
