@@ -606,7 +606,7 @@ function barColor(pct, inverse) {
   return '#cc0000';
 }
 
-// ── Vital Bar (Sims-style, stacked label/bar, Pixelify Sans) ──
+// ── Vital Bar (compact, Silkscreen labels) ──────────────
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
@@ -615,37 +615,37 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const critical = (!inverse && pct < 15) || (inverse && pct > 75);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
       {/* Header row: icon + label ... value */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          fontSize: '13px', fontWeight: '700', color: '#111',
-          fontFamily: "'Pixelify Sans', 'VT323', monospace",
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontSize: '11px', fontWeight: '700', color: '#111',
+          fontFamily: "'Silkscreen', monospace",
         }}>
           <span style={{
-            width: '26px', height: '26px', borderRadius: '50%',
+            width: '20px', height: '20px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: `2px solid ${color}`, background: 'rgba(0,0,0,0.15)',
+            border: `1.5px solid ${color}`, background: 'rgba(0,0,0,0.15)',
             flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
           }}>
-            <StatIcon type={iconType} size={13} />
+            <StatIcon type={iconType} size={11} />
           </span>
           {label}
         </span>
         <span style={{
-          fontSize: '13px', fontWeight: '700', color,
-          fontFamily: "'Pixelify Sans', 'VT323', monospace",
+          fontSize: '11px', fontWeight: '700', color,
+          fontFamily: "'Silkscreen', monospace",
           transition: 'color 0.5s',
         }}>{v}</span>
       </div>
       {/* Bar */}
       <div style={{
-        height: '14px', background: '#333',
-        borderRadius: '3px', overflow: 'hidden',
+        height: '12px', background: '#333',
+        borderRadius: '2px', overflow: 'hidden',
       }}>
         <div style={{
-          width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
+          width: `${pct}%`, height: '100%', background: color, borderRadius: '2px',
           transition: 'width 0.5s ease, background-color 0.5s ease',
           animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
         }} />
@@ -654,7 +654,7 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   );
 }
 
-// ── Stone Button (pixel art 3D blue-grey, Pixelify Sans) ─
+// ── Stone Button (pixel art 3D blue-grey, Silkscreen) ────
 function StoneBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
@@ -662,10 +662,10 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
       disabled={disabled}
       title={title}
       style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-        padding: '9px 6px', minWidth: '70px',
-        fontFamily: "'Pixelify Sans', monospace",
-        fontSize: '13px', fontWeight: '700',
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        padding: '7px 4px', minWidth: '65px',
+        fontFamily: "'Silkscreen', monospace",
+        fontSize: '11px', fontWeight: '700',
         textTransform: 'uppercase',
         color: disabled ? '#555' : '#1a2030',
         background: disabled ? '#4a4a4a' : '#6b7b8a',
@@ -681,7 +681,7 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
         imageRendering: 'pixelated',
       }}
     >
-      {emoji && <span style={{ fontSize: '14px' }}>{emoji}</span>}
+      {emoji && <span style={{ fontSize: '12px' }}>{emoji}</span>}
       {label}
     </button>
   );
@@ -714,7 +714,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
           <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
             display: 'block', width: '100%', padding: '8px 8px', border: 'none',
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+            fontFamily: "'Silkscreen', monospace", fontSize: '12px', fontWeight: '700',
             textAlign: 'left',
           }}>{'\uD83D\uDCB0'} FUND</button>
           {allDevs && allDevs.length > 1 && (
@@ -726,12 +726,54 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
                 background: 'transparent',
                 color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
                 cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
-                fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+                fontFamily: "'Silkscreen', monospace", fontSize: '12px', fontWeight: '700',
                 textAlign: 'left',
               }}>{'\uD83D\uDCE4'} SEND</button>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── NXT Spend Animation + Sound ─────────────────────────
+function playSpendSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
+    osc.frequency.setValueAtTime(400, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+function NxtSpendOverlay({ spends }) {
+  if (!spends.length) return null;
+  return (
+    <div style={{
+      position: 'absolute', top: 0, left: 0, right: 0,
+      pointerEvents: 'none', zIndex: 100, display: 'flex', justifyContent: 'center',
+    }}>
+      {spends.map(s => (
+        <div key={s.id} style={{
+          position: 'absolute',
+          fontFamily: "'Silkscreen', monospace", fontSize: '14px', fontWeight: '700',
+          color: '#ff4444', whiteSpace: 'nowrap',
+          textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
+          animation: 'float-up-fade 1.5s ease-out forwards',
+        }}>
+          -{s.amount} $NXT
+        </div>
+      ))}
     </div>
   );
 }
@@ -749,6 +791,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const busyRef = useRef(false);
   const [showFundModal, setShowFundModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [spends, setSpends] = useState([]);
+
+  const triggerSpend = useCallback((amount) => {
+    const id = Date.now();
+    setSpends(prev => [...prev, { id, amount }]);
+    playSpendSound();
+    setTimeout(() => setSpends(prev => prev.filter(s => s.id !== id)), 1500);
+  }, []);
 
   const lockBusy = () => { if (busyRef.current) return false; busyRef.current = true; setBusy(true); return true; };
   const unlockBusy = (cooldownMs = 1000) => {
@@ -780,6 +830,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     try {
       const res = await api.buyItem(address, itemId, dev.token_id);
       setActionMsg({ text: `${label} applied!`, color: '#005500' });
+      if (res.cost) triggerSpend(res.cost);
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -798,6 +849,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (!address || !lockBusy()) return;
     try {
       const res = await api.hack(address, dev.token_id);
+      triggerSpend(15);
       if (res.success) {
         setActionMsg({ text: `HACK SUCCESS: Stole ${res.stolen} $NXT from ${res.target}`, color: '#005500' });
       } else {
@@ -832,6 +884,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (!address || !lockBusy()) return;
     try {
       const res = await api.fixBug(address, dev.token_id);
+      triggerSpend(res.cost || 5);
       setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
@@ -868,13 +921,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       style={{
         padding: '8px', cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
-        position: 'relative',
+        position: 'relative', overflow: 'visible',
         filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
         opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
+      <NxtSpendOverlay spends={spends} />
+
       {/* Row 1: Avatar + Identity */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '5px' }}>
         <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
           {dev._fetchFailed && (
@@ -892,7 +947,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           )}
           {/* Name + Archetype + Rarity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', fontFamily: "'Pixelify Sans', 'VT323', monospace" }}>{dev.name}</span>
+            <span style={{ fontWeight: '700', fontSize: '12px', color: 'var(--text-primary)', fontFamily: "'Silkscreen', monospace" }}>{dev.name}</span>
             <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>[{dev.archetype}]</span>
             {dev.rarity_tier && dev.rarity_tier !== 'common' && (
               <span style={{
@@ -910,8 +965,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             <span>| #{dev.token_id}</span>
           </div>
           {/* Status line */}
-          <div style={{ display: 'flex', gap: '8px', fontSize: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
+          <div style={{ display: 'flex', gap: '6px', fontSize: '10px', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'Silkscreen', monospace" }}>
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: '700' }}>
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
             <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
@@ -925,8 +980,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 2: Vital Stats — 2 column grid (Sims style) */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px',
-        marginBottom: '6px', width: '100%',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 16px',
+        marginBottom: '5px', width: '100%',
       }}>
         <VitalBar iconType="energy" label="Energy" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
         <VitalBar iconType="bugs" label="Bugs" value={bugsVal} max={bugsMax} inverse />
@@ -941,7 +996,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         <div style={{
           fontSize: '10px', color: '#b8860b', marginBottom: '4px',
           display: 'flex', alignItems: 'center', gap: '4px',
-          fontFamily: "'Pixelify Sans', monospace",
+          fontFamily: "'Silkscreen', monospace",
         }}>
           [TRAIN] {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
           {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (

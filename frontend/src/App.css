@@ -512,6 +512,12 @@
   50% { opacity: 0.5; }
 }
 
+@keyframes float-up-fade {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  30% { opacity: 1; transform: translateY(-20px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+}
+
 /* Boot fade-out transition */
 .boot-fadeout {
   animation: bootFadeOut 0.8s ease-out forwards;
