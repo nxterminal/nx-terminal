@@ -833,6 +833,11 @@ def pay_salaries(conn):
         UPDATE devs SET pc_health = GREATEST(0, pc_health - 2) WHERE status = 'active'
     """)
 
+    # Degrade caffeine: -2 per hour for all active devs (min 0)
+    cur.execute("""
+        UPDATE devs SET caffeine = GREATEST(0, caffeine - 2) WHERE status = 'active'
+    """)
+
     conn.commit()
     log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen + PC wear")
     return count

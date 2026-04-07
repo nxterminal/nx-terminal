@@ -368,10 +368,10 @@ export default function DevProfile({ devId }) {
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
             🥤 Energy 12
           </button>
-          <button className="win-btn" onClick={() => doShopAction('pizza', '🍕 Pizza')}
-            title={energyFull ? "Energy is full" : "🍕 PIZZA: 25 $NXT → +5 energy"}
+          <button className="win-btn" onClick={() => doShopAction('pizza', '🍔 Hamburger')}
+            title={energyFull ? "Energy is full" : "🍔 HAMBURGER: 25 $NXT → +7 energy"}
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🍕 Pizza 25
+            🍔 Hamburger 25
           </button>
           <button className="win-btn" onClick={() => doShopAction('mega_meal', '🍔 MegaMeal')}
             title={energyFull ? "Energy is full" : "🍔 MEGA MEAL: 50 $NXT → full energy"}

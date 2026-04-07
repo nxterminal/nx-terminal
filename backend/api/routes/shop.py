@@ -58,9 +58,9 @@ SHOP_ITEMS = {
     # ── Food & Drinks (energy) ──────────────────────────────
     "coffee": {
         "name": "Coffee",
-        "description": "+3 energy. Fuel for the grind.",
+        "description": "+25 caffeine. Fuel for the grind.",
         "cost_nxt": 5,
-        "effect": {"type": "energy_boost", "value": 3},
+        "effect": {"type": "caffeine_boost", "value": 25},
     },
     "energy_drink_small": {
         "name": "Energy Drink XL",
@@ -69,7 +69,7 @@ SHOP_ITEMS = {
         "effect": {"type": "energy_boost", "value": 5},
     },
     "pizza": {
-        "name": "Pizza",
+        "name": "Hamburger",
         "description": "+7 energy. The developer's staple.",
         "cost_nxt": 25,
         "effect": {"type": "energy_boost", "value": 7},
@@ -198,6 +198,11 @@ async def buy_item(req: PurchaseRequest):
                         "UPDATE devs SET coffee_count = coffee_count + 1 WHERE token_id = %s",
                         (req.target_dev_id,)
                     )
+            elif effect["type"] == "caffeine_boost":
+                cur.execute(
+                    "UPDATE devs SET caffeine = LEAST(100, caffeine + %s), coffee_count = coffee_count + 1 WHERE token_id = %s",
+                    (effect["value"], req.target_dev_id)
+                )
             elif effect["type"] == "mood_reset":
                 cur.execute(
                     "UPDATE devs SET mood = %s WHERE token_id = %s",

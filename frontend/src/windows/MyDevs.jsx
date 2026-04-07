@@ -514,35 +514,29 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
           </div>
 
           {/* Amount input */}
-          <div style={{ marginBottom: '6px' }}>
-            <label style={{ fontSize: '11px', color: '#555' }}>Amount:</label>
-            <input
-              type="number"
-              min="1"
-              max={dev.balance_nxt}
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              disabled={stage !== 'idle'}
-              style={{
-                width: '100%', padding: '4px 6px', fontSize: '14px',
-                fontFamily: "'VT323', monospace",
-                background: '#fff', border: '2px inset #888',
-              }}
-              placeholder="0"
-            />
-          </div>
-
-          {/* Percentage preset buttons */}
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
-            {[25, 50, 75].map(pct => (
-              <button key={pct} className="win-btn"
-                onClick={() => setAmount(String(Math.floor(dev.balance_nxt * pct / 100)))}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>Amount:</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input
+                type="number"
+                min="1"
+                max={dev.balance_nxt}
+                value={amount}
+                onChange={e => setAmount(String(Math.min(Number(e.target.value) || 0, dev.balance_nxt)))}
                 disabled={stage !== 'idle'}
-                style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{pct}%</button>
-            ))}
-            <button className="win-btn" onClick={() => setAmount(String(dev.balance_nxt))}
-              disabled={stage !== 'idle'}
-              style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
+                style={{
+                  width: '100px', padding: '6px 10px', fontSize: '18px',
+                  fontFamily: "'VT323', monospace",
+                  background: '#1a1a2e', color: '#66ff66',
+                  border: '2px solid #3a5a3a', textAlign: 'center',
+                  outline: 'none',
+                }}
+                placeholder="0"
+              />
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#888' }}>
+                / {formatNumber(dev.balance_nxt)} $NXT
+              </span>
+            </div>
           </div>
 
           {/* Action button */}
@@ -698,7 +692,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON."
+      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECONOMY"
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
         title="Fund or transfer $NXT" />
@@ -1030,15 +1024,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '4px', width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr) 2fr', gap: '4px', marginBottom: '4px', width: '100%' }}>
           <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
-            title="COFFEE: 5 $NXT +3 energy" />
+            title="COFFEE: 5 $NXT +25 caffeine" />
           <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
-            onClick={(e) => doShopAction(e, 'pizza', 'Pizza')}
+            onClick={(e) => doShopAction(e, 'pizza', 'Hamburger')}
             disabled={busy || energyHigh}
-            title={energyHigh ? "Energy is OK" : "PIZZA: 25 $NXT +7 energy"} />
+            title={energyHigh ? "Energy is OK" : "HAMBURGER: 25 $NXT +7 energy"} />
           <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
             onClick={doHack} disabled={busy}
             title="Spend 15 $NXT to hack a rival. ~50% success." />
