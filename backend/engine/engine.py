@@ -726,31 +726,32 @@ def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
     return cur.fetchall()
 
 
-def build_context(conn, dev: dict) -> dict:
-    """Build the context packet for a dev's decision."""
+def _fetch_shared_context(conn) -> dict:
+    """Fetch context that is identical for all devs in a tick (run once)."""
     cur = get_cursor(conn)
-
-    # Check if protocols exist
     cur.execute("SELECT COUNT(*) as cnt FROM protocols WHERE status = 'active'")
     has_protocols = cur.fetchone()["cnt"] > 0
-
-    # Check if dev has investments
-    cur.execute("SELECT COUNT(*) as cnt FROM protocol_investments WHERE dev_id = %s", (dev["token_id"],))
-    has_investments = cur.fetchone()["cnt"] > 0
-
-    # Active world event
     cur.execute("""
         SELECT effects FROM world_events
         WHERE is_active = TRUE AND starts_at <= NOW() AND ends_at >= NOW()
         ORDER BY starts_at DESC LIMIT 1
     """)
     event_row = cur.fetchone()
-    event_effects = event_row["effects"] if event_row else {}
-
     return {
         "has_protocols": has_protocols,
+        "event_effects": event_row["effects"] if event_row else {},
+    }
+
+
+def build_context(conn, dev: dict, shared: dict) -> dict:
+    """Build the context packet for a dev's decision."""
+    cur = get_cursor(conn)
+    cur.execute("SELECT COUNT(*) as cnt FROM protocol_investments WHERE dev_id = %s", (dev["token_id"],))
+    has_investments = cur.fetchone()["cnt"] > 0
+    return {
+        "has_protocols": shared["has_protocols"],
         "has_investments": has_investments,
-        "event_effects": event_effects,
+        "event_effects": shared["event_effects"],
     }
 
 
@@ -760,10 +761,12 @@ def run_scheduler_tick(conn) -> int:
     if not devs:
         return 0
 
+    shared_ctx = _fetch_shared_context(conn)
+
     processed = 0
     for dev in devs:
         try:
-            ctx = build_context(conn, dev)
+            ctx = build_context(conn, dev, shared_ctx)
             result = process_dev(conn, dev, ctx)
             processed += 1
 
