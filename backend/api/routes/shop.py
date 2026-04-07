@@ -375,7 +375,12 @@ async def hack_mainframe(req: HackRequest):
             if attacker["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
             if attacker["balance_nxt"] < HACK_COST:
-                raise HTTPException(400, f"Not enough $NXT. Need {HACK_COST}, have {attacker['balance_nxt']}")
+                raise HTTPException(400, detail={
+                    "error": "insufficient_funds",
+                    "message": f"Need {HACK_COST} $NXT to hack. You have {attacker['balance_nxt']}.",
+                    "required": HACK_COST,
+                    "current": attacker["balance_nxt"],
+                })
 
             # Check cooldown (shared with hack-player)
             now = datetime.now(timezone.utc)
@@ -393,7 +398,12 @@ async def hack_mainframe(req: HackRequest):
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
-                raise HTTPException(400, "Social too low to hack. Your dev has no street cred.")
+                raise HTTPException(400, detail={
+                    "error": "low_social",
+                    "message": "Social too low. Your dev has no street cred.",
+                    "required": 15,
+                    "current": attacker.get("social_vitality", 50),
+                })
 
             # Deduct cost and set cooldown
             cur.execute(
@@ -489,7 +499,12 @@ async def hack_player(req: HackRequest):
             if attacker["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
             if attacker["balance_nxt"] < HACK_PLAYER_COST:
-                raise HTTPException(400, f"Not enough $NXT. Need {HACK_PLAYER_COST}, have {attacker['balance_nxt']}")
+                raise HTTPException(400, detail={
+                    "error": "insufficient_funds",
+                    "message": f"Need {HACK_PLAYER_COST} $NXT to hack. You have {attacker['balance_nxt']}.",
+                    "required": HACK_PLAYER_COST,
+                    "current": attacker["balance_nxt"],
+                })
 
             # Check cooldown
             now = datetime.now(timezone.utc)
@@ -507,7 +522,12 @@ async def hack_player(req: HackRequest):
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
-                raise HTTPException(400, "Social too low to hack. Your dev has no street cred.")
+                raise HTTPException(400, detail={
+                    "error": "low_social",
+                    "message": "Social too low. Your dev has no street cred.",
+                    "required": 15,
+                    "current": attacker.get("social_vitality", 50),
+                })
 
             # Find random target from another corporation
             cur.execute(
@@ -516,7 +536,10 @@ async def hack_player(req: HackRequest):
             )
             target = cur.fetchone()
             if not target:
-                raise HTTPException(400, "No valid targets found")
+                raise HTTPException(400, detail={
+                    "error": "no_targets",
+                    "message": "No valid targets found. All devs are broke or protected.",
+                })
 
             # Deduct cost and set cooldown
             cur.execute(

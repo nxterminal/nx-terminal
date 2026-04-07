@@ -853,9 +853,18 @@ function HackResultModal({ result, onClose }) {
   );
 }
 
-// ── Hack Cooldown Modal ────────────────────────────────
-function HackCooldownModal({ cooldown, onClose }) {
-  if (!cooldown) return null;
+// ── Hack Error Modal (all error types) ─────────────────
+const HACK_ERROR_CONFIG = {
+  cooldown:           { icon: '🔒', title: '> SYSTEM LOCKDOWN',    color: '#ff9800' },
+  insufficient_funds: { icon: '💰', title: '> INSUFFICIENT FUNDS', color: '#ff4444' },
+  low_social:         { icon: '👤', title: '> LOW REPUTATION',     color: '#ff6644' },
+  no_targets:         { icon: '🔍', title: '> NO TARGETS',         color: '#888888' },
+};
+const HACK_ERROR_DEFAULT = { icon: '❌', title: '> HACK ERROR', color: '#ff4444' };
+
+function HackErrorModal({ error, onClose }) {
+  if (!error) return null;
+  const c = HACK_ERROR_CONFIG[error.error] || HACK_ERROR_DEFAULT;
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -863,17 +872,17 @@ function HackCooldownModal({ cooldown, onClose }) {
       alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#1a1a2e', border: '2px solid #5a4a2a',
+        background: '#1a1a2e', border: `2px solid ${c.color}33`,
         minWidth: 300, maxWidth: 400, fontFamily: "'VT323', monospace",
-        boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px rgba(255,150,0,0.1)',
+        boxShadow: `inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px ${c.color}1a`,
       }}>
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '10px 14px', background: '#0a0a1e',
-          borderBottom: '2px solid #ff9800',
+          borderBottom: `2px solid ${c.color}`,
         }}>
-          <span style={{ fontSize: 18, letterSpacing: 2, color: '#ff9800' }}>
-            {'>'} SYSTEM LOCKDOWN
+          <span style={{ fontSize: 18, letterSpacing: 2, color: c.color }}>
+            {c.title}
           </span>
           <button onClick={onClose} style={{
             background: 'none', border: '1px solid #555', color: '#aaa',
@@ -881,17 +890,25 @@ function HackCooldownModal({ cooldown, onClose }) {
           }}>X</button>
         </div>
         <div style={{ padding: 16, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
-          <div style={{ color: '#ff9800', fontSize: 16, marginBottom: 16 }}>
-            HACK COOLDOWN ACTIVE
+          <div style={{ fontSize: 40, marginBottom: 12 }}>{c.icon}</div>
+          <div style={{ color: c.color, fontSize: 15, marginBottom: 16 }}>
+            {error.message}
           </div>
-          <div style={{ color: '#ffdd44', fontSize: 22, marginBottom: 8 }}>
-            {cooldown.remaining_hours}h {cooldown.remaining_minutes}m
-          </div>
-          <div style={{ color: '#888', fontSize: 13 }}>
-            Security protocols prevent consecutive intrusions.
-            <br/>Systems will be available after cooldown expires.
-          </div>
+          {error.error === 'cooldown' && (
+            <div style={{ color: '#ffdd44', fontSize: 22, marginBottom: 8 }}>
+              {error.remaining_hours}h {error.remaining_minutes}m
+            </div>
+          )}
+          {error.error === 'insufficient_funds' && (
+            <div style={{ color: '#aaa', fontSize: 13 }}>
+              Required: {error.required} $NXT | Available: {error.current} $NXT
+            </div>
+          )}
+          {error.error === 'low_social' && (
+            <div style={{ color: '#aaa', fontSize: 13 }}>
+              Required: {error.required} Social | Current: {error.current}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -995,7 +1012,7 @@ function SpendOverlay({ spends }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs, onHackResult, onHackCooldown }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs, onHackResult, onHackError }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -1090,11 +1107,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      if (err.detail?.error === 'cooldown' && onHackCooldown) {
-        onHackCooldown(err.detail);
-      } else {
-        setActionMsg(parseError(err));
-      }
+      if (err.detail && onHackError) onHackError(err.detail);
+      else setActionMsg(parseError(err));
     }
     unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
@@ -1111,11 +1125,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      if (err.detail?.error === 'cooldown' && onHackCooldown) {
-        onHackCooldown(err.detail);
-      } else {
-        setActionMsg(parseError(err));
-      }
+      if (err.detail && onHackError) onHackError(err.detail);
+      else setActionMsg(parseError(err));
     }
     unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
@@ -1543,7 +1554,7 @@ export default function MyDevs({ openDevProfile }) {
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
   const [, setRefreshTick] = useState(0);
   const [hackResult, setHackResult] = useState(null);
-  const [hackCooldown, setHackCooldown] = useState(null);
+  const [hackError, setHackError] = useState(null);
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -1700,7 +1711,7 @@ export default function MyDevs({ openDevProfile }) {
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
                   onHackResult={setHackResult}
-                  onHackCooldown={setHackCooldown}
+                  onHackError={setHackError}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
@@ -1737,7 +1748,7 @@ export default function MyDevs({ openDevProfile }) {
         )}
       </div>
       <HackResultModal result={hackResult} onClose={() => setHackResult(null)} />
-      <HackCooldownModal cooldown={hackCooldown} onClose={() => setHackCooldown(null)} />
+      <HackErrorModal error={hackError} onClose={() => setHackError(null)} />
     </div>
   );
 }
