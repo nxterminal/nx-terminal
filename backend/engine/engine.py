@@ -833,9 +833,13 @@ def pay_salaries(conn):
         UPDATE devs SET pc_health = GREATEST(0, pc_health - 2) WHERE status = 'active'
     """)
 
-    # Degrade caffeine: -2 per hour for all active devs (min 0)
+    # Decay vitals: caffeine -2, social -1, knowledge -1 per hour (min 0)
     cur.execute("""
-        UPDATE devs SET caffeine = GREATEST(0, caffeine - 2) WHERE status = 'active'
+        UPDATE devs SET
+            caffeine  = GREATEST(0, caffeine  - 2),
+            social    = GREATEST(0, social    - 1),
+            knowledge = GREATEST(0, knowledge - 1)
+        WHERE status = 'active'
     """)
 
     # Degrade social_vitality: -1 per hour (min 0)
