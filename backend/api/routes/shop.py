@@ -87,6 +87,14 @@ SHOP_ITEMS = {
         "cost_nxt": 10,
         "effect": {"type": "pc_repair"},
     },
+    # ── Bug Fixing ──────────────────────────────────────────
+    "fix_bugs": {
+        "name": "Bug Fix",
+        "description": "Fix bugs in your code. Costs energy.",
+        "cost_nxt": 0,
+        "cost_energy": 10,
+        "effect": {"type": "fix_bugs", "value": 5},
+    },
     # ── Training Courses ────────────────────────────────────
     "train_hacking": {
         "name": "Intro to Hacking",
@@ -145,7 +153,11 @@ async def buy_item(req: PurchaseRequest):
                 raise HTTPException(404, "Dev not found")
             if dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
-            if dev["balance_nxt"] < item["cost_nxt"]:
+            cost_energy = item.get("cost_energy", 0)
+            if cost_energy > 0:
+                if dev["energy"] < cost_energy:
+                    raise HTTPException(400, f"Not enough energy. Need {cost_energy}, have {dev['energy']}")
+            elif dev["balance_nxt"] < item["cost_nxt"]:
                 raise HTTPException(400, f"Not enough $NXT. Need {item['cost_nxt']}, have {dev['balance_nxt']}")
 
             effect = item["effect"]
@@ -156,10 +168,16 @@ async def buy_item(req: PurchaseRequest):
                     raise HTTPException(400, "Dev is already in training. Wait for it to finish.")
 
             # Deduct cost
-            cur.execute(
-                "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s WHERE token_id = %s",
-                (item["cost_nxt"], item["cost_nxt"], req.target_dev_id)
-            )
+            if cost_energy > 0:
+                cur.execute(
+                    "UPDATE devs SET energy = energy - %s WHERE token_id = %s",
+                    (cost_energy, req.target_dev_id)
+                )
+            else:
+                cur.execute(
+                    "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s WHERE token_id = %s",
+                    (item["cost_nxt"], item["cost_nxt"], req.target_dev_id)
+                )
             cur.execute(
                 """INSERT INTO shop_purchases (player_address, target_dev_id, item_type, item_effect, nxt_cost)
                    VALUES (%s, %s, %s, %s::jsonb, %s) RETURNING id""",
@@ -195,6 +213,11 @@ async def buy_item(req: PurchaseRequest):
                     "UPDATE devs SET pc_health = 100 WHERE token_id = %s",
                     (req.target_dev_id,)
                 )
+            elif effect["type"] == "fix_bugs":
+                cur.execute(
+                    "UPDATE devs SET bugs_shipped = GREATEST(0, bugs_shipped - %s), bugs_fixed = COALESCE(bugs_fixed, 0) + %s WHERE token_id = %s",
+                    (effect["value"], effect["value"], req.target_dev_id)
+                )
             elif effect["type"] == "training":
                 ends_at = datetime.now(timezone.utc) + timedelta(hours=effect["hours"])
                 cur.execute(
@@ -206,7 +229,7 @@ async def buy_item(req: PurchaseRequest):
             cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.target_dev_id,))
             updated_dev = cur.fetchone()
 
-    return {
+    result = {
         "purchase_id": purchase["id"],
         "item": req.item_id,
         "cost": item["cost_nxt"],
@@ -214,6 +237,9 @@ async def buy_item(req: PurchaseRequest):
         "status": "applied",
         "updated_dev": dict(updated_dev) if updated_dev else None,
     }
+    if cost_energy > 0:
+        result["energy_cost"] = cost_energy
+    return result
 
 
 # ── Fix Bug ────────────────────────────────────────────────
