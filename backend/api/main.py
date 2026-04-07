@@ -46,12 +46,12 @@ def _run_auto_migrations():
                 cur.execute("UPDATE missions SET required_devs = 4 WHERE difficulty = 'hard' AND required_devs = 1")
                 cur.execute("UPDATE missions SET required_devs = 5 WHERE difficulty = 'extreme' AND required_devs = 1")
                 cur.execute("UPDATE missions SET required_devs = 10 WHERE difficulty = 'legendary' AND required_devs = 1")
-                # Update rewards
-                cur.execute("UPDATE missions SET reward_nxt = 25 WHERE difficulty = 'easy' AND reward_nxt < 25")
-                cur.execute("UPDATE missions SET reward_nxt = 50 WHERE difficulty = 'medium' AND reward_nxt < 50")
-                cur.execute("UPDATE missions SET reward_nxt = 80 WHERE difficulty = 'hard' AND reward_nxt < 80")
-                cur.execute("UPDATE missions SET reward_nxt = 150 WHERE difficulty = 'extreme' AND reward_nxt < 150")
-                cur.execute("UPDATE missions SET reward_nxt = 250 WHERE difficulty = 'legendary' AND reward_nxt < 250")
+                # Normalize rewards by difficulty
+                cur.execute("UPDATE missions SET reward_nxt = 25 WHERE difficulty = 'easy' AND reward_nxt != 25")
+                cur.execute("UPDATE missions SET reward_nxt = 50 WHERE difficulty = 'medium' AND reward_nxt != 50")
+                cur.execute("UPDATE missions SET reward_nxt = 80 WHERE difficulty = 'hard' AND reward_nxt != 80")
+                cur.execute("UPDATE missions SET reward_nxt = 150 WHERE difficulty = 'extreme' AND reward_nxt != 150")
+                cur.execute("UPDATE missions SET reward_nxt = 250 WHERE difficulty = 'legendary' AND reward_nxt != 250")
                 # Performance indexes for scale
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_dev_id ON chat_messages(dev_id)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")

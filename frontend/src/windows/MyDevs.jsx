@@ -1192,10 +1192,12 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         padding: '8px', cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
         position: 'relative', overflow: 'visible',
-        filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
-        opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
+      <div style={{
+        filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
+        opacity: onMission && !missionCompleted ? 0.7 : 1,
+      }}>
       <SpendOverlay spends={spends} />
 
       {/* Row 1: Avatar + Identity */}
@@ -1341,8 +1343,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       {showTransferModal && (
         <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />
       )}
+      </div>{/* end grayscale wrapper */}
 
-      {/* On Mission overlay */}
+      {/* On Mission overlay — outside grayscale so colors are preserved */}
       {onMission && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,

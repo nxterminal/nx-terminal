@@ -203,11 +203,24 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
         {notEnough && devs.length > 0 && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
-            <div style={{ fontSize: 16, color: T.red, marginBottom: 8 }}>NOT ENOUGH ELIGIBLE DEVS</div>
-            <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-              This mission requires {required} dev{required > 1 ? 's' : ''}.
-              <br/>You have {eligibleCount} eligible dev{eligibleCount !== 1 ? 's' : ''} available.
-            </div>
+            {reqStat && eligibleCount < required && devs.length >= required ? (
+              <>
+                <div style={{ fontSize: 16, color: '#ff9800', marginBottom: 8 }}>NOT ENOUGH QUALIFIED DEVS</div>
+                <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+                  Requires {required} dev{required > 1 ? 's' : ''} with {(STAT_NAMES[reqStat] || reqStat).toUpperCase()} &ge; {reqVal}.
+                  <br/>{eligibleCount} of {devs.length} available dev{devs.length !== 1 ? 's' : ''} qualify.
+                  <br/><span style={{ color: T.textDim, fontSize: 12 }}>Train your devs to increase their {(STAT_NAMES[reqStat] || reqStat).toUpperCase()} stat.</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 16, color: T.red, marginBottom: 8 }}>NOT ENOUGH AVAILABLE DEVS</div>
+                <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+                  This mission requires {required} dev{required > 1 ? 's' : ''}.
+                  <br/>You have {eligibleCount} eligible dev{eligibleCount !== 1 ? 's' : ''} available.
+                </div>
+              </>
+            )}
           </div>
         )}
         {devs.length === 0 && (
