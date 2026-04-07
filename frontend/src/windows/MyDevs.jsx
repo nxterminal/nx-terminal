@@ -606,7 +606,7 @@ function barColor(pct, inverse) {
   return '#cc0000';
 }
 
-// ── Vital Bar (compact, Silkscreen labels) ──────────────
+// ── Vital Bar (compact, VT323) ──────────────────────────
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
@@ -615,33 +615,31 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const critical = (!inverse && pct < 15) || (inverse && pct > 75);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-      {/* Header row: icon + label ... value */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
           display: 'flex', alignItems: 'center', gap: '4px',
-          fontSize: '11px', fontWeight: '700', color: '#111',
-          fontFamily: "'Silkscreen', monospace",
+          fontSize: '14px', color: '#111',
+          fontFamily: "'VT323', monospace",
         }}>
           <span style={{
-            width: '20px', height: '20px', borderRadius: '50%',
+            width: '18px', height: '18px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: `1.5px solid ${color}`, background: 'rgba(0,0,0,0.15)',
             flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
           }}>
-            <StatIcon type={iconType} size={11} />
+            <StatIcon type={iconType} size={10} />
           </span>
           {label}
         </span>
         <span style={{
-          fontSize: '11px', fontWeight: '700', color,
-          fontFamily: "'Silkscreen', monospace",
+          fontSize: '14px', color,
+          fontFamily: "'VT323', monospace",
           transition: 'color 0.5s',
         }}>{v}</span>
       </div>
-      {/* Bar */}
       <div style={{
-        height: '12px', background: '#333',
+        height: '10px', background: '#333',
         borderRadius: '2px', overflow: 'hidden',
       }}>
         <div style={{
@@ -654,7 +652,7 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   );
 }
 
-// ── Stone Button (pixel art 3D blue-grey, Silkscreen) ────
+// ── Stone Button (pixel art 3D, VT323) ──────────────────
 function StoneBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
@@ -662,10 +660,10 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
       disabled={disabled}
       title={title}
       style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-        padding: '7px 4px', minWidth: '65px',
-        fontFamily: "'Silkscreen', monospace",
-        fontSize: '11px', fontWeight: '700',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        padding: '7px 2px',
+        fontFamily: "'VT323', monospace",
+        fontSize: '14px',
         textTransform: 'uppercase',
         color: disabled ? '#555' : '#1a2030',
         background: disabled ? '#4a4a4a' : '#6b7b8a',
@@ -678,10 +676,9 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
           ? 'inset -2px -2px 0 #333, inset 2px 2px 0 #666'
           : 'inset -3px -3px 0 #3a4654, inset 3px 3px 0 #8fa0b0, 0 3px 0 #2a3444, 0 4px 0 #1a2434',
         transition: 'transform 0.05s',
-        imageRendering: 'pixelated',
       }}
     >
-      {emoji && <span style={{ fontSize: '12px' }}>{emoji}</span>}
+      {emoji && <span style={{ fontSize: '13px' }}>{emoji}</span>}
       {label}
     </button>
   );
@@ -700,7 +697,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
   }, [open]);
 
   return (
-    <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON"
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
@@ -712,21 +709,21 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
           boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
         }}>
           <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'Silkscreen', monospace", fontSize: '12px', fontWeight: '700',
+            fontFamily: "'VT323', monospace", fontSize: '14px',
             textAlign: 'left',
           }}>{'\uD83D\uDCB0'} FUND</button>
           {allDevs && allDevs.length > 1 && (
             <button onClick={(e) => { onTransfer(e); setOpen(false); }}
               disabled={dev.balance_nxt <= 0}
               style={{
-                display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+                display: 'block', width: '100%', padding: '6px 8px', border: 'none',
                 borderTop: '2px solid #3a4654',
                 background: 'transparent',
                 color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
                 cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
-                fontFamily: "'Silkscreen', monospace", fontSize: '12px', fontWeight: '700',
+                fontFamily: "'VT323', monospace", fontSize: '14px',
                 textAlign: 'left',
               }}>{'\uD83D\uDCE4'} SEND</button>
           )}
@@ -736,7 +733,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
   );
 }
 
-// ── NXT Spend Animation + Sound ─────────────────────────
+// ── Spend Animation + Sound ─────────────────────────────
 function playSpendSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -756,7 +753,26 @@ function playSpendSound() {
   } catch {}
 }
 
-function NxtSpendOverlay({ spends }) {
+function playFixSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.setValueAtTime(500, ctx.currentTime + 0.08);
+    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.16);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+function SpendOverlay({ spends }) {
   if (!spends.length) return null;
   return (
     <div style={{
@@ -766,12 +782,13 @@ function NxtSpendOverlay({ spends }) {
       {spends.map(s => (
         <div key={s.id} style={{
           position: 'absolute',
-          fontFamily: "'Silkscreen', monospace", fontSize: '14px', fontWeight: '700',
-          color: '#ff4444', whiteSpace: 'nowrap',
+          fontFamily: "'VT323', monospace", fontSize: '16px',
+          color: s.type === 'energy' ? '#ff9800' : '#ff4444',
+          whiteSpace: 'nowrap',
           textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
           animation: 'float-up-fade 1.5s ease-out forwards',
         }}>
-          -{s.amount} $NXT
+          -{s.amount} {s.type === 'energy' ? 'Energy' : '$NXT'}
         </div>
       ))}
     </div>
@@ -793,10 +810,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [spends, setSpends] = useState([]);
 
-  const triggerSpend = useCallback((amount) => {
+  const triggerSpend = useCallback((amount, type = 'nxt') => {
     const id = Date.now();
-    setSpends(prev => [...prev, { id, amount }]);
-    playSpendSound();
+    setSpends(prev => [...prev, { id, amount, type }]);
+    if (type === 'energy') playFixSound();
+    else playSpendSound();
     setTimeout(() => setSpends(prev => prev.filter(s => s.id !== id)), 1500);
   }, []);
 
@@ -884,7 +902,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (!address || !lockBusy()) return;
     try {
       const res = await api.fixBug(address, dev.token_id);
-      triggerSpend(res.cost || 5);
+      triggerSpend(res.energy_cost || 10, 'energy');
       setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
@@ -926,47 +944,48 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
-      <NxtSpendOverlay spends={spends} />
+      <SpendOverlay spends={spends} />
 
       {/* Row 1: Avatar + Identity */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '5px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
         <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1px' }}>
           {dev._fetchFailed && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '2px 6px', marginBottom: '2px',
               background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
-              fontSize: '10px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
+              fontSize: '12px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
             }}>
               [!] Profile loading from chain...
               <button className="win-btn"
                 onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
-                style={{ fontSize: '9px', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
+                style={{ fontSize: '11px', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
             </div>
           )}
           {/* Name + Archetype + Rarity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: '700', fontSize: '12px', color: 'var(--text-primary)', fontFamily: "'Silkscreen', monospace" }}>{dev.name}</span>
-            <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>[{dev.archetype}]</span>
+            <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontFamily: "'VT323', monospace" }}>{dev.name}</span>
+            <span style={{ color: arcColor, fontSize: '13px', fontFamily: "'VT323', monospace" }}>[{dev.archetype}]</span>
             {dev.rarity_tier && dev.rarity_tier !== 'common' && (
               <span style={{
-                fontSize: '8px', padding: '1px 4px', fontWeight: 'bold', textTransform: 'uppercase',
+                fontSize: '10px', padding: '0 3px', textTransform: 'uppercase',
                 color: 'var(--gold-on-grey, #7a5c00)',
                 border: '1px solid var(--gold-on-grey, #7a5c00)', borderRadius: '2px',
+                fontFamily: "'VT323', monospace",
               }}>{dev.rarity_tier}</span>
             )}
           </div>
           {/* Corp | Species | Location | #Token */}
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap', fontFamily: "'VT323', monospace", lineHeight: 1.3 }}>
             {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
             {dev.species && <span>| {dev.species}</span>}
             {loc && <span>| {loc}</span>}
             <span>| #{dev.token_id}</span>
           </div>
           {/* Status line */}
-          <div style={{ display: 'flex', gap: '6px', fontSize: '10px', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'Silkscreen', monospace" }}>
-            <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: '700' }}>
+          <div style={{ display: 'flex', gap: '6px', fontSize: '13px', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'VT323', monospace" }}>
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
             <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
@@ -978,10 +997,10 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         </div>
       </div>
 
-      {/* Row 2: Vital Stats — 2 column grid (Sims style) */}
+      {/* Row 2: Vital Stats — 2 column grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 16px',
-        marginBottom: '5px', width: '100%',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 14px',
+        marginBottom: '4px', width: '100%',
       }}>
         <VitalBar iconType="energy" label="Energy" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
         <VitalBar iconType="bugs" label="Bugs" value={bugsVal} max={bugsMax} inverse />
@@ -994,9 +1013,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       {/* Row 3: Training status */}
       {dev.training_course && (
         <div style={{
-          fontSize: '10px', color: '#b8860b', marginBottom: '4px',
+          fontSize: '13px', color: '#b8860b', marginBottom: '4px',
           display: 'flex', alignItems: 'center', gap: '4px',
-          fontFamily: "'Silkscreen', monospace",
+          fontFamily: "'VT323', monospace",
         }}>
           [TRAIN] {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
           {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
@@ -1009,9 +1028,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         </div>
       )}
 
-      {/* Row 4: Action Buttons — pixel art stone 3D */}
+      {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '4px', width: '100%' }}>
           <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
@@ -1046,9 +1065,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 5: Footer counters + prompt */}
       <div style={{
-        display: 'flex', gap: '8px', fontSize: '9px',
+        display: 'flex', gap: '8px', fontSize: '12px',
         color: 'var(--text-muted, #888)', marginBottom: address ? '2px' : 0,
-        fontFamily: "'VT323', monospace",
+        fontFamily: "'VT323', monospace", padding: '2px 0',
       }}>
         {dev.coffee_count > 0 && <span>caf:{dev.coffee_count}</span>}
         {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
