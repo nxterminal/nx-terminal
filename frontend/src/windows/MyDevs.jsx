@@ -578,137 +578,105 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
   );
 }
 
-// ── SVG Stat Icons (16x16 viewBox, renders at 12px) ──────
-function StatIcon({ type }) {
-  const s = { display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 };
-  const w = 12, h = 12;
+// ── SVG Stat Icons (16x16 viewBox) ──────────────────────
+function StatIcon({ type, size = 14 }) {
+  const s = { display: 'block' };
   switch (type) {
-    case 'energy': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><path d="M9 1L4 9h4l-1 6 5-8H8l1-6z" fill="currentColor"/></svg>;
-    case 'pc': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="9" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M5 13h6M8 11v2" stroke="currentColor" strokeWidth="1.5"/></svg>;
-    case 'knowledge': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><path d="M2 13V4h3l1-1h4l1 1h3v9H2zM5 7h6M5 9h4" fill="none" stroke="currentColor" strokeWidth="1.2"/></svg>;
-    case 'bugs': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M1 6h3M12 6h3M1 10h3M12 10h3M5 1l1.5 3M11 1l-1.5 3" stroke="currentColor" strokeWidth="1.2"/></svg>;
-    case 'social': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><circle cx="6" cy="5" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.3"/><circle cx="11" cy="6" r="2" fill="none" stroke="currentColor" strokeWidth="1.3"/><path d="M1 14c0-3 2.5-5 5-5s5 2 5 5" fill="none" stroke="currentColor" strokeWidth="1.3"/></svg>;
-    case 'caffeine': return <svg style={s} width={w} height={h} viewBox="0 0 16 16"><path d="M3 4h8v7a2 2 0 01-2 2H5a2 2 0 01-2-2V4zM11 5h1.5a1.5 1.5 0 010 3H11" fill="none" stroke="currentColor" strokeWidth="1.3"/><path d="M5 1c.5 1 0 2 .5 3M7.5 1c.5 1 0 2 .5 3" stroke="currentColor" strokeWidth="1" opacity="0.6"/></svg>;
+    case 'energy': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M9 1L4 9h4l-1 6 5-8H8l1-6z" fill="currentColor"/></svg>;
+    case 'pc': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M5 13h6M8 11v2" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'knowledge': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M3 2v11l5-2 5 2V2H3z" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M8 3v8" stroke="currentColor" strokeWidth="1"/></svg>;
+    case 'bugs': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><ellipse cx="8" cy="9" rx="4" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M2 7h3M11 7h3M2 11h3M11 11h3M5.5 2l1 3.5M10.5 2l-1 3.5" stroke="currentColor" strokeWidth="1.2"/></svg>;
+    case 'social': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><circle cx="6" cy="5" r="2" fill="currentColor"/><path d="M2 14c0-2.5 2-4.5 4-4.5s4 2 4 4.5" fill="currentColor"/><circle cx="11" cy="5.5" r="1.5" fill="currentColor" opacity="0.7"/><path d="M9 14c0-2 1.2-3.5 2-3.5s2 1.5 2 3.5" fill="currentColor" opacity="0.7"/></svg>;
+    case 'caffeine': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M3 5h8v6a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M11 6h1.5a1.5 1.5 0 010 3H11" fill="none" stroke="currentColor" strokeWidth="1.3"/><path d="M5 2c.5 1 0 2 .5 2.5M7.5 2c.5 1 0 2 .5 2.5" stroke="currentColor" strokeWidth="1" opacity="0.5"/></svg>;
     default: return null;
   }
 }
 
-// ── Vital Bar (Sims-style, big) ───────────────────────────
+// ── Bar color thresholds ────────────────────────────────
+function barColor(pct, inverse) {
+  if (inverse) {
+    if (pct <= 20) return '#44ff44';
+    if (pct <= 50) return '#ffaa00';
+    if (pct <= 75) return '#ff4444';
+    return '#cc0000';
+  }
+  if (pct >= 70) return '#44ff44';
+  if (pct >= 40) return '#ffaa00';
+  if (pct >= 15) return '#ff4444';
+  return '#cc0000';
+}
+
+// ── Vital Bar (Sims-style, thick with icon circle) ──────
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
   const pct = Math.max(0, Math.min(100, (v / m) * 100));
-  const color = inverse
-    ? (pct > 60 ? '#aa0000' : pct > 30 ? '#b8860b' : '#005500')
-    : (pct > 60 ? '#005500' : pct > 30 ? '#b8860b' : '#aa0000');
+  const color = barColor(pct, inverse);
+  const critical = (!inverse && pct < 15) || (inverse && pct > 75);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-      <span style={{ color, flexShrink: 0, width: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <StatIcon type={iconType} />
-      </span>
-      <span style={{
-        fontSize: '9px', fontWeight: 'bold', color: 'var(--text-muted, #999)',
-        width: '24px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '-0.3px',
-      }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+      {/* Icon circle */}
       <div style={{
-        flex: 1, height: '8px', background: 'var(--terminal-bg, #0a0a14)',
-        border: '1px solid var(--border-dark, #333)', borderRadius: '1px',
-        minWidth: 0, overflow: 'hidden',
+        width: '28px', height: '28px', borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: `2px solid ${color}`, background: 'rgba(0,0,0,0.3)',
+        flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
       }}>
+        <StatIcon type={iconType} size={13} />
+      </div>
+      {/* Label + bar + value */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <span style={{
+          fontSize: '9px', fontWeight: 'bold', color: '#999',
+          textTransform: 'uppercase', letterSpacing: '0.5px',
+          fontFamily: "'VT323', monospace",
+        }}>{label}</span>
         <div style={{
-          width: `${pct}%`, height: '100%', background: color,
-          transition: 'width 0.4s ease',
-        }} />
+          height: '10px', background: 'rgba(0,0,0,0.4)',
+          borderRadius: '3px', overflow: 'hidden', position: 'relative',
+        }}>
+          <div style={{
+            width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
+            transition: 'width 0.5s ease, background-color 0.5s ease',
+            animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
+          }} />
+        </div>
       </div>
       <span style={{
-        fontSize: '9px', fontWeight: 'bold', color,
-        fontFamily: "'VT323', monospace", width: '30px', textAlign: 'right', flexShrink: 0,
-      }}>{v}/{m}</span>
+        fontSize: '11px', fontWeight: 'bold', color,
+        fontFamily: "'VT323', monospace", width: '22px', textAlign: 'right', flexShrink: 0,
+        transition: 'color 0.5s',
+      }}>{v}</span>
     </div>
   );
 }
 
-// ── Skill Radar (SVG hexagon) — cyan theme ───────────────
-const RADAR_LABELS = ['COD', 'HAK', 'TRD', 'SOC', 'END', 'LCK'];
-const RADAR_SIZE = 140;
-const RADAR_CX = RADAR_SIZE / 2;
-const RADAR_CY = RADAR_SIZE / 2;
-const RADAR_R = 50;
-
-function radarPoint(index, value, maxR = RADAR_R) {
-  const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
-  const r = (Math.min(value || 0, 100) / 100) * maxR;
-  return [RADAR_CX + r * Math.cos(angle), RADAR_CY + r * Math.sin(angle)];
-}
-
-function SkillRadar({ stats }) {
-  const values = [
-    stats.stat_coding || 0, stats.stat_hacking || 0, stats.stat_trading || 0,
-    stats.stat_social || 0, stats.stat_endurance || 0, stats.stat_luck || 0,
-  ];
-  const gridLevels = [25, 50, 75, 100];
-
-  return (
-    <svg width={RADAR_SIZE} height={RADAR_SIZE} viewBox={`0 0 ${RADAR_SIZE} ${RADAR_SIZE}`}
-      style={{ display: 'block', flexShrink: 0, minWidth: RADAR_SIZE }}>
-      {/* Grid hexagons */}
-      {gridLevels.map(level => {
-        const pts = Array.from({ length: 6 }, (_, i) => radarPoint(i, level).join(',')).join(' ');
-        return <polygon key={level} points={pts}
-          fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />;
-      })}
-      {/* Axis lines */}
-      {Array.from({ length: 6 }, (_, i) => {
-        const [x, y] = radarPoint(i, 100);
-        return <line key={i} x1={RADAR_CX} y1={RADAR_CY} x2={x} y2={y}
-          stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />;
-      })}
-      {/* Data polygon */}
-      <polygon
-        points={values.map((v, i) => radarPoint(i, v).join(',')).join(' ')}
-        fill="rgba(0,255,255,0.15)"
-        stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.9"
-      />
-      {/* Dots on each vertex */}
-      {values.map((v, i) => {
-        const [x, y] = radarPoint(i, v);
-        return <circle key={i} cx={x} cy={y} r="2.5"
-          fill="#00e5ff" opacity="0.9" />;
-      })}
-      {/* Labels */}
-      {RADAR_LABELS.map((lbl, i) => {
-        const [x, y] = radarPoint(i, 100, RADAR_R + 15);
-        return <text key={lbl} x={x} y={y}
-          textAnchor="middle" dominantBaseline="central"
-          style={{
-            fontSize: '9px', fontWeight: 'bold', fontFamily: "'VT323', monospace",
-            fill: '#aaaaaa',
-          }}>{lbl}</text>;
-      })}
-    </svg>
-  );
-}
-
-// ── Action Button (no emojis, text-only, uniform) ─────────
-function ActionBtn({ label, onClick, disabled, title, accent = '#888' }) {
+// ── Action Button (emoji + gradient, terminal style) ────
+function ActionBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
-      className="win-btn"
       onClick={onClick}
       disabled={disabled}
       title={title}
       style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '10px', padding: '4px 2px', fontWeight: 'bold',
-        fontFamily: "'VT323', monospace", textTransform: 'uppercase',
-        color: disabled ? '#555' : accent,
-        border: `1px solid ${disabled ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)'}`,
-        background: disabled ? 'transparent' : 'rgba(255,255,255,0.03)',
-        opacity: disabled ? 0.5 : 1,
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+        padding: '6px 4px', fontWeight: 'bold',
+        fontFamily: "'VT323', monospace", fontSize: '13px',
+        textTransform: 'uppercase', letterSpacing: '0.5px',
+        color: disabled ? '#555' : '#88ff88',
+        border: disabled ? '1px solid rgba(100,255,100,0.1)' : '1px solid rgba(100,255,100,0.3)',
+        background: disabled
+          ? 'transparent'
+          : 'linear-gradient(180deg, rgba(40,80,40,0.6) 0%, rgba(20,50,20,0.8) 100%)',
+        opacity: disabled ? 0.45 : 1,
         cursor: disabled ? 'default' : 'pointer',
-        whiteSpace: 'nowrap', minWidth: 0, letterSpacing: '0.5px',
+        whiteSpace: 'nowrap', minWidth: 0,
+        borderRadius: '2px',
+        transition: 'all 0.2s ease',
       }}
     >
+      {emoji && <span style={{ fontSize: '14px' }}>{emoji}</span>}
       {label}
     </button>
   );
@@ -899,21 +867,17 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         </div>
       </div>
 
-      {/* Row 2: Vital Stats (single column) + Skill Radar (same row) */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '6px', flexWrap: 'wrap' }}>
-        {/* Vital Bars — single column, fills available width */}
-        <div style={{ flex: 1, minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <VitalBar iconType="energy" label="NRG" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
-          <VitalBar iconType="pc" label="PC" value={pcHealth} max={100} />
-          <VitalBar iconType="knowledge" label="KNW" value={knowledge} max={100} />
-          <VitalBar iconType="bugs" label="BUG" value={bugsVal} max={bugsMax} inverse />
-          <VitalBar iconType="social" label="SOC" value={social} max={100} />
-          <VitalBar iconType="caffeine" label="CAF" value={caffeine} max={100} />
-        </div>
-        {/* Skill Radar — fixed size, same row on wide, wraps below on narrow */}
-        <div style={{ width: '140px', minWidth: '140px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <SkillRadar stats={dev} />
-        </div>
+      {/* Row 2: Vital Stats — 2 column grid (Sims style) */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px',
+        marginBottom: '6px', width: '100%',
+      }}>
+        <VitalBar iconType="energy" label="NRG" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
+        <VitalBar iconType="bugs" label="BUG" value={bugsVal} max={bugsMax} inverse />
+        <VitalBar iconType="pc" label="PC" value={pcHealth} max={100} />
+        <VitalBar iconType="social" label="SOC" value={social} max={100} />
+        <VitalBar iconType="knowledge" label="KNW" value={knowledge} max={100} />
+        <VitalBar iconType="caffeine" label="CAF" value={caffeine} max={100} />
       </div>
 
       {/* Row 3: Training status */}
@@ -929,27 +893,27 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         </div>
       )}
 
-      {/* Row 4: Action Buttons — uniform, no emojis */}
+      {/* Row 4: Action Buttons — emoji + gradient terminal style */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'flex', gap: '3px', marginBottom: '4px' }}>
-          <ActionBtn label={energyHigh ? 'FEED' : 'FEED:5'}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+          <ActionBtn emoji={'\uD83C\uDF55'} label={energyHigh ? 'FEED' : 'FEED:5'}
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
-            disabled={busy || energyHigh} accent="#33aa55"
+            disabled={busy || energyHigh}
             title={energyHigh ? "Energy is OK" : "COFFEE: 5 $NXT +3 energy"} />
-          <ActionBtn label="HACK"
-            onClick={doHack} disabled={busy} accent="#cc8833"
+          <ActionBtn emoji={'\u2694\uFE0F'} label="HACK"
+            onClick={doHack} disabled={busy}
             title="Spend 15 $NXT to hack a rival. ~50% success." />
-          <ActionBtn label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
-            onClick={doFixBug} disabled={busy || bugsVal <= 0} accent="#33aa55"
+          <ActionBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+            onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
-          <ActionBtn label="FUND"
+          <ActionBtn emoji={'\uD83D\uDCB0'} label="FUND"
             onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-            disabled={busy} accent="#4488cc"
+            disabled={busy}
             title="Deposit $NXT from wallet to this dev" />
           {allDevs && allDevs.length > 1 && (
-            <ActionBtn label="SEND"
+            <ActionBtn emoji={'\uD83D\uDCE4'} label="SEND"
               onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
-              disabled={busy || dev.balance_nxt <= 0} accent="#cc8833"
+              disabled={busy || dev.balance_nxt <= 0}
               title="Transfer $NXT to another dev" />
           )}
         </div>

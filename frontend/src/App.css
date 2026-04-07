@@ -507,6 +507,11 @@
   50% { opacity: 0; }
 }
 
+@keyframes critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Boot fade-out transition */
 .boot-fadeout {
   animation: bootFadeOut 0.8s ease-out forwards;
