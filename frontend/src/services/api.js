@@ -5,11 +5,20 @@ async function fetchJSON(url, options) {
   const r = await fetch(url, options);
   if (!r.ok) {
     let detail = '';
+    let structured = null;
     try {
       const body = await r.json();
-      detail = body.detail || body.message || '';
+      const d = body.detail || body.message || '';
+      if (typeof d === 'object' && d !== null) {
+        structured = d;
+        detail = d.message || JSON.stringify(d);
+      } else {
+        detail = d;
+      }
     } catch {}
-    throw new Error(detail || `HTTP ${r.status}`);
+    const err = new Error(detail || `HTTP ${r.status}`);
+    if (structured) err.detail = structured;
+    throw err;
   }
   return r.json();
 }

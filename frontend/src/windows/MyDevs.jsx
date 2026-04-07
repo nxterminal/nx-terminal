@@ -742,7 +742,7 @@ function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'\uD83D\uDD13'} label="HACK \u25BE"
+      <StoneBtn emoji={'🔓'} label={'HACK ▾'}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
         title="Hack: choose Mainframe (15 $NXT, safe) or Player (25 $NXT, risky)" />
@@ -853,6 +853,51 @@ function HackResultModal({ result, onClose }) {
   );
 }
 
+// ── Hack Cooldown Modal ────────────────────────────────
+function HackCooldownModal({ cooldown, onClose }) {
+  if (!cooldown) return null;
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#1a1a2e', border: '2px solid #5a4a2a',
+        minWidth: 300, maxWidth: 400, fontFamily: "'VT323', monospace",
+        boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px rgba(255,150,0,0.1)',
+      }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '10px 14px', background: '#0a0a1e',
+          borderBottom: '2px solid #ff9800',
+        }}>
+          <span style={{ fontSize: 18, letterSpacing: 2, color: '#ff9800' }}>
+            {'>'} SYSTEM LOCKDOWN
+          </span>
+          <button onClick={onClose} style={{
+            background: 'none', border: '1px solid #555', color: '#aaa',
+            fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
+          }}>X</button>
+        </div>
+        <div style={{ padding: 16, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+          <div style={{ color: '#ff9800', fontSize: 16, marginBottom: 16 }}>
+            HACK COOLDOWN ACTIVE
+          </div>
+          <div style={{ color: '#ffdd44', fontSize: 22, marginBottom: 8 }}>
+            {cooldown.remaining_hours}h {cooldown.remaining_minutes}m
+          </div>
+          <div style={{ color: '#888', fontSize: 13 }}>
+            Security protocols prevent consecutive intrusions.
+            <br/>Systems will be available after cooldown expires.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Spend Animation + Sound ─────────────────────────────
 // ── Sound Effects ───────────────────────────────────────
 function playSpendSound() {
@@ -950,7 +995,7 @@ function SpendOverlay({ spends }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs, onHackResult }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs, onHackResult, onHackCooldown }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -1045,7 +1090,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg(parseError(err));
+      if (err.detail?.error === 'cooldown' && onHackCooldown) {
+        onHackCooldown(err.detail);
+      } else {
+        setActionMsg(parseError(err));
+      }
     }
     unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
@@ -1062,7 +1111,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg(parseError(err));
+      if (err.detail?.error === 'cooldown' && onHackCooldown) {
+        onHackCooldown(err.detail);
+      } else {
+        setActionMsg(parseError(err));
+      }
     }
     unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
@@ -1490,6 +1543,7 @@ export default function MyDevs({ openDevProfile }) {
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
   const [, setRefreshTick] = useState(0);
   const [hackResult, setHackResult] = useState(null);
+  const [hackCooldown, setHackCooldown] = useState(null);
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -1646,6 +1700,7 @@ export default function MyDevs({ openDevProfile }) {
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
                   onHackResult={setHackResult}
+                  onHackCooldown={setHackCooldown}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
@@ -1682,6 +1737,7 @@ export default function MyDevs({ openDevProfile }) {
         )}
       </div>
       <HackResultModal result={hackResult} onClose={() => setHackResult(null)} />
+      <HackCooldownModal cooldown={hackCooldown} onClose={() => setHackCooldown(null)} />
     </div>
   );
 }

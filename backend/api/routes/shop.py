@@ -382,8 +382,14 @@ async def hack_mainframe(req: HackRequest):
             if attacker.get("last_raid_at"):
                 cooldown_end = attacker["last_raid_at"] + timedelta(hours=HACK_COOLDOWN_HOURS)
                 if now < cooldown_end:
-                    remaining = cooldown_end - now
-                    raise HTTPException(400, f"Hack on cooldown. Available in {int(remaining.total_seconds() // 3600)}h.")
+                    rem = (cooldown_end - now).total_seconds()
+                    raise HTTPException(400, detail={
+                        "error": "cooldown",
+                        "message": f"Systems on lockdown. {int(rem // 3600)}h {int((rem % 3600) // 60)}m remaining.",
+                        "remaining_seconds": int(rem),
+                        "remaining_hours": int(rem // 3600),
+                        "remaining_minutes": int((rem % 3600) // 60),
+                    })
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
@@ -490,8 +496,14 @@ async def hack_player(req: HackRequest):
             if attacker.get("last_raid_at"):
                 cooldown_end = attacker["last_raid_at"] + timedelta(hours=HACK_COOLDOWN_HOURS)
                 if now < cooldown_end:
-                    remaining = cooldown_end - now
-                    raise HTTPException(400, f"Hack on cooldown. Available in {int(remaining.total_seconds() // 3600)}h.")
+                    rem = (cooldown_end - now).total_seconds()
+                    raise HTTPException(400, detail={
+                        "error": "cooldown",
+                        "message": f"Systems on lockdown. {int(rem // 3600)}h {int((rem % 3600) // 60)}m remaining.",
+                        "remaining_seconds": int(rem),
+                        "remaining_hours": int(rem // 3600),
+                        "remaining_minutes": int((rem % 3600) // 60),
+                    })
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
@@ -538,12 +550,16 @@ async def hack_player(req: HackRequest):
                 )
                 # Notify target owner
                 if target.get("owner_address"):
+                    attacker_wallet = attacker["owner_address"][:6] + "..." + attacker["owner_address"][-4:]
                     cur.execute(
                         """INSERT INTO notifications (player_address, type, title, body, dev_id)
                            VALUES (%s, 'hack_received', %s, %s, %s)""",
                         (target["owner_address"].lower(),
-                         f"INTRUSION DETECTED on {target['name']}",
-                         f"{attacker['name']} ({attacker['corporation']}) stole {steal_amount} $NXT from {target['name']}.",
+                         f"⚠ SECURITY BREACH — {target['name']} was hacked",
+                         f"Your dev {target['name']} [{target['corporation']}] was hacked.\n"
+                         f"Lost: {steal_amount} $NXT\n"
+                         f"Attacker: {attacker['name']} [{attacker['corporation']}]\n"
+                         f"Wallet: {attacker_wallet}",
                          target["token_id"])
                     )
                 # BONUS: Social boosts on successful hack
