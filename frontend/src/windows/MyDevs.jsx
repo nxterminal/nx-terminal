@@ -606,7 +606,7 @@ function barColor(pct, inverse) {
   return '#cc0000';
 }
 
-// ── Vital Bar (Sims-style, thick with icon circle) ──────
+// ── Vital Bar (Sims-style, stacked label/bar, Pixelify Sans) ──
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
@@ -615,45 +615,47 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const critical = (!inverse && pct < 15) || (inverse && pct > 75);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-      {/* Icon circle */}
-      <div style={{
-        width: '28px', height: '28px', borderRadius: '50%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: `2px solid ${color}`, background: 'rgba(0,0,0,0.3)',
-        flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
-      }}>
-        <StatIcon type={iconType} size={13} />
-      </div>
-      {/* Label + bar + value */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+      {/* Header row: icon + label ... value */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
-          fontSize: '9px', fontWeight: 'bold', color: '#999',
-          textTransform: 'uppercase', letterSpacing: '0.5px',
-          fontFamily: "'VT323', monospace",
-        }}>{label}</span>
-        <div style={{
-          height: '10px', background: 'rgba(0,0,0,0.4)',
-          borderRadius: '3px', overflow: 'hidden', position: 'relative',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: '13px', fontWeight: '700', color: '#111',
+          fontFamily: "'Pixelify Sans', 'VT323', monospace",
         }}>
-          <div style={{
-            width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
-            transition: 'width 0.5s ease, background-color 0.5s ease',
-            animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
-          }} />
-        </div>
+          <span style={{
+            width: '26px', height: '26px', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `2px solid ${color}`, background: 'rgba(0,0,0,0.15)',
+            flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
+          }}>
+            <StatIcon type={iconType} size={13} />
+          </span>
+          {label}
+        </span>
+        <span style={{
+          fontSize: '13px', fontWeight: '700', color,
+          fontFamily: "'Pixelify Sans', 'VT323', monospace",
+          transition: 'color 0.5s',
+        }}>{v}</span>
       </div>
-      <span style={{
-        fontSize: '11px', fontWeight: 'bold', color,
-        fontFamily: "'VT323', monospace", width: '22px', textAlign: 'right', flexShrink: 0,
-        transition: 'color 0.5s',
-      }}>{v}</span>
+      {/* Bar */}
+      <div style={{
+        height: '14px', background: '#333',
+        borderRadius: '3px', overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
+          transition: 'width 0.5s ease, background-color 0.5s ease',
+          animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
+        }} />
+      </div>
     </div>
   );
 }
 
-// ── Action Button (emoji + gradient, terminal style) ────
-function ActionBtn({ emoji, label, onClick, disabled, title }) {
+// ── Stone Button (pixel art 3D blue-grey, Pixelify Sans) ─
+function StoneBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
       onClick={onClick}
@@ -661,24 +663,76 @@ function ActionBtn({ emoji, label, onClick, disabled, title }) {
       title={title}
       style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-        padding: '6px 4px', fontWeight: 'bold',
-        fontFamily: "'VT323', monospace", fontSize: '13px',
-        textTransform: 'uppercase', letterSpacing: '0.5px',
-        color: disabled ? '#555' : '#88ff88',
-        border: disabled ? '1px solid rgba(100,255,100,0.1)' : '1px solid rgba(100,255,100,0.3)',
-        background: disabled
-          ? 'transparent'
-          : 'linear-gradient(180deg, rgba(40,80,40,0.6) 0%, rgba(20,50,20,0.8) 100%)',
-        opacity: disabled ? 0.45 : 1,
-        cursor: disabled ? 'default' : 'pointer',
-        whiteSpace: 'nowrap', minWidth: 0,
+        padding: '9px 6px', minWidth: '70px',
+        fontFamily: "'Pixelify Sans', monospace",
+        fontSize: '13px', fontWeight: '700',
+        textTransform: 'uppercase',
+        color: disabled ? '#555' : '#1a2030',
+        background: disabled ? '#4a4a4a' : '#6b7b8a',
+        border: 'none',
         borderRadius: '2px',
-        transition: 'all 0.2s ease',
+        cursor: disabled ? 'default' : 'pointer',
+        whiteSpace: 'nowrap',
+        opacity: disabled ? 0.5 : 1,
+        boxShadow: disabled
+          ? 'inset -2px -2px 0 #333, inset 2px 2px 0 #666'
+          : 'inset -3px -3px 0 #3a4654, inset 3px 3px 0 #8fa0b0, 0 3px 0 #2a3444, 0 4px 0 #1a2434',
+        transition: 'transform 0.05s',
+        imageRendering: 'pixelated',
       }}
     >
       {emoji && <span style={{ fontSize: '14px' }}>{emoji}</span>}
       {label}
     </button>
+  );
+}
+
+// ── Econ Dropdown (FUND + SEND) ─────────────────────────
+function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON"
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Fund or transfer $NXT" />
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
+          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
+        }}>
+          <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+            background: 'transparent', color: '#1a2030', cursor: 'pointer',
+            fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+            textAlign: 'left',
+          }}>{'\uD83D\uDCB0'} FUND</button>
+          {allDevs && allDevs.length > 1 && (
+            <button onClick={(e) => { onTransfer(e); setOpen(false); }}
+              disabled={dev.balance_nxt <= 0}
+              style={{
+                display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+                borderTop: '2px solid #3a4654',
+                background: 'transparent',
+                color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
+                cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
+                fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+                textAlign: 'left',
+              }}>{'\uD83D\uDCE4'} SEND</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -703,11 +757,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
   const parseError = (err) => {
     const msg = err?.message || '';
-    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#7a5c00' };
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch'))
+      return { text: 'Network error — check connection', color: '#aa0000' };
+    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#b8860b' };
     if (msg.includes('Not enough')) return { text: msg, color: '#aa0000' };
-    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#7a5c00' };
+    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#b8860b' };
     if (msg) return { text: msg, color: '#aa0000' };
-    return { text: 'Failed', color: '#aa0000' };
+    return { text: 'Action failed', color: '#aa0000' };
   };
 
   // Vital stats — use real fields, fallback to defaults for new stats (TODO: connect to backend)
@@ -836,7 +892,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           )}
           {/* Name + Archetype + Rarity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>{dev.name}</span>
+            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', fontFamily: "'Pixelify Sans', 'VT323', monospace" }}>{dev.name}</span>
             <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>[{dev.archetype}]</span>
             {dev.rarity_tier && dev.rarity_tier !== 'common' && (
               <span style={{
@@ -869,53 +925,59 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 2: Vital Stats — 2 column grid (Sims style) */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px',
         marginBottom: '6px', width: '100%',
       }}>
-        <VitalBar iconType="energy" label="NRG" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
-        <VitalBar iconType="bugs" label="BUG" value={bugsVal} max={bugsMax} inverse />
-        <VitalBar iconType="pc" label="PC" value={pcHealth} max={100} />
-        <VitalBar iconType="social" label="SOC" value={social} max={100} />
-        <VitalBar iconType="knowledge" label="KNW" value={knowledge} max={100} />
-        <VitalBar iconType="caffeine" label="CAF" value={caffeine} max={100} />
+        <VitalBar iconType="energy" label="Energy" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
+        <VitalBar iconType="bugs" label="Bugs" value={bugsVal} max={bugsMax} inverse />
+        <VitalBar iconType="pc" label="PC Health" value={pcHealth} max={100} />
+        <VitalBar iconType="social" label="Social" value={social} max={100} />
+        <VitalBar iconType="knowledge" label="Knowledge" value={knowledge} max={100} />
+        <VitalBar iconType="caffeine" label="Caffeine" value={caffeine} max={100} />
       </div>
 
       {/* Row 3: Training status */}
       {dev.training_course && (
-        <div style={{ fontSize: '9px', color: '#7a5c00', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{
+          fontSize: '10px', color: '#b8860b', marginBottom: '4px',
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontFamily: "'Pixelify Sans', monospace",
+        }}>
           [TRAIN] {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
           {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
-            <button className="win-btn" onClick={doGraduate}
-              style={{ fontSize: '8px', padding: '0 6px', fontFamily: "'VT323', monospace" }} disabled={busy}>GRADUATE</button>
+            <StoneBtn emoji={'\uD83C\uDF93'} label="GRAD"
+              onClick={doGraduate} disabled={busy}
+              title="Complete training and apply stat bonus" />
           ) : dev.training_ends_at ? (
             <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
           ) : null}
         </div>
       )}
 
-      {/* Row 4: Action Buttons — emoji + gradient terminal style */}
+      {/* Row 4: Action Buttons — pixel art stone 3D */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
-          <ActionBtn emoji={'\uD83C\uDF55'} label={energyHigh ? 'FEED' : 'FEED:5'}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+          <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
+            disabled={busy}
+            title="COFFEE: 5 $NXT +3 energy" />
+          <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
+            onClick={(e) => doShopAction(e, 'pizza', 'Pizza')}
             disabled={busy || energyHigh}
-            title={energyHigh ? "Energy is OK" : "COFFEE: 5 $NXT +3 energy"} />
-          <ActionBtn emoji={'\u2694\uFE0F'} label="HACK"
+            title={energyHigh ? "Energy is OK" : "PIZZA: 25 $NXT +7 energy"} />
+          <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
             onClick={doHack} disabled={busy}
             title="Spend 15 $NXT to hack a rival. ~50% success." />
-          <ActionBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+          <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
-          <ActionBtn emoji={'\uD83D\uDCB0'} label="FUND"
-            onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-            disabled={busy}
-            title="Deposit $NXT from wallet to this dev" />
-          {allDevs && allDevs.length > 1 && (
-            <ActionBtn emoji={'\uD83D\uDCE4'} label="SEND"
-              onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
-              disabled={busy || dev.balance_nxt <= 0}
-              title="Transfer $NXT to another dev" />
-          )}
+          <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
+            onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
+            disabled={busy || pcHealth >= 100}
+            title={pcHealth >= 100 ? "PC is healthy" : `REPAIR PC: 10 $NXT (${pcHealth}%)`} />
+          <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
+            onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }} />
         </div>
       )}
 
