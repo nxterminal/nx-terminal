@@ -359,7 +359,7 @@ async def hack_raid(req: HackRequest):
         with conn.cursor() as cur:
             # Lock attacker
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.attacker_dev_id,)
             )
             attacker = cur.fetchone()
@@ -416,7 +416,7 @@ async def hack_raid(req: HackRequest):
                 cur.execute(
                     """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                        VALUES (%s, %s, %s, 'HACK_RAID', %s::jsonb, 0, %s)""",
-                    (req.attacker_dev_id, attacker["name"], attacker.get("archetype", "UNKNOWN"),
+                    (req.attacker_dev_id, attacker["name"], attacker["archetype"],
                      json.dumps({"success": True, "target_id": target["token_id"], "target_name": target["name"],
                                  "target_corp": target["corporation"], "stolen": steal_amount}),
                      HACK_COST)
@@ -451,7 +451,7 @@ async def hack_raid(req: HackRequest):
                 cur.execute(
                     """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                        VALUES (%s, %s, %s, 'HACK_RAID', %s::jsonb, 0, %s)""",
-                    (req.attacker_dev_id, attacker["name"], attacker.get("archetype", "UNKNOWN"),
+                    (req.attacker_dev_id, attacker["name"], attacker["archetype"],
                      json.dumps({"success": False, "target_id": target["token_id"], "target_name": target["name"],
                                  "target_corp": target["corporation"]}),
                      HACK_COST)
@@ -525,7 +525,7 @@ async def fund_dev(req: FundRequest):
 
             # Verify dev ownership
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, archetype FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.dev_token_id,)
             )
             dev = cur.fetchone()
@@ -588,7 +588,7 @@ async def fund_dev(req: FundRequest):
             cur.execute(
                 """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                    VALUES (%s, %s, %s, 'FUND_DEV', %s::jsonb, 0, 0)""",
-                (req.dev_token_id, dev["name"], "unknown",
+                (req.dev_token_id, dev["name"], dev["archetype"],
                  json.dumps({"event": "fund_dev", "amount": credit_amount, "tx_hash": req.tx_hash.lower()}))
             )
 
@@ -630,7 +630,7 @@ async def transfer_nxt(req: TransferRequest):
             # Lock both devs ordered by token_id to prevent deadlocks
             ids = sorted([req.from_dev_token_id, req.to_dev_token_id])
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, status FROM devs WHERE token_id IN (%s, %s) ORDER BY token_id FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, status, archetype FROM devs WHERE token_id IN (%s, %s) ORDER BY token_id FOR UPDATE",
                 (ids[0], ids[1])
             )
             rows = cur.fetchall()
@@ -673,7 +673,7 @@ async def transfer_nxt(req: TransferRequest):
             cur.execute(
                 """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                    VALUES (%s, %s, %s, 'TRANSFER', %s::jsonb, 0, %s)""",
-                (req.from_dev_token_id, from_dev["name"], "unknown",
+                (req.from_dev_token_id, from_dev["name"], from_dev["archetype"],
                  json.dumps({"event": "transfer_out", "to_dev_id": req.to_dev_token_id,
                              "to_dev_name": to_dev["name"], "amount": req.amount}),
                  req.amount)
@@ -681,7 +681,7 @@ async def transfer_nxt(req: TransferRequest):
             cur.execute(
                 """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                    VALUES (%s, %s, %s, 'TRANSFER', %s::jsonb, 0, 0)""",
-                (req.to_dev_token_id, to_dev["name"], "unknown",
+                (req.to_dev_token_id, to_dev["name"], to_dev["archetype"],
                  json.dumps({"event": "transfer_in", "from_dev_id": req.from_dev_token_id,
                              "from_dev_name": from_dev["name"], "amount": req.amount}))
             )
