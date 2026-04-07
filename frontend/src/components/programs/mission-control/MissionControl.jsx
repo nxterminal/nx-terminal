@@ -35,7 +35,7 @@ const DIFF_LABELS = {
   legendary: 'LEGENDARY (24 hours)',
 };
 
-const DIFF_ORDER = ['easy', 'medium', 'hard', 'extreme', 'legendary'];
+const DIFF_ORDER = ['easy', 'medium', 'hard', 'legendary'];
 
 const STAT_NAMES = {
   coding: 'COD', hacking: 'HAK', trading: 'TRD', social: 'SOC', endurance: 'END',
