@@ -606,7 +606,7 @@ function barColor(pct, inverse) {
   return '#cc0000';
 }
 
-// ── Vital Bar (Sims-style, thick with icon circle) ──────
+// ── Vital Bar (Sims-style, Pixelify Sans labels) ────────
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
@@ -618,23 +618,23 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
       {/* Icon circle */}
       <div style={{
-        width: '28px', height: '28px', borderRadius: '50%',
+        width: '26px', height: '26px', borderRadius: '50%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         border: `2px solid ${color}`, background: 'rgba(0,0,0,0.3)',
         flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
       }}>
-        <StatIcon type={iconType} size={13} />
+        <StatIcon type={iconType} size={12} />
       </div>
       {/* Label + bar + value */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span style={{
-          fontSize: '9px', fontWeight: 'bold', color: '#999',
+          fontSize: '10px', fontWeight: '600', color: '#aaa',
           textTransform: 'uppercase', letterSpacing: '0.5px',
-          fontFamily: "'VT323', monospace",
+          fontFamily: "'Pixelify Sans', 'VT323', monospace",
         }}>{label}</span>
         <div style={{
           height: '10px', background: 'rgba(0,0,0,0.4)',
-          borderRadius: '3px', overflow: 'hidden', position: 'relative',
+          borderRadius: '3px', overflow: 'hidden',
         }}>
           <div style={{
             width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
@@ -644,41 +644,99 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
         </div>
       </div>
       <span style={{
-        fontSize: '11px', fontWeight: 'bold', color,
-        fontFamily: "'VT323', monospace", width: '22px', textAlign: 'right', flexShrink: 0,
+        fontSize: '12px', fontWeight: '700', color,
+        fontFamily: "'Pixelify Sans', 'VT323', monospace",
+        width: '22px', textAlign: 'right', flexShrink: 0,
         transition: 'color 0.5s',
       }}>{v}</span>
     </div>
   );
 }
 
-// ── Action Button (emoji + gradient, terminal style) ────
-function ActionBtn({ emoji, label, onClick, disabled, title }) {
+// ── Stone Button (pixel art 3D grey, Pixelify Sans) ─────
+function StoneBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
       style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-        padding: '6px 4px', fontWeight: 'bold',
-        fontFamily: "'VT323', monospace", fontSize: '13px',
-        textTransform: 'uppercase', letterSpacing: '0.5px',
-        color: disabled ? '#555' : '#88ff88',
-        border: disabled ? '1px solid rgba(100,255,100,0.1)' : '1px solid rgba(100,255,100,0.3)',
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        padding: '5px 4px',
+        fontFamily: "'Pixelify Sans', 'Press Start 2P', monospace",
+        fontSize: '11px', fontWeight: '600',
+        textTransform: 'uppercase', letterSpacing: '0.3px',
+        color: disabled ? '#666' : '#e0e0e0',
         background: disabled
-          ? 'transparent'
-          : 'linear-gradient(180deg, rgba(40,80,40,0.6) 0%, rgba(20,50,20,0.8) 100%)',
-        opacity: disabled ? 0.45 : 1,
+          ? '#3a3a3a'
+          : 'linear-gradient(180deg, #8a8a8a 0%, #6a6a6a 40%, #5a5a5a 60%, #4a4a4a 100%)',
+        border: 'none',
+        borderTop: disabled ? '1px solid #444' : '2px solid #aaa',
+        borderLeft: disabled ? '1px solid #444' : '2px solid #999',
+        borderRight: disabled ? '1px solid #333' : '2px solid #3a3a3a',
+        borderBottom: disabled ? '1px solid #333' : '3px solid #2a2a2a',
+        borderRadius: '2px',
         cursor: disabled ? 'default' : 'pointer',
         whiteSpace: 'nowrap', minWidth: 0,
-        borderRadius: '2px',
-        transition: 'all 0.2s ease',
+        opacity: disabled ? 0.5 : 1,
+        textShadow: disabled ? 'none' : '0 1px 1px rgba(0,0,0,0.5)',
+        imageRendering: 'pixelated',
       }}
     >
-      {emoji && <span style={{ fontSize: '14px' }}>{emoji}</span>}
+      {emoji && <span style={{ fontSize: '12px' }}>{emoji}</span>}
       {label}
     </button>
+  );
+}
+
+// ── Econ Dropdown (FUND + SEND) ─────────────────────────
+function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON"
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Fund or transfer $NXT" />
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', bottom: '100%', left: 0, right: 0,
+          marginBottom: '2px', zIndex: 20,
+          background: 'linear-gradient(180deg, #7a7a7a 0%, #5a5a5a 100%)',
+          border: '2px solid #999', borderBottom: '2px solid #333',
+          borderRadius: '2px', overflow: 'hidden',
+        }}>
+          <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '5px 8px', border: 'none',
+            background: 'transparent', color: '#e0e0e0', cursor: 'pointer',
+            fontFamily: "'Pixelify Sans', monospace", fontSize: '11px', fontWeight: '600',
+            textAlign: 'left', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
+          }}>{'\uD83D\uDCB0'} FUND DEV</button>
+          {allDevs && allDevs.length > 1 && (
+            <button onClick={(e) => { onTransfer(e); setOpen(false); }}
+              disabled={dev.balance_nxt <= 0}
+              style={{
+                display: 'block', width: '100%', padding: '5px 8px', border: 'none',
+                borderTop: '1px solid rgba(0,0,0,0.2)',
+                background: 'transparent',
+                color: dev.balance_nxt <= 0 ? '#666' : '#e0e0e0',
+                cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
+                fontFamily: "'Pixelify Sans', monospace", fontSize: '11px', fontWeight: '600',
+                textAlign: 'left', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
+              }}>{'\uD83D\uDCE4'} SEND NXT</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -703,11 +761,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
   const parseError = (err) => {
     const msg = err?.message || '';
-    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#7a5c00' };
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch'))
+      return { text: 'Network error — check connection', color: '#aa0000' };
+    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#b8860b' };
     if (msg.includes('Not enough')) return { text: msg, color: '#aa0000' };
-    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#7a5c00' };
+    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#b8860b' };
     if (msg) return { text: msg, color: '#aa0000' };
-    return { text: 'Failed', color: '#aa0000' };
+    return { text: 'Action failed', color: '#aa0000' };
   };
 
   // Vital stats — use real fields, fallback to defaults for new stats (TODO: connect to backend)
@@ -836,7 +896,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           )}
           {/* Name + Archetype + Rarity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>{dev.name}</span>
+            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', fontFamily: "'Pixelify Sans', 'VT323', monospace" }}>{dev.name}</span>
             <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>[{dev.archetype}]</span>
             {dev.rarity_tier && dev.rarity_tier !== 'common' && (
               <span style={{
@@ -882,40 +942,42 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 3: Training status */}
       {dev.training_course && (
-        <div style={{ fontSize: '9px', color: '#7a5c00', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{
+          fontSize: '10px', color: '#b8860b', marginBottom: '4px',
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontFamily: "'Pixelify Sans', monospace",
+        }}>
           [TRAIN] {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
           {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
-            <button className="win-btn" onClick={doGraduate}
-              style={{ fontSize: '8px', padding: '0 6px', fontFamily: "'VT323', monospace" }} disabled={busy}>GRADUATE</button>
+            <StoneBtn emoji={'\uD83C\uDF93'} label="GRAD"
+              onClick={doGraduate} disabled={busy}
+              title="Complete training and apply stat bonus" />
           ) : dev.training_ends_at ? (
             <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
           ) : null}
         </div>
       )}
 
-      {/* Row 4: Action Buttons — emoji + gradient terminal style */}
+      {/* Row 4: Action Buttons — pixel art stone 3D */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
-          <ActionBtn emoji={'\uD83C\uDF55'} label={energyHigh ? 'FEED' : 'FEED:5'}
+        <div style={{ display: 'flex', gap: '3px', marginBottom: '4px' }}>
+          <StoneBtn emoji={'\u2615'} label={energyHigh ? 'OK' : 'COFFEE'}
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy || energyHigh}
             title={energyHigh ? "Energy is OK" : "COFFEE: 5 $NXT +3 energy"} />
-          <ActionBtn emoji={'\u2694\uFE0F'} label="HACK"
+          <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
             onClick={doHack} disabled={busy}
             title="Spend 15 $NXT to hack a rival. ~50% success." />
-          <ActionBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+          <StoneBtn emoji={'\uD83D\uDC1B'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
-          <ActionBtn emoji={'\uD83D\uDCB0'} label="FUND"
-            onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-            disabled={busy}
-            title="Deposit $NXT from wallet to this dev" />
-          {allDevs && allDevs.length > 1 && (
-            <ActionBtn emoji={'\uD83D\uDCE4'} label="SEND"
-              onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
-              disabled={busy || dev.balance_nxt <= 0}
-              title="Transfer $NXT to another dev" />
-          )}
+          <StoneBtn emoji={'\uD83D\uDD27'} label="REPAIR"
+            onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
+            disabled={busy || pcHealth >= 100}
+            title={pcHealth >= 100 ? "PC is healthy" : `REPAIR PC: 10 $NXT (${pcHealth}%)`} />
+          <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
+            onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }} />
         </div>
       )}
 
