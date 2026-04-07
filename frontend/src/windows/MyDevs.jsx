@@ -728,6 +728,131 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
   );
 }
 
+// ── Hack Dropdown (MAINFRAME + PLAYER) ─────────────────
+function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <StoneBtn emoji={'\u2694\uFE0F'} label="HACK \u25BE"
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Hack: choose Mainframe (15 $NXT, safe) or Player (25 $NXT, risky)" />
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
+          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
+        }}>
+          <button onClick={(e) => { onHackMainframe(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+            background: 'transparent', color: '#1a2030', cursor: 'pointer',
+            fontFamily: "'VT323', monospace", fontSize: '14px',
+            textAlign: 'left',
+          }}>{'\uD83D\uDDA5\uFE0F'} MAINFRAME — 15 $NXT</button>
+          <button onClick={(e) => { onHackPlayer(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+            borderTop: '2px solid #3a4654',
+            background: 'transparent', color: '#1a2030', cursor: 'pointer',
+            fontFamily: "'VT323', monospace", fontSize: '14px',
+            textAlign: 'left',
+          }}>{'\uD83D\uDC64'} PLAYER — 25 $NXT</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hack Result Modal ──────────────────────────────────
+function HackResultModal({ result, onClose }) {
+  if (!result) return null;
+  const ok = result.hack_success;
+  const isPlayer = result.hack_type === 'player';
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#1a1a2e', border: `2px solid ${ok ? '#3a5a3a' : '#5a3a3a'}`,
+        minWidth: 300, maxWidth: 400, fontFamily: "'VT323', monospace",
+        boxShadow: `inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px ${ok ? 'rgba(0,255,100,0.1)' : 'rgba(255,0,0,0.1)'}`,
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '10px 14px', background: '#0a0a1e',
+          borderBottom: `2px solid ${ok ? '#44ffaa' : '#ff4444'}`,
+        }}>
+          <span style={{ fontSize: 18, letterSpacing: 2, color: ok ? '#44ffaa' : '#ff4444' }}>
+            {ok ? '> ACCESS GRANTED' : '> ACCESS DENIED'}
+          </span>
+          <button onClick={onClose} style={{
+            background: 'none', border: '1px solid #555', color: '#aaa',
+            fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
+          }}>X</button>
+        </div>
+        {/* Body */}
+        <div style={{ padding: 16, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: '#888', letterSpacing: 1, marginBottom: 8 }}>
+            {isPlayer ? '\uD83D\uDC64 PLAYER HACK' : '\uD83D\uDDA5\uFE0F MAINFRAME HACK'}
+          </div>
+          <div style={{ fontSize: 14, color: '#aaa', marginBottom: 16 }}>
+            TARGET: {result.target_name}
+            {result.target_corp && ` [${result.target_corp}]`}
+            {result.target_owner && (
+              <span style={{ display: 'block', fontSize: 11, color: '#666', marginTop: 2 }}>
+                {result.target_owner}
+              </span>
+            )}
+          </div>
+          <div style={{
+            color: ok ? '#44ffaa' : '#ff4444', fontSize: 24,
+            fontWeight: 'bold', letterSpacing: 2, marginBottom: 16,
+          }}>
+            {ok ? `+${result.stolen} $NXT` : `-${result.cost} $NXT`}
+          </div>
+          <div style={{ fontSize: 14, color: '#ccc', lineHeight: 1.8, marginBottom: 12 }}>
+            <div style={{ color: '#ff6666' }}>Cost: -{result.cost} $NXT</div>
+            {ok && (
+              <>
+                <div style={{ color: '#44ffaa' }}>Extracted: +{result.stolen} $NXT</div>
+                <div style={{ color: '#44ccff' }}>Social: +{isPlayer ? 8 : 5}</div>
+              </>
+            )}
+            <div style={{
+              color: result.net_gain >= 0 ? '#ffdd44' : '#ff4444',
+              fontWeight: 'bold', marginTop: 8, fontSize: 16,
+            }}>
+              NET: {result.net_gain >= 0 ? '+' : ''}{result.net_gain} $NXT
+            </div>
+          </div>
+          <div style={{
+            fontSize: 12, color: '#666', fontStyle: 'italic',
+            borderTop: '1px solid #333', paddingTop: 10,
+          }}>
+            {result.message}
+          </div>
+          {!ok && isPlayer && (
+            <div style={{ color: '#ff9800', fontSize: 12, marginTop: 8 }}>
+              {'\u26A0'} Your {result.cost} $NXT was seized by {result.target_name}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Spend Animation + Sound ─────────────────────────────
 // ── Sound Effects ───────────────────────────────────────
 function playSpendSound() {
@@ -825,7 +950,7 @@ function SpendOverlay({ spends }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs, onHackResult }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -909,18 +1034,31 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     setTimeout(() => setActionMsg(null), 2500);
   };
 
-  const doHack = async (e) => {
+  const doHackMainframe = async (e) => {
     e.stopPropagation();
     if (!address || !lockBusy()) return;
     try {
-      const res = await api.hack(address, dev.token_id);
+      const res = await api.hackMainframe(address, dev.token_id);
       if (res.changes && res.changes.length) triggerChanges(res.changes);
       else triggerSpend(15);
-      if (res.success) {
-        setActionMsg({ text: `HACK SUCCESS: Stole ${res.stolen} $NXT from ${res.target}`, color: '#005500' });
-      } else {
-        setActionMsg({ text: `HACK FAILED: ${res.target}'s firewall blocked you`, color: '#aa0000' });
-      }
+      if (onHackResult) onHackResult(res);
+      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
+      if (fresh && onDevUpdate) onDevUpdate(fresh);
+    } catch (err) {
+      setActionMsg(parseError(err));
+    }
+    unlockBusy();
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
+  const doHackPlayer = async (e) => {
+    e.stopPropagation();
+    if (!address || !lockBusy()) return;
+    try {
+      const res = await api.hackPlayer(address, dev.token_id);
+      if (res.changes && res.changes.length) triggerChanges(res.changes);
+      else triggerSpend(25);
+      if (onHackResult) onHackResult(res);
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
@@ -1089,9 +1227,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             onClick={(e) => doShopAction(e, 'pizza', 'Hamburger')}
             disabled={busy || energyHigh}
             title={energyHigh ? "Energy is OK" : "Hamburger: 8 $NXT \u2192 +15 Energy"} />
-          <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
-            onClick={doHack} disabled={busy}
-            title="Hack: 15 $NXT \u2192 steal 20-40 $NXT (risk!), +5 Social if success" />
+          <HackDropdown dev={dev} busy={busy}
+            onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer} />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
@@ -1352,6 +1489,7 @@ export default function MyDevs({ openDevProfile }) {
   const [activityCount, setActivityCount] = useState(0);
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
   const [, setRefreshTick] = useState(0);
+  const [hackResult, setHackResult] = useState(null);
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -1507,6 +1645,7 @@ export default function MyDevs({ openDevProfile }) {
                   allDevs={devs}
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
+                  onHackResult={setHackResult}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
@@ -1542,6 +1681,7 @@ export default function MyDevs({ openDevProfile }) {
           <ActivityTab walletAddress={address} devs={devs} />
         )}
       </div>
+      <HackResultModal result={hackResult} onClose={() => setHackResult(null)} />
     </div>
   );
 }
