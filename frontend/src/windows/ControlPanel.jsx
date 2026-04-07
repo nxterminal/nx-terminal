@@ -11,7 +11,6 @@ const WALLPAPERS = [
 const THEMES = [
   { id: 'classic', name: 'Classic', desc: 'The original Windows 98 look', preview: { bg: '#c0c0c0', titlebar: '#000080', text: '#000' } },
   { id: 'dark', name: 'Dark Mode', desc: 'Easy on the eyes. Hard on the soul.', preview: { bg: '#2d2d3f', titlebar: '#4a148c', text: '#e0e0e0' } },
-  { id: 'high-contrast', name: 'High Contrast', desc: 'Maximum visibility. Maximum intensity.', preview: { bg: '#000000', titlebar: '#ffff00', text: '#ffffff' } },
 ];
 
 const SCREENSAVERS = [

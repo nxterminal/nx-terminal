@@ -32,6 +32,11 @@ DO $$ BEGIN
     THEN ALTER TYPE action_enum ADD VALUE 'HACK_RAID'; END IF;
 END $$;
 
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'HACK_MAINFRAME' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'action_enum'))
+    THEN ALTER TYPE action_enum ADD VALUE 'HACK_MAINFRAME'; END IF;
+END $$;
+
 -- Verify
 SELECT column_name, data_type, column_default
 FROM information_schema.columns

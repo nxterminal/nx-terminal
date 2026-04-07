@@ -99,47 +99,6 @@
   background: #1a1a2e;
 }
 
-[data-theme="high-contrast"] {
-  --bg-desktop: #000000;
-  --win-bg: #000000;
-  --win-title-l: #ffff00;
-  --win-title-r: #ffff00;
-  --border-light: #ffffff;
-  --border-dark: #ffffff;
-  --border-darker: #ffffff;
-  --selection: #ffff00;
-  --selection-text: #000000;
-  --terminal-bg: #000000;
-  --terminal-green: #00ff00;
-  --terminal-amber: #ffff00;
-  --terminal-red: #ff0000;
-  --terminal-cyan: #00ffff;
-  --terminal-magenta: #ff00ff;
-  --gold: #ffff00;
-  --gold-on-grey: #ffff00;
-  --green-on-grey: #00ff00;
-  --cyan-on-grey: #00ffff;
-  --pink-on-grey: #ff00ff;
-  --amber-on-grey: #ffff00;
-  --red-on-grey: #ff0000;
-  --common-on-grey: #ffffff;
-  --blue-on-grey: #00ffff;
-  --text-primary: #ffffff;
-  --text-secondary: #ffffff;
-  --text-muted: #ffff00;
-  color: #ffffff;
-}
-
-[data-theme="high-contrast"] .win-btn {
-  color: #ffffff;
-  border: 1px solid #ffffff;
-}
-
-[data-theme="high-contrast"] .win98-titlebar {
-  background: #ffff00;
-  color: #000000;
-}
-
 * {
   margin: 0;
   padding: 0;

@@ -118,7 +118,7 @@ function AddTokenButton() {
         method: 'wallet_watchAsset',
         params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
       });
-    }} style={{ fontSize: '10px', padding: '2px 8px', fontFamily: "'VT323', monospace" }}>
+    }} style={{ fontSize: '13px', padding: '4px 12px', fontFamily: "'VT323', monospace" }}>
       Add $NXT to MetaMask
     </button>
   );
@@ -638,17 +638,17 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
         <AddTokenButton />
       </div>
 
-      {/* Summary stats — secondary */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-        <div className="stat-box win-panel">
-          <div className="stat-label">Total Spent</div>
-          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
-          <div className="stat-label">$NXT</div>
+      {/* Summary stats — secondary, smaller */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', padding: '4px 8px' }}>
+        <div className="stat-box win-panel" style={{ padding: '3px 6px' }}>
+          <div className="stat-label" style={{ fontSize: '9px' }}>Total Spent</div>
+          <div className="stat-value" style={{ color: 'var(--red-on-grey)', fontSize: '13px' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
+          <div className="stat-label" style={{ fontSize: '9px' }}>$NXT</div>
         </div>
-        <div className="stat-box win-panel">
-          <div className="stat-label">Total Earned</div>
-          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>{formatNumber(summary.balance_total_earned)}</div>
-          <div className="stat-label">$NXT</div>
+        <div className="stat-box win-panel" style={{ padding: '3px 6px' }}>
+          <div className="stat-label" style={{ fontSize: '9px' }}>Total Earned</div>
+          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)', fontSize: '13px' }}>{formatNumber(summary.balance_total_earned)}</div>
+          <div className="stat-label" style={{ fontSize: '9px' }}>$NXT</div>
         </div>
       </div>
 
