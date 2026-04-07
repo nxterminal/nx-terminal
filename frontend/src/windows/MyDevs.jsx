@@ -655,6 +655,7 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
       title={title}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        width: '100%',
         padding: '7px 2px',
         fontFamily: "'VT323', monospace",
         fontSize: '14px',
@@ -1024,7 +1025,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr) 2fr', gap: '4px', marginBottom: '4px', width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '4px', width: '100%' }}>
           <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
