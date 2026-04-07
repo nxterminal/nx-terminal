@@ -610,7 +610,35 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-      {/* Summary stats */}
+      {/* Balance header: In-Game + Wallet — prominent */}
+      <div style={{
+        display: 'flex', gap: '12px', padding: '10px 10px 6px', margin: '4px 8px 0',
+        fontFamily: "'VT323', monospace", background: 'var(--terminal-bg)',
+        border: '1px solid var(--border-dark)',
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '12px', color: '#ffff00' }}>IN-GAME BALANCE</div>
+          <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#ffff00' }}>
+            {formatNumber(summary.balance_claimable)} $NXT
+          </div>
+          <div style={{ fontSize: '10px', color: '#666' }}>(earned by devs)</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '12px', color: '#888' }}>WALLET BALANCE</div>
+          <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
+            {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
+          </div>
+          <div style={{ fontSize: '10px', color: '#666' }}>(in MetaMask)</div>
+        </div>
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', margin: '0 8px',
+        fontFamily: "'VT323', monospace",
+      }}>
+        <AddTokenButton />
+      </div>
+
+      {/* Summary stats — secondary */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Total Spent</div>
@@ -622,34 +650,6 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
           <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>{formatNumber(summary.balance_total_earned)}</div>
           <div className="stat-label">$NXT</div>
         </div>
-      </div>
-
-      {/* Balance header: In-Game + Wallet */}
-      <div style={{
-        display: 'flex', gap: '12px', padding: '8px 8px 4px', margin: '4px 8px 0',
-        fontFamily: "'VT323', monospace", background: 'var(--terminal-bg)',
-        border: '1px solid var(--border-dark)',
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>IN-GAME BALANCE</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
-            {formatNumber(summary.balance_claimable)} $NXT
-          </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>(earned by devs)</div>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>WALLET BALANCE</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
-            {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
-          </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>(in MetaMask)</div>
-        </div>
-      </div>
-      <div style={{
-        display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', margin: '0 8px',
-        fontFamily: "'VT323', monospace",
-      }}>
-        <AddTokenButton />
       </div>
 
       {/* Salary info + Add token */}

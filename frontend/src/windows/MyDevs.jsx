@@ -742,7 +742,7 @@ function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'\u2694\uFE0F'} label="HACK \u25BE"
+      <StoneBtn emoji={'\uD83D\uDD13'} label="HACK \u25BE"
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
         title="Hack: choose Mainframe (15 $NXT, safe) or Player (25 $NXT, risky)" />
