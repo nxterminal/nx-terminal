@@ -52,6 +52,11 @@ def _run_auto_migrations():
                 cur.execute("UPDATE missions SET reward_nxt = 80 WHERE difficulty = 'hard' AND reward_nxt < 80")
                 cur.execute("UPDATE missions SET reward_nxt = 150 WHERE difficulty = 'extreme' AND reward_nxt < 150")
                 cur.execute("UPDATE missions SET reward_nxt = 250 WHERE difficulty = 'legendary' AND reward_nxt < 250")
+                # Performance indexes for scale
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_dev_id ON chat_messages(dev_id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_player_read ON notifications(player_address, read, created_at DESC)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_player_missions_wallet_dev ON player_missions(wallet_address, dev_token_id)")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
