@@ -1242,7 +1242,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             </span>
             <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
             <span style={{
-              color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+              color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#2d8a2d' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
               textTransform: 'uppercase', fontWeight: 'bold',
             }}>{dev.status || 'active'}</span>
           </div>

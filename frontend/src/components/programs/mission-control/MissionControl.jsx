@@ -244,7 +244,11 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
             }}
               onMouseEnter={e => canSelect && !isFull && (e.currentTarget.style.borderColor = isSelected ? '#44ff44' : T.cyan)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = isSelected ? '#44ff44' : T.cardBorder)}
-              onClick={() => canSelect && !busy && handleDevClick(dev)}
+              onClick={() => {
+                if (busy) return;
+                if (isSelected) { toggleDev(dev); return; }
+                if (canSelect && !isFull) handleDevClick(dev);
+              }}
             >
               <DevAvatar dev={dev} size={48} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -399,7 +403,7 @@ function MissionCard({ mission, onSelectDev, devCount }) {
 
   return (
     <div style={{
-      padding: '16px', marginBottom: '10px',
+      padding: '10px 12px', marginBottom: '6px',
       background: T.card,
       border: `1px solid ${hovered ? diffColor : T.cardBorder}`,
       transition: 'border-color 0.2s',
@@ -408,37 +412,37 @@ function MissionCard({ mission, onSelectDev, devCount }) {
       onMouseLeave={() => setHovered(false)}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, paddingRight: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '16px', color: T.cyan }}>
+        <div style={{ flex: 1, paddingRight: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', color: T.cyan }}>
               {mission.title}
             </span>
             <DiffBadge difficulty={mission.difficulty} />
           </div>
-          <div style={{ fontSize: '13px', color: '#aaa', marginTop: '4px', lineHeight: '1.3', fontStyle: 'italic' }}>
+          <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px', lineHeight: '1.3', fontStyle: 'italic' }}>
             "{mission.description}"
           </div>
-          <div style={{ fontSize: '12px', color: T.textMuted, marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <span>Duration: {mission.duration_hours}h</span>
+          <div style={{ fontSize: '11px', color: T.textMuted, marginTop: '4px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <span>{mission.duration_hours}h</span>
             {mission.min_stat && (
-              <span>Requires: {STAT_NAMES[mission.min_stat] || mission.min_stat} &ge; {mission.min_stat_value}</span>
+              <span>{STAT_NAMES[mission.min_stat] || mission.min_stat} &ge; {mission.min_stat_value}</span>
             )}
-            {!mission.min_stat && <span>Any dev can go</span>}
+            {!mission.min_stat && <span>Any dev</span>}
             {mission.min_devs_owned > 1 && (
-              <span>Requires: {mission.min_devs_owned}+ devs</span>
+              <span>{mission.min_devs_owned}+ devs owned</span>
             )}
             {mission.required_devs > 1 && (
               <span style={{ color: '#ffaa00', fontWeight: 'bold' }}>Send: {mission.required_devs} devs</span>
             )}
           </div>
         </div>
-        <div style={{ textAlign: 'right', minWidth: 130, flexShrink: 0 }}>
-          <div style={{ fontWeight: 'bold', color: T.gold, fontSize: '16px' }}>
+        <div style={{ textAlign: 'right', minWidth: 110, flexShrink: 0 }}>
+          <div style={{ fontWeight: 'bold', color: T.gold, fontSize: '14px' }}>
             +{mission.reward_nxt} $NXT
           </div>
           <button className="win-btn" onClick={() => onSelectDev(mission)}
             style={{
-              fontSize: '14px', padding: '10px 20px', marginTop: '8px', fontWeight: 'bold',
+              fontSize: '13px', padding: '6px 14px', marginTop: '6px', fontWeight: 'bold',
               background: '#00332a', color: T.cyan, border: `1px solid ${T.cyan}`,
               cursor: 'pointer', borderRadius: '2px',
             }}>
@@ -460,13 +464,13 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
 
   return (
     <div style={{
-      padding: '16px', marginBottom: '10px',
+      padding: '10px 12px', marginBottom: '6px',
       background: T.card,
       border: completed ? `1px solid ${T.greenMid}` : `1px solid ${T.cardBorder}`,
     }}>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* Dev avatar */}
-        <DevAvatar dev={{ ipfs_hash: null, name: mission.dev_name }} size={48} />
+        <DevAvatar dev={{ ipfs_hash: null, name: mission.dev_name }} size={40} />
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -673,13 +677,13 @@ export default function MissionControl() {
 
   return (
     <div style={{
-      padding: '12px', fontFamily: "'VT323', monospace", fontSize: '14px',
+      padding: '8px 10px', fontFamily: "'VT323', monospace", fontSize: '13px',
       height: '100%', overflow: 'auto',
       background: T.bg, color: T.text,
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '20px', color: T.cyan }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '18px', color: T.cyan }}>
           &gt; MISSION CONTROL
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -695,7 +699,7 @@ export default function MissionControl() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0px', marginBottom: '12px', borderBottom: `1px solid ${T.cardBorder}` }}>
+      <div style={{ display: 'flex', gap: '0px', marginBottom: '8px', borderBottom: `1px solid ${T.cardBorder}` }}>
         {[
           { key: 'available', label: 'Available' },
           { key: 'active', label: `Active${activeMissions.length ? ` (${activeMissions.length})` : ''}` },
@@ -704,7 +708,7 @@ export default function MissionControl() {
           <button key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              fontSize: '14px', padding: '8px 18px',
+              fontSize: '13px', padding: '5px 14px',
               fontWeight: tab === t.key ? 'bold' : 'normal',
               color: tab === t.key ? T.cyan : T.textMuted,
               background: 'transparent', border: 'none',
@@ -772,9 +776,9 @@ export default function MissionControl() {
             if (!group || group.length === 0) return null;
             const diffColor = DIFF_COLORS[diff];
             return (
-              <div key={diff} style={{ marginBottom: '14px' }}>
+              <div key={diff} style={{ marginBottom: '8px' }}>
                 <div style={{
-                  fontSize: '14px', fontWeight: 'bold', padding: '6px 10px', marginBottom: '8px',
+                  fontSize: '13px', fontWeight: 'bold', padding: '4px 8px', marginBottom: '4px',
                   color: diffColor, borderBottom: `1px solid ${diffColor}40`,
                   display: 'flex', alignItems: 'center', gap: '8px',
                 }}>
