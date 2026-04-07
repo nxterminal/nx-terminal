@@ -1,11 +1,9 @@
--- ============================================================
--- MIGRATION: Add caffeine, social, knowledge columns to devs
--- ============================================================
+-- Add vital stat columns: caffeine, social_vitality, knowledge
+-- These stats decay over time and are boosted by shop purchases
 
-ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine INTEGER DEFAULT 50 NOT NULL;
-ALTER TABLE devs ADD COLUMN IF NOT EXISTS social INTEGER DEFAULT 50 NOT NULL;
-ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge INTEGER DEFAULT 50 NOT NULL;
+ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50;
+ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50;
+ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50;
 
-UPDATE devs SET caffeine = 50 WHERE caffeine IS NULL;
-UPDATE devs SET social = 50 WHERE social IS NULL;
-UPDATE devs SET knowledge = 50 WHERE knowledge IS NULL;
+-- Initialize social_vitality from stat_social for existing devs
+UPDATE devs SET social_vitality = LEAST(100, GREATEST(15, stat_social)) WHERE social_vitality = 50;

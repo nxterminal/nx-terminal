@@ -359,29 +359,24 @@ export default function DevProfile({ devId }) {
         <div style={{ padding: '4px 6px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '10px', color: 'var(--text-muted, #888)', fontWeight: 'bold' }}>SHOP:</span>
           <button className="win-btn" onClick={() => doShopAction('coffee', '☕ Coffee')}
-            title={energyFull ? "Energy is full" : "☕ COFFEE: 5 $NXT → +2 energy"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            ☕ Coffee 5
-          </button>
-          <button className="win-btn" onClick={() => doShopAction('energy_drink', '🥤 Energy')}
-            title={energyFull ? "Energy is full" : "🥤 ENERGY DRINK: 12 $NXT → +5 energy"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🥤 Energy 12
+            title={energyFull ? "Energy is full" : "☕ Coffee: 3 $NXT → +25 caffeine"}
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            ☕ Coffee 3
           </button>
           <button className="win-btn" onClick={() => doShopAction('pizza', '🍔 Hamburger')}
-            title={energyFull ? "Energy is full" : "🍔 HAMBURGER: 25 $NXT → +7 energy"}
+            title={energyFull ? "Energy is full" : "🍔 Hamburger: 8 $NXT → +15 energy"}
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🍔 Hamburger 25
+            🍔 Hamburger 8
           </button>
           <button className="win-btn" onClick={() => doShopAction('mega_meal', '🍔 MegaMeal')}
-            title={energyFull ? "Energy is full" : "🍔 MEGA MEAL: 50 $NXT → full energy"}
+            title={energyFull ? "Energy is full" : "🍔 MegaMeal: 20 $NXT → +30 energy"}
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🍔 MegaMeal 50
+            🍔 MegaMeal 20
           </button>
           <button className="win-btn" onClick={() => doShopAction('pc_repair', '🔧 PC Repair')}
-            title={"🔧 REPAIR PC: 10 $NXT → restore PC health to 100%"}
+            title={"🔧 PC Repair: 8 $NXT → restore PC health to 100%"}
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
-            🔧 Repair 10
+            🔧 Repair 8
           </button>
           {shopMsg && (
             <span style={{ fontSize: '10px', color: shopMsg.color, fontWeight: 'bold' }}>{shopMsg.text}</span>

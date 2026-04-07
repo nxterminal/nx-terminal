@@ -17,23 +17,63 @@ router = APIRouter()
 # ── Shop Items (defined in code, not DB) ─────────────────────
 
 SHOP_ITEMS = {
-    # ── Original items (rebalanced prices) ──────────────────
-    "energy_drink": {
-        "name": "Energy Drink",
-        "description": "+5 energy instantly",
-        "cost_nxt": 12,
-        "effect": {"type": "energy_boost", "value": 5},
+    # ── Food & Drinks ───────────────────────────────────────
+    "coffee": {
+        "name": "Coffee",
+        "description": "Hot coffee boosts caffeine by 25",
+        "cost_nxt": 3,
+        "effect": {"type": "caffeine_boost", "value": 25},
+    },
+    "pizza": {
+        "name": "Hamburger",
+        "description": "Hamburger boosts energy by 15",
+        "cost_nxt": 8,
+        "effect": {"type": "energy_boost", "value": 15},
+    },
+    "mega_meal": {
+        "name": "MegaMeal",
+        "description": "Premium meal boosts energy by 30",
+        "cost_nxt": 20,
+        "effect": {"type": "energy_boost", "value": 30},
+    },
+    # ── Maintenance & Fixes ─────────────────────────────────
+    "pc_repair": {
+        "name": "Run Diagnostic",
+        "description": "Full PC repair to 100%",
+        "cost_nxt": 8,
+        "effect": {"type": "pc_repair"},
+    },
+    "fix_bugs": {
+        "name": "Bug Fix",
+        "description": "Fix 8 bugs (costs 5 energy, +3 knowledge)",
+        "cost_nxt": 0,
+        "cost_energy": 5,
+        "effect": {"type": "fix_bugs", "value": 8},
     },
     "mood_reset": {
         "name": "Mood Reset",
         "description": "Reset mood to neutral",
-        "cost_nxt": 10,
+        "cost_nxt": 5,
         "effect": {"type": "mood_reset", "value": "neutral"},
     },
+    # ── Social & Knowledge ──────────────────────────────────
+    "team_lunch": {
+        "name": "Team Lunch",
+        "description": "Team lunch boosts social by 20",
+        "cost_nxt": 6,
+        "effect": {"type": "social_boost", "value": 20},
+    },
+    "read_docs": {
+        "name": "Read Docs",
+        "description": "Read documentation, +15 knowledge",
+        "cost_nxt": 4,
+        "effect": {"type": "knowledge_boost", "value": 15},
+    },
+    # ── Utility ─────────────────────────────────────────────
     "code_boost": {
         "name": "Code Boost",
         "description": "+15% code quality for next protocol",
-        "cost_nxt": 25,
+        "cost_nxt": 15,
         "effect": {"type": "code_quality_boost", "value": 15},
     },
     "sabotage_bug": {
@@ -46,54 +86,14 @@ SHOP_ITEMS = {
     "teleporter": {
         "name": "Teleporter",
         "description": "Move your dev to any location (no energy)",
-        "cost_nxt": 15,
+        "cost_nxt": 10,
         "effect": {"type": "free_move"},
     },
     "reputation_boost": {
         "name": "Reputation Boost",
         "description": "+10 reputation",
-        "cost_nxt": 20,
-        "effect": {"type": "reputation_boost", "value": 10},
-    },
-    # ── Food & Drinks (energy) ──────────────────────────────
-    "coffee": {
-        "name": "Coffee",
-        "description": "+25 caffeine. Fuel for the grind.",
-        "cost_nxt": 5,
-        "effect": {"type": "caffeine_boost", "value": 25},
-    },
-    "energy_drink_small": {
-        "name": "Energy Drink XL",
-        "description": "+5 energy. Code harder.",
         "cost_nxt": 12,
-        "effect": {"type": "energy_boost", "value": 5},
-    },
-    "pizza": {
-        "name": "Hamburger",
-        "description": "+7 energy. The developer's staple.",
-        "cost_nxt": 25,
-        "effect": {"type": "energy_boost", "value": 7},
-    },
-    "mega_meal": {
-        "name": "MegaMeal",
-        "description": "+10 energy. Full restore.",
-        "cost_nxt": 50,
-        "effect": {"type": "energy_boost", "value": 10},
-    },
-    # ── PC Maintenance ──────────────────────────────────────
-    "pc_repair": {
-        "name": "Run Diagnostic",
-        "description": "Restore PC health to 100%",
-        "cost_nxt": 10,
-        "effect": {"type": "pc_repair"},
-    },
-    # ── Bug Fixing ──────────────────────────────────────────
-    "fix_bugs": {
-        "name": "Bug Fix",
-        "description": "Fix bugs in your code. Costs energy.",
-        "cost_nxt": 0,
-        "cost_energy": 10,
-        "effect": {"type": "fix_bugs", "value": 5},
+        "effect": {"type": "reputation_boost", "value": 10},
     },
     # ── Training Courses ────────────────────────────────────
     "train_hacking": {
@@ -116,7 +116,7 @@ SHOP_ITEMS = {
     },
 }
 
-COFFEE_ITEMS = {"energy_drink_small", "energy_drink", "pizza", "mega_meal"}
+COFFEE_ITEMS = {"coffee", "pizza", "mega_meal"}
 
 
 @router.get("")
@@ -145,7 +145,7 @@ async def buy_item(req: PurchaseRequest):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, energy, max_energy, training_course FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, energy, max_energy, training_course, bugs_shipped, social_vitality, knowledge FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.target_dev_id,)
             )
             dev = cur.fetchone()
@@ -186,43 +186,73 @@ async def buy_item(req: PurchaseRequest):
             )
             purchase = cur.fetchone()
 
-            # Apply immediate effects
+            # Apply immediate effects and build changes list for frontend animations
+            changes = []
+            # Record cost change
+            if cost_energy > 0:
+                changes.append({"stat": "energy", "amount": -cost_energy, "type": "spend"})
+            elif item["cost_nxt"] > 0:
+                changes.append({"stat": "$NXT", "amount": -item["cost_nxt"], "type": "spend"})
+
             if effect["type"] == "energy_boost":
                 cur.execute(
                     "UPDATE devs SET energy = LEAST(energy + %s, max_energy) WHERE token_id = %s",
                     (effect["value"], req.target_dev_id)
                 )
-                # Increment coffee counter for food items
                 if req.item_id in COFFEE_ITEMS:
                     cur.execute(
                         "UPDATE devs SET coffee_count = coffee_count + 1 WHERE token_id = %s",
                         (req.target_dev_id,)
                     )
+                changes.append({"stat": "energy", "amount": effect["value"], "type": "gain"})
             elif effect["type"] == "caffeine_boost":
                 cur.execute(
                     "UPDATE devs SET caffeine = LEAST(100, caffeine + %s), coffee_count = coffee_count + 1 WHERE token_id = %s",
                     (effect["value"], req.target_dev_id)
                 )
+                changes.append({"stat": "caffeine", "amount": effect["value"], "type": "gain"})
             elif effect["type"] == "mood_reset":
                 cur.execute(
                     "UPDATE devs SET mood = %s WHERE token_id = %s",
                     (effect["value"], req.target_dev_id)
                 )
+                changes.append({"stat": "mood", "amount": 0, "type": "gain"})
             elif effect["type"] == "reputation_boost":
                 cur.execute(
                     "UPDATE devs SET reputation = reputation + %s WHERE token_id = %s",
                     (effect["value"], req.target_dev_id)
                 )
+                changes.append({"stat": "reputation", "amount": effect["value"], "type": "gain"})
             elif effect["type"] == "pc_repair":
                 cur.execute(
                     "UPDATE devs SET pc_health = 100 WHERE token_id = %s",
                     (req.target_dev_id,)
                 )
+                changes.append({"stat": "pc", "amount": 100, "type": "gain"})
             elif effect["type"] == "fix_bugs":
+                bugs_to_fix = min(dev.get("bugs_shipped", 0), effect["value"])
+                knowledge_gain = 3
                 cur.execute(
-                    "UPDATE devs SET bugs_shipped = GREATEST(0, bugs_shipped - %s), bugs_fixed = COALESCE(bugs_fixed, 0) + %s WHERE token_id = %s",
-                    (effect["value"], effect["value"], req.target_dev_id)
+                    "UPDATE devs SET bugs_shipped = GREATEST(0, bugs_shipped - %s), "
+                    "bugs_fixed = COALESCE(bugs_fixed, 0) + %s, "
+                    "knowledge = LEAST(100, knowledge + %s) "
+                    "WHERE token_id = %s",
+                    (bugs_to_fix, bugs_to_fix, knowledge_gain, req.target_dev_id)
                 )
+                changes.append({"stat": "bugs", "amount": -bugs_to_fix, "type": "gain"})
+                changes.append({"stat": "knowledge", "amount": knowledge_gain, "type": "gain"})
+            elif effect["type"] == "social_boost":
+                cur.execute(
+                    "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) WHERE token_id = %s",
+                    (effect["value"], req.target_dev_id)
+                )
+                changes.append({"stat": "social", "amount": effect["value"], "type": "gain"})
+            elif effect["type"] == "knowledge_boost":
+                cur.execute(
+                    "UPDATE devs SET knowledge = LEAST(100, knowledge + %s) WHERE token_id = %s",
+                    (effect["value"], req.target_dev_id)
+                )
+                changes.append({"stat": "knowledge", "amount": effect["value"], "type": "gain"})
             elif effect["type"] == "training":
                 ends_at = datetime.now(timezone.utc) + timedelta(hours=effect["hours"])
                 cur.execute(
@@ -234,76 +264,13 @@ async def buy_item(req: PurchaseRequest):
             cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.target_dev_id,))
             updated_dev = cur.fetchone()
 
-    result = {
+    return {
         "purchase_id": purchase["id"],
         "item": req.item_id,
         "cost": item["cost_nxt"],
         "dev": dev["name"],
         "status": "applied",
-        "updated_dev": dict(updated_dev) if updated_dev else None,
-    }
-    if cost_energy > 0:
-        result["energy_cost"] = cost_energy
-    return result
-
-
-# ── Fix Bug ────────────────────────────────────────────────
-
-FIX_BUG_COST = 5  # flat NXT per bug
-
-class FixBugRequest(BaseModel):
-    player_address: str
-    dev_id: int
-
-
-@router.post("/fix-bug")
-async def fix_bug(req: FixBugRequest):
-    """Fix one bug on a dev. Costs 5 $NXT per bug."""
-    addr = validate_wallet(req.player_address)
-    shop_limiter.check(f"fixbug:{addr}")
-
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, bugs_shipped FROM devs WHERE token_id = %s FOR UPDATE",
-                (req.dev_id,)
-            )
-            dev = cur.fetchone()
-            if not dev:
-                raise HTTPException(404, "Dev not found")
-            if dev["owner_address"].lower() != addr:
-                raise HTTPException(403, "You don't own this dev")
-            if dev["bugs_shipped"] <= 0:
-                raise HTTPException(400, "No bugs to fix")
-            if dev["balance_nxt"] < FIX_BUG_COST:
-                raise HTTPException(400, f"Not enough $NXT. Need {FIX_BUG_COST}, have {dev['balance_nxt']}")
-
-            cur.execute(
-                "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s, "
-                "bugs_shipped = bugs_shipped - 1, bugs_fixed = COALESCE(bugs_fixed, 0) + 1 "
-                "WHERE token_id = %s",
-                (FIX_BUG_COST, FIX_BUG_COST, req.dev_id)
-            )
-
-            cur.execute(
-                """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
-                   VALUES (%s, %s, %s, 'FIX_BUG', %s::jsonb, 0, %s)""",
-                (req.dev_id, dev["name"], "unknown",
-                 json.dumps({"event": "bug_fixed", "remaining": dev["bugs_shipped"] - 1}),
-                 FIX_BUG_COST)
-            )
-
-            # Return updated dev
-            cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.dev_id,))
-            updated_dev = cur.fetchone()
-
-    remaining = dev["bugs_shipped"] - 1
-    return {
-        "dev": dev["name"],
-        "cost": FIX_BUG_COST,
-        "bugs_remaining": remaining,
-        "status": "fixed",
-        "message": f"Bug fixed! {remaining} bug{'s' if remaining != 1 else ''} remaining." if remaining > 0 else "All bugs fixed!",
+        "changes": changes,
         "updated_dev": dict(updated_dev) if updated_dev else None,
     }
 
@@ -347,10 +314,13 @@ async def graduate_training(req: GraduateRequest):
             stat = training_item["effect"]["stat"]
             bonus = training_item["effect"]["bonus"]
 
-            # Apply stat bonus permanently and clear training
+            # Apply stat bonus permanently, clear training, +10 knowledge bonus
+            knowledge_bonus = 10
             cur.execute(
-                f"UPDATE devs SET {stat} = LEAST({stat} + %s, 100), training_course = NULL, training_ends_at = NULL WHERE token_id = %s",
-                (bonus, req.dev_id)
+                f"UPDATE devs SET {stat} = LEAST({stat} + %s, 100), "
+                "knowledge = LEAST(100, knowledge + %s), "
+                "training_course = NULL, training_ends_at = NULL WHERE token_id = %s",
+                (bonus, knowledge_bonus, req.dev_id)
             )
 
     return {
@@ -358,6 +328,10 @@ async def graduate_training(req: GraduateRequest):
         "stat": stat,
         "bonus": bonus,
         "status": "graduated",
+        "changes": [
+            {"stat": stat.replace("stat_", ""), "amount": bonus, "type": "gain"},
+            {"stat": "knowledge", "amount": knowledge_bonus, "type": "gain"},
+        ],
     }
 
 
@@ -385,7 +359,7 @@ async def hack_raid(req: HackRequest):
         with conn.cursor() as cur:
             # Lock attacker
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.attacker_dev_id,)
             )
             attacker = cur.fetchone()
@@ -403,6 +377,10 @@ async def hack_raid(req: HackRequest):
                 if now < cooldown_end:
                     remaining = cooldown_end - now
                     raise HTTPException(400, f"Hack on cooldown. Available in {int(remaining.total_seconds() // 3600)}h.")
+
+            # Check social threshold
+            if attacker.get("social_vitality", 50) < 15:
+                raise HTTPException(400, "Social too low to hack. Your dev has no street cred.")
 
             # Find random target from another corporation
             cur.execute(
@@ -453,7 +431,21 @@ async def hack_raid(req: HackRequest):
                          f"{attacker['name']} ({attacker['corporation']}) stole {steal_amount} $NXT from {target['name']}.",
                          target["token_id"])
                     )
-                result = {"success": True, "stolen": steal_amount, "target": target["name"], "target_corp": target["corporation"]}
+                # BONUS: Social boosts on successful hack
+                social_gain = 5
+                cur.execute(
+                    "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) WHERE token_id = %s",
+                    (social_gain, req.attacker_dev_id)
+                )
+                result = {
+                    "success": True, "stolen": steal_amount,
+                    "target": target["name"], "target_corp": target["corporation"],
+                    "changes": [
+                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                        {"stat": "$NXT", "amount": steal_amount, "type": "gain"},
+                        {"stat": "social", "amount": social_gain, "type": "gain"},
+                    ],
+                }
             else:
                 # Failed — already lost HACK_COST
                 cur.execute(
@@ -464,7 +456,13 @@ async def hack_raid(req: HackRequest):
                                  "target_corp": target["corporation"]}),
                      HACK_COST)
                 )
-                result = {"success": False, "lost": HACK_COST, "target": target["name"], "target_corp": target["corporation"]}
+                result = {
+                    "success": False, "lost": HACK_COST,
+                    "target": target["name"], "target_corp": target["corporation"],
+                    "changes": [
+                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                    ],
+                }
 
             # Record in shop_purchases for tracking
             cur.execute(
