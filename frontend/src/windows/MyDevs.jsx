@@ -578,18 +578,135 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
   );
 }
 
+// ── Vital Bar (Sims-style, big) ───────────────────────────
+function VitalBar({ icon, label, value, max = 100, inverse = false }) {
+  const v = value ?? 0;
+  const m = max || 100;
+  const pct = Math.max(0, Math.min(100, (v / m) * 100));
+  const color = inverse
+    ? (pct > 60 ? '#aa0000' : pct > 30 ? '#b8860b' : '#005500')
+    : (pct > 60 ? '#005500' : pct > 30 ? '#b8860b' : '#aa0000');
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+      <span style={{ fontSize: '11px', flexShrink: 0, width: '14px', textAlign: 'center' }}>{icon}</span>
+      <span style={{
+        fontSize: '9px', fontWeight: 'bold', color: 'var(--text-muted, #999)',
+        width: '24px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '-0.3px',
+      }}>{label}</span>
+      <div style={{
+        flex: 1, height: '8px', background: 'var(--terminal-bg, #0a0a14)',
+        border: '1px solid var(--border-dark, #333)', borderRadius: '1px',
+        minWidth: 0, overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color,
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+      <span style={{
+        fontSize: '9px', fontWeight: 'bold', color,
+        fontFamily: "'VT323', monospace", width: '30px', textAlign: 'right', flexShrink: 0,
+      }}>{v}/{m}</span>
+    </div>
+  );
+}
+
+// ── Skill Radar (SVG hexagon) ─────────────────────────────
+const RADAR_LABELS = ['COD', 'HAK', 'TRD', 'SOC', 'END', 'LCK'];
+const RADAR_SIZE = 130;
+const RADAR_CX = RADAR_SIZE / 2;
+const RADAR_CY = RADAR_SIZE / 2;
+const RADAR_R = 48;
+
+function radarPoint(index, value, maxR = RADAR_R) {
+  const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+  const r = (Math.min(value || 0, 100) / 100) * maxR;
+  return [RADAR_CX + r * Math.cos(angle), RADAR_CY + r * Math.sin(angle)];
+}
+
+function SkillRadar({ stats }) {
+  const values = [
+    stats.stat_coding || 0, stats.stat_hacking || 0, stats.stat_trading || 0,
+    stats.stat_social || 0, stats.stat_endurance || 0, stats.stat_luck || 0,
+  ];
+  const gridLevels = [25, 50, 75, 100];
+
+  return (
+    <svg width={RADAR_SIZE} height={RADAR_SIZE} viewBox={`0 0 ${RADAR_SIZE} ${RADAR_SIZE}`}
+      style={{ display: 'block', flexShrink: 0 }}>
+      {/* Grid hexagons */}
+      {gridLevels.map(level => {
+        const pts = Array.from({ length: 6 }, (_, i) => radarPoint(i, level).join(',')).join(' ');
+        return <polygon key={level} points={pts}
+          fill="none" stroke="var(--border-dark, #333)" strokeWidth="0.5" opacity="0.5" />;
+      })}
+      {/* Axis lines */}
+      {Array.from({ length: 6 }, (_, i) => {
+        const [x, y] = radarPoint(i, 100);
+        return <line key={i} x1={RADAR_CX} y1={RADAR_CY} x2={x} y2={y}
+          stroke="var(--border-dark, #333)" strokeWidth="0.5" opacity="0.4" />;
+      })}
+      {/* Data polygon */}
+      <polygon
+        points={values.map((v, i) => radarPoint(i, v).join(',')).join(' ')}
+        fill="var(--terminal-green, #33ff33)" fillOpacity="0.15"
+        stroke="var(--terminal-green, #33ff33)" strokeWidth="1.5" strokeOpacity="0.8"
+      />
+      {/* Dots on each vertex */}
+      {values.map((v, i) => {
+        const [x, y] = radarPoint(i, v);
+        return <circle key={i} cx={x} cy={y} r="2"
+          fill="var(--terminal-green, #33ff33)" opacity="0.9" />;
+      })}
+      {/* Labels */}
+      {RADAR_LABELS.map((lbl, i) => {
+        const [x, y] = radarPoint(i, 100, RADAR_R + 14);
+        return <text key={lbl} x={x} y={y}
+          textAnchor="middle" dominantBaseline="central"
+          style={{
+            fontSize: '8px', fontWeight: 'bold', fontFamily: "'VT323', monospace",
+            fill: 'var(--text-muted, #888)',
+          }}>{lbl}</text>;
+      })}
+    </svg>
+  );
+}
+
+// ── Action Button ─────────────────────────────────────────
+function ActionBtn({ icon, label, onClick, disabled, title, accent = '#888' }) {
+  return (
+    <button
+      className="win-btn"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        fontSize: '10px', padding: '3px 2px', fontWeight: 'bold',
+        color: disabled ? '#666' : accent,
+        border: `1px solid ${disabled ? '#555' : accent}`,
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+        whiteSpace: 'nowrap', minWidth: 0,
+      }}
+    >
+      <span style={{ fontSize: '11px' }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
-  const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   const energyHigh = energyPct >= 70;
   const onMission = dev.status === 'on_mission';
   const missionCompleted = onMission && mission && new Date(mission.ends_at) <= new Date();
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false); // synchronous guard against double-clicks
+  const busyRef = useRef(false);
   const [showFundModal, setShowFundModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
@@ -606,6 +723,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (msg) return { text: msg, color: '#aa0000' };
     return { text: 'Failed', color: '#aa0000' };
   };
+
+  // Vital stats — use real fields, fallback to defaults for new stats (TODO: connect to backend)
+  const pcHealth = dev.pc_health ?? 100;
+  const bugsVal = dev.bugs_shipped ?? 0;
+  const bugsMax = 20; // visual max for bugs bar
+  const knowledge = dev.knowledge ?? 50;
+  const social = dev.social ?? (dev.stat_social || 50);
+  const caffeine = dev.caffeine ?? Math.min(100, (dev.coffee_count || 0) * 10 + 30);
 
   const doShopAction = async (e, itemId, label) => {
     e.stopPropagation();
@@ -679,9 +804,6 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     setTimeout(() => setActionMsg(null), 3000);
   };
 
-  const pcHealth = dev.pc_health ?? 100;
-  const pcColor = pcHealth > 70 ? '#005500' : pcHealth >= 40 ? '#b8860b' : '#aa0000';
-
   const doClaimMission = async (e) => {
     e.stopPropagation();
     if (!mission || !lockBusy()) return;
@@ -702,211 +824,147 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       className="win-raised"
       onClick={onClick}
       style={{
-        display: 'flex', gap: '10px', padding: '8px',
-        cursor: 'pointer', marginBottom: '4px',
+        padding: '8px', cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
         position: 'relative',
         filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
         opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
-      {/* Left column: Avatar + Action buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 80 }}>
+      {/* Row 1: Avatar + Identity */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
         <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
-
-        {address && !dev._fetchFailed && !onMission && (
-          <>
-            {/* Food buttons — disabled when energy >= 70% */}
-            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +3 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                ☕5
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +7 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                🍕25
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → +10 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                🍔50
-              </button>
-            </div>
-            {/* Energy status indicator */}
-            <span style={{
-              fontSize: '8px', fontWeight: 'bold', textAlign: 'center',
-              color: energyPct >= 70 ? '#005500' : energyPct >= 30 ? '#b8860b' : '#aa0000',
-              animation: energyPct < 30 ? 'blink 1s step-end infinite' : 'none',
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+          {dev._fetchFailed && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '2px 6px', marginBottom: '2px',
+              background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
+              fontSize: '10px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
             }}>
-              {energyPct >= 70 ? 'ENERGY OK' : energyPct >= 30 ? 'LOW ENERGY' : 'CRITICAL'}
-            </span>
-            {/* Hack + Repair row */}
-            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button className="win-btn" onClick={doHack}
-                title={"Spend 15 $NXT to hack a rival. ~50% success."}
-                style={{ fontSize: '9px', padding: '1px 4px', border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy}>
-                ⚡Hack 15
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
-                title={"🔧 REPAIR PC: 10 $NXT → restore PC to 100%"}
-                style={{
-                  fontSize: '9px', padding: '1px 4px',
-                  border: pcHealth < 40 ? '2px solid #aa0000' : pcHealth <= 70 ? '1px solid #b8860b' : undefined,
-                  color: pcHealth < 40 ? '#aa0000' : undefined,
-                  fontWeight: pcHealth < 40 ? 'bold' : undefined,
-                  animation: pcHealth < 40 ? 'blink 1s step-end infinite' : 'none',
-                }} disabled={busy}>
-                🔧PC {pcHealth}%{pcHealth < 40 ? ' CRITICAL' : pcHealth <= 70 ? ' ⚠' : ''}
-              </button>
+              [!] Profile loading from chain...
+              <button className="win-btn"
+                onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
+                style={{ fontSize: '9px', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
             </div>
-            {/* Bugs — fix button when bugs > 0 */}
-            {dev.bugs_shipped > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '9px', color: '#aa0000', fontWeight: 'bold' }}>
-                  🐛 BUGS: {dev.bugs_shipped}
-                </span>
-                <button className="win-btn" onClick={doFixBug}
-                  title={`Fix 1 bug for 5 $NXT (${dev.bugs_shipped} remaining)`}
-                  style={{
-                    fontSize: '8px', padding: '0 4px', fontWeight: 'bold',
-                    color: '#005500', border: '1px solid #005500',
-                  }} disabled={busy}>
-                  🔧 Fix: 5 $NXT
-                </button>
-              </div>
+          )}
+          {/* Name + Archetype + Rarity */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>{dev.name}</span>
+            <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>[{dev.archetype}]</span>
+            {dev.rarity_tier && dev.rarity_tier !== 'common' && (
+              <span style={{
+                fontSize: '8px', padding: '1px 4px', fontWeight: 'bold', textTransform: 'uppercase',
+                color: 'var(--gold-on-grey, #7a5c00)',
+                border: '1px solid var(--gold-on-grey, #7a5c00)', borderRadius: '2px',
+              }}>{dev.rarity_tier}</span>
             )}
-            {/* Fund + Transfer row */}
-            <div style={{ display: 'flex', gap: '2px', justifyContent: 'center', marginTop: '2px' }}>
-              <button className="win-btn" onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-                title="Deposit $NXT from wallet to this dev"
-                style={{ fontSize: '9px', padding: '1px 4px', color: '#0d47a1', fontWeight: 'bold' }} disabled={busy}>
-                🏦 FUND
-              </button>
-              {allDevs && allDevs.length > 1 && (
-                <button className="win-btn" onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
-                  title="Transfer $NXT to another dev"
-                  style={{ fontSize: '9px', padding: '1px 4px', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy || dev.balance_nxt <= 0}>
-                  💼 TRANSFER
-                </button>
-              )}
-            </div>
-          </>
+          </div>
+          {/* Corp | Species | Location | #Token */}
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
+            {dev.species && <span>| {dev.species}</span>}
+            {loc && <span>| {loc}</span>}
+            <span>| #{dev.token_id}</span>
+          </div>
+          {/* Status line */}
+          <div style={{ display: 'flex', gap: '8px', fontSize: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
+              {formatNumber(dev.balance_nxt)} $NXT
+            </span>
+            <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
+            <span style={{
+              color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+              textTransform: 'uppercase', fontWeight: 'bold',
+            }}>{dev.status || 'active'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Vital Stats + Skill Radar */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+        {/* Vital Bars — 2 columns */}
+        <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', alignContent: 'start' }}>
+          <VitalBar icon="\u26A1" label="NRG" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
+          <VitalBar icon="\uD83D\uDC1B" label="BUG" value={bugsVal} max={bugsMax} inverse />
+          <VitalBar icon="\uD83D\uDCBB" label="PC" value={pcHealth} max={100} />
+          <VitalBar icon="\uD83D\uDC65" label="SOC" value={social} max={100} />
+          <VitalBar icon="\uD83D\uDCDA" label="KNW" value={knowledge} max={100} />
+          <VitalBar icon="\u2615" label="CAF" value={caffeine} max={100} />
+        </div>
+        {/* Skill Radar */}
+        <SkillRadar stats={dev} />
+      </div>
+
+      {/* Row 3: Training status */}
+      {dev.training_course && (
+        <div style={{ fontSize: '9px', color: '#7a5c00', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          📚 Training: {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
+          {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
+            <button className="win-btn" onClick={doGraduate}
+              style={{ fontSize: '8px', padding: '0 4px' }} disabled={busy}>🎓 Graduate</button>
+          ) : dev.training_ends_at ? (
+            <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
+          ) : null}
+        </div>
+      )}
+
+      {/* Row 4: Action Buttons */}
+      {address && !dev._fetchFailed && !onMission && (
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+          <ActionBtn icon="☕" label={energyHigh ? 'OK' : '5'}
+            onClick={(e) => doShopAction(e, 'coffee', '☕')}
+            disabled={busy || energyHigh} accent="#005500"
+            title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +3 energy"} />
+          <ActionBtn icon="🍕" label="25"
+            onClick={(e) => doShopAction(e, 'pizza', '🍕')}
+            disabled={busy || energyHigh} accent="#b8860b"
+            title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +7 energy"} />
+          <ActionBtn icon="⚔️" label="HACK"
+            onClick={doHack} disabled={busy} accent="#aa5500"
+            title="Spend 15 $NXT to hack a rival. ~50% success." />
+          <ActionBtn icon="🔧" label={bugsVal > 0 ? `FIX(${bugsVal})` : 'FIX'}
+            onClick={doFixBug} disabled={busy || bugsVal <= 0} accent="#005500"
+            title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
+          <ActionBtn icon="💰" label="FUND"
+            onClick={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+            disabled={busy} accent="#0d47a1"
+            title="Deposit $NXT from wallet to this dev" />
+          {allDevs && allDevs.length > 1 && (
+            <ActionBtn icon="🔄" label="SEND"
+              onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
+              disabled={busy || dev.balance_nxt <= 0} accent="#7a5c00"
+              title="Transfer $NXT to another dev" />
+          )}
+        </div>
+      )}
+
+      {/* Action feedback */}
+      {actionMsg && (
+        <div style={{ fontSize: '10px', color: actionMsg.color, fontWeight: 'bold', marginBottom: '2px',
+          fontFamily: "'VT323', monospace" }}>
+          {actionMsg.text}
+        </div>
+      )}
+
+      {/* Row 5: Footer counters + prompt */}
+      <div style={{
+        display: 'flex', gap: '8px', fontSize: '9px',
+        color: 'var(--text-muted, #888)', marginBottom: address ? '2px' : 0,
+      }}>
+        {dev.coffee_count > 0 && <span>☕{dev.coffee_count}</span>}
+        {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
+        {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
+        {dev.last_action_type && (
+          <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
+            [{dev.last_action_type.replace(/_/g, ' ')}]
+          </span>
         )}
       </div>
 
-      {/* Right column: Info + Stats */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {dev._fetchFailed && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '2px 6px', marginBottom: '2px',
-            background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
-            fontSize: '10px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
-          }}>
-            [!] Profile loading from chain...
-            <button
-              className="win-btn"
-              onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
-              style={{ fontSize: '9px', padding: '0 4px', marginLeft: 'auto' }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-        {/* Name + Archetype + Rarity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>{dev.name}</span>
-          <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
-            [{dev.archetype}]
-          </span>
-          {dev.rarity_tier && dev.rarity_tier !== 'common' && (
-            <span style={{ fontSize: '9px', color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              {dev.rarity_tier}
-            </span>
-          )}
-        </div>
-
-        {/* Corp | Species | Location | #Token */}
-        <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
-          {dev.species && <span>| {dev.species}</span>}
-          {loc && <span>| {loc}</span>}
-          <span>| #{dev.token_id}</span>
-        </div>
-
-        {/* Stats bars */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: '2px' }}>
-          <StatBar label="COD" value={dev.stat_coding} />
-          <StatBar label="HAK" value={dev.stat_hacking} />
-          <StatBar label="TRD" value={dev.stat_trading} />
-          <StatBar label="SOC" value={dev.stat_social} />
-          <StatBar label="END" value={dev.stat_endurance} />
-          <StatBar label="LCK" value={dev.stat_luck} />
-        </div>
-
-        {/* Energy | $NXT | Mood | Status */}
-        <div style={{
-          display: 'flex', gap: '6px', fontSize: '10px', marginTop: '2px',
-          flexWrap: 'wrap', alignItems: 'center',
-          color: 'var(--text-secondary, #666)',
-        }}>
-          <span style={{ color: energyColor, fontWeight: 'bold' }}>
-            ⚡ ENERGY: {dev.energy ?? 0}/{dev.max_energy ?? 10}
-          </span>
-          <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
-            {formatNumber(dev.balance_nxt)} $NXT
-          </span>
-          <span>{dev.mood || '-'}</span>
-          <span style={{
-            color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
-            textTransform: 'uppercase', fontWeight: 'bold',
-          }}>
-            {dev.status || 'active'}
-          </span>
-        </div>
-
-        {/* Training status */}
-        {dev.training_course && (
-          <div style={{ fontSize: '9px', color: '#7a5c00', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            📚 Training: {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
-            {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
-              <button className="win-btn" onClick={doGraduate}
-                style={{ fontSize: '8px', padding: '0 4px' }} disabled={busy}>🎓 Graduate</button>
-            ) : dev.training_ends_at ? (
-              <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
-            ) : null}
-          </div>
-        )}
-
-        {/* Action feedback */}
-        {actionMsg && (
-          <div style={{ fontSize: '9px', color: actionMsg.color, fontWeight: 'bold', marginTop: '1px' }}>
-            {actionMsg.text}
-          </div>
-        )}
-
-        {/* Counters */}
-        <div style={{
-          display: 'flex', gap: '8px', fontSize: '9px', marginTop: '1px',
-          color: 'var(--text-muted, #888)',
-        }}>
-          {dev.coffee_count > 0 && <span>☕{dev.coffee_count}</span>}
-          {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
-          {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
-          {dev.last_action_type && (
-            <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
-              [{dev.last_action_type.replace(/_/g, ' ')}]
-            </span>
-          )}
-        </div>
-
-        {/* Quick prompt input */}
-        {address && (
-          <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
-        )}
-      </div>
+      {address && (
+        <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
+      )}
 
       {/* Fund / Transfer modals */}
       {showFundModal && (
@@ -916,7 +974,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />
       )}
 
-      {/* On Mission overlay — full-card centered (FIX 3+4) */}
+      {/* On Mission overlay */}
       {onMission && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -929,9 +987,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             fontSize: '16px', fontWeight: 'bold', color: '#ff4444',
             textTransform: 'uppercase', letterSpacing: '2px',
             textShadow: '0 0 6px rgba(255, 68, 68, 0.5)',
-          }}>
-            ON MISSION
-          </span>
+          }}>ON MISSION</span>
           {mission && (
             <>
               <span style={{ fontSize: '11px', color: '#ccc', maxWidth: '80%', textAlign: 'center' }}>
