@@ -97,6 +97,11 @@ async def get_claim_sync_status():
     }
 
 
+ADMIN_WALLETS = {
+    "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc",  # treasury
+}
+
+
 @router.post("/claim-sync/force")
 async def force_claim_sync(request: Request):
     """Force an immediate claim sync run (bypasses scheduler timer).
@@ -108,17 +113,24 @@ async def force_claim_sync(request: Request):
     try:
         from backend.engine.claim_sync import sync_claimable_balances
 
-        # Parse optional token_ids from request body
-        filter_ids = None
+        # Parse body
+        body = {}
         try:
-            body = await request.json()
-            if body and isinstance(body.get("token_ids"), list):
-                filter_ids = [int(t) for t in body["token_ids"]]
-                log.info("[CLAIM_SYNC] Manual force sync for %d specific devs", len(filter_ids))
-            else:
-                log.info("[CLAIM_SYNC] Manual force sync triggered via API (all devs)")
+            body = await request.json() or {}
         except Exception:
-            log.info("[CLAIM_SYNC] Manual force sync triggered via API (all devs)")
+            pass
+
+        # Auth: require admin wallet
+        wallet = (body.get("wallet_address") or body.get("wallet") or "").strip().lower()
+        if wallet not in ADMIN_WALLETS:
+            raise HTTPException(403, "Unauthorized: admin wallet required")
+
+        filter_ids = None
+        if isinstance(body.get("token_ids"), list):
+            filter_ids = [int(t) for t in body["token_ids"]]
+            log.info("[CLAIM_SYNC] Admin force sync for %d specific devs", len(filter_ids))
+        else:
+            log.info("[CLAIM_SYNC] Admin force sync triggered via API (all devs)")
 
         with get_db() as conn:
             # wait_for_receipt=False: return immediately after TX is sent

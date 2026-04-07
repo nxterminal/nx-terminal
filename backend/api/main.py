@@ -52,6 +52,11 @@ def _run_auto_migrations():
                 cur.execute("UPDATE missions SET reward_nxt = 80 WHERE difficulty = 'hard' AND reward_nxt < 80")
                 cur.execute("UPDATE missions SET reward_nxt = 150 WHERE difficulty = 'extreme' AND reward_nxt < 150")
                 cur.execute("UPDATE missions SET reward_nxt = 250 WHERE difficulty = 'legendary' AND reward_nxt < 250")
+                # Performance indexes for scale
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_dev_id ON chat_messages(dev_id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_player_read ON notifications(player_address, read, created_at DESC)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_player_missions_wallet_dev ON player_missions(wallet_address, dev_token_id)")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
@@ -61,7 +66,7 @@ def _run_auto_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("🚀 NX Terminal API starting...")
-    init_db_pool(minconn=2, maxconn=20)
+    init_db_pool(minconn=5, maxconn=50)
     _run_auto_migrations()
     await init_redis()
     log.info("✅ NX Terminal API ready")
@@ -81,6 +86,21 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# ── Global per-IP rate limit middleware ──────────────────
+from backend.api.rate_limit import global_ip_limiter  # noqa: E402
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Skip health check and WebSocket
+    path = request.url.path
+    if path in ("/health", "/ws/feed") or path.startswith("/metadata/"):
+        return await call_next(request)
+    client_ip = request.client.host if request.client else "unknown"
+    if not global_ip_limiter.check(client_ip):
+        return JSONResponse(status_code=429, content={"detail": "Rate limited. Try again shortly."})
+    return await call_next(request)
+
 
 # CORS — allow frontend
 app.add_middleware(
