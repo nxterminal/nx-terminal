@@ -606,7 +606,7 @@ function barColor(pct, inverse) {
   return '#cc0000';
 }
 
-// ── Vital Bar (Sims-style, Pixelify Sans labels) ────────
+// ── Vital Bar (Sims-style, stacked label/bar, Pixelify Sans) ──
 function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const v = value ?? 0;
   const m = max || 100;
@@ -615,45 +615,46 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
   const critical = (!inverse && pct < 15) || (inverse && pct > 75);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-      {/* Icon circle */}
-      <div style={{
-        width: '26px', height: '26px', borderRadius: '50%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: `2px solid ${color}`, background: 'rgba(0,0,0,0.3)',
-        flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
-      }}>
-        <StatIcon type={iconType} size={12} />
-      </div>
-      {/* Label + bar + value */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+      {/* Header row: icon + label ... value */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
-          fontSize: '10px', fontWeight: '600', color: '#aaa',
-          textTransform: 'uppercase', letterSpacing: '0.5px',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: '13px', fontWeight: '700', color: '#111',
           fontFamily: "'Pixelify Sans', 'VT323', monospace",
-        }}>{label}</span>
-        <div style={{
-          height: '10px', background: 'rgba(0,0,0,0.4)',
-          borderRadius: '3px', overflow: 'hidden',
         }}>
-          <div style={{
-            width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
-            transition: 'width 0.5s ease, background-color 0.5s ease',
-            animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
-          }} />
-        </div>
+          <span style={{
+            width: '26px', height: '26px', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `2px solid ${color}`, background: 'rgba(0,0,0,0.15)',
+            flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
+          }}>
+            <StatIcon type={iconType} size={13} />
+          </span>
+          {label}
+        </span>
+        <span style={{
+          fontSize: '13px', fontWeight: '700', color,
+          fontFamily: "'Pixelify Sans', 'VT323', monospace",
+          transition: 'color 0.5s',
+        }}>{v}</span>
       </div>
-      <span style={{
-        fontSize: '12px', fontWeight: '700', color,
-        fontFamily: "'Pixelify Sans', 'VT323', monospace",
-        width: '22px', textAlign: 'right', flexShrink: 0,
-        transition: 'color 0.5s',
-      }}>{v}</span>
+      {/* Bar */}
+      <div style={{
+        height: '14px', background: '#333',
+        borderRadius: '3px', overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color, borderRadius: '3px',
+          transition: 'width 0.5s ease, background-color 0.5s ease',
+          animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
+        }} />
+      </div>
     </div>
   );
 }
 
-// ── Stone Button (pixel art 3D grey, Pixelify Sans) ─────
+// ── Stone Button (pixel art 3D blue-grey, Pixelify Sans) ─
 function StoneBtn({ emoji, label, onClick, disabled, title }) {
   return (
     <button
@@ -661,29 +662,26 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
       disabled={disabled}
       title={title}
       style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-        padding: '5px 4px',
-        fontFamily: "'Pixelify Sans', 'Press Start 2P', monospace",
-        fontSize: '11px', fontWeight: '600',
-        textTransform: 'uppercase', letterSpacing: '0.3px',
-        color: disabled ? '#666' : '#e0e0e0',
-        background: disabled
-          ? '#3a3a3a'
-          : 'linear-gradient(180deg, #8a8a8a 0%, #6a6a6a 40%, #5a5a5a 60%, #4a4a4a 100%)',
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+        padding: '9px 6px', minWidth: '70px',
+        fontFamily: "'Pixelify Sans', monospace",
+        fontSize: '13px', fontWeight: '700',
+        textTransform: 'uppercase',
+        color: disabled ? '#555' : '#1a2030',
+        background: disabled ? '#4a4a4a' : '#6b7b8a',
         border: 'none',
-        borderTop: disabled ? '1px solid #444' : '2px solid #aaa',
-        borderLeft: disabled ? '1px solid #444' : '2px solid #999',
-        borderRight: disabled ? '1px solid #333' : '2px solid #3a3a3a',
-        borderBottom: disabled ? '1px solid #333' : '3px solid #2a2a2a',
         borderRadius: '2px',
         cursor: disabled ? 'default' : 'pointer',
-        whiteSpace: 'nowrap', minWidth: 0,
+        whiteSpace: 'nowrap',
         opacity: disabled ? 0.5 : 1,
-        textShadow: disabled ? 'none' : '0 1px 1px rgba(0,0,0,0.5)',
+        boxShadow: disabled
+          ? 'inset -2px -2px 0 #333, inset 2px 2px 0 #666'
+          : 'inset -3px -3px 0 #3a4654, inset 3px 3px 0 #8fa0b0, 0 3px 0 #2a3444, 0 4px 0 #1a2434',
+        transition: 'transform 0.05s',
         imageRendering: 'pixelated',
       }}
     >
-      {emoji && <span style={{ fontSize: '12px' }}>{emoji}</span>}
+      {emoji && <span style={{ fontSize: '14px' }}>{emoji}</span>}
       {label}
     </button>
   );
@@ -709,30 +707,28 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
         title="Fund or transfer $NXT" />
       {open && (
         <div onClick={e => e.stopPropagation()} style={{
-          position: 'absolute', bottom: '100%', left: 0, right: 0,
-          marginBottom: '2px', zIndex: 20,
-          background: 'linear-gradient(180deg, #7a7a7a 0%, #5a5a5a 100%)',
-          border: '2px solid #999', borderBottom: '2px solid #333',
-          borderRadius: '2px', overflow: 'hidden',
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
+          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
         }}>
           <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '5px 8px', border: 'none',
-            background: 'transparent', color: '#e0e0e0', cursor: 'pointer',
-            fontFamily: "'Pixelify Sans', monospace", fontSize: '11px', fontWeight: '600',
-            textAlign: 'left', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
-          }}>{'\uD83D\uDCB0'} FUND DEV</button>
+            display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+            background: 'transparent', color: '#1a2030', cursor: 'pointer',
+            fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+            textAlign: 'left',
+          }}>{'\uD83D\uDCB0'} FUND</button>
           {allDevs && allDevs.length > 1 && (
             <button onClick={(e) => { onTransfer(e); setOpen(false); }}
               disabled={dev.balance_nxt <= 0}
               style={{
-                display: 'block', width: '100%', padding: '5px 8px', border: 'none',
-                borderTop: '1px solid rgba(0,0,0,0.2)',
+                display: 'block', width: '100%', padding: '8px 8px', border: 'none',
+                borderTop: '2px solid #3a4654',
                 background: 'transparent',
-                color: dev.balance_nxt <= 0 ? '#666' : '#e0e0e0',
+                color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
                 cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
-                fontFamily: "'Pixelify Sans', monospace", fontSize: '11px', fontWeight: '600',
-                textAlign: 'left', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
-              }}>{'\uD83D\uDCE4'} SEND NXT</button>
+                fontFamily: "'Pixelify Sans', monospace", fontSize: '12px', fontWeight: '700',
+                textAlign: 'left',
+              }}>{'\uD83D\uDCE4'} SEND</button>
           )}
         </div>
       )}
@@ -929,15 +925,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 2: Vital Stats — 2 column grid (Sims style) */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px',
         marginBottom: '6px', width: '100%',
       }}>
-        <VitalBar iconType="energy" label="NRG" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
-        <VitalBar iconType="bugs" label="BUG" value={bugsVal} max={bugsMax} inverse />
-        <VitalBar iconType="pc" label="PC" value={pcHealth} max={100} />
-        <VitalBar iconType="social" label="SOC" value={social} max={100} />
-        <VitalBar iconType="knowledge" label="KNW" value={knowledge} max={100} />
-        <VitalBar iconType="caffeine" label="CAF" value={caffeine} max={100} />
+        <VitalBar iconType="energy" label="Energy" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
+        <VitalBar iconType="bugs" label="Bugs" value={bugsVal} max={bugsMax} inverse />
+        <VitalBar iconType="pc" label="PC Health" value={pcHealth} max={100} />
+        <VitalBar iconType="social" label="Social" value={social} max={100} />
+        <VitalBar iconType="knowledge" label="Knowledge" value={knowledge} max={100} />
+        <VitalBar iconType="caffeine" label="Caffeine" value={caffeine} max={100} />
       </div>
 
       {/* Row 3: Training status */}
@@ -960,18 +956,22 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 4: Action Buttons — pixel art stone 3D */}
       {address && !dev._fetchFailed && !onMission && (
-        <div style={{ display: 'flex', gap: '3px', marginBottom: '4px' }}>
-          <StoneBtn emoji={'\u2615'} label={energyHigh ? 'OK' : 'COFFEE'}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+          <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
+            disabled={busy}
+            title="COFFEE: 5 $NXT +3 energy" />
+          <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
+            onClick={(e) => doShopAction(e, 'pizza', 'Pizza')}
             disabled={busy || energyHigh}
-            title={energyHigh ? "Energy is OK" : "COFFEE: 5 $NXT +3 energy"} />
+            title={energyHigh ? "Energy is OK" : "PIZZA: 25 $NXT +7 energy"} />
           <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
             onClick={doHack} disabled={busy}
             title="Spend 15 $NXT to hack a rival. ~50% success." />
-          <StoneBtn emoji={'\uD83D\uDC1B'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+          <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
-          <StoneBtn emoji={'\uD83D\uDD27'} label="REPAIR"
+          <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
             onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
             disabled={busy || pcHealth >= 100}
             title={pcHealth >= 100 ? "PC is healthy" : `REPAIR PC: 10 $NXT (${pcHealth}%)`} />
