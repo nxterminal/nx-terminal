@@ -128,6 +128,8 @@ function DevAvatar({ dev, size = 48 }) {
 function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
   const reqStat = mission.min_stat;
   const reqVal = mission.min_stat_value || 0;
+  const required = mission.required_devs || 1;
+  const [selected, setSelected] = useState([]);
 
   const sortedDevs = [...devs].sort((a, b) => {
     const statKey = reqStat ? STAT_KEYS[reqStat] : null;
@@ -142,6 +144,25 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
     return bVal - aVal;
   });
 
+  const toggleDev = (dev) => {
+    setSelected(prev => {
+      if (prev.some(d => d.token_id === dev.token_id)) {
+        return prev.filter(d => d.token_id !== dev.token_id);
+      }
+      if (prev.length >= required) return prev;
+      return [...prev, dev];
+    });
+  };
+
+  // For single-dev, click selects immediately (legacy behavior)
+  const handleDevClick = (dev) => {
+    if (required === 1) {
+      onSelect([dev]);
+    } else {
+      toggleDev(dev);
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -155,8 +176,16 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
         fontFamily: "'VT323', monospace",
       }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '16px', color: T.cyan }}>
-          Select a Dev for: {mission.title}
+          Select {required > 1 ? `${required} devs` : 'a Dev'} for: {mission.title}
         </div>
+        {required > 1 && (
+          <div style={{
+            fontSize: '14px', marginBottom: '8px', fontWeight: 'bold',
+            color: selected.length === required ? '#44ff44' : '#ffaa00',
+          }}>
+            {selected.length}/{required} SELECTED
+          </div>
+        )}
         {reqStat && (
           <div style={{ fontSize: '12px', color: T.textMuted, marginBottom: '10px' }}>
             Requires: {STAT_NAMES[reqStat] || reqStat} &ge; {reqVal}
@@ -182,18 +211,21 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
           }
           const onCooldown = cooldownHoursLeft > 0;
           const canSelect = meetsReq && !onCooldown;
+          const isSelected = selected.some(d => d.token_id === dev.token_id);
+          const isFull = selected.length >= required && !isSelected;
 
           return (
             <div key={dev.token_id} style={{
               display: 'flex', gap: '10px', padding: '10px',
-              marginBottom: '6px', background: T.card, border: `1px solid ${T.cardBorder}`,
-              opacity: canSelect ? 1 : 0.45,
-              cursor: canSelect ? 'pointer' : 'default',
+              marginBottom: '6px', background: T.card,
+              border: isSelected ? '2px solid #44ff44' : `1px solid ${T.cardBorder}`,
+              opacity: canSelect && !isFull ? 1 : (isSelected ? 1 : 0.45),
+              cursor: canSelect && !isFull ? 'pointer' : (isSelected ? 'pointer' : 'default'),
               transition: 'border-color 0.15s',
             }}
-              onMouseEnter={e => canSelect && (e.currentTarget.style.borderColor = T.cyan)}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = T.cardBorder)}
-              onClick={() => canSelect && !busy && onSelect(dev)}
+              onMouseEnter={e => canSelect && !isFull && (e.currentTarget.style.borderColor = isSelected ? '#44ff44' : T.cyan)}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = isSelected ? '#44ff44' : T.cardBorder)}
+              onClick={() => canSelect && !busy && handleDevClick(dev)}
             >
               <DevAvatar dev={dev} size={48} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -203,6 +235,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                     fontSize: '11px', fontWeight: 'bold',
                     color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted,
                   }}>[{dev.archetype}]</span>
+                  {isSelected && <span style={{ color: '#44ff44', fontWeight: 'bold', fontSize: '14px' }}>✓</span>}
                 </div>
                 <div style={{ fontSize: '11px', color: T.textDim, marginTop: '2px' }}>
                   {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ').toUpperCase()}</span>}
@@ -243,7 +276,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                   <span style={{ fontSize: '11px', color: T.red }}>
                     {reqStat && `${STAT_NAMES[reqStat] || reqStat} too low`}
                   </span>
-                ) : (
+                ) : required === 1 ? (
                   <button className="win-btn" disabled={busy}
                     style={{
                       fontSize: '13px', padding: '6px 14px', fontWeight: 'bold',
@@ -252,16 +285,30 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                     }}>
                     SELECT
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
           );
         })}
-        <div style={{ textAlign: 'right', marginTop: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
           <button className="win-btn" onClick={onClose}
             style={{ fontSize: '13px', padding: '6px 16px', color: T.textMuted }}>
             Cancel
           </button>
+          {required > 1 && (
+            <button className="win-btn"
+              disabled={selected.length !== required || busy}
+              onClick={() => onSelect(selected)}
+              style={{
+                fontSize: '14px', padding: '8px 20px', fontWeight: 'bold',
+                background: selected.length === required ? '#00332a' : '#222',
+                color: selected.length === required ? T.green : '#555',
+                border: `1px solid ${selected.length === required ? T.greenMid : '#333'}`,
+                cursor: selected.length === required ? 'pointer' : 'default',
+              }}>
+              START MISSION ({selected.length}/{required})
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -270,7 +317,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
 
 
 // ── Confirm Modal ───────────────────────────────────────────
-function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
+function ConfirmModal({ mission, devs, onConfirm, onClose, busy }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -286,17 +333,21 @@ function ConfirmModal({ mission, dev, onConfirm, onClose, busy }) {
         <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '16px', color: T.cyan }}>
           Confirm Mission
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px' }}>
-          <DevAvatar dev={dev} size={48} />
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dev.name}</div>
-            <div style={{ fontSize: '11px', color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted }}>
-              [{dev.archetype}]
+        <div style={{ marginBottom: '14px' }}>
+          {devs.map(dev => (
+            <div key={dev.token_id} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '6px' }}>
+              <DevAvatar dev={dev} size={36} />
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dev.name}</div>
+                <div style={{ fontSize: '11px', color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted }}>
+                  [{dev.archetype}]
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
         <div style={{ fontSize: '13px', marginBottom: '14px', lineHeight: '1.5', color: '#ccc' }}>
-          Send on "<b style={{ color: T.cyan }}>{mission.title}</b>"
+          Send {devs.length > 1 ? `${devs.length} devs` : devs[0]?.name} on "<b style={{ color: T.cyan }}>{mission.title}</b>"
           <br />
           Unavailable for <b>{mission.duration_hours}h</b>
           <br />
@@ -357,6 +408,9 @@ function MissionCard({ mission, onSelectDev, devCount }) {
             {mission.min_devs_owned > 1 && (
               <span>Requires: {mission.min_devs_owned}+ devs</span>
             )}
+            {mission.required_devs > 1 && (
+              <span style={{ color: '#ffaa00', fontWeight: 'bold' }}>Send: {mission.required_devs} devs</span>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'right', minWidth: 130, flexShrink: 0 }}>
@@ -369,7 +423,7 @@ function MissionCard({ mission, onSelectDev, devCount }) {
               background: '#00332a', color: T.cyan, border: `1px solid ${T.cyan}`,
               cursor: 'pointer', borderRadius: '2px',
             }}>
-            SELECT DEV & START
+            {mission.required_devs > 1 ? `SELECT ${mission.required_devs} DEVS & START` : 'SELECT DEV & START'}
           </button>
         </div>
       </div>
@@ -471,7 +525,7 @@ export default function MissionControl() {
   const [feedback, setFeedback] = useState(null);
 
   const [selectingMission, setSelectingMission] = useState(null);
-  const [confirmDev, setConfirmDev] = useState(null);
+  const [confirmDevs, setConfirmDevs] = useState(null);
 
   const { devCount, tier } = useDevCount();
   const { address, isConnected } = useWallet();
@@ -529,14 +583,14 @@ export default function MissionControl() {
   }, [tab, fetchActive]);
 
   // ── Actions ─────────────────────────────────────────────
-  const handleStartMission = async (mission, dev) => {
+  const handleStartMission = async (mission, devs) => {
     setBusy(true);
     setFeedback(null);
     try {
-      const result = await api.startMission(address, mission.id, dev.token_id);
+      const result = await api.startMission(address, mission.id, devs.map(d => d.token_id));
       setFeedback({ text: result.message, color: T.greenMid });
       setSelectingMission(null);
-      setConfirmDev(null);
+      setConfirmDevs(null);
       fetchAvailable();
     } catch (e) {
       setFeedback({ text: e.message || 'Failed to start mission', color: T.red });
@@ -765,25 +819,25 @@ export default function MissionControl() {
       )}
 
       {/* ═══ DEV SELECT MODAL ═══ */}
-      {selectingMission && !confirmDev && (
+      {selectingMission && !confirmDevs && (
         <DevSelectModal
           mission={selectingMission}
           devs={availableDevs}
           cooldowns={cooldowns}
           busy={busy}
-          onSelect={(dev) => setConfirmDev(dev)}
+          onSelect={(devs) => setConfirmDevs(devs)}
           onClose={() => setSelectingMission(null)}
         />
       )}
 
       {/* ═══ CONFIRM MODAL ═══ */}
-      {selectingMission && confirmDev && (
+      {confirmDevs && selectingMission && (
         <ConfirmModal
           mission={selectingMission}
-          dev={confirmDev}
+          devs={confirmDevs}
           busy={busy}
-          onConfirm={() => handleStartMission(selectingMission, confirmDev)}
-          onClose={() => setConfirmDev(null)}
+          onConfirm={() => handleStartMission(selectingMission, confirmDevs)}
+          onClose={() => setConfirmDevs(null)}
         />
       )}
     </div>

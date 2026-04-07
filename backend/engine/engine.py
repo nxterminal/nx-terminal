@@ -809,7 +809,7 @@ def pay_salaries(conn):
                     ELSE 0
                 END
             )
-        WHERE status = 'active'
+        WHERE status IN ('active', 'on_mission')
     """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
 
     count = cur.rowcount
@@ -825,7 +825,7 @@ def pay_salaries(conn):
                ),
                0, %s
         FROM devs
-        WHERE status = 'active'
+        WHERE status IN ('active', 'on_mission')
     """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
 
     # Degrade PC health: -2 per hour for all active devs (min 0)

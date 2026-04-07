@@ -170,11 +170,11 @@ export const api = {
   getMissionsAvailable: (wallet) => fetchJSON(`${API_BASE}/api/missions/available?wallet=${wallet}`),
   getMissionsActive: (wallet) => fetchJSON(`${API_BASE}/api/missions/active?wallet=${wallet}`),
   getMissionsHistory: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/missions/history?wallet=${wallet}&limit=${limit}`),
-  startMission: (wallet, mission_id, dev_token_id) =>
+  startMission: (wallet, mission_id, dev_token_ids) =>
     fetchJSON(`${API_BASE}/api/missions/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet, mission_id, dev_token_id }),
+      body: JSON.stringify({ wallet, mission_id, dev_token_ids }),
     }),
   claimMission: (wallet, player_mission_id) =>
     fetchJSON(`${API_BASE}/api/missions/claim`, {
