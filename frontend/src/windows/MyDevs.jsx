@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { formatUnits } from 'viem';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
+import { NXT_TOKEN_ADDRESS } from '../services/contract';
+
+const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
+const TREASURY_ADDRESS = '0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
@@ -222,26 +227,623 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTransfer }) {
+// ── RPC helper for wallet balance ──────────────────────────
+async function rpcCall(method, params) {
+  const res = await fetch(MAINNET_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result;
+}
+
+async function fetchWalletNxtBalance(walletAddress) {
+  const padded = walletAddress.slice(2).toLowerCase().padStart(64, '0');
+  const data = await rpcCall('eth_call', [{ to: NXT_TOKEN_ADDRESS, data: '0x70a08231' + padded }, 'latest']);
+  return BigInt(data);
+}
+
+async function waitForReceipt(txHash, maxWait = 60) {
+  for (let i = 0; i < maxWait; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const receipt = await rpcCall('eth_getTransactionReceipt', [txHash]);
+      if (receipt) return receipt;
+    } catch {}
+  }
+  throw new Error('Transaction not confirmed in time');
+}
+
+// ── Fund Modal ────────────────────────────────────────────
+function FundModal({ dev, address, onClose, onDevUpdate }) {
+  const [amount, setAmount] = useState('');
+  const [walletBal, setWalletBal] = useState(null);
+  const [stage, setStage] = useState('idle'); // idle | signing | mining | success | error
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (!address) return;
+    fetchWalletNxtBalance(address)
+      .then(wei => setWalletBal(Number(formatUnits(wei, 18))))
+      .catch(() => setWalletBal(null));
+  }, [address]);
+
+  const amountNum = parseInt(amount, 10) || 0;
+  const canFund = amountNum > 0 && walletBal !== null && amountNum <= walletBal && stage === 'idle';
+
+  const doFund = async () => {
+    if (!canFund) return;
+    setStage('signing');
+    setErrorMsg('');
+    try {
+      // Build ERC-20 transfer(address,uint256) calldata
+      // selector: 0xa9059cbb
+      const toAddr = TREASURY_ADDRESS.slice(2).toLowerCase().padStart(64, '0');
+      const amountWei = BigInt(amountNum) * BigInt(10 ** 18);
+      const amountHex = amountWei.toString(16).padStart(64, '0');
+      const calldata = '0xa9059cbb' + toAddr + amountHex;
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: address.toLowerCase(),
+          to: NXT_TOKEN_ADDRESS,
+          data: calldata,
+        }],
+      });
+
+      setStage('mining');
+      const receipt = await waitForReceipt(txHash);
+      if (receipt.status !== '0x1') throw new Error('Transaction reverted');
+
+      // Report to backend
+      const res = await api.fundDev(address, dev.token_id, amountNum, txHash);
+      setStage('success');
+      if (res.updated_dev && onDevUpdate) onDevUpdate(res.updated_dev);
+      setTimeout(() => onClose(), 2500);
+    } catch (err) {
+      setStage('error');
+      const msg = err?.message || 'Unknown error';
+      if (msg.includes('User denied') || msg.includes('rejected')) {
+        setErrorMsg('Transaction rejected by user');
+      } else {
+        setErrorMsg(msg.length > 80 ? msg.slice(0, 80) + '...' : msg);
+      }
+    }
+  };
+
+  const presets = [25, 50, 100];
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.6)', zIndex: 10010,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div className="win-raised" style={{
+        width: '320px', background: 'var(--win-bg, #c0c0c0)',
+        fontFamily: "'VT323', monospace",
+      }}>
+        {/* Title bar */}
+        <div style={{
+          background: 'linear-gradient(90deg, #000080, #1084d0)',
+          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span>Fund Dev</span>
+          <button onClick={onClose} style={{
+            background: '#c0c0c0', border: '1px outset #fff',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            padding: '0 4px', lineHeight: 1,
+          }}>X</button>
+        </div>
+
+        <div style={{ padding: '12px', fontSize: '13px' }}>
+          <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
+            "Every startup needs a seed round."
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Your wallet:</span>
+            <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {walletBal !== null ? `${Math.floor(walletBal)} $NXT` : '...'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span>{dev.name} balance:</span>
+            <span style={{ fontWeight: 'bold', color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {formatNumber(dev.balance_nxt)} $NXT
+            </span>
+          </div>
+
+          {/* Amount input */}
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{ fontSize: '11px', color: '#555' }}>Amount:</label>
+            <input
+              type="number"
+              min="1"
+              max={walletBal ? Math.floor(walletBal) : 999999}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              disabled={stage !== 'idle'}
+              style={{
+                width: '100%', padding: '4px 6px', fontSize: '14px',
+                fontFamily: "'VT323', monospace",
+                background: '#fff', border: '2px inset #888',
+              }}
+              placeholder="0"
+            />
+          </div>
+
+          {/* Preset buttons */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+            {presets.map(v => (
+              <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
+                disabled={stage !== 'idle'}
+                style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
+            ))}
+            <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
+              disabled={stage !== 'idle' || !walletBal}
+              style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
+          </div>
+
+          {/* Action button */}
+          <button className="win-btn" onClick={doFund}
+            disabled={!canFund}
+            style={{
+              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+              color: canFund ? '#005500' : '#888',
+              border: canFund ? '2px outset #aaa' : undefined,
+            }}>
+            {stage === 'idle' && `\uD83D\uDCB0 FUND ${dev.name}`}
+            {stage === 'signing' && 'Confirm in MetaMask...'}
+            {stage === 'mining' && 'Processing...'}
+            {stage === 'success' && '\u2705 Funded!'}
+            {stage === 'error' && '\u274C Failed — Try Again'}
+          </button>
+
+          {stage === 'error' && errorMsg && (
+            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+          )}
+          {stage === 'error' && (
+            <button className="win-btn" onClick={() => setStage('idle')}
+              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+              Try Again
+            </button>
+          )}
+
+          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+            Transfers $NXT from your MetaMask to your dev's in-game balance.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Transfer Modal ────────────────────────────────────────
+function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
+  const [toDevId, setToDevId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [stage, setStage] = useState('idle'); // idle | sending | success | error
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const otherDevs = (allDevs || []).filter(d => d.token_id !== dev.token_id && !d._fetchFailed);
+  const selectedDev = otherDevs.find(d => d.token_id === Number(toDevId));
+  const amountNum = parseInt(amount, 10) || 0;
+  const canTransfer = amountNum > 0 && amountNum <= dev.balance_nxt && toDevId && stage === 'idle'
+    && selectedDev && selectedDev.status !== 'on_mission' && dev.status !== 'on_mission';
+
+  const doTransfer = async () => {
+    if (!canTransfer) return;
+    setStage('sending');
+    setErrorMsg('');
+    try {
+      const res = await api.transferNxt(address, dev.token_id, Number(toDevId), amountNum);
+      setStage('success');
+      if (res.updated_from && onDevUpdate) onDevUpdate(res.updated_from);
+      if (res.updated_to && onDevUpdate) onDevUpdate(res.updated_to);
+      setTimeout(() => onClose(), 2500);
+    } catch (err) {
+      setStage('error');
+      setErrorMsg(err?.message || 'Transfer failed');
+    }
+  };
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.6)', zIndex: 10010,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div className="win-raised" style={{
+        width: '320px', background: 'var(--win-bg, #c0c0c0)',
+        fontFamily: "'VT323', monospace",
+      }}>
+        {/* Title bar */}
+        <div style={{
+          background: 'linear-gradient(90deg, #000080, #1084d0)',
+          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span>Transfer Funds</span>
+          <button onClick={onClose} style={{
+            background: '#c0c0c0', border: '1px outset #fff',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            padding: '0 4px', lineHeight: 1,
+          }}>X</button>
+        </div>
+
+        <div style={{ padding: '12px', fontSize: '13px' }}>
+          <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
+            "Reallocating the budget. Standard corporate procedure."
+          </div>
+
+          <div style={{ marginBottom: '6px' }}>
+            <span style={{ fontWeight: 'bold' }}>From:</span>{' '}
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {dev.name} ({formatNumber(dev.balance_nxt)} $NXT)
+            </span>
+          </div>
+
+          {/* Dev selector */}
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>To:</label>
+            <select
+              value={toDevId}
+              onChange={e => setToDevId(e.target.value)}
+              disabled={stage !== 'idle'}
+              style={{
+                width: '100%', padding: '4px', fontSize: '13px',
+                fontFamily: "'VT323', monospace",
+                background: '#fff', border: '2px inset #888',
+              }}
+            >
+              <option value="">Select dev...</option>
+              {otherDevs.map(d => {
+                const onMission = d.status === 'on_mission';
+                return (
+                  <option key={d.token_id} value={d.token_id} disabled={onMission}>
+                    {d.name} ({formatNumber(d.balance_nxt)} $NXT){d.balance_nxt === 0 ? ' \u2190 needs funds!' : ''}{onMission ? ' [ON MISSION]' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Amount input */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>Amount:</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input
+                type="number"
+                min="1"
+                max={dev.balance_nxt}
+                value={amount}
+                onChange={e => setAmount(String(Math.min(Number(e.target.value) || 0, dev.balance_nxt)))}
+                disabled={stage !== 'idle'}
+                style={{
+                  width: '100px', padding: '6px 10px', fontSize: '18px',
+                  fontFamily: "'VT323', monospace",
+                  background: '#1a1a2e', color: '#66ff66',
+                  border: '2px solid #3a5a3a', textAlign: 'center',
+                  outline: 'none',
+                }}
+                placeholder="0"
+              />
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#888' }}>
+                / {formatNumber(dev.balance_nxt)} $NXT
+              </span>
+            </div>
+          </div>
+
+          {/* Action button */}
+          <button className="win-btn" onClick={doTransfer}
+            disabled={!canTransfer}
+            style={{
+              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+              color: canTransfer ? '#005500' : '#888',
+              border: canTransfer ? '2px outset #aaa' : undefined,
+            }}>
+            {stage === 'idle' && '\uD83D\uDCBC TRANSFER'}
+            {stage === 'sending' && 'Processing...'}
+            {stage === 'success' && '\u2705 Transferred!'}
+            {stage === 'error' && '\u274C Failed'}
+          </button>
+
+          {stage === 'error' && errorMsg && (
+            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+          )}
+          {stage === 'error' && (
+            <button className="win-btn" onClick={() => setStage('idle')}
+              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+              Try Again
+            </button>
+          )}
+
+          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+            Moves $NXT between your devs. No blockchain transaction needed.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SVG Stat Icons (16x16 viewBox) ──────────────────────
+function StatIcon({ type, size = 14 }) {
+  const s = { display: 'block' };
+  switch (type) {
+    case 'energy': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M9 1L4 9h4l-1 6 5-8H8l1-6z" fill="currentColor"/></svg>;
+    case 'pc': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M5 13h6M8 11v2" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'knowledge': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M3 2v11l5-2 5 2V2H3z" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M8 3v8" stroke="currentColor" strokeWidth="1"/></svg>;
+    case 'bugs': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><ellipse cx="8" cy="9" rx="4" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M2 7h3M11 7h3M2 11h3M11 11h3M5.5 2l1 3.5M10.5 2l-1 3.5" stroke="currentColor" strokeWidth="1.2"/></svg>;
+    case 'social': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><circle cx="6" cy="5" r="2" fill="currentColor"/><path d="M2 14c0-2.5 2-4.5 4-4.5s4 2 4 4.5" fill="currentColor"/><circle cx="11" cy="5.5" r="1.5" fill="currentColor" opacity="0.7"/><path d="M9 14c0-2 1.2-3.5 2-3.5s2 1.5 2 3.5" fill="currentColor" opacity="0.7"/></svg>;
+    case 'caffeine': return <svg style={s} width={size} height={size} viewBox="0 0 16 16"><path d="M3 5h8v6a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M11 6h1.5a1.5 1.5 0 010 3H11" fill="none" stroke="currentColor" strokeWidth="1.3"/><path d="M5 2c.5 1 0 2 .5 2.5M7.5 2c.5 1 0 2 .5 2.5" stroke="currentColor" strokeWidth="1" opacity="0.5"/></svg>;
+    default: return null;
+  }
+}
+
+// ── Bar color thresholds ────────────────────────────────
+function barColor(pct, inverse) {
+  if (inverse) {
+    if (pct <= 20) return '#44ff44';
+    if (pct <= 50) return '#ffaa00';
+    if (pct <= 75) return '#ff4444';
+    return '#cc0000';
+  }
+  if (pct >= 70) return '#44ff44';
+  if (pct >= 40) return '#ffaa00';
+  if (pct >= 15) return '#ff4444';
+  return '#cc0000';
+}
+
+// ── Vital Bar (compact, VT323) ──────────────────────────
+function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
+  const v = value ?? 0;
+  const m = max || 100;
+  const pct = Math.max(0, Math.min(100, (v / m) * 100));
+  const color = barColor(pct, inverse);
+  const critical = (!inverse && pct < 15) || (inverse && pct > 75);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontSize: '14px', color: '#111',
+          fontFamily: "'VT323', monospace",
+        }}>
+          <span style={{
+            width: '18px', height: '18px', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `1.5px solid ${color}`, background: 'rgba(0,0,0,0.15)',
+            flexShrink: 0, color, transition: 'border-color 0.5s, color 0.5s',
+          }}>
+            <StatIcon type={iconType} size={10} />
+          </span>
+          {label}
+        </span>
+        <span style={{
+          fontSize: '14px', color,
+          fontFamily: "'VT323', monospace",
+          transition: 'color 0.5s',
+        }}>{v}</span>
+      </div>
+      <div style={{
+        height: '10px', background: '#333',
+        borderRadius: '2px', overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', background: color, borderRadius: '2px',
+          transition: 'width 0.5s ease, background-color 0.5s ease',
+          animation: critical ? 'critical-pulse 1.5s ease-in-out infinite' : 'none',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Stone Button (pixel art 3D, VT323) ──────────────────
+function StoneBtn({ emoji, label, onClick, disabled, title }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+        width: '100%',
+        padding: '7px 2px',
+        fontFamily: "'VT323', monospace",
+        fontSize: '14px',
+        textTransform: 'uppercase',
+        color: disabled ? '#555' : '#1a2030',
+        background: disabled ? '#4a4a4a' : '#6b7b8a',
+        border: 'none',
+        borderRadius: '2px',
+        cursor: disabled ? 'default' : 'pointer',
+        whiteSpace: 'nowrap',
+        opacity: disabled ? 0.5 : 1,
+        boxShadow: disabled
+          ? 'inset -2px -2px 0 #333, inset 2px 2px 0 #666'
+          : 'inset -3px -3px 0 #3a4654, inset 3px 3px 0 #8fa0b0, 0 3px 0 #2a3444, 0 4px 0 #1a2434',
+        transition: 'transform 0.05s',
+      }}
+    >
+      {emoji && <span style={{ fontSize: '13px' }}>{emoji}</span>}
+      {label}
+    </button>
+  );
+}
+
+// ── Econ Dropdown (FUND + SEND) ─────────────────────────
+function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECONOMY"
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Fund or transfer $NXT" />
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
+          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
+        }}>
+          <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+            background: 'transparent', color: '#1a2030', cursor: 'pointer',
+            fontFamily: "'VT323', monospace", fontSize: '14px',
+            textAlign: 'left',
+          }}>{'\uD83D\uDCB0'} FUND</button>
+          {allDevs && allDevs.length > 1 && (
+            <button onClick={(e) => { onTransfer(e); setOpen(false); }}
+              disabled={dev.balance_nxt <= 0}
+              style={{
+                display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+                borderTop: '2px solid #3a4654',
+                background: 'transparent',
+                color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
+                cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
+                fontFamily: "'VT323', monospace", fontSize: '14px',
+                textAlign: 'left',
+              }}>{'\uD83D\uDCE4'} SEND</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Spend Animation + Sound ─────────────────────────────
+function playSpendSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
+    osc.frequency.setValueAtTime(400, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+function playFixSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.setValueAtTime(500, ctx.currentTime + 0.08);
+    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.16);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+function SpendOverlay({ spends }) {
+  if (!spends.length) return null;
+  return (
+    <div style={{
+      position: 'absolute', top: 0, left: 0, right: 0,
+      pointerEvents: 'none', zIndex: 100, display: 'flex', justifyContent: 'center',
+    }}>
+      {spends.map(s => (
+        <div key={s.id} style={{
+          position: 'absolute',
+          fontFamily: "'VT323', monospace", fontSize: '16px',
+          color: s.type === 'energy' ? '#ff9800' : '#ff4444',
+          whiteSpace: 'nowrap',
+          textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
+          animation: 'float-up-fade 1.5s ease-out forwards',
+        }}>
+          -{s.amount} {s.type === 'energy' ? 'Energy' : '$NXT'}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
-  const energyColor = energyPct > 60 ? 'var(--green-on-grey, #005500)' : energyPct > 30 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   const energyHigh = energyPct >= 70;
   const onMission = dev.status === 'on_mission';
   const missionCompleted = onMission && mission && new Date(mission.ends_at) <= new Date();
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [spends, setSpends] = useState([]);
+
+  const triggerSpend = useCallback((amount, type = 'nxt') => {
+    const id = Date.now();
+    setSpends(prev => [...prev, { id, amount, type }]);
+    if (type === 'energy') playFixSound();
+    else playSpendSound();
+    setTimeout(() => setSpends(prev => prev.filter(s => s.id !== id)), 1500);
+  }, []);
+
+  const lockBusy = () => { if (busyRef.current) return false; busyRef.current = true; setBusy(true); return true; };
+  const unlockBusy = (cooldownMs = 1000) => {
+    setTimeout(() => { busyRef.current = false; setBusy(false); }, cooldownMs);
+  };
+
+  const parseError = (err) => {
+    const msg = err?.message || '';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch'))
+      return { text: 'Network error — check connection', color: '#aa0000' };
+    if (msg.includes('Rate limited') || msg.includes('429')) return { text: 'Too fast! Wait a moment', color: '#b8860b' };
+    if (msg.includes('Not enough')) return { text: msg, color: '#aa0000' };
+    if (msg.includes('cooldown') || msg.includes('Cooldown')) return { text: msg, color: '#b8860b' };
+    if (msg) return { text: msg, color: '#aa0000' };
+    return { text: 'Action failed', color: '#aa0000' };
+  };
+
+  // Vital stats — use real fields, fallback to defaults for new stats (TODO: connect to backend)
+  const pcHealth = dev.pc_health ?? 100;
+  const bugsVal = dev.bugs_shipped ?? 0;
+  const bugsMax = 20; // visual max for bugs bar
+  const knowledge = dev.knowledge ?? 50;
+  const social = dev.social ?? (dev.stat_social || 50);
+  const caffeine = dev.caffeine ?? Math.min(100, (dev.coffee_count || 0) * 10 + 30);
 
   const doShopAction = async (e, itemId, label) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.buyItem(address, itemId, dev.token_id);
       setActionMsg({ text: `${label} applied!`, color: '#005500' });
-      // Use updated dev from response directly (avoids GET cache issues)
+      if (res.cost) triggerSpend(res.cost);
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -249,18 +851,18 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTrans
         if (fresh && onDevUpdate) onDevUpdate(fresh);
       }
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 2500);
   };
 
   const doHack = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.hack(address, dev.token_id);
+      triggerSpend(15);
       if (res.success) {
         setActionMsg({ text: `HACK SUCCESS: Stole ${res.stolen} $NXT from ${res.target}`, color: '#005500' });
       } else {
@@ -269,35 +871,34 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTrans
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('cooldown') ? 'Cooldown active' : err.message?.includes('400') ? 'Not enough $NXT' : 'Failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
   };
 
   const doGraduate = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
       const res = await api.graduate(address, dev.token_id);
       setActionMsg({ text: `Graduated! ${res.stat} +${res.bonus}`, color: '#005500' });
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: 'Not ready yet', color: '#7a5c00' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 3000);
   };
 
   const doFixBug = async (e) => {
     e.stopPropagation();
-    if (busy || !address) return;
-    setBusy(true);
+    if (!address || !lockBusy()) return;
     try {
-      const res = await api.fixBug(address, dev.token_id);
-      setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
+      const res = await api.buyItem(address, 'fix_bugs', dev.token_id);
+      if (res.energy_cost) triggerSpend(res.energy_cost, 'energy');
+      setActionMsg({ text: 'Bug fixed!', color: '#005500' });
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -305,28 +906,24 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTrans
         if (fresh && onDevUpdate) onDevUpdate(fresh);
       }
     } catch (err) {
-      setActionMsg({ text: err.message?.includes('400') ? 'Not enough $NXT' : 'Fix failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 3000);
   };
 
-  const pcHealth = dev.pc_health ?? 100;
-  const pcColor = pcHealth > 70 ? '#005500' : pcHealth >= 40 ? '#b8860b' : '#aa0000';
-
   const doClaimMission = async (e) => {
     e.stopPropagation();
-    if (!mission) return;
-    setBusy(true);
+    if (!mission || !lockBusy()) return;
     try {
       await api.claimMission(address, mission.player_mission_id);
       setActionMsg({ text: `+${mission.reward_nxt} $NXT \u2192 ${dev.name}'s balance! Collect in NXT Wallet`, color: '#005500' });
       const fresh = await api.getDev(dev.token_id, address);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
-      setActionMsg({ text: err.message || 'Claim failed', color: '#aa0000' });
+      setActionMsg(parseError(err));
     }
-    setBusy(false);
+    unlockBusy();
     setTimeout(() => setActionMsg(null), 5000);
   };
 
@@ -335,203 +932,161 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTrans
       className="win-raised"
       onClick={onClick}
       style={{
-        display: 'flex', gap: '10px', padding: '8px',
-        cursor: 'pointer', marginBottom: '4px',
+        padding: '8px', cursor: 'pointer', marginBottom: '4px',
         border: '1px solid var(--border-dark)',
-        position: 'relative',
+        position: 'relative', overflow: 'visible',
         filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
         opacity: onMission && !missionCompleted ? 0.7 : 1,
       }}
     >
-      {/* Left column: Avatar + Action buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 80 }}>
+      <SpendOverlay spends={spends} />
+
+      {/* Row 1: Avatar + Identity */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
         <GifImage src={gifUrl} alt={dev.name} arcColor={arcColor} tokenId={dev.token_id} />
-
-        {address && !dev._fetchFailed && !onMission && (
-          <>
-            {/* Food buttons — disabled when energy >= 70% */}
-            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'coffee', '☕')}
-                title={energyHigh ? "Energy is OK" : "☕ COFFEE: 5 $NXT → +3 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                ☕5
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍔')}
-                title={energyHigh ? "Energy is OK" : "🍔 HAMBURGER: 25 $NXT → +7 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                🍔25
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
-                title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → +10 energy"}
-                style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                🍔50
-              </button>
-            </div>
-            {/* Energy status indicator */}
-            <span style={{
-              fontSize: '8px', fontWeight: 'bold', textAlign: 'center',
-              color: energyPct >= 70 ? '#005500' : energyPct >= 30 ? '#b8860b' : '#aa0000',
-              animation: energyPct < 30 ? 'blink 1s step-end infinite' : 'none',
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1px' }}>
+          {dev._fetchFailed && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '2px 6px', marginBottom: '2px',
+              background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
+              fontSize: '12px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
             }}>
-              {energyPct >= 70 ? 'ENERGY OK' : energyPct >= 30 ? 'LOW ENERGY' : 'CRITICAL'}
-            </span>
-            {/* Hack + Repair + Transfer row */}
-            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button className="win-btn" onClick={doHack}
-                title={"Spend 15 $NXT to hack a rival. ~50% success."}
-                style={{ fontSize: '9px', padding: '1px 4px', border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy}>
-                ⚡Hack 15
-              </button>
-              <button className="win-btn" onClick={(e) => { e.stopPropagation(); onTransfer?.(dev); }}
-                title={"Transfer $NXT to another dev"}
-                style={{ fontSize: '9px', padding: '1px 4px', color: '#0d47a1' }} disabled={busy || dev.balance_nxt <= 0}>
-                💼Txfr
-              </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
-                title={"🔧 REPAIR PC: 10 $NXT → restore PC to 100%"}
-                style={{
-                  fontSize: '9px', padding: '1px 4px',
-                  border: pcHealth < 40 ? '2px solid #aa0000' : pcHealth <= 70 ? '1px solid #b8860b' : undefined,
-                  color: pcHealth < 40 ? '#aa0000' : undefined,
-                  fontWeight: pcHealth < 40 ? 'bold' : undefined,
-                  animation: pcHealth < 40 ? 'blink 1s step-end infinite' : 'none',
-                }} disabled={busy}>
-                🔧PC {pcHealth}%{pcHealth < 40 ? ' CRITICAL' : pcHealth <= 70 ? ' ⚠' : ''}
-              </button>
+              [!] Profile loading from chain...
+              <button className="win-btn"
+                onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
+                style={{ fontSize: '11px', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
             </div>
-            {/* Bugs — fix button when bugs > 0 */}
-            {dev.bugs_shipped > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '9px', color: '#aa0000', fontWeight: 'bold' }}>
-                  🐛 BUGS: {dev.bugs_shipped}
-                </span>
-                <button className="win-btn" onClick={doFixBug}
-                  title={`Fix 1 bug for 5 $NXT (${dev.bugs_shipped} remaining)`}
-                  style={{
-                    fontSize: '8px', padding: '0 4px', fontWeight: 'bold',
-                    color: '#005500', border: '1px solid #005500',
-                  }} disabled={busy}>
-                  🔧 Fix: 5 $NXT
-                </button>
-              </div>
+          )}
+          {/* Name + Archetype + Rarity */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontFamily: "'VT323', monospace" }}>{dev.name}</span>
+            <span style={{ color: arcColor, fontSize: '13px', fontFamily: "'VT323', monospace" }}>[{dev.archetype}]</span>
+            {dev.rarity_tier && dev.rarity_tier !== 'common' && (
+              <span style={{
+                fontSize: '10px', padding: '0 3px', textTransform: 'uppercase',
+                color: 'var(--gold-on-grey, #7a5c00)',
+                border: '1px solid var(--gold-on-grey, #7a5c00)', borderRadius: '2px',
+                fontFamily: "'VT323', monospace",
+              }}>{dev.rarity_tier}</span>
             )}
-          </>
+          </div>
+          {/* Corp | Species | Location | #Token */}
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap', fontFamily: "'VT323', monospace", lineHeight: 1.3 }}>
+            {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
+            {dev.species && <span>| {dev.species}</span>}
+            {loc && <span>| {loc}</span>}
+            <span>| #{dev.token_id}</span>
+          </div>
+          {/* Status line */}
+          <div style={{ display: 'flex', gap: '6px', fontSize: '13px', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'VT323', monospace" }}>
+            <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
+              {formatNumber(dev.balance_nxt)} $NXT
+            </span>
+            <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
+            <span style={{
+              color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+              textTransform: 'uppercase', fontWeight: 'bold',
+            }}>{dev.status || 'active'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Vital Stats — 2 column grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 14px',
+        marginBottom: '4px', width: '100%',
+      }}>
+        <VitalBar iconType="energy" label="Energy" value={dev.energy ?? 0} max={dev.max_energy ?? 10} />
+        <VitalBar iconType="bugs" label="Bugs" value={bugsVal} max={bugsMax} inverse />
+        <VitalBar iconType="pc" label="PC Health" value={pcHealth} max={100} />
+        <VitalBar iconType="social" label="Social" value={social} max={100} />
+        <VitalBar iconType="knowledge" label="Knowledge" value={knowledge} max={100} />
+        <VitalBar iconType="caffeine" label="Caffeine" value={caffeine} max={100} />
+      </div>
+
+      {/* Row 3: Training status */}
+      {dev.training_course && (
+        <div style={{
+          fontSize: '13px', color: '#b8860b', marginBottom: '4px',
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontFamily: "'VT323', monospace",
+        }}>
+          [TRAIN] {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
+          {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
+            <StoneBtn emoji={'\uD83C\uDF93'} label="GRAD"
+              onClick={doGraduate} disabled={busy}
+              title="Complete training and apply stat bonus" />
+          ) : dev.training_ends_at ? (
+            <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
+          ) : null}
+        </div>
+      )}
+
+      {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width */}
+      {address && !dev._fetchFailed && !onMission && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '4px', width: '100%' }}>
+          <StoneBtn emoji={'\u2615'} label="COFFEE"
+            onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
+            disabled={busy}
+            title="COFFEE: 5 $NXT +25 caffeine" />
+          <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
+            onClick={(e) => doShopAction(e, 'pizza', 'Hamburger')}
+            disabled={busy || energyHigh}
+            title={energyHigh ? "Energy is OK" : "HAMBURGER: 25 $NXT +7 energy"} />
+          <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
+            onClick={doHack} disabled={busy}
+            title="Spend 15 $NXT to hack a rival. ~50% success." />
+          <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+            onClick={doFixBug} disabled={busy || bugsVal <= 0}
+            title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
+          <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
+            onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
+            disabled={busy || pcHealth >= 100}
+            title={pcHealth >= 100 ? "PC is healthy" : `REPAIR PC: 10 $NXT (${pcHealth}%)`} />
+          <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
+            onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }} />
+        </div>
+      )}
+
+      {/* Action feedback */}
+      {actionMsg && (
+        <div style={{ fontSize: '10px', color: actionMsg.color, fontWeight: 'bold', marginBottom: '2px',
+          fontFamily: "'VT323', monospace" }}>
+          {actionMsg.text}
+        </div>
+      )}
+
+      {/* Row 5: Footer counters + prompt */}
+      <div style={{
+        display: 'flex', gap: '8px', fontSize: '12px',
+        color: 'var(--text-muted, #888)', marginBottom: address ? '2px' : 0,
+        fontFamily: "'VT323', monospace", padding: '2px 0',
+      }}>
+        {dev.coffee_count > 0 && <span>caf:{dev.coffee_count}</span>}
+        {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
+        {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
+        {dev.last_action_type && (
+          <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
+            [{dev.last_action_type.replace(/_/g, ' ')}]
+          </span>
         )}
       </div>
 
-      {/* Right column: Info + Stats */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {dev._fetchFailed && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '2px 6px', marginBottom: '2px',
-            background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
-            fontSize: '10px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
-          }}>
-            [!] Profile loading from chain...
-            <button
-              className="win-btn"
-              onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
-              style={{ fontSize: '9px', padding: '0 4px', marginLeft: 'auto' }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-        {/* Name + Archetype + Rarity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>{dev.name}</span>
-          <span style={{ color: arcColor, fontSize: '10px', fontWeight: 'bold' }}>
-            [{dev.archetype}]
-          </span>
-          {dev.rarity_tier && dev.rarity_tier !== 'common' && (
-            <span style={{ fontSize: '9px', color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold', textTransform: 'uppercase' }}>
-              {dev.rarity_tier}
-            </span>
-          )}
-        </div>
+      {address && (
+        <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
+      )}
 
-        {/* Corp | Species | Location | #Token */}
-        <div style={{ fontSize: '10px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
-          {dev.species && <span>| {dev.species}</span>}
-          {loc && <span>| {loc}</span>}
-          <span>| #{dev.token_id}</span>
-        </div>
+      {/* Fund / Transfer modals */}
+      {showFundModal && (
+        <FundModal dev={dev} address={address} onClose={() => setShowFundModal(false)} onDevUpdate={onDevUpdate} />
+      )}
+      {showTransferModal && (
+        <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />
+      )}
 
-        {/* Stats bars */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: '2px' }}>
-          <StatBar label="COD" value={dev.stat_coding} />
-          <StatBar label="HAK" value={dev.stat_hacking} />
-          <StatBar label="TRD" value={dev.stat_trading} />
-          <StatBar label="SOC" value={dev.stat_social} />
-          <StatBar label="END" value={dev.stat_endurance} />
-          <StatBar label="LCK" value={dev.stat_luck} />
-        </div>
-
-        {/* Energy | $NXT | Mood | Status */}
-        <div style={{
-          display: 'flex', gap: '6px', fontSize: '10px', marginTop: '2px',
-          flexWrap: 'wrap', alignItems: 'center',
-          color: 'var(--text-secondary, #666)',
-        }}>
-          <span style={{ color: energyColor, fontWeight: 'bold' }}>
-            ⚡ ENERGY: {dev.energy ?? 0}/{dev.max_energy ?? 10}
-          </span>
-          <span style={{ color: 'var(--gold-on-grey, #7a5c00)', fontWeight: 'bold' }}>
-            {formatNumber(dev.balance_nxt)} $NXT
-          </span>
-          <span>{dev.mood || '-'}</span>
-          <span style={{
-            color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#b8860b' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
-            textTransform: 'uppercase', fontWeight: 'bold',
-          }}>
-            {dev.status || 'active'}
-          </span>
-        </div>
-
-        {/* Training status */}
-        {dev.training_course && (
-          <div style={{ fontSize: '9px', color: '#7a5c00', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            📚 Training: {SHOP_ITEMS_MAP[dev.training_course] || dev.training_course}
-            {dev.training_ends_at && new Date(dev.training_ends_at) <= new Date() ? (
-              <button className="win-btn" onClick={doGraduate}
-                style={{ fontSize: '8px', padding: '0 4px' }} disabled={busy}>🎓 Graduate</button>
-            ) : dev.training_ends_at ? (
-              <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
-            ) : null}
-          </div>
-        )}
-
-        {/* Action feedback */}
-        {actionMsg && (
-          <div style={{ fontSize: '9px', color: actionMsg.color, fontWeight: 'bold', marginTop: '1px' }}>
-            {actionMsg.text}
-          </div>
-        )}
-
-        {/* Counters */}
-        <div style={{
-          display: 'flex', gap: '8px', fontSize: '9px', marginTop: '1px',
-          color: 'var(--text-muted, #888)',
-        }}>
-          {dev.coffee_count > 0 && <span>☕{dev.coffee_count}</span>}
-          {dev.lines_of_code > 0 && <span>LoC:{formatNumber(dev.lines_of_code)}</span>}
-          {dev.hours_since_sleep > 0 && <span>nosleep:{dev.hours_since_sleep}h</span>}
-          {dev.last_action_type && (
-            <span style={{ color: 'var(--cyan-on-grey, #006677)' }}>
-              [{dev.last_action_type.replace(/_/g, ' ')}]
-            </span>
-          )}
-        </div>
-
-        {/* Quick prompt input */}
-        {address && (
-          <QuickPrompt devId={dev.token_id} devName={dev.name} address={address} />
-        )}
-      </div>
-
-      {/* On Mission overlay — full-card centered (FIX 3+4) */}
+      {/* On Mission overlay */}
       {onMission && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -544,9 +1099,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTrans
             fontSize: '16px', fontWeight: 'bold', color: '#ff4444',
             textTransform: 'uppercase', letterSpacing: '2px',
             textShadow: '0 0 6px rgba(255, 68, 68, 0.5)',
-          }}>
-            ON MISSION
-          </span>
+          }}>ON MISSION</span>
           {mission && (
             <>
               <span style={{ fontSize: '11px', color: '#ccc', maxWidth: '80%', textAlign: 'center' }}>
@@ -737,134 +1290,6 @@ function ActivityTab({ walletAddress, devs }) {
   );
 }
 
-function TransferModal({ fromDev, allDevs, address, onClose, onDevUpdate }) {
-  const [toDevId, setToDevId] = useState('');
-  const [transferAmount, setTransferAmount] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const otherDevs = allDevs.filter(d => d.token_id !== fromDev.token_id);
-
-  const handleTransfer = async () => {
-    if (!toDevId || transferAmount <= 0 || busy) return;
-    setBusy(true);
-    setResult(null);
-    try {
-      const res = await api.transferNxt(address, fromDev.token_id, parseInt(toDevId), transferAmount);
-      setResult({ success: true, msg: `Transferred ${res.amount} $NXT to ${res.to_dev}` });
-      // Refresh both devs
-      const freshFrom = await api.getDev(fromDev.token_id, address).catch(() => null);
-      const freshTo = await api.getDev(parseInt(toDevId), address).catch(() => null);
-      if (freshFrom && onDevUpdate) onDevUpdate(freshFrom);
-      if (freshTo && onDevUpdate) onDevUpdate(freshTo);
-    } catch (err) {
-      setResult({ success: false, msg: err.message || 'Transfer failed' });
-    }
-    setBusy(false);
-  };
-
-  const modalStyle = {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', zIndex: 9999,
-  };
-  const boxStyle = {
-    background: 'var(--win-bg, #c0c0c0)', border: '2px outset #fff',
-    padding: '0', width: '320px', fontFamily: "'VT323', monospace",
-  };
-  const titleBar = {
-    background: 'linear-gradient(90deg, #000080, #0000ff)', color: '#fff',
-    padding: '3px 6px', fontSize: '13px', display: 'flex', justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-  const body = { padding: '12px', fontSize: '14px' };
-  const inputStyle = {
-    fontFamily: "'VT323', monospace", fontSize: '18px',
-    background: '#1a1a2e', color: '#66ff66',
-    border: '2px solid #3a5a3a', padding: '6px 10px',
-    width: '100px', textAlign: 'center', outline: 'none',
-  };
-
-  return (
-    <div style={modalStyle} onClick={onClose}>
-      <div style={boxStyle} onClick={e => e.stopPropagation()}>
-        <div style={titleBar}>
-          <span>Transfer $NXT — {fromDev.name}</span>
-          <button className="win-btn" onClick={onClose} style={{ fontSize: '10px', padding: '0 4px' }}>X</button>
-        </div>
-        <div style={body}>
-          <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555' }}>
-            From: <strong>{fromDev.name}</strong> — Balance: <strong>{fromDev.balance_nxt} $NXT</strong>
-          </div>
-
-          {otherDevs.length === 0 ? (
-            <div style={{ color: '#aa0000', fontSize: '13px' }}>You need at least 2 devs to transfer.</div>
-          ) : (
-            <>
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px' }}>To:</label>
-                <select
-                  value={toDevId}
-                  onChange={e => setToDevId(e.target.value)}
-                  style={{
-                    fontFamily: "'VT323', monospace", fontSize: '14px',
-                    width: '100%', padding: '4px',
-                    background: '#1a1a2e', color: '#66ff66',
-                    border: '2px solid #3a5a3a',
-                  }}
-                >
-                  <option value="">-- Select dev --</option>
-                  {otherDevs.map(d => (
-                    <option key={d.token_id} value={d.token_id}>
-                      {d.name} (#{d.token_id}) — {d.balance_nxt} $NXT
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0' }}>
-                <label style={{ fontSize: '14px', color: '#555' }}>Amount:</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={fromDev.balance_nxt}
-                  value={transferAmount || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setTransferAmount(Math.max(0, Math.min(val, fromDev.balance_nxt)));
-                  }}
-                  style={inputStyle}
-                />
-                <span style={{ fontSize: '12px', color: '#666' }}>/ {fromDev.balance_nxt} $NXT</span>
-              </div>
-
-              <button
-                className="win-btn"
-                disabled={!toDevId || !transferAmount || transferAmount <= 0 || busy}
-                onClick={handleTransfer}
-                style={{ width: '100%', padding: '6px', fontSize: '14px', marginTop: '6px', fontWeight: 'bold' }}
-              >
-                {busy ? 'Transferring...' : '💼 TRANSFER'}
-              </button>
-            </>
-          )}
-
-          {result && (
-            <div style={{
-              marginTop: '8px', padding: '6px', fontSize: '13px',
-              color: result.success ? '#005500' : '#aa0000',
-              background: result.success ? '#e8f5e9' : '#fde8e8',
-              border: `1px solid ${result.success ? '#005500' : '#aa0000'}`,
-            }}>
-              {result.success ? '✓' : '✗'} {result.msg}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function MyDevs({ openDevProfile }) {
   const { address, isConnected, connect, displayAddress } = useWallet();
   const { devs, loading, fetchError, refreshDevs, updateDev, tokenIds } = useDevs();
@@ -872,7 +1297,6 @@ export default function MyDevs({ openDevProfile }) {
   const [activityCount, setActivityCount] = useState(0);
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
   const [, setRefreshTick] = useState(0);
-  const [transferDev, setTransferDev] = useState(null); // dev object for transfer modal
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -1025,9 +1449,9 @@ export default function MyDevs({ openDevProfile }) {
                   key={dev.token_id}
                   dev={dev}
                   address={address}
+                  allDevs={devs}
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
-                  onTransfer={(d) => setTransferDev(d)}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
@@ -1063,19 +1487,6 @@ export default function MyDevs({ openDevProfile }) {
           <ActivityTab walletAddress={address} devs={devs} />
         )}
       </div>
-
-      {transferDev && (
-        <TransferModal
-          fromDev={transferDev}
-          allDevs={devs}
-          address={address}
-          onClose={() => setTransferDev(null)}
-          onDevUpdate={(fresh) => {
-            updateDev(fresh);
-            setTransferDev(null);
-          }}
-        />
-      )}
     </div>
   );
 }

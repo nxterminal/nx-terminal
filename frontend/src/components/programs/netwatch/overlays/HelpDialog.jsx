@@ -39,7 +39,7 @@ ${'═'.repeat(45)}
 Network:   MegaETH
 Chain ID:  4326
 RPC:       carrot.megaeth.com/rpc
-Explorer:  megaexplorer.xyz
+Explorer:  mega.etherscan.io
 Consensus: AsyncBFT
 Target TPS: 30,000+
 Block Time: Sub-second (~0.5-0.8s)

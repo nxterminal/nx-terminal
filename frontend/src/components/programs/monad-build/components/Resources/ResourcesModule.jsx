@@ -47,7 +47,7 @@ const megaeth = {
   name: 'MegaETH',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
   rpcUrls: { default: { http: ['https://carrot.megaeth.com/rpc'] } },
-  blockExplorers: { default: { name: 'MegaExplorer', url: 'https://megaexplorer.xyz' } },
+  blockExplorers: { default: { name: 'MegaExplorer', url: 'https://mega.etherscan.io' } },
 };
 
 const client = createPublicClient({
@@ -91,7 +91,7 @@ export default function ResourcesModule() {
       <Section title="Block Explorers">
         <div className="mb-flex-col mb-gap-sm">
           {[
-            { name: 'MegaExplorer', url: 'https://megaexplorer.xyz', desc: 'Block explorer' },
+            { name: 'MegaEtherscan', url: 'https://mega.etherscan.io', desc: 'Block explorer' },
           ].map(e => (
             <div key={e.name} className="mb-flex mb-items-center mb-justify-between">
               <div>

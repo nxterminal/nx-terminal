@@ -1,11 +1,17 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
 const WS_BASE = API_BASE.replace('https', 'wss').replace('http', 'ws');
 
-function fetchJSON(url, options) {
-  return fetch(url, options).then(r => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
+async function fetchJSON(url, options) {
+  const r = await fetch(url, options);
+  if (!r.ok) {
+    let detail = '';
+    try {
+      const body = await r.json();
+      detail = body.detail || body.message || '';
+    } catch {}
+    throw new Error(detail || `HTTP ${r.status}`);
+  }
+  return r.json();
 }
 
 export const api = {
@@ -74,11 +80,17 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, dev_id }),
     }),
-  transferNxt: (player_address, from_dev_id, to_dev_id, amount) =>
+  fundDev: (player_address, dev_token_id, amount, tx_hash) =>
+    fetchJSON(`${API_BASE}/api/shop/fund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, dev_token_id, amount, tx_hash }),
+    }),
+  transferNxt: (player_address, from_dev_token_id, to_dev_token_id, amount) =>
     fetchJSON(`${API_BASE}/api/shop/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ player_address, from_dev_id, to_dev_id, amount }),
+      body: JSON.stringify({ player_address, from_dev_token_id, to_dev_token_id, amount }),
     }),
 
   // Players
