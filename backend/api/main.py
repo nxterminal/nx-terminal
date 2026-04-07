@@ -61,7 +61,7 @@ def _run_auto_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("🚀 NX Terminal API starting...")
-    init_db_pool(minconn=2, maxconn=20)
+    init_db_pool(minconn=5, maxconn=50)
     _run_auto_migrations()
     await init_redis()
     log.info("✅ NX Terminal API ready")
