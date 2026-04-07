@@ -223,7 +223,7 @@ async def get_dev_protocols(token_id: int):
         """SELECT id, name, description, code_quality, value,
                   investor_count, total_invested, status, created_at
            FROM protocols WHERE creator_dev_id = %s
-           ORDER BY created_at DESC""",
+           ORDER BY created_at DESC LIMIT 100""",
         (token_id,)
     )
 
@@ -237,7 +237,7 @@ async def get_dev_investments(token_id: int):
            FROM protocol_investments pi
            JOIN protocols p ON p.id = pi.protocol_id
            WHERE pi.dev_id = %s
-           ORDER BY pi.invested_at DESC""",
+           ORDER BY pi.invested_at DESC LIMIT 100""",
         (token_id,)
     )
 
@@ -248,7 +248,7 @@ async def get_dev_ais(token_id: int):
     return fetch_all(
         """SELECT id, name, description, vote_count, weighted_votes, reward_tier, created_at
            FROM absurd_ais WHERE creator_dev_id = %s
-           ORDER BY created_at DESC""",
+           ORDER BY created_at DESC LIMIT 100""",
         (token_id,)
     )
 
