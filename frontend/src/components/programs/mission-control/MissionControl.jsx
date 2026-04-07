@@ -131,6 +131,15 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
   const required = mission.required_devs || 1;
   const [selected, setSelected] = useState([]);
 
+  // Count eligible devs (meet stat req + not on cooldown)
+  const eligibleCount = devs.filter(dev => {
+    const statKey = reqStat ? STAT_KEYS[reqStat] : null;
+    const meetsReq = statKey ? (dev[statKey] || 0) >= reqVal : true;
+    const onCd = (cooldowns || []).some(c => c.dev_token_id === dev.token_id && c.mission_id === mission.id);
+    return meetsReq && !onCd;
+  }).length;
+  const notEnough = eligibleCount < required;
+
   const sortedDevs = [...devs].sort((a, b) => {
     const statKey = reqStat ? STAT_KEYS[reqStat] : null;
     const aVal = statKey ? (a[statKey] || 0) : 999;
@@ -189,6 +198,16 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
         {reqStat && (
           <div style={{ fontSize: '12px', color: T.textMuted, marginBottom: '10px' }}>
             Requires: {STAT_NAMES[reqStat] || reqStat} &ge; {reqVal}
+          </div>
+        )}
+        {notEnough && devs.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
+            <div style={{ fontSize: 16, color: T.red, marginBottom: 8 }}>NOT ENOUGH ELIGIBLE DEVS</div>
+            <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+              This mission requires {required} dev{required > 1 ? 's' : ''}.
+              <br/>You have {eligibleCount} eligible dev{eligibleCount !== 1 ? 's' : ''} available.
+            </div>
           </div>
         )}
         {devs.length === 0 && (
@@ -592,6 +611,7 @@ export default function MissionControl() {
       setSelectingMission(null);
       setConfirmDevs(null);
       fetchAvailable();
+      window.dispatchEvent(new Event('nx-devs-refresh'));
     } catch (e) {
       setFeedback({ text: e.message || 'Failed to start mission', color: T.red });
     }
@@ -610,6 +630,7 @@ export default function MissionControl() {
         color: T.greenMid,
       });
       fetchActive();
+      window.dispatchEvent(new Event('nx-devs-refresh'));
     } catch (e) {
       setFeedback({ text: e.message || 'Failed to claim', color: T.red });
     }
@@ -624,6 +645,7 @@ export default function MissionControl() {
       await api.abandonMission(address, mission.player_mission_id);
       setFeedback({ text: 'Mission abandoned.', color: '#ffaa00' });
       fetchActive();
+      window.dispatchEvent(new Event('nx-devs-refresh'));
     } catch (e) {
       setFeedback({ text: e.message || 'Failed to abandon', color: T.red });
     }
