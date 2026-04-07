@@ -27,7 +27,6 @@ DIFFICULTY_SLOTS = {
     'easy': 3,
     'medium': 2,
     'hard': 1,
-    'extreme': 1,   # only if devCount >= 5
     'legendary': 1, # only if devCount >= 10
 }
 
@@ -87,9 +86,7 @@ async def get_available_missions(wallet: str = Query(...)):
 
     selected = []
     for diff, slots in DIFFICULTY_SLOTS.items():
-        # Skip extreme/legendary if not enough devs
-        if diff == 'extreme' and dev_count < 5:
-            continue
+        # Skip legendary if not enough devs
         if diff == 'legendary' and dev_count < 10:
             continue
         pool = by_difficulty.get(diff, [])
