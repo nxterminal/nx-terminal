@@ -698,7 +698,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON"
+      <StoneBtn emoji={'\uD83D\uDCB0'} label="ECON."
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
         title="Fund or transfer $NXT" />
@@ -901,9 +901,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     e.stopPropagation();
     if (!address || !lockBusy()) return;
     try {
-      const res = await api.fixBug(address, dev.token_id);
-      triggerSpend(res.energy_cost || 10, 'energy');
-      setActionMsg({ text: res.message || 'Bug fixed!', color: '#005500' });
+      const res = await api.buyItem(address, 'fix_bugs', dev.token_id);
+      if (res.energy_cost) triggerSpend(res.energy_cost, 'energy');
+      setActionMsg({ text: 'Bug fixed!', color: '#005500' });
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
