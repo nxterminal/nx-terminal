@@ -159,6 +159,8 @@ CREATE TABLE devs (
 
     -- Vital stats (decay over time)
     caffeine            SMALLINT NOT NULL DEFAULT 50,
+    social              SMALLINT NOT NULL DEFAULT 50,
+    knowledge           SMALLINT NOT NULL DEFAULT 50,
 
     -- Game mechanics
     pc_health           SMALLINT NOT NULL DEFAULT 100,

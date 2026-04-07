@@ -116,7 +116,7 @@ SHOP_ITEMS = {
     },
 }
 
-COFFEE_ITEMS = {"coffee", "energy_drink_small", "energy_drink", "pizza", "mega_meal"}
+COFFEE_ITEMS = {"energy_drink_small", "energy_drink", "pizza", "mega_meal"}
 
 
 @router.get("")
