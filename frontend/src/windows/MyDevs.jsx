@@ -222,7 +222,7 @@ function QuickPrompt({ devId, devName, address }) {
   );
 }
 
-function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
+function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, onTransfer }) {
   const arcColor = ARCHETYPE_COLORS[dev.archetype] || '#ccc';
   const gifUrl = dev.ipfs_hash ? `${IPFS_GW}${dev.ipfs_hash}` : null;
   const energyPct = dev.max_energy ? Math.round((dev.energy / dev.max_energy) * 100) : (dev.energy || 0);
@@ -356,10 +356,10 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
                 style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
                 ☕5
               </button>
-              <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍕')}
-                title={energyHigh ? "Energy is OK" : "🍕 PIZZA: 25 $NXT → +7 energy"}
+              <button className="win-btn" onClick={(e) => doShopAction(e, 'pizza', '🍔')}
+                title={energyHigh ? "Energy is OK" : "🍔 HAMBURGER: 25 $NXT → +7 energy"}
                 style={{ fontSize: '9px', padding: '1px 4px' }} disabled={busy || energyHigh}>
-                🍕25
+                🍔25
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'mega_meal', '🍔')}
                 title={energyHigh ? "Energy is OK" : "🍔 MEGA MEAL: 50 $NXT → +10 energy"}
@@ -375,12 +375,17 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission }) {
             }}>
               {energyPct >= 70 ? 'ENERGY OK' : energyPct >= 30 ? 'LOW ENERGY' : 'CRITICAL'}
             </span>
-            {/* Hack + Repair row */}
+            {/* Hack + Repair + Transfer row */}
             <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="win-btn" onClick={doHack}
                 title={"Spend 15 $NXT to hack a rival. ~50% success."}
                 style={{ fontSize: '9px', padding: '1px 4px', border: '1px solid #b8860b', color: '#7a5c00', fontWeight: 'bold' }} disabled={busy}>
                 ⚡Hack 15
+              </button>
+              <button className="win-btn" onClick={(e) => { e.stopPropagation(); onTransfer?.(dev); }}
+                title={"Transfer $NXT to another dev"}
+                style={{ fontSize: '9px', padding: '1px 4px', color: '#0d47a1' }} disabled={busy || dev.balance_nxt <= 0}>
+                💼Txfr
               </button>
               <button className="win-btn" onClick={(e) => doShopAction(e, 'pc_repair', '🔧 Repaired')}
                 title={"🔧 REPAIR PC: 10 $NXT → restore PC to 100%"}
@@ -732,6 +737,134 @@ function ActivityTab({ walletAddress, devs }) {
   );
 }
 
+function TransferModal({ fromDev, allDevs, address, onClose, onDevUpdate }) {
+  const [toDevId, setToDevId] = useState('');
+  const [transferAmount, setTransferAmount] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const otherDevs = allDevs.filter(d => d.token_id !== fromDev.token_id);
+
+  const handleTransfer = async () => {
+    if (!toDevId || transferAmount <= 0 || busy) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await api.transferNxt(address, fromDev.token_id, parseInt(toDevId), transferAmount);
+      setResult({ success: true, msg: `Transferred ${res.amount} $NXT to ${res.to_dev}` });
+      // Refresh both devs
+      const freshFrom = await api.getDev(fromDev.token_id, address).catch(() => null);
+      const freshTo = await api.getDev(parseInt(toDevId), address).catch(() => null);
+      if (freshFrom && onDevUpdate) onDevUpdate(freshFrom);
+      if (freshTo && onDevUpdate) onDevUpdate(freshTo);
+    } catch (err) {
+      setResult({ success: false, msg: err.message || 'Transfer failed' });
+    }
+    setBusy(false);
+  };
+
+  const modalStyle = {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', zIndex: 9999,
+  };
+  const boxStyle = {
+    background: 'var(--win-bg, #c0c0c0)', border: '2px outset #fff',
+    padding: '0', width: '320px', fontFamily: "'VT323', monospace",
+  };
+  const titleBar = {
+    background: 'linear-gradient(90deg, #000080, #0000ff)', color: '#fff',
+    padding: '3px 6px', fontSize: '13px', display: 'flex', justifyContent: 'space-between',
+    alignItems: 'center',
+  };
+  const body = { padding: '12px', fontSize: '14px' };
+  const inputStyle = {
+    fontFamily: "'VT323', monospace", fontSize: '18px',
+    background: '#1a1a2e', color: '#66ff66',
+    border: '2px solid #3a5a3a', padding: '6px 10px',
+    width: '100px', textAlign: 'center', outline: 'none',
+  };
+
+  return (
+    <div style={modalStyle} onClick={onClose}>
+      <div style={boxStyle} onClick={e => e.stopPropagation()}>
+        <div style={titleBar}>
+          <span>Transfer $NXT — {fromDev.name}</span>
+          <button className="win-btn" onClick={onClose} style={{ fontSize: '10px', padding: '0 4px' }}>X</button>
+        </div>
+        <div style={body}>
+          <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555' }}>
+            From: <strong>{fromDev.name}</strong> — Balance: <strong>{fromDev.balance_nxt} $NXT</strong>
+          </div>
+
+          {otherDevs.length === 0 ? (
+            <div style={{ color: '#aa0000', fontSize: '13px' }}>You need at least 2 devs to transfer.</div>
+          ) : (
+            <>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px' }}>To:</label>
+                <select
+                  value={toDevId}
+                  onChange={e => setToDevId(e.target.value)}
+                  style={{
+                    fontFamily: "'VT323', monospace", fontSize: '14px',
+                    width: '100%', padding: '4px',
+                    background: '#1a1a2e', color: '#66ff66',
+                    border: '2px solid #3a5a3a',
+                  }}
+                >
+                  <option value="">-- Select dev --</option>
+                  {otherDevs.map(d => (
+                    <option key={d.token_id} value={d.token_id}>
+                      {d.name} (#{d.token_id}) — {d.balance_nxt} $NXT
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0' }}>
+                <label style={{ fontSize: '14px', color: '#555' }}>Amount:</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={fromDev.balance_nxt}
+                  value={transferAmount || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setTransferAmount(Math.max(0, Math.min(val, fromDev.balance_nxt)));
+                  }}
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: '12px', color: '#666' }}>/ {fromDev.balance_nxt} $NXT</span>
+              </div>
+
+              <button
+                className="win-btn"
+                disabled={!toDevId || !transferAmount || transferAmount <= 0 || busy}
+                onClick={handleTransfer}
+                style={{ width: '100%', padding: '6px', fontSize: '14px', marginTop: '6px', fontWeight: 'bold' }}
+              >
+                {busy ? 'Transferring...' : '💼 TRANSFER'}
+              </button>
+            </>
+          )}
+
+          {result && (
+            <div style={{
+              marginTop: '8px', padding: '6px', fontSize: '13px',
+              color: result.success ? '#005500' : '#aa0000',
+              background: result.success ? '#e8f5e9' : '#fde8e8',
+              border: `1px solid ${result.success ? '#005500' : '#aa0000'}`,
+            }}>
+              {result.success ? '✓' : '✗'} {result.msg}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MyDevs({ openDevProfile }) {
   const { address, isConnected, connect, displayAddress } = useWallet();
   const { devs, loading, fetchError, refreshDevs, updateDev, tokenIds } = useDevs();
@@ -739,6 +872,7 @@ export default function MyDevs({ openDevProfile }) {
   const [activityCount, setActivityCount] = useState(0);
   const [missionMap, setMissionMap] = useState({}); // devTokenId → mission info
   const [, setRefreshTick] = useState(0);
+  const [transferDev, setTransferDev] = useState(null); // dev object for transfer modal
 
   // Fetch active missions to show on-mission state in DevCards
   useEffect(() => {
@@ -893,6 +1027,7 @@ export default function MyDevs({ openDevProfile }) {
                   address={address}
                   mission={missionMap[dev.token_id]}
                   onClick={() => openDevProfile?.(dev.token_id)}
+                  onTransfer={(d) => setTransferDev(d)}
                   onRetry={(id) => {
                     api.getDev(id, address).then(fresh => {
                       if (fresh && !fresh._fetchFailed) {
@@ -928,6 +1063,19 @@ export default function MyDevs({ openDevProfile }) {
           <ActivityTab walletAddress={address} devs={devs} />
         )}
       </div>
+
+      {transferDev && (
+        <TransferModal
+          fromDev={transferDev}
+          allDevs={devs}
+          address={address}
+          onClose={() => setTransferDev(null)}
+          onDevUpdate={(fresh) => {
+            updateDev(fresh);
+            setTransferDev(null);
+          }}
+        />
+      )}
     </div>
   );
 }

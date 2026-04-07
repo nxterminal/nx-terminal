@@ -74,6 +74,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, dev_id }),
     }),
+  transferNxt: (player_address, from_dev_id, to_dev_id, amount) =>
+    fetchJSON(`${API_BASE}/api/shop/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, from_dev_id, to_dev_id, amount }),
+    }),
 
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),

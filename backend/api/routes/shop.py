@@ -56,9 +56,9 @@ SHOP_ITEMS = {
     # ── Food & Drinks (energy) ──────────────────────────────
     "coffee": {
         "name": "Coffee",
-        "description": "+3 energy. Fuel for the grind.",
+        "description": "+25 caffeine. Fuel for the grind.",
         "cost_nxt": 5,
-        "effect": {"type": "energy_boost", "value": 3},
+        "effect": {"type": "caffeine_boost", "value": 25},
     },
     "energy_drink_small": {
         "name": "Energy Drink XL",
@@ -67,7 +67,7 @@ SHOP_ITEMS = {
         "effect": {"type": "energy_boost", "value": 5},
     },
     "pizza": {
-        "name": "Pizza",
+        "name": "Hamburger",
         "description": "+7 energy. The developer's staple.",
         "cost_nxt": 25,
         "effect": {"type": "energy_boost", "value": 7},
@@ -106,7 +106,7 @@ SHOP_ITEMS = {
     },
 }
 
-COFFEE_ITEMS = {"coffee", "energy_drink_small", "energy_drink", "pizza", "mega_meal"}
+COFFEE_ITEMS = {"energy_drink_small", "energy_drink", "pizza", "mega_meal"}
 
 
 @router.get("")
@@ -178,6 +178,11 @@ async def buy_item(req: PurchaseRequest):
                         "UPDATE devs SET coffee_count = coffee_count + 1 WHERE token_id = %s",
                         (req.target_dev_id,)
                     )
+            elif effect["type"] == "caffeine_boost":
+                cur.execute(
+                    "UPDATE devs SET caffeine = LEAST(100, caffeine + %s), coffee_count = coffee_count + 1 WHERE token_id = %s",
+                    (effect["value"], req.target_dev_id)
+                )
             elif effect["type"] == "mood_reset":
                 cur.execute(
                     "UPDATE devs SET mood = %s WHERE token_id = %s",
@@ -441,3 +446,65 @@ async def hack_raid(req: HackRequest):
             )
 
     return result
+
+
+# ── Transfer NXT between owned devs ────────────────────────
+
+class TransferRequest(BaseModel):
+    player_address: str
+    from_dev_id: int
+    to_dev_id: int
+    amount: int
+
+
+@router.post("/transfer")
+async def transfer_nxt(req: TransferRequest):
+    """Transfer $NXT between two devs owned by the same player."""
+    addr = validate_wallet(req.player_address)
+    shop_limiter.check(f"wallet:{addr}")
+
+    if req.amount <= 0:
+        raise HTTPException(400, "Amount must be greater than 0")
+    if req.from_dev_id == req.to_dev_id:
+        raise HTTPException(400, "Cannot transfer to the same dev")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT token_id, owner_address, balance_nxt, name FROM devs WHERE token_id IN (%s, %s) FOR UPDATE",
+                (req.from_dev_id, req.to_dev_id)
+            )
+            rows = cur.fetchall()
+            devs_map = {r["token_id"]: r for r in rows}
+
+            from_dev = devs_map.get(req.from_dev_id)
+            to_dev = devs_map.get(req.to_dev_id)
+
+            if not from_dev:
+                raise HTTPException(404, "Source dev not found")
+            if not to_dev:
+                raise HTTPException(404, "Destination dev not found")
+            if from_dev["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own the source dev")
+            if to_dev["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own the destination dev")
+            if from_dev["balance_nxt"] < req.amount:
+                raise HTTPException(400, f"Not enough $NXT. Have {from_dev['balance_nxt']}, need {req.amount}")
+
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt - %s WHERE token_id = %s",
+                (req.amount, req.from_dev_id)
+            )
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt + %s WHERE token_id = %s",
+                (req.amount, req.to_dev_id)
+            )
+
+        conn.commit()
+
+    return {
+        "success": True,
+        "from_dev": from_dev["name"],
+        "to_dev": to_dev["name"],
+        "amount": req.amount
+    }

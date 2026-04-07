@@ -157,6 +157,11 @@ CREATE TABLE devs (
     last_message        TEXT,
     last_message_channel chat_channel_enum,
 
+    -- Vitals (decayed by engine each salary tick)
+    caffeine            INTEGER NOT NULL DEFAULT 50,
+    social              INTEGER NOT NULL DEFAULT 50,
+    knowledge           INTEGER NOT NULL DEFAULT 50,
+
     -- Game mechanics
     pc_health           SMALLINT NOT NULL DEFAULT 100,
     training_course     VARCHAR(30) DEFAULT NULL,
