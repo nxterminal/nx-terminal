@@ -176,6 +176,13 @@ export function DevsProvider({ children }) {
     setRefreshKey(k => k + 1);
   }, []);
 
+  // Listen for cross-window refresh requests (e.g. from MissionControl)
+  useEffect(() => {
+    const handler = () => refreshDevs();
+    window.addEventListener('nx-devs-refresh', handler);
+    return () => window.removeEventListener('nx-devs-refresh', handler);
+  }, [refreshDevs]);
+
   const updateDev = useCallback((fresh) => {
     setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
   }, []);

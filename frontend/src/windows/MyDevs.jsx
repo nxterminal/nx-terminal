@@ -1352,9 +1352,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           gap: '6px', zIndex: 2,
         }} onClick={e => e.stopPropagation()}>
           <span style={{
-            fontSize: '16px', fontWeight: 'bold', color: '#ffaa00',
+            fontSize: '16px', fontWeight: 'bold', color: '#2d8a2d',
             textTransform: 'uppercase', letterSpacing: '2px',
-            textShadow: '0 0 6px rgba(255, 170, 0, 0.5)',
+            textShadow: '0 0 6px rgba(45, 138, 45, 0.5)',
             animation: 'mission-pulse 2s ease-in-out infinite',
           }}>⏳ ON MISSION</span>
           {mission && (
