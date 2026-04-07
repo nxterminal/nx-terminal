@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis
+from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions
 from backend.api.ws.feed import router as ws_router
 
@@ -22,10 +22,25 @@ log = logging.getLogger("nx_api")
 # LIFESPAN — Startup / Shutdown
 # ============================================================
 
+def _run_auto_migrations():
+    """Ensure new columns exist. Safe to run on every startup (IF NOT EXISTS)."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50")
+            conn.commit()
+        log.info("✅ Auto-migrations complete (caffeine, social_vitality, knowledge)")
+    except Exception as e:
+        log.warning(f"⚠️ Auto-migration warning: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("🚀 NX Terminal API starting...")
     init_db_pool(minconn=2, maxconn=20)
+    _run_auto_migrations()
     await init_redis()
     log.info("✅ NX Terminal API ready")
     yield
