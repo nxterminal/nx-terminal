@@ -838,6 +838,25 @@ def pay_salaries(conn):
         UPDATE devs SET caffeine = GREATEST(0, caffeine - 2) WHERE status = 'active'
     """)
 
+    # Degrade social_vitality: -1 per hour (min 0)
+    cur.execute("""
+        UPDATE devs SET social_vitality = GREATEST(0, social_vitality - 1) WHERE status = 'active'
+    """)
+
+    # Degrade knowledge: -1 per hour (min 0)
+    cur.execute("""
+        UPDATE devs SET knowledge = GREATEST(0, knowledge - 1) WHERE status = 'active'
+    """)
+
+    # Low knowledge penalty: generate extra bugs
+    # knowledge < 15: +2 bugs/hour, knowledge 15-29: +1 bug/hour
+    cur.execute("""
+        UPDATE devs SET bugs_shipped = bugs_shipped + 2 WHERE status = 'active' AND knowledge < 15
+    """)
+    cur.execute("""
+        UPDATE devs SET bugs_shipped = bugs_shipped + 1 WHERE status = 'active' AND knowledge >= 15 AND knowledge < 30
+    """)
+
     conn.commit()
     log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen + PC wear")
     return count

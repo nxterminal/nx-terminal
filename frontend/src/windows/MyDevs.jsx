@@ -720,7 +720,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
                 cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
                 fontFamily: "'VT323', monospace", fontSize: '14px',
                 textAlign: 'left',
-              }}>{'\uD83D\uDCE4'} SEND</button>
+              }}>{'\uD83D\uDD04'} TRANSFER</button>
           )}
         </div>
       )}
@@ -729,61 +729,96 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
 }
 
 // ── Spend Animation + Sound ─────────────────────────────
+// ── Sound Effects ───────────────────────────────────────
 function playSpendSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(ctx.destination);
     osc.type = 'square';
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
     osc.frequency.setValueAtTime(400, ctx.currentTime + 0.1);
     gain.gain.setValueAtTime(0.12, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
     setTimeout(() => ctx.close(), 500);
   } catch {}
 }
 
-function playFixSound() {
+function playGainSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(ctx.destination);
     osc.type = 'square';
-    osc.frequency.setValueAtTime(300, ctx.currentTime);
-    osc.frequency.setValueAtTime(500, ctx.currentTime + 0.08);
-    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.16);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
+    osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(1000, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
     setTimeout(() => ctx.close(), 500);
   } catch {}
 }
 
+function playActionSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(500, ctx.currentTime);
+    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
+    setTimeout(() => ctx.close(), 500);
+  } catch {}
+}
+
+// ── Animation Color Map ────────────────────────────────
+const ANIM_COLORS = {
+  '$NXT_spend': '#ff4444', '$NXT_gain': '#ffdd44',
+  'energy_spend': '#ff9800', 'energy_gain': '#66ff66',
+  'bugs_gain': '#44ffcc', 'caffeine_gain': '#66ff66',
+  'social_gain': '#66ff66', 'knowledge_gain': '#44ccff',
+  'pc_gain': '#66ff66', 'reputation_gain': '#ffdd44',
+};
+
+function getAnimColor(stat, type) {
+  return ANIM_COLORS[`${stat}_${type}`] || (type === 'spend' ? '#ff4444' : '#66ff66');
+}
+
+const STAT_NAMES = {
+  '$NXT': '$NXT', energy: 'Energy', bugs: 'Bugs', caffeine: 'Caffeine',
+  social: 'Social', knowledge: 'Knowledge', pc: 'PC Health', reputation: 'Rep',
+  mood: 'Mood',
+};
+
+// ── Multi-stat Animation Overlay ───────────────────────
 function SpendOverlay({ spends }) {
   if (!spends.length) return null;
   return (
     <div style={{
-      position: 'absolute', top: 0, left: 0, right: 0,
-      pointerEvents: 'none', zIndex: 100, display: 'flex', justifyContent: 'center',
+      position: 'absolute', top: '20%', left: 0, right: 0,
+      pointerEvents: 'none', zIndex: 100, display: 'flex',
+      flexDirection: 'column', alignItems: 'center',
     }}>
       {spends.map(s => (
         <div key={s.id} style={{
-          position: 'absolute',
-          fontFamily: "'VT323', monospace", fontSize: '16px',
-          color: s.type === 'energy' ? '#ff9800' : '#ff4444',
+          fontFamily: "'VT323', monospace", fontSize: '16px', fontWeight: 'bold',
+          color: getAnimColor(s.stat || (s.type === 'energy' ? 'energy' : '$NXT'), s.animType || 'spend'),
           whiteSpace: 'nowrap',
           textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
-          animation: 'float-up-fade 1.5s ease-out forwards',
+          animation: `float-up-fade 1.5s ease-out ${s.delay || 0}ms forwards`,
+          opacity: 0,
         }}>
-          -{s.amount} {s.type === 'energy' ? 'Energy' : '$NXT'}
+          {s.amount > 0 ? '+' : ''}{s.amount} {STAT_NAMES[s.stat] || s.stat || (s.type === 'energy' ? 'Energy' : '$NXT')}
         </div>
       ))}
     </div>
@@ -805,13 +840,29 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [spends, setSpends] = useState([]);
 
-  const triggerSpend = useCallback((amount, type = 'nxt') => {
-    const id = Date.now();
-    setSpends(prev => [...prev, { id, amount, type }]);
-    if (type === 'energy') playFixSound();
-    else playSpendSound();
-    setTimeout(() => setSpends(prev => prev.filter(s => s.id !== id)), 1500);
+  const triggerChanges = useCallback((changes) => {
+    if (!changes || !changes.length) return;
+    const newAnims = changes.map((c, i) => ({
+      id: Date.now() + i,
+      stat: c.stat,
+      amount: c.amount,
+      animType: c.type,
+      delay: i * 200,
+    }));
+    setSpends(prev => [...prev, ...newAnims]);
+    const hasSpend = changes.some(c => c.type === 'spend');
+    const hasGain = changes.some(c => c.type === 'gain');
+    if (hasSpend) playSpendSound();
+    else if (hasGain) playGainSound();
+    else playActionSound();
+    const ids = newAnims.map(a => a.id);
+    setTimeout(() => setSpends(prev => prev.filter(s => !ids.includes(s.id))), 2000);
   }, []);
+
+  // Legacy compatibility wrapper
+  const triggerSpend = useCallback((amount, type = 'nxt') => {
+    triggerChanges([{ stat: type === 'energy' ? 'energy' : '$NXT', amount: -Math.abs(amount), type: 'spend' }]);
+  }, [triggerChanges]);
 
   const lockBusy = () => { if (busyRef.current) return false; busyRef.current = true; setBusy(true); return true; };
   const unlockBusy = (cooldownMs = 1000) => {
@@ -829,13 +880,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     return { text: 'Action failed', color: '#aa0000' };
   };
 
-  // Vital stats — use real fields, fallback to defaults for new stats (TODO: connect to backend)
+  // Vital stats — real values from backend
   const pcHealth = dev.pc_health ?? 100;
   const bugsVal = dev.bugs_shipped ?? 0;
-  const bugsMax = 20; // visual max for bugs bar
+  const bugsMax = 20;
   const knowledge = dev.knowledge ?? 50;
-  const social = dev.social ?? (dev.stat_social || 50);
-  const caffeine = dev.caffeine ?? Math.min(100, (dev.coffee_count || 0) * 10 + 30);
+  const social = dev.social_vitality ?? (dev.stat_social || 50);
+  const caffeine = dev.caffeine ?? 50;
 
   const doShopAction = async (e, itemId, label) => {
     e.stopPropagation();
@@ -843,7 +894,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     try {
       const res = await api.buyItem(address, itemId, dev.token_id);
       setActionMsg({ text: `${label} applied!`, color: '#005500' });
-      if (res.cost) triggerSpend(res.cost);
+      if (res.changes && res.changes.length) triggerChanges(res.changes);
+      else if (res.cost) triggerSpend(res.cost);
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -862,7 +914,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (!address || !lockBusy()) return;
     try {
       const res = await api.hack(address, dev.token_id);
-      triggerSpend(15);
+      if (res.changes && res.changes.length) triggerChanges(res.changes);
+      else triggerSpend(15);
       if (res.success) {
         setActionMsg({ text: `HACK SUCCESS: Stole ${res.stolen} $NXT from ${res.target}`, color: '#005500' });
       } else {
@@ -883,6 +936,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     try {
       const res = await api.graduate(address, dev.token_id);
       setActionMsg({ text: `Graduated! ${res.stat} +${res.bonus}`, color: '#005500' });
+      if (res.changes && res.changes.length) triggerChanges(res.changes);
       const fresh = await api.getDev(dev.token_id, address).catch(() => null);
       if (fresh && onDevUpdate) onDevUpdate(fresh);
     } catch (err) {
@@ -897,8 +951,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     if (!address || !lockBusy()) return;
     try {
       const res = await api.buyItem(address, 'fix_bugs', dev.token_id);
-      if (res.energy_cost) triggerSpend(res.energy_cost, 'energy');
-      setActionMsg({ text: 'Bug fixed!', color: '#005500' });
+      if (res.changes && res.changes.length) triggerChanges(res.changes);
+      else if (res.energy_cost) triggerSpend(res.energy_cost, 'energy');
+      setActionMsg({ text: 'Bugs fixed!', color: '#005500' });
       if (res.updated_dev && onDevUpdate) {
         onDevUpdate(res.updated_dev);
       } else {
@@ -1029,21 +1084,21 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
-            title="COFFEE: 5 $NXT +25 caffeine" />
+            title="Coffee: 3 $NXT \u2192 +25 Caffeine" />
           <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
             onClick={(e) => doShopAction(e, 'pizza', 'Hamburger')}
             disabled={busy || energyHigh}
-            title={energyHigh ? "Energy is OK" : "HAMBURGER: 25 $NXT +7 energy"} />
+            title={energyHigh ? "Energy is OK" : "Hamburger: 8 $NXT \u2192 +15 Energy"} />
           <StoneBtn emoji={'\u2694\uFE0F'} label="HACK"
             onClick={doHack} disabled={busy}
-            title="Spend 15 $NXT to hack a rival. ~50% success." />
+            title="Hack: 15 $NXT \u2192 steal 20-40 $NXT (risk!), +5 Social if success" />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
-            title={bugsVal > 0 ? `Fix 1 bug for 5 $NXT (${bugsVal} remaining)` : 'No bugs to fix'} />
+            title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
           <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
             onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
             disabled={busy || pcHealth >= 100}
-            title={pcHealth >= 100 ? "PC is healthy" : `REPAIR PC: 10 $NXT (${pcHealth}%)`} />
+            title={pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
           <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
             onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
             onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }} />
