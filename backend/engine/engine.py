@@ -1005,6 +1005,18 @@ def run_engine():
     snapshot_interval = timedelta(hours=24)
     claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
 
+    # Auto-migrate new columns before any queries
+    try:
+        with get_db() as conn:
+            cur = get_cursor(conn)
+            cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
+            cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
+            cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50")
+            conn.commit()
+            log.info("✅ Engine auto-migrations complete")
+    except Exception as e:
+        log.warning(f"⚠️ Engine auto-migration warning: {e}")
+
     # Pay salary immediately on startup so devs don't wait 1 hour after restart
     try:
         with get_db() as conn:
