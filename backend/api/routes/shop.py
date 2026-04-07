@@ -348,12 +348,127 @@ HACK_BASE_SUCCESS = 0.40
 HACK_STEAL_MIN = 20
 HACK_STEAL_MAX = 40
 
+# Player hack (PvP) constants — higher risk, higher reward
+HACK_PLAYER_COST = 25
+HACK_PLAYER_BASE_SUCCESS = 0.25
+HACK_PLAYER_STEAL_MIN = 30
+HACK_PLAYER_STEAL_MAX = 60
+HACK_PLAYER_SOCIAL_GAIN = 8
 
-@router.post("/hack")
-async def hack_raid(req: HackRequest):
+
+@router.post("/hack-mainframe")
+async def hack_mainframe(req: HackRequest):
+    """Hack the corporate mainframe. Reward from treasury."""
+    addr = validate_wallet(req.player_address)
+    shop_limiter.check(f"hack_mainframe:{addr}")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # Lock attacker
+            cur.execute(
+                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype FROM devs WHERE token_id = %s FOR UPDATE",
+                (req.attacker_dev_id,)
+            )
+            attacker = cur.fetchone()
+            if not attacker:
+                raise HTTPException(404, "Dev not found")
+            if attacker["owner_address"].lower() != addr:
+                raise HTTPException(403, "You don't own this dev")
+            if attacker["balance_nxt"] < HACK_COST:
+                raise HTTPException(400, f"Not enough $NXT. Need {HACK_COST}, have {attacker['balance_nxt']}")
+
+            # Check cooldown (shared with hack-player)
+            now = datetime.now(timezone.utc)
+            if attacker.get("last_raid_at"):
+                cooldown_end = attacker["last_raid_at"] + timedelta(hours=HACK_COOLDOWN_HOURS)
+                if now < cooldown_end:
+                    remaining = cooldown_end - now
+                    raise HTTPException(400, f"Hack on cooldown. Available in {int(remaining.total_seconds() // 3600)}h.")
+
+            # Check social threshold
+            if attacker.get("social_vitality", 50) < 15:
+                raise HTTPException(400, "Social too low to hack. Your dev has no street cred.")
+
+            # Deduct cost and set cooldown
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s, last_raid_at = %s WHERE token_id = %s",
+                (HACK_COST, HACK_COST, now, req.attacker_dev_id)
+            )
+
+            # Calculate success probability: 40% base + hacking_stat/200 (max ~85%)
+            success_prob = HACK_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
+            success = random.random() < success_prob
+
+            if success:
+                steal_amount = random.randint(HACK_STEAL_MIN, HACK_STEAL_MAX)
+                # Credit the dev (from treasury)
+                cur.execute(
+                    "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
+                    (steal_amount, steal_amount, req.attacker_dev_id)
+                )
+                # Log action
+                cur.execute(
+                    """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+                       VALUES (%s, %s, %s, 'HACK_MAINFRAME', %s::jsonb, 0, %s)""",
+                    (req.attacker_dev_id, attacker["name"], attacker["archetype"],
+                     json.dumps({"success": True, "stolen": steal_amount}),
+                     HACK_COST)
+                )
+                # Social boost
+                social_gain = 5
+                cur.execute(
+                    "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) WHERE token_id = %s",
+                    (social_gain, req.attacker_dev_id)
+                )
+                result = {
+                    "success": True, "hack_success": True, "hack_type": "mainframe",
+                    "stolen": steal_amount, "cost": HACK_COST,
+                    "net_gain": steal_amount - HACK_COST,
+                    "target_name": "CORPORATE MAINFRAME",
+                    "target_corp": attacker["corporation"],
+                    "message": f"Extracted {steal_amount} $NXT from corporate mainframe",
+                    "changes": [
+                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                        {"stat": "$NXT", "amount": steal_amount, "type": "gain"},
+                        {"stat": "social", "amount": social_gain, "type": "gain"},
+                    ],
+                }
+            else:
+                # Failed — cost is lost
+                cur.execute(
+                    """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+                       VALUES (%s, %s, %s, 'HACK_MAINFRAME', %s::jsonb, 0, %s)""",
+                    (req.attacker_dev_id, attacker["name"], attacker["archetype"],
+                     json.dumps({"success": False}),
+                     HACK_COST)
+                )
+                result = {
+                    "success": True, "hack_success": False, "hack_type": "mainframe",
+                    "stolen": 0, "cost": HACK_COST,
+                    "net_gain": -HACK_COST,
+                    "target_name": "CORPORATE MAINFRAME",
+                    "target_corp": None,
+                    "message": f"Firewall detected intrusion. {HACK_COST} $NXT seized by security.",
+                    "changes": [
+                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                    ],
+                }
+
+            # Record in shop_purchases
+            cur.execute(
+                """INSERT INTO shop_purchases (player_address, target_dev_id, item_type, item_effect, nxt_cost)
+                   VALUES (%s, %s, 'hack_mainframe', %s::jsonb, %s)""",
+                (addr, req.attacker_dev_id, json.dumps(result), HACK_COST)
+            )
+
+    return result
+
+
+@router.post("/hack-player")
+async def hack_player(req: HackRequest):
     """Attempt to hack a random dev from another corporation."""
     addr = validate_wallet(req.player_address)
-    shop_limiter.check(f"hack:{addr}")
+    shop_limiter.check(f"hack_player:{addr}")
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -367,8 +482,8 @@ async def hack_raid(req: HackRequest):
                 raise HTTPException(404, "Attacker dev not found")
             if attacker["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
-            if attacker["balance_nxt"] < HACK_COST:
-                raise HTTPException(400, f"Not enough $NXT. Need {HACK_COST}, have {attacker['balance_nxt']}")
+            if attacker["balance_nxt"] < HACK_PLAYER_COST:
+                raise HTTPException(400, f"Not enough $NXT. Need {HACK_PLAYER_COST}, have {attacker['balance_nxt']}")
 
             # Check cooldown
             now = datetime.now(timezone.utc)
@@ -394,15 +509,15 @@ async def hack_raid(req: HackRequest):
             # Deduct cost and set cooldown
             cur.execute(
                 "UPDATE devs SET balance_nxt = balance_nxt - %s, total_spent = total_spent + %s, last_raid_at = %s WHERE token_id = %s",
-                (HACK_COST, HACK_COST, now, req.attacker_dev_id)
+                (HACK_PLAYER_COST, HACK_PLAYER_COST, now, req.attacker_dev_id)
             )
 
-            # Calculate success probability: 40% base + hacking_stat/200 (max ~85%)
-            success_prob = HACK_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
+            # Calculate success probability: 25% base + hacking_stat/200 (max ~75%)
+            success_prob = HACK_PLAYER_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
             success = random.random() < success_prob
 
             if success:
-                steal_amount = random.randint(HACK_STEAL_MIN, min(HACK_STEAL_MAX, target["balance_nxt"]))
+                steal_amount = random.randint(HACK_PLAYER_STEAL_MIN, min(HACK_PLAYER_STEAL_MAX, target["balance_nxt"]))
                 # Transfer NXT
                 cur.execute(
                     "UPDATE devs SET balance_nxt = GREATEST(0, balance_nxt - %s) WHERE token_id = %s",
@@ -419,7 +534,7 @@ async def hack_raid(req: HackRequest):
                     (req.attacker_dev_id, attacker["name"], attacker["archetype"],
                      json.dumps({"success": True, "target_id": target["token_id"], "target_name": target["name"],
                                  "target_corp": target["corporation"], "stolen": steal_amount}),
-                     HACK_COST)
+                     HACK_PLAYER_COST)
                 )
                 # Notify target owner
                 if target.get("owner_address"):
@@ -432,35 +547,48 @@ async def hack_raid(req: HackRequest):
                          target["token_id"])
                     )
                 # BONUS: Social boosts on successful hack
-                social_gain = 5
+                social_gain = HACK_PLAYER_SOCIAL_GAIN
                 cur.execute(
                     "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) WHERE token_id = %s",
                     (social_gain, req.attacker_dev_id)
                 )
                 result = {
-                    "success": True, "stolen": steal_amount,
-                    "target": target["name"], "target_corp": target["corporation"],
+                    "success": True, "hack_success": True, "hack_type": "player",
+                    "stolen": steal_amount, "cost": HACK_PLAYER_COST,
+                    "net_gain": steal_amount - HACK_PLAYER_COST,
+                    "target_name": target["name"], "target_corp": target["corporation"],
+                    "target_owner": target["owner_address"][:6] + "..." + target["owner_address"][-4:],
+                    "message": f"Breached {target['name']}'s firewall. Extracted {steal_amount} $NXT.",
                     "changes": [
-                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                        {"stat": "$NXT", "amount": -HACK_PLAYER_COST, "type": "spend"},
                         {"stat": "$NXT", "amount": steal_amount, "type": "gain"},
                         {"stat": "social", "amount": social_gain, "type": "gain"},
                     ],
                 }
             else:
-                # Failed — already lost HACK_COST
+                # Failed — already lost HACK_PLAYER_COST
                 cur.execute(
                     """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
                        VALUES (%s, %s, %s, 'HACK_RAID', %s::jsonb, 0, %s)""",
                     (req.attacker_dev_id, attacker["name"], attacker["archetype"],
                      json.dumps({"success": False, "target_id": target["token_id"], "target_name": target["name"],
                                  "target_corp": target["corporation"]}),
-                     HACK_COST)
+                     HACK_PLAYER_COST)
+                )
+                # Failed hack: target seizes the cost
+                cur.execute(
+                    "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
+                    (HACK_PLAYER_COST, HACK_PLAYER_COST, target["token_id"])
                 )
                 result = {
-                    "success": False, "lost": HACK_COST,
-                    "target": target["name"], "target_corp": target["corporation"],
+                    "success": True, "hack_success": False, "hack_type": "player",
+                    "stolen": 0, "cost": HACK_PLAYER_COST,
+                    "net_gain": -HACK_PLAYER_COST,
+                    "target_name": target["name"], "target_corp": target["corporation"],
+                    "target_owner": target["owner_address"][:6] + "..." + target["owner_address"][-4:],
+                    "message": f"Intrusion detected by {target['name']}. {HACK_PLAYER_COST} $NXT seized by target.",
                     "changes": [
-                        {"stat": "$NXT", "amount": -HACK_COST, "type": "spend"},
+                        {"stat": "$NXT", "amount": -HACK_PLAYER_COST, "type": "spend"},
                     ],
                 }
 
@@ -468,7 +596,7 @@ async def hack_raid(req: HackRequest):
             cur.execute(
                 """INSERT INTO shop_purchases (player_address, target_dev_id, item_type, item_effect, nxt_cost)
                    VALUES (%s, %s, 'hack_raid', %s::jsonb, %s)""",
-                (addr, req.attacker_dev_id, json.dumps(result), HACK_COST)
+                (addr, req.attacker_dev_id, json.dumps(result), HACK_PLAYER_COST)
             )
 
     return result

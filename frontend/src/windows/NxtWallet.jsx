@@ -610,6 +610,20 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+      {/* Summary stats */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        <div className="stat-box win-panel">
+          <div className="stat-label">Total Spent</div>
+          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
+          <div className="stat-label">$NXT</div>
+        </div>
+        <div className="stat-box win-panel">
+          <div className="stat-label">Total Earned</div>
+          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>{formatNumber(summary.balance_total_earned)}</div>
+          <div className="stat-label">$NXT</div>
+        </div>
+      </div>
+
       {/* Balance header: In-Game + Wallet */}
       <div style={{
         display: 'flex', gap: '12px', padding: '8px 8px 4px', margin: '4px 8px 0',
@@ -636,20 +650,6 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
         fontFamily: "'VT323', monospace",
       }}>
         <AddTokenButton />
-      </div>
-
-      {/* Summary stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-        <div className="stat-box win-panel">
-          <div className="stat-label">Total Spent</div>
-          <div className="stat-value" style={{ color: 'var(--red-on-grey)' }}>{formatNumber(summary.total_spent || summary.balance_claimed || 0)}</div>
-          <div className="stat-label">$NXT</div>
-        </div>
-        <div className="stat-box win-panel">
-          <div className="stat-label">Total Earned</div>
-          <div className="stat-value" style={{ color: 'var(--cyan-on-grey)' }}>{formatNumber(summary.balance_total_earned)}</div>
-          <div className="stat-label">$NXT</div>
-        </div>
       </div>
 
       {/* Salary info + Add token */}

@@ -68,8 +68,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, dev_id }),
     }),
-  hack: (player_address, attacker_dev_id) =>
-    fetchJSON(`${API_BASE}/api/shop/hack`, {
+  hackMainframe: (player_address, attacker_dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/hack-mainframe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_address, attacker_dev_id }),
+    }),
+  hackPlayer: (player_address, attacker_dev_id) =>
+    fetchJSON(`${API_BASE}/api/shop/hack-player`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, attacker_dev_id }),
