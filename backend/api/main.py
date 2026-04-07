@@ -87,6 +87,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── Global per-IP rate limit middleware ──────────────────
+from backend.api.rate_limit import global_ip_limiter  # noqa: E402
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Skip health check and WebSocket
+    path = request.url.path
+    if path in ("/health", "/ws/feed") or path.startswith("/metadata/"):
+        return await call_next(request)
+    client_ip = request.client.host if request.client else "unknown"
+    if not global_ip_limiter.check(client_ip):
+        return JSONResponse(status_code=429, content={"detail": "Rate limited. Try again shortly."})
+    return await call_next(request)
+
+
 # CORS — allow frontend
 app.add_middleware(
     CORSMiddleware,
