@@ -23,15 +23,23 @@ log = logging.getLogger("nx_api")
 # ============================================================
 
 def _run_auto_migrations():
-    """Ensure new columns exist. Safe to run on every startup (IF NOT EXISTS)."""
+    """Ensure new columns/enums exist. Safe to run on every startup (IF NOT EXISTS)."""
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50")
+                # Ensure action_enum has all required values
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'HACK_MAINFRAME'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'action_enum'))
+                        THEN ALTER TYPE action_enum ADD VALUE 'HACK_MAINFRAME'; END IF;
+                    END $$;
+                """)
             conn.commit()
-        log.info("✅ Auto-migrations complete (caffeine, social_vitality, knowledge)")
+        log.info("✅ Auto-migrations complete")
     except Exception as e:
         log.warning(f"⚠️ Auto-migration warning: {e}")
 
