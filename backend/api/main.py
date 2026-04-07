@@ -38,6 +38,20 @@ def _run_auto_migrations():
                         THEN ALTER TYPE action_enum ADD VALUE 'HACK_MAINFRAME'; END IF;
                     END $$;
                 """)
+                # Mission multi-dev support
+                cur.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS required_devs SMALLINT NOT NULL DEFAULT 1")
+                cur.execute("ALTER TABLE player_missions ADD COLUMN IF NOT EXISTS group_id VARCHAR(36)")
+                # Update required_devs based on difficulty (only if still at default 1)
+                cur.execute("UPDATE missions SET required_devs = 2 WHERE difficulty = 'medium' AND required_devs = 1")
+                cur.execute("UPDATE missions SET required_devs = 4 WHERE difficulty = 'hard' AND required_devs = 1")
+                cur.execute("UPDATE missions SET required_devs = 5 WHERE difficulty = 'extreme' AND required_devs = 1")
+                cur.execute("UPDATE missions SET required_devs = 10 WHERE difficulty = 'legendary' AND required_devs = 1")
+                # Update rewards
+                cur.execute("UPDATE missions SET reward_nxt = 25 WHERE difficulty = 'easy' AND reward_nxt < 25")
+                cur.execute("UPDATE missions SET reward_nxt = 50 WHERE difficulty = 'medium' AND reward_nxt < 50")
+                cur.execute("UPDATE missions SET reward_nxt = 80 WHERE difficulty = 'hard' AND reward_nxt < 80")
+                cur.execute("UPDATE missions SET reward_nxt = 150 WHERE difficulty = 'extreme' AND reward_nxt < 150")
+                cur.execute("UPDATE missions SET reward_nxt = 250 WHERE difficulty = 'legendary' AND reward_nxt < 250")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
