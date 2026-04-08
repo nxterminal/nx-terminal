@@ -688,12 +688,13 @@ export default function MissionControl() {
   }
 
   return (
-    <div className="mc-scroll" style={{
-      padding: '8px 10px', fontFamily: "'VT323', monospace", fontSize: '13px',
-      height: '100%', overflowY: 'scroll',
+    <div style={{
+      fontFamily: "'VT323', monospace", fontSize: '13px',
+      height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       background: T.bg, color: T.text,
     }}>
-      {/* Header */}
+      {/* Header — fixed */}
+      <div style={{ flexShrink: 0, padding: '8px 10px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div style={{ fontWeight: 'bold', fontSize: '18px', color: T.cyan }}>
           &gt; MISSION CONTROL
@@ -751,6 +752,10 @@ export default function MissionControl() {
           Refresh
         </button>
       </div>
+      </div>{/* end fixed header */}
+
+      {/* Scrollable content */}
+      <div className="mc-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'scroll', padding: '0 10px 8px' }}>
 
       {/* Feedback */}
       {feedback && (
@@ -879,6 +884,7 @@ export default function MissionControl() {
         />
       )}
 
+      </div>{/* end scrollable content */}
     </div>
   );
 }
