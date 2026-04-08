@@ -193,7 +193,7 @@ export default function Desktop() {
       {/* Tier badge — fixed top-right corner */}
       {tier && devCount > 0 && (
         <div style={{
-          position: 'fixed', top: 8, right: 8, zIndex: 9999,
+          position: 'fixed', top: 8, right: 8, zIndex: 5,
           background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)',
           borderRadius: '3px', padding: '4px 10px',
           fontSize: '11px', fontFamily: "'VT323', monospace",
