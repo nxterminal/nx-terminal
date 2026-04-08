@@ -56,6 +56,7 @@
     inset 2px 2px 0 #dfdfdf;
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 38px);
 }
 
 .win98-window.maximized {
@@ -525,6 +526,7 @@
   box-shadow: inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0;
 }
 .mc-scroll::-webkit-scrollbar-thumb:hover { background: #7a8a9a; }
+.mc-scroll::-webkit-scrollbar-button { display: none; height: 0; }
 .mc-scroll { scrollbar-width: auto; scrollbar-color: #6b7b8a #1a1a2e; }
 
 @keyframes float-up-fade {
