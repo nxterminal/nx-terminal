@@ -515,6 +515,10 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+@keyframes mission-scroll-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.4; }
+}
 
 @keyframes float-up-fade {
   0% { opacity: 0; transform: translateY(0) scale(0.8); }
