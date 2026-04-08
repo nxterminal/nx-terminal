@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../services/api';
 import { useDevCount } from '../../../hooks/useDevCount';
 import { useWallet } from '../../../hooks/useWallet';
@@ -559,9 +559,6 @@ export default function MissionControl() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const contentRef = useRef(null);
-
   const [selectingMission, setSelectingMission] = useState(null);
   const [confirmDevs, setConfirmDevs] = useState(null);
 
@@ -619,18 +616,6 @@ export default function MissionControl() {
     const interval = setInterval(fetchActive, 60000);
     return () => clearInterval(interval);
   }, [tab, fetchActive]);
-
-  // ── Scroll indicator ────────────────────────────────────
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const check = () => setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 40);
-    el.addEventListener('scroll', check);
-    check();
-    const resizeObs = new ResizeObserver(check);
-    resizeObs.observe(el);
-    return () => { el.removeEventListener('scroll', check); resizeObs.disconnect(); };
-  }, [missions, activeMissions, historyMissions]);
 
   // ── Actions ─────────────────────────────────────────────
   const handleStartMission = async (mission, devs) => {
@@ -703,9 +688,9 @@ export default function MissionControl() {
   }
 
   return (
-    <div ref={contentRef} style={{
+    <div className="mc-scroll" style={{
       padding: '8px 10px', fontFamily: "'VT323', monospace", fontSize: '13px',
-      height: '100%', overflow: 'auto', position: 'relative',
+      height: '100%', overflowY: 'scroll',
       background: T.bg, color: T.text,
     }}>
       {/* Header */}
@@ -894,23 +879,6 @@ export default function MissionControl() {
         />
       )}
 
-      {/* Scroll indicator */}
-      {showScrollBtn && (
-        <div
-          onClick={() => contentRef.current?.scrollBy({ top: 200, behavior: 'smooth' })}
-          style={{
-            position: 'sticky', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-            width: 'fit-content', fontFamily: "'VT323', monospace", fontSize: 13,
-            color: '#66ff66', background: 'rgba(0,0,0,0.75)',
-            padding: '3px 14px', borderRadius: 4, cursor: 'pointer',
-            border: '1px solid rgba(100,255,100,0.3)', zIndex: 10,
-            animation: 'mission-scroll-pulse 2s ease-in-out infinite',
-            textAlign: 'center',
-          }}
-        >
-          ▼ SCROLL FOR MORE ▼
-        </div>
-      )}
     </div>
   );
 }

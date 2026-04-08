@@ -515,10 +515,16 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
-@keyframes mission-scroll-pulse {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.4; }
+/* Mission Control scrollbar — always visible, Win98 stone style */
+.mc-scroll::-webkit-scrollbar { width: 16px; }
+.mc-scroll::-webkit-scrollbar-track { background: #1a1a2e; border-left: 1px solid #333; }
+.mc-scroll::-webkit-scrollbar-thumb {
+  background: #6b7b8a;
+  border: 2px solid #1a1a2e;
+  box-shadow: inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0;
 }
+.mc-scroll::-webkit-scrollbar-thumb:hover { background: #7a8a9a; }
+.mc-scroll { scrollbar-width: auto; scrollbar-color: #6b7b8a #1a1a2e; }
 
 @keyframes float-up-fade {
   0% { opacity: 0; transform: translateY(0) scale(0.8); }
