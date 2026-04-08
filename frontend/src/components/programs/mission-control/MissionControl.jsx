@@ -690,7 +690,8 @@ export default function MissionControl() {
   return (
     <div style={{
       fontFamily: "'VT323', monospace", fontSize: '13px',
-      height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
       background: T.bg, color: T.text,
     }}>
       {/* Header — fixed */}

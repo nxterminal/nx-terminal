@@ -131,6 +131,7 @@
   overflow: auto;
   padding: 4px;
   min-height: 0;
+  position: relative;
 }
 
 .win98-statusbar {
