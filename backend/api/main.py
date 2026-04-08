@@ -54,6 +54,9 @@ def _run_auto_migrations():
                 cur.execute("UPDATE player_missions SET status = 'abandoned' WHERE mission_id IN (SELECT id FROM missions WHERE difficulty = 'extreme') AND status = 'in_progress'")
                 cur.execute("DELETE FROM player_missions WHERE mission_id IN (SELECT id FROM missions WHERE difficulty = 'extreme')")
                 cur.execute("DELETE FROM missions WHERE difficulty = 'extreme'")
+                # Remove one easy mission to keep 3 total
+                cur.execute("DELETE FROM player_missions WHERE mission_id IN (SELECT id FROM missions WHERE title = 'Explain Crypto to Your Mom')")
+                cur.execute("DELETE FROM missions WHERE title = 'Explain Crypto to Your Mom'")
                 # Performance indexes for scale
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_dev_id ON chat_messages(dev_id)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")

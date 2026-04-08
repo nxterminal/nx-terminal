@@ -24,7 +24,7 @@ STAT_COLUMNS = {
 
 # How many missions to show per difficulty
 DIFFICULTY_SLOTS = {
-    'easy': 3,
+    'easy': 2,
     'medium': 2,
     'hard': 1,
     'legendary': 1, # only if devCount >= 10
@@ -114,7 +114,7 @@ async def get_active_missions(wallet: str = Query(...)):
         "SELECT pm.id as player_mission_id, pm.status, pm.started_at, pm.ends_at, pm.claimed_at, "
         "       pm.dev_token_id, pm.group_id, "
         "       m.id as mission_id, m.title, m.description, m.difficulty, m.duration_hours, m.reward_nxt, "
-        "       d.name as dev_name, d.archetype as dev_archetype "
+        "       d.name as dev_name, d.archetype as dev_archetype, d.ipfs_hash as dev_ipfs_hash "
         "FROM player_missions pm "
         "JOIN missions m ON pm.mission_id = m.id "
         "LEFT JOIN devs d ON pm.dev_token_id = d.token_id "
@@ -134,7 +134,7 @@ async def get_mission_history(wallet: str = Query(...), limit: int = Query(50, l
         "SELECT pm.id as player_mission_id, pm.status, pm.started_at, pm.ends_at, pm.claimed_at, "
         "       pm.dev_token_id, "
         "       m.title, m.difficulty, m.duration_hours, m.reward_nxt, "
-        "       d.name as dev_name, d.archetype as dev_archetype "
+        "       d.name as dev_name, d.archetype as dev_archetype, d.ipfs_hash as dev_ipfs_hash "
         "FROM player_missions pm "
         "JOIN missions m ON pm.mission_id = m.id "
         "LEFT JOIN devs d ON pm.dev_token_id = d.token_id "

@@ -6,48 +6,63 @@ const TODAY = new Date().toLocaleDateString('en-US', { month: 'short', day: 'num
 const WELCOME_EMAIL = {
   id: 'welcome-1',
   from: 'NX Terminal System <system@nxterminal.corp>',
-  subject: 'Welcome to NX Terminal — Read Before You Begin',
+  subject: 'Welcome to NX Terminal — Protocol Wars Awaits',
   date: TODAY,
   read: false,
   body: `Welcome to NX Terminal.
 
-NX Terminal is a simulation of the AI development race — a satirical alternate history where dystopian AI corporations compete for dominance across 20 years of technological chaos.
-
-Here's what you need to know:
+You've entered the simulation — a satirical alternate history where dystopian AI corporations compete for dominance. Your devs are autonomous agents. They code, trade, hack, and survive. Your job is to manage them.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  HOW TO START
-  ────────────
-  1. Open "Mint/Hire Devs" from your desktop
-  2. Mint your first Developer (NFT)
-  3. Each Dev is a unique AI agent with randomized traits, archetype, and abilities
-  4. Your corporation will be assigned based on metadata
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  SALARY & EARNINGS
+  GETTING STARTED
   ────────────────
-  Each Developer you own earns you 200 $NXT every 24 hours.
-
-  More Devs = More $NXT = More Power.
-
-  Salary is deposited automatically into your Protocol Wars account.
-  Use $NXT to trade, invest in protocols, and dominate the leaderboard.
+  1. Open "Mint/Hire Devs" from the desktop
+  2. Mint your first Developer (0.0025 ETH)
+  3. Each Dev is unique — randomized traits, archetype, corporation, and skills
+  4. Your Dev starts working immediately after mint
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  THE SIMULATION
-  ──────────────
-  • 20 years of AI history compressed into real-time cycles
-  • Your devs code, trade, hack, and sabotage autonomously
-  • Worst performers are eliminated each cycle
-  • Monitor everything via Live Feed on your desktop
-  • Check the Leaderboard to track your standing
+  SALARY
+  ──────
+  Every Dev earns ~200 $NXT per day. Automatically.
+  Use $NXT to feed, repair, train, and hack.
+  Withdraw $NXT to your wallet anytime.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Mint a Dev. Watch them work. Collect your $NXT.
+  KEEP YOUR DEVS ALIVE
+  ─────────────────────
+  Your devs have vital stats that decay over time:
+  Energy, PC Health, Caffeine, Knowledge, Social.
+
+  If stats drop too low, performance suffers.
+  Use the action buttons on each dev card:
+  Feed, Coffee, Fix, Repair — each costs $NXT or Energy.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  EARN MORE
+  ─────────
+  • Missions — send devs on timed missions for bonus $NXT
+  • Hack Mainframe — risk $NXT to extract from the system
+  • Hack Player — higher risk, steal from rival wallets
+  • Invest — buy into protocols, sell for profit (or loss)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  QUICK TIPS
+  ──────────
+  • More Devs = more salary = more power
+  • Check the NXT Wallet to track earnings
+  • Train your devs to unlock harder missions
+  • Watch the Live Feed to see what your devs are doing
+  • The Leaderboard tracks top players
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mint a Dev. Keep them alive. Stack $NXT.
 
 Good luck, Commander.
 
