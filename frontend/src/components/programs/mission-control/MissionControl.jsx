@@ -483,7 +483,7 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
     }}>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* Dev avatar */}
-        <DevAvatar dev={{ ipfs_hash: null, name: mission.dev_name }} size={40} />
+        <DevAvatar dev={{ ipfs_hash: mission.dev_ipfs_hash, name: mission.dev_name }} size={40} />
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
