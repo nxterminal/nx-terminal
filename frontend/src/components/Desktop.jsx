@@ -5,6 +5,37 @@ import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
 import DailyStreakPopup from './DailyStreakPopup';
 import WorldEventBanner from './WorldEventBanner';
+
+// ── Global floating stat animation (for achievements, etc.) ──
+function GlobalStatAnimation() {
+  const [anims, setAnims] = useState([]);
+  useEffect(() => {
+    const handler = (e) => {
+      const changes = e.detail;
+      if (!Array.isArray(changes) || !changes.length) return;
+      const items = changes.map((c, i) => ({
+        id: Date.now() + i, text: `${c.amount > 0 ? '+' : ''}${c.amount} ${c.stat || '$NXT'}`,
+        color: c.type === 'gain' ? '#ffdd44' : '#ff4444', delay: i * 200,
+      }));
+      setAnims(prev => [...prev, ...items]);
+      setTimeout(() => setAnims(prev => prev.filter(a => !items.includes(a))), 2000);
+    };
+    window.addEventListener('nx-stat-animation', handler);
+    return () => window.removeEventListener('nx-stat-animation', handler);
+  }, []);
+  if (!anims.length) return null;
+  return (
+    <div style={{ position: 'fixed', top: '35%', left: 0, right: 0, pointerEvents: 'none', zIndex: 10600, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {anims.map(a => (
+        <div key={a.id} style={{
+          fontFamily: "'VT323', monospace", fontSize: 22, fontWeight: 'bold',
+          color: a.color, textShadow: '1px 1px 0 #000, -1px -1px 0 #000',
+          animation: `float-up-fade 1.5s ease-out ${a.delay}ms forwards`, opacity: 0,
+        }}>{a.text}</div>
+      ))}
+    </div>
+  );
+}
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
@@ -228,6 +259,7 @@ export default function Desktop() {
       <NXAssistant />
       <DailyStreakPopup />
       <WorldEventBanner />
+      <GlobalStatAnimation />
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
