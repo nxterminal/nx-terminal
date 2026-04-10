@@ -25,6 +25,10 @@ export default function Achievements() {
       const res = await api.claimAchievement(address, id);
       setFeedback({ text: `+${res.reward} $NXT — ${res.title}`, color: T.gold });
       setAchievements(prev => prev.map(a => a.id === id ? { ...a, claimed: true } : a));
+      // Trigger floating gain animation
+      window.dispatchEvent(new CustomEvent('nx-stat-animation', {
+        detail: [{ stat: '$NXT', amount: res.reward, type: 'gain' }],
+      }));
     } catch (e) {
       setFeedback({ text: e.message || 'Claim failed', color: T.red });
     }
