@@ -1042,6 +1042,10 @@ def check_and_rotate_weekly_event(conn):
     if current and current["ends_at"] > now:
         return  # Still active
 
+    # Never rotate out the permanent tester event
+    if current and current["title"] == "MEGA TESTER PROGRAM":
+        return
+
     # Expire old
     if current:
         cur.execute("UPDATE world_events SET is_active = FALSE WHERE id = %s", (current["id"],))
