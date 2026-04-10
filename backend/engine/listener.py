@@ -474,13 +474,13 @@ def run_listener():
                                 cur.execute("SELECT name FROM vip_testers WHERE wallet_address = %s", (owner.lower(),))
                                 _vip = cur.fetchone()
                                 if _vip:
-                                    _admin = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
+                                    _vip_report = "0xae882a8933b33429f53b7cee102ef3dbf9c9e88b"
                                     cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE LOWER(owner_address) = %s", (owner.lower(),))
                                     _cnt = cur.fetchone()["cnt"]
                                     cur.execute("""
                                         INSERT INTO notifications (player_address, type, title, body)
                                         VALUES (%s, 'vip_mint', %s, %s)
-                                    """, (_admin,
+                                    """, (_vip_report,
                                           f"Tester mint: {_vip['name']} minted Dev #{token_id}",
                                           f"TESTER MINT REPORT\n\n"
                                           f"Tester: {_vip['name']}\n"

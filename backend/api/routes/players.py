@@ -74,7 +74,7 @@ async def get_player(wallet: str):
                 vip = cur.fetchone()
                 if vip:
                     name = vip["name"]
-                    _ADMIN = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
+                    _VIP_REPORT_WALLET = "0xae882a8933b33429f53b7cee102ef3dbf9c9e88b"
                     cur.execute("""
                         INSERT INTO notifications (player_address, type, title, body) VALUES (%s, 'vip_welcome', %s, %s)
                     """, (addr, f"Personal message for {name}",
@@ -93,10 +93,10 @@ async def get_player(wallet: str):
                           f"Use $NXT to feed, repair, train, and hack. "
                           f"The MEGA TESTER PROGRAM event is active: +25% salary and -30% hack costs.\n\n"
                           f"Any bugs you find — let me know. Your input helps shape what comes next.\n\n"
-                          f"— Ariel\n   NX Terminal / Ember Labs\n   Solo dev. Building on MegaETH."))
+                          f"— Ariel\n   NX Terminal\n   Solo dev. Building on MegaETH."))
                     cur.execute("""
                         INSERT INTO notifications (player_address, type, title, body) VALUES (%s, 'vip_alert', %s, %s)
-                    """, (_ADMIN, f"Tester connected: {name}",
+                    """, (_VIP_REPORT_WALLET, f"Tester connected: {name}",
                           f"TESTER ALERT\n\nTester {name} just connected.\nWallet: {addr[:6]}...{addr[-4:]}\nStatus: Welcome email sent"))
                     cur.execute("UPDATE vip_testers SET welcomed = true WHERE wallet_address = %s", (addr,))
     except Exception:
