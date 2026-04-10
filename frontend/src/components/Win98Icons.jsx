@@ -855,6 +855,27 @@ function IconMissionControl({ size = 32 }) {
   );
 }
 
+function IconMedal({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="medalGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffd700" />
+          <stop offset="100%" stopColor="#cc9900" />
+        </linearGradient>
+      </defs>
+      {/* Ribbon */}
+      <path d="M11 2 L16 14 L12 14 L8 2 Z" fill="#cc3333" opacity="0.9" />
+      <path d="M21 2 L16 14 L20 14 L24 2 Z" fill="#3333cc" opacity="0.9" />
+      {/* Medal circle */}
+      <circle cx="16" cy="20" r="9" fill="url(#medalGrad)" stroke="#aa8800" strokeWidth="1" />
+      <circle cx="16" cy="20" r="7" fill="none" stroke="#fff8dc" strokeWidth="0.5" opacity="0.5" />
+      {/* Star */}
+      <polygon points="16,14 17.5,17.5 21,17.5 18.2,19.8 19.2,23.5 16,21.2 12.8,23.5 13.8,19.8 11,17.5 14.5,17.5" fill="#fff8dc" opacity="0.9" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -881,6 +902,7 @@ export const ICON_MAP = {
   'monad-build': IconMonadBuild,
   'mega-sentinel': IconMegaSentinel,
   'mission-control': IconMissionControl,
+  'achievements': IconMedal,
 };
 
 export function Win98Icon({ id, size = 32 }) {
