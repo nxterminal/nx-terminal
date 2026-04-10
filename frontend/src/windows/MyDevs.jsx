@@ -6,7 +6,7 @@ import { useDevs } from '../contexts/DevsContext';
 import { NXT_TOKEN_ADDRESS } from '../services/contract';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
-const TREASURY_ADDRESS = '0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC';
+const TREASURY_ADDRESS = '0xaE882a8933b33429F53B7Cee102Ef3Dbf9C9E88B';
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',

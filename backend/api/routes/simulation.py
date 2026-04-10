@@ -98,7 +98,7 @@ async def get_claim_sync_status():
 
 
 ADMIN_WALLETS = {
-    "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc",  # treasury
+    "0xae882a8933b33429f53b7cee102ef3dbf9c9e88b",  # admin
 }
 
 

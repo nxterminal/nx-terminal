@@ -660,7 +660,7 @@ async def hack_player(req: HackRequest):
 
 _RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
 _NXT_TOKEN = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47".lower()
-_TREASURY = "0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC".lower()
+_TREASURY = "0xaE882a8933b33429F53B7Cee102Ef3Dbf9C9E88B".lower()
 # ERC-20 Transfer(address,address,uint256) event topic
 _TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
