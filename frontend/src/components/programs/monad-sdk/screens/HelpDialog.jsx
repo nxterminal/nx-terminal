@@ -19,7 +19,7 @@ const TAB_CONTENT = {
     { type: 'text', text: '' },
     { type: 'mono', text: 'Network: MegaETH Testnet\nChain ID: 4326\nBlock Time: Sub-second\nTPS: 30,000+' },
     { type: 'text', text: '' },
-    { type: 'text', text: 'NX Terminal\nnxterminal.com \u00B7 @nxterminalcorp' },
+    { type: 'text', text: 'Built by Ember Labs\nnxterminal.com \u00B7 @nxterminalcorp' },
   ],
   'MegaETH Info': [
     { type: 'heading', text: 'MEGAETH NETWORK OVERVIEW' },

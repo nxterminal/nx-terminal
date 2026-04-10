@@ -19,7 +19,7 @@ const TAB_CONTENT = {
     { type: 'text', text: '' },
     { type: 'mono', text: 'Network: MegaETH Atlantic Testnet\nChain ID: 4326' },
     { type: 'text', text: '' },
-    { type: 'text', text: 'NX Terminal\nnxterminal.com \u00B7 @nxterminalcorp' },
+    { type: 'text', text: 'Built by Ember Labs\nnxterminal.com \u00B7 @nxterminalcorp' },
   ],
   'Beta Info': [
     { type: 'heading', text: 'BETA VERSION \u2014 What\'s Included' },

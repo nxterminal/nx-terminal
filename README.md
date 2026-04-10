@@ -113,4 +113,4 @@ nx-terminal/
 
 ## License
 
-Proprietary — NX Terminal
+Proprietary — Ember Labs
