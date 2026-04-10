@@ -196,3 +196,19 @@ async def broadcast(event_type, data):
         except Exception:
             dead.add(ws)
     ws_clients -= dead
+
+
+def get_active_event_effects(cur) -> dict:
+    """Get effects from the currently active weekly event, if any."""
+    cur.execute("""
+        SELECT effects FROM world_events
+        WHERE is_active = TRUE AND starts_at <= NOW() AND ends_at >= NOW()
+        ORDER BY starts_at DESC LIMIT 1
+    """)
+    row = cur.fetchone()
+    if not row:
+        return {}
+    effects = row["effects"]
+    if isinstance(effects, str):
+        effects = json.loads(effects)
+    return effects

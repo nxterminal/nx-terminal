@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -62,6 +62,49 @@ def _run_auto_migrations():
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_player_read ON notifications(player_address, read, created_at DESC)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_player_missions_wallet_dev ON player_missions(wallet_address, dev_token_id)")
+                # Daily login streak table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS login_streaks (
+                        wallet_address VARCHAR(42) PRIMARY KEY,
+                        current_streak INTEGER NOT NULL DEFAULT 0,
+                        longest_streak INTEGER NOT NULL DEFAULT 0,
+                        last_claim_date DATE,
+                        total_claimed_nxt BIGINT NOT NULL DEFAULT 0
+                    )
+                """)
+                # Achievements tables
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS achievements (
+                        id VARCHAR(40) PRIMARY KEY,
+                        title VARCHAR(80) NOT NULL,
+                        description TEXT NOT NULL,
+                        category VARCHAR(30) NOT NULL,
+                        icon VARCHAR(10) NOT NULL DEFAULT '?',
+                        reward_nxt INTEGER NOT NULL DEFAULT 0,
+                        requirement_type VARCHAR(40) NOT NULL,
+                        requirement_value INTEGER NOT NULL DEFAULT 1,
+                        rarity VARCHAR(20) NOT NULL DEFAULT 'common'
+                    )
+                """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS player_achievements (
+                        wallet_address VARCHAR(42) NOT NULL,
+                        achievement_id VARCHAR(40) NOT NULL REFERENCES achievements(id),
+                        unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        claimed BOOLEAN NOT NULL DEFAULT FALSE,
+                        PRIMARY KEY (wallet_address, achievement_id)
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_player_achievements_wallet ON player_achievements(wallet_address)")
+                # Seed achievements
+                from backend.api.routes.achievements import ACHIEVEMENTS as _ACHS
+                for a in _ACHS:
+                    cur.execute("""
+                        INSERT INTO achievements (id, title, description, category, icon, reward_nxt, requirement_type, requirement_value, rarity)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, (a["id"], a["title"], a["description"], a["category"], a["icon"],
+                          a["reward_nxt"], a["requirement_type"], a["requirement_value"], a["rarity"]))
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
@@ -155,6 +198,8 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(academy.router, prefix="/api/academy", tags=["Academy"])
 app.include_router(sentinel.router, prefix="/api/sentinel", tags=["Sentinel"])
 app.include_router(missions.router, prefix="/api/missions", tags=["Missions"])
+app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
+app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(ws_router, tags=["WebSocket"])
 
 # ── NFT Metadata (tokenURI) — baseURI + tokenId ──

@@ -28,6 +28,7 @@ import MonadBuild from './programs/monad-build/MonadBuild';
 import NetWatch from './programs/netwatch/NetWatch';
 import MegaSentinel from './programs/mega-sentinel/MegaSentinel';
 import MissionControl from './programs/mission-control/MissionControl';
+import Achievements from '../windows/Achievements';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -55,6 +56,7 @@ const WINDOW_COMPONENTS = {
   'netwatch': NetWatch,
   'mega-sentinel': MegaSentinel,
   'mission-control': MissionControl,
+  'achievements': Achievements,
 };
 
 export default function WindowManager({

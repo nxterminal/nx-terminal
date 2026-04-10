@@ -3,6 +3,8 @@ import DesktopIcon from './DesktopIcon';
 import Taskbar from './Taskbar';
 import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
+import DailyStreakPopup from './DailyStreakPopup';
+import WorldEventBanner from './WorldEventBanner';
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
@@ -33,6 +35,7 @@ const DESKTOP_ICONS = [
   { id: 'netwatch', icon: '', label: 'MegaWatch' },
   { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
   { id: 'mission-control', icon: '\u{1F4CB}', label: 'Mission Control' },
+  { id: 'achievements', icon: '\u2605', label: 'Achievements' },
 ];
 
 function getWallpaperStyle() {
@@ -223,6 +226,8 @@ export default function Desktop() {
       />
 
       <NXAssistant />
+      <DailyStreakPopup />
+      <WorldEventBanner />
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
