@@ -50,9 +50,10 @@ async def register_player(req: RegisterRequest):
 @router.get("/{wallet}")
 async def get_player(wallet: str):
     """Get player profile."""
+    addr = wallet.lower()
     player = fetch_one(
         "SELECT * FROM players WHERE wallet_address = %s",
-        (wallet.lower(),)
+        (addr,)
     )
     if not player:
         raise HTTPException(404, "Player not found")
@@ -61,8 +62,45 @@ async def get_player(wallet: str):
         """SELECT token_id, name, archetype, rarity_tier, energy, mood,
                   location, balance_nxt, reputation, status, last_action_type
            FROM devs WHERE owner_address = %s ORDER BY balance_nxt DESC""",
-        (wallet.lower(),)
+        (addr,)
     )
+
+    # VIP tester welcome (one-time)
+    try:
+        from backend.api.deps import get_db
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT name FROM vip_testers WHERE wallet_address = %s AND welcomed = false", (addr,))
+                vip = cur.fetchone()
+                if vip:
+                    name = vip["name"]
+                    _ADMIN = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
+                    cur.execute("""
+                        INSERT INTO notifications (player_address, type, title, body) VALUES (%s, 'vip_welcome', %s, %s)
+                    """, (addr, f"Personal message for {name}",
+                          f"To: {name}\nFrom: Ariel — NX Terminal Founder\n\n"
+                          f"Hey {name},\n\n"
+                          f"Welcome to NX Terminal. Seriously, thank you for taking the time to check out this project.\n\n"
+                          f"Your wallet has been whitelisted for 3 FREE MINTS. "
+                          f"Go to \"Mint/Hire Devs\" on the desktop to claim your developers.\n\n"
+                          f"QUICK START:\n"
+                          f"1. Open \"Mint/Hire Devs\" — mint 3 devs (free!)\n"
+                          f"2. Open \"My Devs\" — watch them work\n"
+                          f"3. Check \"NXT Wallet\" — track your earnings\n"
+                          f"4. Try \"Mission Control\" — send devs on missions\n"
+                          f"5. Use HACK on any dev card — hack the mainframe\n\n"
+                          f"Each dev earns ~200 $NXT/day automatically. "
+                          f"Use $NXT to feed, repair, train, and hack. "
+                          f"The MEGA TESTER PROGRAM event is active: +25% salary and -30% hack costs.\n\n"
+                          f"Any bugs you find — let me know. Your input helps shape what comes next.\n\n"
+                          f"— Ariel\n   NX Terminal / Ember Labs\n   Solo dev. Building on MegaETH."))
+                    cur.execute("""
+                        INSERT INTO notifications (player_address, type, title, body) VALUES (%s, 'vip_alert', %s, %s)
+                    """, (_ADMIN, f"Tester connected: {name}",
+                          f"TESTER ALERT\n\nTester {name} just connected.\nWallet: {addr[:6]}...{addr[-4:]}\nStatus: Welcome email sent"))
+                    cur.execute("UPDATE vip_testers SET welcomed = true WHERE wallet_address = %s", (addr,))
+    except Exception:
+        pass  # Don't break player load if VIP check fails
 
     return {**player, "devs": devs}
 
