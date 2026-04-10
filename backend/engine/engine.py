@@ -4,6 +4,7 @@ NX TERMINAL: PROTOCOL WARS — Simulation Engine v2
 """
 
 import random
+import random as _random
 import time
 import json
 import logging
@@ -65,6 +66,19 @@ LOCATION_MODIFIERS = {
 
 MOODS = ["neutral", "excited", "angry", "depressed", "focused"]
 LOCATIONS = list(LOCATION_MODIFIERS.keys())
+
+WEEKLY_EVENTS = [
+    {"title": "Hackathon Frenzy", "description": "Protocol development boosted across all corps.", "effects": {"create_protocol_multiplier": 2.0}},
+    {"title": "Bull Market", "description": "Investments surge. Salary bonus +25%.", "effects": {"salary_multiplier": 1.25, "invest_weight_boost": 2.0}},
+    {"title": "Security Audit Week", "description": "Hacking costs less, succeeds more often.", "effects": {"hack_cost_multiplier": 0.5, "hack_success_bonus": 0.15}},
+    {"title": "AI Uprising", "description": "AI creation boosted. Strange AIs emerge.", "effects": {"create_ai_multiplier": 2.5}},
+    {"title": "Corporate Tax", "description": "Shop costs up 50%, but salary up 50% too.", "effects": {"shop_cost_multiplier": 1.5, "salary_multiplier": 1.5}},
+    {"title": "Energy Crisis", "description": "Energy decays faster. Shop items cheaper.", "effects": {"energy_decay_multiplier": 2.0, "shop_cost_multiplier": 0.5}},
+    {"title": "Golden Age", "description": "Double salary for all devs. Enjoy it while it lasts.", "effects": {"salary_multiplier": 2.0}},
+    {"title": "Dark Web Surge", "description": "Hacking is riskier. Code reviews find more bugs.", "effects": {"hack_success_bonus": -0.10}},
+    {"title": "Protocol Rush", "description": "Protocol creation boosted by 50%.", "effects": {"create_protocol_multiplier": 1.5}},
+    {"title": "Maintenance Mode", "description": "PC decay halted. Devs take it easy.", "effects": {"pc_decay_multiplier": 0.0, "energy_decay_multiplier": 0.5}},
+]
 
 # ============================================================
 # DATABASE CONNECTION
@@ -800,6 +814,20 @@ def pay_salaries(conn):
     contract fee, the player nets exactly the right amount.
     """
     cur = get_cursor(conn)
+
+    # Get active weekly event effects
+    cur.execute("""
+        SELECT effects FROM world_events
+        WHERE is_active = TRUE AND event_type = 'weekly' AND starts_at <= NOW() AND ends_at >= NOW()
+        ORDER BY starts_at DESC LIMIT 1
+    """)
+    evt = cur.fetchone()
+    event_effects = evt["effects"] if evt else {}
+    if isinstance(event_effects, str):
+        event_effects = json.loads(event_effects)
+
+    effective_salary = int(SALARY_PER_INTERVAL * event_effects.get("salary_multiplier", 1.0))
+
     cur.execute("""
         UPDATE devs SET
             balance_nxt = balance_nxt + %s,
@@ -813,7 +841,7 @@ def pay_salaries(conn):
                 END
             )
         WHERE status IN ('active', 'on_mission')
-    """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
+    """, (effective_salary, effective_salary))
 
     count = cur.rowcount
 
@@ -829,21 +857,25 @@ def pay_salaries(conn):
                0, %s
         FROM devs
         WHERE status IN ('active', 'on_mission')
-    """, (SALARY_PER_INTERVAL, SALARY_PER_INTERVAL))
+    """, (effective_salary, effective_salary))
 
-    # Degrade PC health: -2 per hour for all active devs (min 0)
+    # Degrade PC health: -2 per hour for all active devs (min 0), with event modifier
+    pc_decay = max(0, int(2 * event_effects.get("pc_decay_multiplier", 1.0)))
     cur.execute("""
-        UPDATE devs SET pc_health = GREATEST(0, pc_health - 2) WHERE status = 'active'
-    """)
+        UPDATE devs SET pc_health = GREATEST(0, pc_health - %s) WHERE status = 'active'
+    """, (pc_decay,))
 
-    # Decay vitals: caffeine -2, social -1, knowledge -1 per hour (min 0)
+    # Decay vitals: caffeine -2, social -1, knowledge -1 per hour (min 0), with event modifier
+    caff_decay = max(0, int(2 * event_effects.get("energy_decay_multiplier", 1.0)))
+    social_decay = max(0, int(1 * event_effects.get("energy_decay_multiplier", 1.0)))
+    knowledge_decay = max(0, int(1 * event_effects.get("energy_decay_multiplier", 1.0)))
     cur.execute("""
         UPDATE devs SET
-            caffeine  = GREATEST(0, caffeine  - 2),
-            social    = GREATEST(0, social    - 1),
-            knowledge = GREATEST(0, knowledge - 1)
+            caffeine  = GREATEST(0, caffeine  - %s),
+            social    = GREATEST(0, social    - %s),
+            knowledge = GREATEST(0, knowledge - %s)
         WHERE status = 'active'
-    """)
+    """, (caff_decay, social_decay, knowledge_decay))
 
     # Degrade social_vitality: -1 per hour (min 0)
     cur.execute("""
@@ -865,7 +897,7 @@ def pay_salaries(conn):
     """)
 
     conn.commit()
-    log.info(f"💰 Paid salary ({SALARY_PER_INTERVAL} $NXT) to {count} devs + energy regen + PC wear")
+    log.info(f"💰 Paid salary ({effective_salary} $NXT) to {count} devs + energy regen + PC wear")
     return count
 
 
@@ -996,6 +1028,49 @@ def run_claim_sync():
         _last_claim_sync_result = f"error: {e}"
 
 
+def check_and_rotate_weekly_event(conn):
+    """Check if weekly event needs rotation. Insert new event if expired or none active."""
+    cur = get_cursor(conn)
+    cur.execute("""
+        SELECT id, title, ends_at FROM world_events
+        WHERE event_type = 'weekly' AND is_active = TRUE
+        ORDER BY starts_at DESC LIMIT 1
+    """)
+    current = cur.fetchone()
+    now = datetime.now(timezone.utc)
+
+    if current and current["ends_at"] > now:
+        return  # Still active
+
+    # Expire old
+    if current:
+        cur.execute("UPDATE world_events SET is_active = FALSE WHERE id = %s", (current["id"],))
+
+    # Pick new (avoid same as current)
+    pool = [e for e in WEEKLY_EVENTS if not current or e["title"] != current["title"]]
+    event = _random.choice(pool)
+
+    starts = now
+    ends = now + timedelta(days=7)
+    cur.execute("""
+        INSERT INTO world_events (title, description, event_type, effects, starts_at, ends_at, is_active)
+        VALUES (%s, %s, 'weekly', %s, %s, %s, TRUE)
+    """, (event["title"], event["description"], json.dumps(event["effects"]), starts, ends))
+
+    # Notify all players
+    cur.execute("SELECT DISTINCT wallet_address FROM players")
+    for p in cur.fetchall():
+        cur.execute("""
+            INSERT INTO notifications (player_address, type, title, body)
+            VALUES (%s, 'world_event', %s, %s)
+        """, (p["wallet_address"],
+              f"New Event: {event['title']}",
+              f"{event['description']} (Active for 7 days)"))
+
+    conn.commit()
+    log.info(f"🌍 New weekly event: {event['title']}")
+
+
 def run_engine():
     """Main simulation loop. Runs forever."""
     log.info("=" * 60)
@@ -1039,6 +1114,9 @@ def run_engine():
                 if now - last_salary >= salary_interval:
                     pay_salaries(conn)
                     last_salary = now
+
+                # Check weekly event rotation
+                check_and_rotate_weekly_event(conn)
 
                 # Daily balance snapshots
                 if now - last_snapshot >= snapshot_interval:

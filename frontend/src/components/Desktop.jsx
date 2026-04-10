@@ -4,6 +4,7 @@ import Taskbar from './Taskbar';
 import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
 import DailyStreakPopup from './DailyStreakPopup';
+import WorldEventBanner from './WorldEventBanner';
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
@@ -225,6 +226,7 @@ export default function Desktop() {
 
       <NXAssistant />
       <DailyStreakPopup />
+      <WorldEventBanner />
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
