@@ -1422,7 +1422,7 @@ export default function MonadCity() {
               <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>NX Terminal: Protocol Wars</div>
               <div style={{ fontSize: '13px', color: '#333', marginTop: 8 }}>Running on MegaETH — The First Real-Time Blockchain</div>
               <div style={{ fontSize: '12px', color: '#555', marginTop: 4 }}>10ms blocks | 100K TPS | Chain ID 4326</div>
-              <div style={{ fontSize: '12px', color: '#666', marginTop: 12 }}>Powered by Ember Labs</div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: 12 }}>Powered by NX Terminal</div>
               <div style={{ marginTop: 16 }}>
                 <button className="win-btn" onClick={() => setShowAbout(false)} style={{ padding: '3px 24px', fontWeight: 'bold' }}>OK</button>
               </div>
