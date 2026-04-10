@@ -198,6 +198,15 @@ export const api = {
       body: JSON.stringify({ wallet }),
     }),
 
+  // Achievements
+  getAchievements: (wallet) => fetchJSON(`${API_BASE}/api/achievements?wallet=${wallet}`),
+  claimAchievement: (wallet, achievement_id) =>
+    fetchJSON(`${API_BASE}/api/achievements/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, achievement_id }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
