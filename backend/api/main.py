@@ -105,6 +105,16 @@ def _run_auto_migrations():
                         ON CONFLICT (id) DO NOTHING
                     """, (a["id"], a["title"], a["description"], a["category"], a["icon"],
                           a["reward_nxt"], a["requirement_type"], a["requirement_value"], a["rarity"]))
+                # Seed MEGA TESTER PROGRAM event (permanent, won't be rotated)
+                cur.execute("""
+                    INSERT INTO world_events (title, description, event_type, effects, starts_at, ends_at, is_active)
+                    SELECT 'MEGA TESTER PROGRAM',
+                           'MegaETH ecosystem testers are evaluating NX Terminal. All devs receive +25%% salary bonus and hack costs reduced by 30%%.',
+                           'weekly',
+                           '{"salary_multiplier": 1.25, "hack_cost_multiplier": 0.7, "mission_reward_multiplier": 1.25}'::jsonb,
+                           NOW(), '2099-12-31'::timestamptz, TRUE
+                    WHERE NOT EXISTS (SELECT 1 FROM world_events WHERE title = 'MEGA TESTER PROGRAM')
+                """)
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
