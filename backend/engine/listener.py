@@ -468,6 +468,31 @@ def run_listener():
                             ensure_player(cur, owner, dev_data["corporation"])
                             insert_dev(cur, token_id, owner, dev_data)
                             insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
+
+                            # Notify Ariel if VIP tester minted
+                            try:
+                                cur.execute("SELECT name FROM vip_testers WHERE wallet_address = %s", (owner.lower(),))
+                                _vip = cur.fetchone()
+                                if _vip:
+                                    _admin = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
+                                    cur.execute("SELECT COUNT(*) as cnt FROM devs WHERE LOWER(owner_address) = %s", (owner.lower(),))
+                                    _cnt = cur.fetchone()["cnt"]
+                                    cur.execute("""
+                                        INSERT INTO notifications (player_address, type, title, body)
+                                        VALUES (%s, 'vip_mint', %s, %s)
+                                    """, (_admin,
+                                          f"Tester mint: {_vip['name']} minted Dev #{token_id}",
+                                          f"TESTER MINT REPORT\n\n"
+                                          f"Tester: {_vip['name']}\n"
+                                          f"Wallet: {owner.lower()[:6]}...{owner.lower()[-4:]}\n\n"
+                                          f"Dev: #{token_id} — {dev_data['name']}\n"
+                                          f"Corp: {dev_data['corporation']}\n"
+                                          f"Archetype: {dev_data['archetype']}\n"
+                                          f"Rarity: {dev_data['rarity']}\n\n"
+                                          f"Total devs now: {_cnt}"))
+                            except Exception as _e:
+                                log.warning(f"VIP mint notification failed: {_e}")
+
                             conn.commit()
                             minted_count += 1
                             log.info(f"Minted dev #{token_id}: {dev_data['name']} "

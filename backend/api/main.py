@@ -115,6 +115,26 @@ def _run_auto_migrations():
                            NOW(), '2099-12-31'::timestamptz, TRUE
                     WHERE NOT EXISTS (SELECT 1 FROM world_events WHERE title = 'MEGA TESTER PROGRAM')
                 """)
+                # VIP testers table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS vip_testers (
+                        wallet_address VARCHAR(42) PRIMARY KEY,
+                        name VARCHAR(100),
+                        welcomed BOOLEAN DEFAULT false
+                    )
+                """)
+                _VIP_TESTERS = [
+                    ("0x9acd0c4bdf6e599312f7e5e0beb24c4fe8f05764", "wabersky"),
+                    ("0xcac4f9d03002e095df3cabfe625e93bbb7260363", "Scott_louis"),
+                    ("0x1638f76072261335960fdd16c1e86fa78679faff", "Trisa26"),
+                    ("0x73f04cdeb2ce2ea9329fdbcfa08cebf7b6f06251", "Medocons"),
+                    ("0x6b85a239ecd32e0bf25e46f272a74879eb9e8495", "xSolynor"),
+                    ("0x194175b405822622f1784b9e13f8ffb24b283721", "tcatnguyentran"),
+                    ("0x5c2fbf4a8bc802b6410249e30d60e9769edae437", "xPolice911"),
+                    ("0xb3b615ab7916f12ef7b1c889660c2c8a3b361afe", "vanalli"),
+                ]
+                for _w, _n in _VIP_TESTERS:
+                    cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
