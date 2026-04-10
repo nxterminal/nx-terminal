@@ -124,13 +124,29 @@ async def claim_streak(req: StreakClaimRequest):
                 (reward, reward, dev["token_id"])
             )
 
-            # Send notification
+            # Send corporate notification
+            longest = max(new_streak, row["longest_streak"] if row else 0)
+            _MILESTONES = {
+                7: "One full week. HR is impressed. Don't let it go to your head.",
+                14: "Two weeks straight. You're now eligible for the company parking spot. We don't have one.",
+                21: "Three weeks. At this point, you're basically furniture. Welcome aboard.",
+                30: "30 days. The board of directors has noticed. They're slightly concerned.",
+            }
+            milestone = _MILESTONES.get(new_streak, "Your consistency has been noted. Filed under 'suspicious behavior.'")
             cur.execute("""
                 INSERT INTO notifications (player_address, type, title, body)
                 VALUES (%s, 'streak_claim', %s, %s)
             """, (addr,
-                  f"Day {new_streak} Streak Bonus!",
-                  f"+{reward} $NXT daily attendance bonus. Streak: {new_streak} days. Keep it up!"))
+                  f"Daily Attendance Record — Day {new_streak}",
+                  f"To: Employee\nFrom: NX Terminal Human Resources Department\n\n"
+                  f"ATTENDANCE BONUS: +{reward} $NXT\n"
+                  f"CURRENT STREAK: {new_streak} days\n"
+                  f"RECORD STREAK: {longest} days\n\n"
+                  f"{milestone}\n\n"
+                  f"Missing a day will reset your streak to zero. No exceptions.\n"
+                  f"We don't care if 'the blockchain was down.'\n\n"
+                  f"— NX Terminal Human Resources Department\n"
+                  f"   (HR does not read replies. HR does not care.)"))
 
     return {
         "success": True, "streak": new_streak, "reward": reward,

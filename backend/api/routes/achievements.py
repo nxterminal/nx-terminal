@@ -9,6 +9,76 @@ log = logging.getLogger("nx_api")
 
 router = APIRouter()
 
+# ── Corporate notification templates by category ──────────────
+
+_NOTIF_TEMPLATES = {
+    "milestone": (
+        "Employee Recognition Notice",
+        "NX Terminal Human Resources Department",
+        "HR has updated your permanent record. This will be considered during your next performance review. Whenever that is. We keep postponing it.",
+        "(Your file is getting thick. That's usually a bad sign. Not this time.)",
+    ),
+    "hack": (
+        "Security Incident Report",
+        "NX Terminal Cybersecurity Division",
+        "Multiple intrusion events logged under your account. The Cybersecurity Division would like to remind you that hacking is technically against company policy. However, since you're generating revenue, we've decided to look the other way.",
+        "(This message is being monitored. By you, probably.)",
+    ),
+    "economy": (
+        "Executive Memo",
+        "Office of the CEO",
+        "The board has reviewed your financial performance. They are... impressed. And slightly concerned. Nobody should be making this much $NXT without at least one compliance violation.",
+        "(The CEO did not actually write this. The CEO is on a yacht.)",
+    ),
+    "mission": (
+        "Mission Debrief",
+        "NX Terminal Operations Department",
+        "Operations has reviewed your mission history. Your completion rate is above average. The average is very low, so don't get excited. Your devs have been assigned more work.",
+        "(Mission briefings are mandatory. Reading them is optional. Apparently.)",
+    ),
+    "coding": (
+        "Engineering Report",
+        "NX Terminal Engineering Division",
+        "The Engineering team has reviewed your code metrics. Your bug-to-feature ratio is... creative. We've seen worse. Mostly from interns. Keep shipping.",
+        "(git blame says it's your fault. git blame is always right.)",
+    ),
+    "social": (
+        "Wellness Check",
+        "NX Terminal Wellness Committee",
+        "The Wellness Committee is legally required to inform you that this level of consumption is 'concerning.' We've added $NXT to your account so you can buy more. We see no contradiction in this.",
+        "(The committee consists of one intern and a coffee machine.)",
+    ),
+    "dedication": (
+        "Attendance Award",
+        "NX Terminal Human Resources Department",
+        "Your dedication to showing up every day has been noted. In a world of remote work and 'mental health days,' you chose consistency. We respect that. We also question it.",
+        "(HR appreciates your attendance. HR cannot say the same for your peers.)",
+    ),
+    "special": (
+        "Classified Notice",
+        "NX Terminal Internal Affairs",
+        "This achievement has been flagged by Internal Affairs. Not because you did anything wrong. But because what you did was unusual enough to trigger our automated monitoring systems. Carry on.",
+        "(This message will not self-destruct. We don't have the budget for that.)",
+    ),
+}
+
+
+def _achievement_notification(ach):
+    """Build corporate notification title+body for an achievement."""
+    subj, dept, flavor, sig = _NOTIF_TEMPLATES.get(ach["category"], _NOTIF_TEMPLATES["special"])
+    title = f"{subj} — {ach['title']}"
+    body = (
+        f"To: Employee\nFrom: {dept}\n\n"
+        f"ACHIEVEMENT: {ach['title']}\n"
+        f"RARITY: {ach['rarity'].upper()}\n"
+        f"REWARD: +{ach['reward_nxt']} $NXT\n\n"
+        f"{ach['description']}\n\n"
+        f"{flavor}\n\n"
+        f"— {dept}\n   {sig}"
+    )
+    return title, body
+
+
 ACHIEVEMENTS = [
     {"id": "first_dev", "title": "Hello World", "description": "Mint your first dev.", "category": "milestone", "icon": "🖥️", "reward_nxt": 100, "requirement_type": "devs_minted", "requirement_value": 1, "rarity": "common"},
     {"id": "mint_5", "title": "Building a Team", "description": "Own 5 developers.", "category": "milestone", "icon": "👥", "reward_nxt": 500, "requirement_type": "devs_minted", "requirement_value": 5, "rarity": "uncommon"},
@@ -99,11 +169,11 @@ def check_achievements_for_action(cur, wallet, action_type):
             """, (wallet, ach["id"]))
             if cur.rowcount > 0:
                 newly.append(dict(ach))
+                notif_title, notif_body = _achievement_notification(ach)
                 cur.execute("""
                     INSERT INTO notifications (player_address, type, title, body)
                     VALUES (%s, 'achievement', %s, %s)
-                """, (wallet, f"Achievement Unlocked: {ach['title']}!",
-                      f"{ach['description']} Claim {ach['reward_nxt']} $NXT reward!"))
+                """, (wallet, notif_title, notif_body))
     return newly
 
 
