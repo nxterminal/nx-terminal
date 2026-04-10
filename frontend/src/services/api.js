@@ -189,6 +189,15 @@ export const api = {
       body: JSON.stringify({ wallet, player_mission_id }),
     }),
 
+  // Streak
+  getStreak: (wallet) => fetchJSON(`${API_BASE}/api/streak?wallet=${wallet}`),
+  claimStreak: (wallet) =>
+    fetchJSON(`${API_BASE}/api/streak/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
