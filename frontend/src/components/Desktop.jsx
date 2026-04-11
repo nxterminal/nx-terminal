@@ -59,6 +59,7 @@ import BSOD from './BSOD';
 import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
+import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
   { id: 'nx-terminal', icon: '>_', label: 'NX Terminal' },
@@ -116,6 +117,47 @@ function getWallpaperOverlay() {
   return null;
 }
 
+// ── Notification toast popup (slides up from bottom-right) ──
+function NotifPopup({ title, onClose, onOpen }) {
+  const [hiding, setHiding] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => { setHiding(true); setTimeout(onClose, 400); }, 8000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  const dismiss = () => { setHiding(true); setTimeout(onClose, 400); };
+  return (
+    <div style={{
+      position: 'fixed', bottom: 44, right: 10, width: 260, zIndex: 50,
+      animation: hiding ? 'notifSlideDown 0.3s ease-in forwards' : 'notifSlideUp 0.4s ease-out',
+    }}>
+      <div style={{
+        background: 'linear-gradient(90deg, #0a246a, #3a6ea5)', padding: '3px 8px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        fontSize: 11, color: '#fff', fontFamily: "'VT323', monospace",
+      }}>
+        <span>New Message</span>
+        <button onClick={dismiss} style={{
+          background: 'none', border: '1px solid rgba(255,255,255,0.3)',
+          color: '#fff', fontSize: 10, cursor: 'pointer', padding: '0 4px',
+          fontFamily: "'VT323', monospace",
+        }}>✕</button>
+      </div>
+      <div onClick={() => { onOpen(); dismiss(); }} style={{
+        background: '#1a1a2e', border: '1px solid #3a6ea5', borderTop: 'none',
+        padding: '8px 10px', cursor: 'pointer', fontFamily: "'VT323', monospace",
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>✉</span>
+          <div>
+            <div style={{ color: '#fff', fontSize: 12 }}>{title}</div>
+            <div style={{ color: '#888', fontSize: 10, marginTop: 2 }}>Click to open Inbox</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getInitialUnreadCount() {
   const saved = localStorage.getItem('nx-inbox-emails');
   if (saved) {
@@ -145,7 +187,9 @@ export default function Desktop() {
   const [showScreensaver, setShowScreensaver] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getInitialUnreadCount);
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
+  const [notifPopup, setNotifPopup] = useState(null);
   const idleTimerRef = useRef(null);
+  const lastNotifCheck = useRef(0);
 
   useEffect(() => {
     const handleUnread = (e) => setUnreadCount(e.detail);
@@ -156,6 +200,27 @@ export default function Desktop() {
       window.removeEventListener('nx-inbox-unread', handleUnread);
       window.removeEventListener('nx-icon-scale', handleScale);
     };
+  }, []);
+
+  // Poll backend for new notifications (every 30s)
+  useEffect(() => {
+    const { address: addr } = { address: window.ethereum?.selectedAddress };
+    if (!addr) return;
+    const check = () => {
+      api.getNotifications(addr, true).then(notifs => {
+        if (!Array.isArray(notifs)) return;
+        const count = notifs.length;
+        if (count > lastNotifCheck.current && lastNotifCheck.current > 0 && notifs[0]) {
+          setNotifPopup(notifs[0].title);
+        }
+        lastNotifCheck.current = count;
+        // Update unread badge if Inbox isn't open
+        setUnreadCount(prev => Math.max(prev, count));
+      }).catch(() => {});
+    };
+    const t = setTimeout(check, 5000);
+    const iv = setInterval(check, 30000);
+    return () => { clearTimeout(t); clearInterval(iv); };
   }, []);
 
   const refreshSettings = useCallback(() => {
@@ -301,6 +366,13 @@ export default function Desktop() {
       <DailyStreakPopup />
       <WorldEventBanner />
       <GlobalStatAnimation />
+      {notifPopup && (
+        <NotifPopup
+          title={notifPopup}
+          onClose={() => setNotifPopup(null)}
+          onOpen={() => openWindowWithBSOD('inbox')}
+        />
+      )}
       <ErrorPopup />
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
