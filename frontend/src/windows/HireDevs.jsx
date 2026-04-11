@@ -591,7 +591,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [mintPrice, mintPhase, remaining]);
 
-  const { data: freeAllowance } = useReadContract({
+  const { data: freeAllowance, refetch: refetchFreeAllowance } = useReadContract({
     address: NXDEVNFT_ADDRESS,
     abi: NXDEVNFT_ABI,
     functionName: 'freeMintAllowance',
@@ -635,6 +635,8 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
       localStorage.setItem('nx-minted-devs', String(current + quantity));
       window.dispatchEvent(new CustomEvent('nx-dev-minted', { detail: { count: current + quantity, added: quantity } }));
       if (onMint) onMint(answers, quantity, address);
+      // Refetch free mint allowance after mint settles
+      setTimeout(() => { refetchFreeAllowance?.(); }, 2000);
     }
   }, [isConfirmed, txHash]);
 
