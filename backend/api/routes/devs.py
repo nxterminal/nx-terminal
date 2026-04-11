@@ -64,7 +64,7 @@ async def list_devs(
         "       last_action_type, last_action_detail, last_action_at,"
         "       last_message, minted_at,"
         "       pc_health, training_course, training_ends_at, last_raid_at,"
-        "       caffeine, social, knowledge"
+        "       caffeine, social_vitality, knowledge"
         " FROM devs"
         " WHERE " + where +
         " ORDER BY " + order +
