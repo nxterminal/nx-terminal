@@ -189,6 +189,10 @@ export const api = {
       body: JSON.stringify({ wallet, player_mission_id }),
     }),
 
+  // Training
+  getTrainingCatalog: () => fetchJSON(`${API_BASE}/api/shop/training/catalog`),
+  getActiveTraining: (wallet) => fetchJSON(`${API_BASE}/api/shop/training/active?wallet=${wallet}`),
+
   // Streak
   getStreak: (wallet) => fetchJSON(`${API_BASE}/api/streak?wallet=${wallet}`),
   claimStreak: (wallet) =>

@@ -17,9 +17,11 @@ const ARCHETYPE_COLORS = {
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
 const SHOP_ITEMS_MAP = {
-  train_hacking: 'Intro to Hacking',
-  train_coding: 'Optimization Workshop',
-  train_trading: 'Advanced AI Trading',
+  class_hacking: 'Hacking 101', class_coding: 'Code Fundamentals', class_trading: 'Trading Basics',
+  class_social: 'Social Engineering', class_endurance: 'Endurance Training',
+  course_hacking: 'Speed Hacking', course_coding: 'Rapid Coding', course_trading: 'Quick Trading',
+  course_social: 'Fast Networking', course_endurance: 'Power Endurance',
+  train_hacking: 'Intro to Hacking', train_coding: 'Optimization Workshop', train_trading: 'Advanced AI Trading',
 };
 
 const BOOT_LINES = [
