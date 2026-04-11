@@ -13,8 +13,16 @@ export default function DailyStreakPopup() {
   useEffect(() => {
     if (!isConnected || !address || checked.current || dismissed) return;
     checked.current = true;
+    // Only show streak popup if player has devs (registered player)
     api.getStreak(address)
-      .then(d => { if (d.can_claim) setData(d); })
+      .then(d => {
+        if (!d.can_claim) return;
+        // Verify player actually has devs before showing popup
+        return api.getDevs({ owner: address, limit: 1 }).then(devs => {
+          const hasDev = Array.isArray(devs) ? devs.length > 0 : (devs?.devs?.length > 0);
+          if (hasDev) setData(d);
+        });
+      })
       .catch(() => {});
   }, [isConnected, address, dismissed]);
 
