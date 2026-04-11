@@ -30,6 +30,16 @@ def _run_auto_migrations():
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50")
+                # Tables that must exist before anything else
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS login_streaks (
+                        wallet_address VARCHAR(42) PRIMARY KEY,
+                        current_streak INTEGER NOT NULL DEFAULT 0,
+                        longest_streak INTEGER NOT NULL DEFAULT 0,
+                        last_claim_date DATE,
+                        total_claimed_nxt BIGINT NOT NULL DEFAULT 0
+                    )
+                """)
                 # Ensure action_enum has all required values
                 cur.execute("""
                     DO $$ BEGIN
@@ -62,16 +72,6 @@ def _run_auto_migrations():
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_player_read ON notifications(player_address, read, created_at DESC)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_player_missions_wallet_dev ON player_missions(wallet_address, dev_token_id)")
-                # Daily login streak table
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS login_streaks (
-                        wallet_address VARCHAR(42) PRIMARY KEY,
-                        current_streak INTEGER NOT NULL DEFAULT 0,
-                        longest_streak INTEGER NOT NULL DEFAULT 0,
-                        last_claim_date DATE,
-                        total_claimed_nxt BIGINT NOT NULL DEFAULT 0
-                    )
-                """)
                 # Achievements tables
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS achievements (

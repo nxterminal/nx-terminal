@@ -26,8 +26,9 @@ export default function DailyStreakPopup() {
       setResult(res);
     } catch (err) {
       setResult({ error: err.message || 'Claim failed' });
+    } finally {
+      setClaiming(false);
     }
-    setClaiming(false);
   }
 
   if (!data || dismissed) return null;
