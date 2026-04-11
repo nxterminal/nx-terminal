@@ -67,6 +67,7 @@ const DESKTOP_ICONS = [
   { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
   { id: 'mission-control', icon: '\u{1F4CB}', label: 'Mission Control' },
   { id: 'achievements', icon: '\u2605', label: 'Achievements' },
+  { id: 'dev-camp', icon: '\u{1F393}', label: 'Dev Camp' },
 ];
 
 function getWallpaperStyle() {

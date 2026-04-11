@@ -29,6 +29,7 @@ import NetWatch from './programs/netwatch/NetWatch';
 import MegaSentinel from './programs/mega-sentinel/MegaSentinel';
 import MissionControl from './programs/mission-control/MissionControl';
 import Achievements from '../windows/Achievements';
+import DevCamp from '../windows/DevCamp';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -57,6 +58,7 @@ const WINDOW_COMPONENTS = {
   'mega-sentinel': MegaSentinel,
   'mission-control': MissionControl,
   'achievements': Achievements,
+  'dev-camp': DevCamp,
 };
 
 export default function WindowManager({

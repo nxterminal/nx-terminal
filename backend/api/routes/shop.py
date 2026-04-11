@@ -5,7 +5,7 @@ import json
 import random
 import logging
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_active_event_effects
 from backend.api.rate_limit import shop_limiter
@@ -95,24 +95,67 @@ SHOP_ITEMS = {
         "cost_nxt": 12,
         "effect": {"type": "reputation_boost", "value": 10},
     },
-    # ── Training Courses ────────────────────────────────────
-    "train_hacking": {
-        "name": "Intro to Hacking",
-        "description": "4 hour course. Hacking +2.",
-        "cost_nxt": 20,
-        "effect": {"type": "training", "stat": "stat_hacking", "bonus": 2, "hours": 4},
+    # ── Training: Classes (8h, +4, 15 $NXT) ───────────────
+    "class_hacking": {
+        "name": "Hacking 101",
+        "description": "8h class: +4 hacking",
+        "cost_nxt": 15,
+        "effect": {"type": "training", "stat": "stat_hacking", "bonus": 4, "hours": 8},
     },
-    "train_coding": {
-        "name": "Optimization Workshop",
-        "description": "12 hour course. Coding +3.",
-        "cost_nxt": 50,
-        "effect": {"type": "training", "stat": "stat_coding", "bonus": 3, "hours": 12},
+    "class_coding": {
+        "name": "Code Fundamentals",
+        "description": "8h class: +4 coding",
+        "cost_nxt": 15,
+        "effect": {"type": "training", "stat": "stat_coding", "bonus": 4, "hours": 8},
     },
-    "train_trading": {
-        "name": "Advanced AI Trading",
-        "description": "24 hour course. Trading +5.",
-        "cost_nxt": 100,
-        "effect": {"type": "training", "stat": "stat_trading", "bonus": 5, "hours": 24},
+    "class_trading": {
+        "name": "Trading Basics",
+        "description": "8h class: +4 trading",
+        "cost_nxt": 15,
+        "effect": {"type": "training", "stat": "stat_trading", "bonus": 4, "hours": 8},
+    },
+    "class_social": {
+        "name": "Social Engineering",
+        "description": "8h class: +4 social",
+        "cost_nxt": 15,
+        "effect": {"type": "training", "stat": "stat_social", "bonus": 4, "hours": 8},
+    },
+    "class_endurance": {
+        "name": "Endurance Training",
+        "description": "8h class: +4 endurance",
+        "cost_nxt": 15,
+        "effect": {"type": "training", "stat": "stat_endurance", "bonus": 4, "hours": 8},
+    },
+    # ── Training: Intensive Courses (2h, +2, 40 $NXT) ─────
+    "course_hacking": {
+        "name": "Speed Hacking",
+        "description": "2h intensive: +2 hacking",
+        "cost_nxt": 40,
+        "effect": {"type": "training", "stat": "stat_hacking", "bonus": 2, "hours": 2},
+    },
+    "course_coding": {
+        "name": "Rapid Coding",
+        "description": "2h intensive: +2 coding",
+        "cost_nxt": 40,
+        "effect": {"type": "training", "stat": "stat_coding", "bonus": 2, "hours": 2},
+    },
+    "course_trading": {
+        "name": "Quick Trading",
+        "description": "2h intensive: +2 trading",
+        "cost_nxt": 40,
+        "effect": {"type": "training", "stat": "stat_trading", "bonus": 2, "hours": 2},
+    },
+    "course_social": {
+        "name": "Fast Networking",
+        "description": "2h intensive: +2 social",
+        "cost_nxt": 40,
+        "effect": {"type": "training", "stat": "stat_social", "bonus": 2, "hours": 2},
+    },
+    "course_endurance": {
+        "name": "Power Endurance",
+        "description": "2h intensive: +2 endurance",
+        "cost_nxt": 40,
+        "effect": {"type": "training", "stat": "stat_endurance", "bonus": 2, "hours": 2},
     },
 }
 
@@ -123,6 +166,70 @@ COFFEE_ITEMS = {"coffee", "pizza", "mega_meal"}
 async def list_shop_items():
     """Get all available shop items."""
     return [{"id": k, **v} for k, v in SHOP_ITEMS.items()]
+
+
+@router.get("/training/catalog")
+async def get_training_catalog():
+    """Return available training items grouped by type."""
+    classes = []
+    courses = []
+    for item_id, item in SHOP_ITEMS.items():
+        eff = item.get("effect", {})
+        if not isinstance(eff, dict) or eff.get("type") != "training":
+            continue
+        entry = {
+            "id": item_id,
+            "name": item["name"],
+            "description": item["description"],
+            "cost": item["cost_nxt"],
+            "stat": eff["stat"].replace("stat_", ""),
+            "boost": eff["bonus"],
+            "duration_hours": eff["hours"],
+            "category": "class" if item_id.startswith("class_") else "course",
+        }
+        if item_id.startswith("class_"):
+            classes.append(entry)
+        else:
+            courses.append(entry)
+    return {"classes": classes, "courses": courses}
+
+
+@router.get("/training/active")
+async def get_active_training(wallet: str = Query(...)):
+    """Return devs currently in training for this wallet."""
+    addr = validate_wallet(wallet)
+    rows = fetch_all(
+        "SELECT token_id, name, archetype, corporation, rarity_tier, ipfs_hash, "
+        "       training_course, training_ends_at, "
+        "       stat_hacking, stat_coding, stat_trading, stat_social, stat_endurance "
+        "FROM devs WHERE LOWER(owner_address) = %s AND training_course IS NOT NULL "
+        "ORDER BY training_ends_at ASC",
+        (addr,)
+    )
+    now = datetime.now(timezone.utc)
+    result = []
+    for r in rows:
+        item = SHOP_ITEMS.get(r["training_course"], {})
+        eff = item.get("effect", {})
+        duration_h = eff.get("hours", 4)
+        total_s = duration_h * 3600
+        ends = r["training_ends_at"]
+        remaining = max(0, (ends - now).total_seconds()) if ends else 0
+        elapsed = total_s - remaining
+        pct = min(100, int((elapsed / total_s) * 100)) if total_s > 0 else 100
+        result.append({
+            "token_id": r["token_id"], "name": r["name"],
+            "archetype": r["archetype"], "ipfs_hash": r["ipfs_hash"],
+            "training_course": r["training_course"],
+            "training_name": item.get("name", r["training_course"]),
+            "stat": eff.get("stat", "").replace("stat_", ""),
+            "boost": eff.get("bonus", 0),
+            "ends_at": ends.isoformat() if ends else None,
+            "remaining_seconds": int(remaining),
+            "progress": pct,
+            "can_graduate": remaining <= 0,
+        })
+    return {"training_devs": result}
 
 
 class PurchaseRequest(BaseModel):

@@ -29,6 +29,7 @@ const WINDOW_DEFAULTS = {
   'mega-sentinel': { title: 'Mega Sentinel v1.0', icon: '\u{1F6E1}', width: 1000, height: 700, x: 60, y: 30, maximized: true },
   'mission-control': { title: 'Mission Control', icon: '\u{1F4CB}', width: 900, height: 700, x: 80, y: 5 },
   'achievements': { title: 'Achievements', icon: '\u2605', width: 800, height: 600, x: 100, y: 5 },
+  'dev-camp': { title: 'Dev Camp', icon: '\u{1F393}', width: 700, height: 550, x: 120, y: 5 },
 };
 
 export function useWindowManager() {
