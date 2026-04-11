@@ -500,6 +500,11 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {/* COLLECT button */}
           {claimStep === 'idle' && (
             <>
+              <div style={{ fontSize: '11px', color: '#777', marginTop: '8px', lineHeight: 1.5, borderTop: '1px solid #333', paddingTop: '6px' }}>
+                Net pay is your withdrawable amount after the 10% protocol fee.
+                Devs on missions are included. Some $NXT may have been spent on
+                actions (feed, hack, train) and won't appear here.
+              </div>
               <button className="win-btn" onClick={handleClaim}
                 disabled={isWrongChain || selectedIds.length === 0}
                 style={{ padding: '6px 20px', fontWeight: 'bold', fontSize: '13px', marginTop: '10px',

@@ -62,7 +62,7 @@ def get_pending_claims(db_conn):
     query = """
         SELECT token_id, balance_nxt
         FROM nx.devs
-        WHERE status = 'active'
+        WHERE status IN ('active', 'on_mission')
           AND balance_nxt > 0
         ORDER BY token_id
     """
