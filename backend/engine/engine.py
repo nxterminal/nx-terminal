@@ -62,6 +62,7 @@ LOCATION_MODIFIERS = {
     "GOVERNANCE_HALL":  {"CODE_REVIEW": 2.0, "REST": 1.5},
     "THE_GRAVEYARD":    {"CHAT": 1.5, "MOVE": 1.5},
     "BOARD_ROOM":       {},
+    "GitHub HQ":        {"CREATE_PROTOCOL": 2.0, "CODE_REVIEW": 1.5},
 }
 
 MOODS = ["neutral", "excited", "angry", "depressed", "focused"]
