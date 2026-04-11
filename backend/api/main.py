@@ -152,6 +152,28 @@ def _run_auto_migrations():
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
+                # One-time broadcast system
+                cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
+                cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'dev_camp_launch'")
+                if not cur.fetchone():
+                    cur.execute("SELECT DISTINCT wallet_address FROM players")
+                    _players = cur.fetchall()
+                    for _p in _players:
+                        cur.execute("""
+                            INSERT INTO notifications (player_address, type, title, body)
+                            VALUES (%s, 'broadcast', %s, %s)
+                        """, (_p["wallet_address"],
+                              "New Program: Dev Camp",
+                              "DEV CAMP IS NOW OPEN\n\n"
+                              "A new training facility has been deployed to your desktop. "
+                              "All developers are now eligible for enrollment.\n\n"
+                              "CLASSES (8h, 15 $NXT): +4 permanent stat boost\n"
+                              "INTENSIVE COURSES (2h, 40 $NXT): +2 permanent stat boost\n\n"
+                              "Skills: Hacking, Coding, Trading, Social, Endurance\n\n"
+                              "Open Dev Camp from your desktop to get started. "
+                              "Trained devs qualify for harder missions with bigger rewards.\n\n"
+                              "— NX Terminal Training Division"))
+                    cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch')")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
