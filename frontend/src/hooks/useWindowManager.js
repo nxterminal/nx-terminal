@@ -44,7 +44,11 @@ export function useWindowManager() {
         );
       }
 
-      const defaults = WINDOW_DEFAULTS[id] || { title: id, icon: '>', width: 600, height: 400, x: 100 + prev.length * 30, y: 60 + prev.length * 30 };
+      const raw = WINDOW_DEFAULTS[id] || { title: id, icon: '>', width: 600, height: 400, x: 100 + prev.length * 30, y: 60 + prev.length * 30 };
+      const uw = typeof window !== 'undefined' && window.innerWidth >= 2560;
+      const defaults = uw && !raw.maximized
+        ? { ...raw, width: Math.round(raw.width * 1.15), height: Math.round(raw.height * 1.1), x: Math.round(raw.x * 1.5) }
+        : raw;
       nextZIndex++;
       return [...prev, {
         id,

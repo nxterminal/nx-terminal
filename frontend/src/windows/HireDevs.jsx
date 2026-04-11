@@ -411,18 +411,18 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
 
         {/* What's Next guide */}
         <div style={{
-          background: 'rgba(0,255,100,0.05)', border: '1px solid rgba(100,255,100,0.2)',
+          background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)',
           padding: '8px 12px', marginTop: '8px', fontSize: '11px',
           fontFamily: "'VT323', monospace",
         }}>
-          <div style={{ color: '#66ff66', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+          <div style={{ color: '#006600', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
             WHAT'S NEXT?
           </div>
-          <div style={{ color: '#aaa', lineHeight: 1.7 }}>
-            1. Open <b style={{color:'#ddd'}}>My Devs</b> — manage stats &amp; watch them work<br/>
-            2. Check <b style={{color:'#ddd'}}>NXT Wallet</b> — devs earn ~200 $NXT/day<br/>
-            3. Try <b style={{color:'#ddd'}}>Mission Control</b> — bonus $NXT missions<br/>
-            4. Use <b style={{color:'#ddd'}}>HACK</b> on a dev card — quick $NXT<br/>
+          <div style={{ color: '#333', lineHeight: 1.7 }}>
+            1. Open <b style={{color:'#000'}}>My Devs</b> — manage stats &amp; watch them work<br/>
+            2. Check <b style={{color:'#000'}}>NXT Wallet</b> — devs earn ~200 $NXT/day<br/>
+            3. Try <b style={{color:'#000'}}>Mission Control</b> — bonus $NXT missions<br/>
+            4. Use <b style={{color:'#000'}}>HACK</b> on a dev card — quick $NXT<br/>
             5. Keep devs alive! Feed, Coffee, Fix, Repair
           </div>
         </div>
