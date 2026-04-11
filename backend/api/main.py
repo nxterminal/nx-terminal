@@ -48,6 +48,14 @@ def _run_auto_migrations():
                         THEN ALTER TYPE action_enum ADD VALUE 'HACK_MAINFRAME'; END IF;
                     END $$;
                 """)
+                # Ensure location_enum has all values the engine might use
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'GitHub HQ'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'location_enum'))
+                        THEN ALTER TYPE location_enum ADD VALUE 'GitHub HQ'; END IF;
+                    END $$;
+                """)
                 # Mission multi-dev support
                 cur.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS required_devs SMALLINT NOT NULL DEFAULT 1")
                 cur.execute("ALTER TABLE player_missions ADD COLUMN IF NOT EXISTS group_id VARCHAR(36)")
