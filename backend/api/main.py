@@ -152,7 +152,15 @@ def _run_auto_migrations():
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
-                # One-time broadcast system
+            conn.commit()
+        log.info("✅ Auto-migrations complete")
+    except Exception as e:
+        log.warning(f"⚠️ Auto-migration warning: {e}")
+
+    # Broadcast emails (separate transaction so main migrations aren't affected)
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
                 cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'dev_camp_launch'")
                 if not cur.fetchone():
@@ -175,9 +183,9 @@ def _run_auto_migrations():
                               "— NX Terminal Training Division"))
                     cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch')")
             conn.commit()
-        log.info("✅ Auto-migrations complete")
+            log.info(f"✅ Broadcast 'dev_camp_launch' sent to {len(_players)} players")
     except Exception as e:
-        log.warning(f"⚠️ Auto-migration warning: {e}")
+        log.warning(f"⚠️ Broadcast warning: {e}")
 
 
 @asynccontextmanager
