@@ -163,27 +163,40 @@ def _run_auto_migrations():
             with conn.cursor() as cur:
                 cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'dev_camp_launch'")
-                if not cur.fetchone():
+                _flag = cur.fetchone()
+                if _flag:
+                    # Check if notifications actually exist (flag may be stale from rolled-back attempt)
+                    cur.execute("SELECT COUNT(*) as c FROM notifications WHERE type = 'broadcast' AND title = 'New Program: Dev Camp'")
+                    if cur.fetchone()["c"] == 0:
+                        cur.execute("DELETE FROM system_broadcasts WHERE id = 'dev_camp_launch'")
+                        _flag = None
+                if not _flag:
                     cur.execute("SELECT DISTINCT wallet_address FROM players")
-                    _players = cur.fetchall()
-                    for _p in _players:
-                        cur.execute("""
-                            INSERT INTO notifications (player_address, type, title, body)
-                            VALUES (%s, 'broadcast', %s, %s)
-                        """, (_p["wallet_address"],
-                              "New Program: Dev Camp",
-                              "DEV CAMP IS NOW OPEN\n\n"
-                              "A new training facility has been deployed to your desktop. "
-                              "All developers are now eligible for enrollment.\n\n"
-                              "CLASSES (8h, 15 $NXT): +4 permanent stat boost\n"
-                              "INTENSIVE COURSES (2h, 40 $NXT): +2 permanent stat boost\n\n"
-                              "Skills: Hacking, Coding, Trading, Social, Endurance\n\n"
-                              "Open Dev Camp from your desktop to get started. "
-                              "Trained devs qualify for harder missions with bigger rewards.\n\n"
-                              "— NX Terminal Training Division"))
+                    _bcast_players = cur.fetchall()
+                    _bcast_count = 0
+                    for _p in _bcast_players:
+                        try:
+                            cur.execute("""
+                                INSERT INTO notifications (player_address, type, title, body)
+                                VALUES (%s, 'broadcast', %s, %s)
+                            """, (_p["wallet_address"],
+                                  "New Program: Dev Camp",
+                                  "DEV CAMP IS NOW OPEN\n\n"
+                                  "A new training facility has been deployed to your desktop. "
+                                  "All developers are now eligible for enrollment.\n\n"
+                                  "CLASSES (8h, 15 $NXT): +4 permanent stat boost\n"
+                                  "INTENSIVE COURSES (2h, 40 $NXT): +2 permanent stat boost\n\n"
+                                  "Skills: Hacking, Coding, Trading, Social, Endurance\n\n"
+                                  "Open Dev Camp from your desktop to get started. "
+                                  "Trained devs qualify for harder missions with bigger rewards.\n\n"
+                                  "— NX Terminal Training Division"))
+                            _bcast_count += 1
+                        except Exception:
+                            pass  # skip individual insert failures
                     cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch')")
-            conn.commit()
-            log.info(f"✅ Broadcast 'dev_camp_launch' sent to {len(_players)} players")
+                    log.info(f"✅ Broadcast 'dev_camp_launch' sent to {_bcast_count} players")
+                else:
+                    log.info("ℹ️ Broadcast 'dev_camp_launch' already sent")
     except Exception as e:
         log.warning(f"⚠️ Broadcast warning: {e}")
 
