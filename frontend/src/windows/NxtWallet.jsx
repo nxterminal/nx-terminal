@@ -234,26 +234,29 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     }
   }, [wallet, allIds.length]);
 
-  // Calculate based on percentage: claim is per-dev, so we select a subset of dev IDs
-  // Sort devs by balance descending so partial claims take the richest devs first
+  // Calculate based on percentage: select devs (by balance desc) until reaching target amount
   const sortedDevs = (devs || [])
     .filter(d => d.balance_nxt > 0)
     .sort((a, b) => b.balance_nxt - a.balance_nxt);
 
-  // Determine how many devs to claim based on percentage
   const devCount = sortedDevs.length;
-  const selectedDevCount = Math.max(1, Math.round(devCount * pct / 100));
-  const selectedDevs = pct === 100 ? sortedDevs : sortedDevs.slice(0, selectedDevCount);
+  const totalDevBalance = sortedDevs.reduce((s, d) => s + d.balance_nxt, 0);
+  const targetAmount = Math.floor(totalDevBalance * pct / 100);
+
+  // Select devs greedily until we reach the target amount
+  let accumulated = 0;
+  const selectedDevs = [];
+  for (const d of sortedDevs) {
+    if (pct < 100 && accumulated >= targetAmount) break;
+    selectedDevs.push(d);
+    accumulated += d.balance_nxt;
+  }
   const selectedIds = pct === 100
     ? allIds
     : selectedDevs.map(d => BigInt(d.token_id));
 
-  // Calculate gross for selected devs
-  const selectedGross = pct === 100
-    ? (gameBalance || 0)
-    : selectedDevs.reduce((s, d) => s + d.balance_nxt, 0);
-
-  const gross = selectedGross;
+  // Gross = what the selected devs actually hold (may slightly exceed target)
+  const gross = pct === 100 ? (gameBalance || 0) : accumulated;
   const net = Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
   const totalDeduction = gross - net;
 
@@ -442,7 +445,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {claimStep === 'idle' && devCount > 1 && (
             <div style={{ marginBottom: '8px' }}>
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
-                Collect from ({selectedDevCount}/{devCount} devs):
+                Withdraw: {pct}% — ~{formatNumber(Math.round(gross * (1 - TOTAL_DEDUCTION_PCT / 100)))} $NXT net
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {[25, 50, 75, 100].map(v => (
