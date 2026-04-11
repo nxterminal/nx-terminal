@@ -469,6 +469,26 @@ def run_listener():
                             insert_dev(cur, token_id, owner, dev_data)
                             insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
 
+                            # Post-mint email to owner
+                            try:
+                                cur.execute("""
+                                    INSERT INTO notifications (player_address, type, title, body)
+                                    VALUES (%s, 'dev_deployed', %s, %s)
+                                """, (owner.lower(),
+                                      f"Dev Deployed: {dev_data['name']} [{dev_data['archetype']}]",
+                                      f"DEPLOYMENT SUCCESSFUL\n\n"
+                                      f"Name: {dev_data['name']}\n"
+                                      f"Corporation: {dev_data['corporation']}\n"
+                                      f"Archetype: {dev_data['archetype']}\n"
+                                      f"Rarity: {dev_data['rarity']}\n"
+                                      f"Token: #{token_id}\n\n"
+                                      f"Your dev is now active and earning ~200 $NXT/day.\n\n"
+                                      f"Open My Devs to manage stats. Feed, Coffee, Fix, Repair — "
+                                      f"stats decay over time. A well-fed dev is a productive dev.\n\n"
+                                      f"— NX Terminal Deployment Division"))
+                            except Exception as _ne:
+                                log.warning(f"Post-mint notification failed: {_ne}")
+
                             # Notify Ariel if VIP tester minted
                             try:
                                 cur.execute("SELECT name FROM vip_testers WHERE wallet_address = %s", (owner.lower(),))
