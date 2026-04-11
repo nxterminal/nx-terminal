@@ -60,6 +60,7 @@ async def list_devs(
         "       owner_address, energy, max_energy, mood, location,"
         "       balance_nxt, reputation, status,"
         "       protocols_created, ais_created,"
+        "       stat_hacking, stat_coding, stat_trading, stat_social, stat_endurance, stat_luck,"
         "       last_action_type, last_action_detail, last_action_at,"
         "       last_message, minted_at,"
         "       pc_health, training_course, training_ends_at, last_raid_at,"

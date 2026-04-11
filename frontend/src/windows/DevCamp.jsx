@@ -104,13 +104,20 @@ export default function DevCamp() {
                 border: `1px solid ${T.cardBorder}`, padding: '5px 8px', width: '100%',
               }}>
                 <option value="">-- Choose a dev --</option>
-                {availableDevs.map(d => (
-                  <option key={d.token_id} value={d.token_id}>
-                    {d.name} [{d.archetype}] HAK:{d.stat_hacking} COD:{d.stat_coding} TRD:{d.stat_trading} SOC:{d.stat_social} END:{d.stat_endurance}
-                  </option>
-                ))}
+                {myDevs.map(d => {
+                  const onMission = d.status === 'on_mission';
+                  const inTraining = !!d.training_course;
+                  const ok = !onMission && !inTraining;
+                  return (
+                    <option key={d.token_id} value={d.token_id} disabled={!ok}>
+                      {d.name} [{d.archetype}] HAK:{d.stat_hacking||'?'} COD:{d.stat_coding||'?'} TRD:{d.stat_trading||'?'} SOC:{d.stat_social||'?'} END:{d.stat_endurance||'?'}
+                      {onMission ? ' (ON MISSION)' : ''}{inTraining ? ' (TRAINING)' : ''}
+                    </option>
+                  );
+                })}
               </select>
-              {availableDevs.length === 0 && <div style={{ fontSize: 11, color: T.red, marginTop: 4 }}>No available devs. All may be on missions or already training.</div>}
+              {myDevs.length === 0 && <div style={{ fontSize: 11, color: T.red, marginTop: 4 }}>No devs found. Mint a dev first.</div>}
+              {myDevs.length > 0 && availableDevs.length === 0 && <div style={{ fontSize: 11, color: '#ff9800', marginTop: 4 }}>All devs are on missions or training.</div>}
             </div>
 
             {/* Classes */}
