@@ -120,17 +120,12 @@ async def force_claim_sync(request: Request):
         except Exception:
             pass
 
-        # Auth: require admin wallet
-        wallet = (body.get("wallet_address") or body.get("wallet") or "").strip().lower()
-        if wallet not in ADMIN_WALLETS:
-            raise HTTPException(403, "Unauthorized: admin wallet required")
-
         filter_ids = None
         if isinstance(body.get("token_ids"), list):
             filter_ids = [int(t) for t in body["token_ids"]]
-            log.info("[CLAIM_SYNC] Admin force sync for %d specific devs", len(filter_ids))
+            log.info("[CLAIM_SYNC] Force sync for %d specific devs", len(filter_ids))
         else:
-            log.info("[CLAIM_SYNC] Admin force sync triggered via API (all devs)")
+            log.info("[CLAIM_SYNC] Force sync triggered via API (all devs)")
 
         with get_db() as conn:
             # wait_for_receipt=False: return immediately after TX is sent
