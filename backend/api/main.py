@@ -117,14 +117,14 @@ def _run_auto_migrations():
                 cur.execute("""
                     INSERT INTO world_events (title, description, event_type, effects, starts_at, ends_at, is_active)
                     SELECT 'MEGA TESTER PROGRAM',
-                           'Management authorized a special bonus program. Don''t ask why. Just enjoy the extra $NXT before they change their mind.',
+                           'NX Terminal is currently running a testing phase. Regular operations continue as normal.',
                            'weekly',
                            '{"salary_multiplier": 1.25, "hack_cost_multiplier": 0.7, "mission_reward_multiplier": 1.25}'::jsonb,
                            NOW(), '2099-12-31'::timestamptz, TRUE
                     WHERE NOT EXISTS (SELECT 1 FROM world_events WHERE title = 'MEGA TESTER PROGRAM')
                 """)
                 cur.execute("""
-                    UPDATE world_events SET description = 'Management authorized a special bonus program. Don''t ask why. Just enjoy the extra $NXT before they change their mind.'
+                    UPDATE world_events SET description = 'NX Terminal is currently running a testing phase. Regular operations continue as normal.'
                     WHERE title = 'MEGA TESTER PROGRAM'
                 """)
                 # VIP testers table
