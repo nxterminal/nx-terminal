@@ -872,21 +872,11 @@ def pay_salaries(conn):
     knowledge_decay = max(0, int(1 * event_effects.get("energy_decay_multiplier", 1.0)))
     cur.execute("""
         UPDATE devs SET
-            caffeine  = GREATEST(0, caffeine  - %s),
-            social    = GREATEST(0, social    - %s),
-            knowledge = GREATEST(0, knowledge - %s)
+            caffeine        = GREATEST(0, caffeine        - %s),
+            social_vitality = GREATEST(0, social_vitality - %s),
+            knowledge       = GREATEST(0, knowledge       - %s)
         WHERE status = 'active'
     """, (caff_decay, social_decay, knowledge_decay))
-
-    # Degrade social_vitality: -1 per hour (min 0)
-    cur.execute("""
-        UPDATE devs SET social_vitality = GREATEST(0, social_vitality - 1) WHERE status = 'active'
-    """)
-
-    # Degrade knowledge: -1 per hour (min 0)
-    cur.execute("""
-        UPDATE devs SET knowledge = GREATEST(0, knowledge - 1) WHERE status = 'active'
-    """)
 
     # Low knowledge penalty: generate extra bugs
     # knowledge < 15: +2 bugs/hour, knowledge 15-29: +1 bug/hour
