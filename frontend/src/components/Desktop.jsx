@@ -231,24 +231,39 @@ export default function Desktop() {
         ))}
       </div>
 
-      {/* Tier badge — fixed top-right corner */}
+      {/* Rank sticky note — top-right */}
       {tier && devCount > 0 && (
         <div style={{
-          position: 'fixed', top: 8, right: 8, zIndex: 5,
-          background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: '3px', padding: '4px 10px',
-          fontSize: '11px', fontFamily: "'VT323', monospace",
-          color: '#e0e0e0', display: 'flex', alignItems: 'center', gap: '6px',
+          position: 'fixed', top: 10, right: 10, zIndex: 2,
           pointerEvents: 'none', userSelect: 'none',
+          transform: 'rotate(2deg)',
         }}>
-          <span>{tier.icon}</span>
-          <span style={{ fontWeight: 'bold' }}>{tier.label.toUpperCase()}</span>
-          <span style={{ color: '#aaa' }}>({devCount} devs)</span>
-          {nextTier && (
-            <span style={{ color: '#888', fontSize: '10px' }}>
-              → {nextTier.label} at {nextTier.minDevs}
-            </span>
-          )}
+          <div style={{
+            width: 12, height: 12, borderRadius: '50%', background: '#cc3333',
+            position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)', zIndex: 3,
+          }} />
+          <div style={{
+            width: 170, background: '#ffe066',
+            boxShadow: '3px 3px 8px rgba(0,0,0,0.25)',
+            fontFamily: "'Patrick Hand', cursive",
+          }}>
+            <div style={{
+              background: '#ecc94b', padding: '3px 8px', fontSize: 11,
+              color: '#744210',
+            }}>📌 My Rank</div>
+            <div style={{ padding: '8px 10px', color: '#744210' }}>
+              <div style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 2 }}>
+                {tier.label.toUpperCase()}
+              </div>
+              <div style={{ fontSize: 15, opacity: 0.8 }}>{devCount} devs</div>
+              {nextTier && (
+                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 2 }}>
+                  → {nextTier.label} at {nextTier.minDevs}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

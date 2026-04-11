@@ -24,15 +24,32 @@ export default function WorldEventBanner() {
 
   return (
     <div style={{
-      position: 'fixed', top: 36, right: 8, zIndex: 4,
-      fontFamily: "'VT323', monospace", fontSize: 12,
-      background: 'rgba(0,0,0,0.7)', border: '1px solid #ffaa0040',
-      borderLeft: '3px solid #ffaa00', padding: '4px 10px',
-      borderRadius: '2px', maxWidth: 300,
-      color: '#ddd', pointerEvents: 'none', userSelect: 'none',
+      position: 'fixed', top: 130, right: 10, zIndex: 2,
+      pointerEvents: 'none', userSelect: 'none',
+      transform: 'rotate(-1.5deg)',
     }}>
-      <span style={{ color: '#ffaa00', fontWeight: 'bold' }}>EVENT: </span>
-      <span>{event.title}</span>
+      <div style={{
+        width: 12, height: 12, borderRadius: '50%', background: '#4444cc',
+        position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3)', zIndex: 3,
+      }} />
+      <div style={{
+        width: 190, background: '#ff8a80',
+        boxShadow: '3px 3px 8px rgba(0,0,0,0.25)',
+        fontFamily: "'Patrick Hand', cursive",
+      }}>
+        <div style={{
+          background: '#e57373', padding: '3px 8px', fontSize: 11, color: '#4a1010',
+        }}>📢 Active Event</div>
+        <div style={{ padding: '8px 10px', color: '#4a1010' }}>
+          <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>
+            {event.title}
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.4 }}>
+            {event.description}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
