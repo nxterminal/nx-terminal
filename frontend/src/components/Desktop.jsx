@@ -125,12 +125,18 @@ export default function Desktop() {
   const [showBSOD, setShowBSOD] = useState(false);
   const [showScreensaver, setShowScreensaver] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getInitialUnreadCount);
+  const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
   const idleTimerRef = useRef(null);
 
   useEffect(() => {
     const handleUnread = (e) => setUnreadCount(e.detail);
+    const handleScale = (e) => setIconScale(e.detail);
     window.addEventListener('nx-inbox-unread', handleUnread);
-    return () => window.removeEventListener('nx-inbox-unread', handleUnread);
+    window.addEventListener('nx-icon-scale', handleScale);
+    return () => {
+      window.removeEventListener('nx-inbox-unread', handleUnread);
+      window.removeEventListener('nx-icon-scale', handleScale);
+    };
   }, []);
 
   const refreshSettings = useCallback(() => {
@@ -212,13 +218,14 @@ export default function Desktop() {
       {wallpaperOverlay === 'matrix' && <div className="wallpaper-matrix" />}
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
-      <div className="desktop-icons">
+      <div className={`desktop-icons${iconScale !== 'medium' ? ` scale-${iconScale}` : ''}`}>
         {DESKTOP_ICONS.filter(item => !item.hidden).map(item => (
           <DesktopIcon
             key={item.id}
             id={item.id}
             icon={item.icon}
             label={item.label}
+            iconSize={iconScale === 'small' ? 24 : iconScale === 'large' ? 48 : 32}
             onDoubleClick={() => openWindowWithBSOD(item.id)}
           />
         ))}

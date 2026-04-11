@@ -247,6 +247,7 @@ export default function ControlPanel() {
   const [assistantEnabled, setAssistantEnabled] = useState(() => localStorage.getItem('nx-assistant-enabled') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
+  const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
 
   // Pending (selected but not yet applied) values
   const [pendingWallpaper, setPendingWallpaper] = useState(null);
@@ -388,6 +389,7 @@ export default function ControlPanel() {
         <button className={`win-tab${tab === 'screensaver' ? ' active' : ''}`} onClick={() => setTab('screensaver')}>Screensaver</button>
         <button className={`win-tab${tab === 'assistant' ? ' active' : ''}`} onClick={() => setTab('assistant')}>NX Assistant</button>
         <button className={`win-tab${tab === 'corporate' ? ' active' : ''}`} onClick={() => setTab('corporate')}>Corporate</button>
+        <button className={`win-tab${tab === 'desktop' ? ' active' : ''}`} onClick={() => setTab('desktop')}>Desktop</button>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
@@ -639,6 +641,34 @@ export default function ControlPanel() {
               <div style={{ fontSize: '9px', color: '#666' }}>
                 NX Terminal Corp. is not responsible for any loss of motivation, productivity, or will to live
                 that may result from adjusting these settings. All complaints will be forwarded to /dev/null.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'desktop' && (
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>Desktop Icon Size</div>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+              {['small', 'medium', 'large'].map(s => (
+                <button key={s} className="win-btn"
+                  onClick={() => {
+                    setIconScale(s);
+                    localStorage.setItem('nx-icon-scale', s);
+                    window.dispatchEvent(new CustomEvent('nx-icon-scale', { detail: s }));
+                  }}
+                  style={{
+                    flex: 1, padding: '6px', fontSize: '11px', fontWeight: iconScale === s ? 'bold' : 'normal',
+                    background: iconScale === s ? '#000080' : undefined,
+                    color: iconScale === s ? '#fff' : undefined,
+                  }}>
+                  {s.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="win-panel" style={{ padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: '#666' }}>
+                Changes the size of desktop icons. Takes effect immediately.
               </div>
             </div>
           </div>

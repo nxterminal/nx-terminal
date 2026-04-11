@@ -222,6 +222,26 @@
   max-width: 72px;
 }
 
+/* Icon scale variants */
+.desktop-icons.scale-small { gap: 4px; }
+.desktop-icons.scale-small .desktop-icon { width: 56px; }
+.desktop-icons.scale-small .desktop-icon-img { width: 24px; height: 24px; font-size: 20px; }
+.desktop-icons.scale-small .desktop-icon-label { font-size: 9px; max-width: 56px; }
+
+.desktop-icons.scale-large { gap: 12px; }
+.desktop-icons.scale-large .desktop-icon { width: 88px; }
+.desktop-icons.scale-large .desktop-icon-img { width: 48px; height: 48px; font-size: 40px; }
+.desktop-icons.scale-large .desktop-icon-label { font-size: 13px; max-width: 88px; }
+
+/* Ultrawide */
+@media (min-width: 2560px) {
+  .desktop-icons { gap: 12px; padding: 20px; }
+  .desktop-icon { width: 80px; }
+  .desktop-icon-img { width: 40px; height: 40px; font-size: 34px; }
+  .desktop-icon-label { font-size: 12px; max-width: 80px; }
+  .taskbar { height: 40px; }
+}
+
 /* ====== TASKBAR ====== */
 .taskbar {
   position: fixed;
