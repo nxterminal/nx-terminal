@@ -858,14 +858,20 @@ function IconMissionControl({ size = 32 }) {
 function IconDevCamp({ size = 32 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="16,4 4,14 28,14" fill="#333" stroke="#555" strokeWidth="0.5" />
-      <rect x="16" y="4" width="10" height="2" fill="#ffaa00" />
-      <circle cx="26" cy="6" r="2" fill="#ffaa00" />
-      <line x1="26" y1="8" x2="26" y2="14" stroke="#ffaa00" strokeWidth="1" />
-      <rect x="8" y="14" width="16" height="12" fill="#1a1a2e" stroke="#555" strokeWidth="0.5" />
-      <rect x="13" y="18" width="6" height="8" fill="#0f0f1a" />
-      <rect x="10" y="16" width="4" height="4" fill="#00aaff" opacity="0.6" />
-      <rect x="18" y="16" width="4" height="4" fill="#00aaff" opacity="0.6" />
+      {/* Ground */}
+      <rect x="2" y="25" width="28" height="3" rx="1" fill="#5a4a3a" />
+      {/* Tent body */}
+      <polygon points="16,3 1,25 31,25" fill="#d4883a" stroke="#aa6622" strokeWidth="0.7" />
+      <polygon points="16,3 1,25 16,25" fill="#b87030" />
+      {/* Door opening */}
+      <polygon points="12,25 16,12 20,25" fill="#0a1a2e" />
+      {/* Terminal inside */}
+      <rect x="13" y="16" width="6" height="5" rx="0.5" fill="#0a2a0a" stroke="#2a7a2a" strokeWidth="0.5" />
+      <rect x="14" y="17" width="4" height="1" fill="#66ff66" />
+      <rect x="14" y="19" width="3" height="1" fill="#44aa44" opacity="0.7" />
+      {/* Flag pole + flag */}
+      <line x1="16" y1="3" x2="16" y2="0" stroke="#888" strokeWidth="1" />
+      <polygon points="16,0 22,1.5 16,3" fill="#ff4444" stroke="#cc2222" strokeWidth="0.3" />
     </svg>
   );
 }
