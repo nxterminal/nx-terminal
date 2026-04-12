@@ -167,6 +167,16 @@ function getInitialUnreadCount() {
   return readIds.includes('welcome-1') ? 0 : 1;
 }
 
+// Must stay in sync with ALLOWED_NOTIF_TYPES in windows/Inbox.jsx — the
+// desktop unread badge should only count notifications the Inbox window
+// actually displays, otherwise stray engine types (protocol_created,
+// ai_created, etc.) pin the badge with no way for the user to clear it.
+const INBOX_DISPLAY_TYPES = new Set([
+  'broadcast', 'streak_claim', 'achievement', 'vip_welcome',
+  'vip_alert', 'vip_mint', 'dev_deployed', 'hack_received',
+  'world_event', 'prompt_response',
+]);
+
 export default function Desktop() {
   const {
     windows,
@@ -205,18 +215,23 @@ export default function Desktop() {
 
   // Poll backend for new notifications (every 30s)
   useEffect(() => {
-    const { address: addr } = { address: window.ethereum?.selectedAddress };
+    const addr = window.ethereum?.selectedAddress;
     if (!addr) return;
     const check = () => {
       api.getNotifications(addr, true).then(notifs => {
         if (!Array.isArray(notifs)) return;
-        const count = notifs.length;
-        if (count > lastNotifCheck.current && lastNotifCheck.current > 0 && notifs[0]) {
-          setNotifPopup(notifs[0].title);
+        // Only count types the Inbox window actually displays. The backend
+        // may hold unread rows (protocol_created, ai_created, …) that don't
+        // have an email mapping, which would pin the badge forever.
+        const displayable = notifs.filter(n => INBOX_DISPLAY_TYPES.has(n.type));
+        const count = displayable.length;
+        if (count > lastNotifCheck.current && lastNotifCheck.current > 0 && displayable[0]) {
+          setNotifPopup(displayable[0].title);
         }
         lastNotifCheck.current = count;
-        // Update unread badge if Inbox isn't open
-        setUnreadCount(prev => Math.max(prev, count));
+        // Authoritatively set (not Math.max) so the badge can decrease when
+        // the user reads or deletes notifications.
+        setUnreadCount(count);
       }).catch(() => {});
     };
     const t = setTimeout(check, 5000);
