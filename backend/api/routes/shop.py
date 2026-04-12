@@ -4,6 +4,7 @@ import os
 import json
 import random
 import logging
+import time
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -823,10 +824,23 @@ async def fund_dev(req: FundRequest):
             if dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
 
-            # Verify TX on-chain
-            receipt = _rpc("eth_getTransactionReceipt", [req.tx_hash])
+            # Verify TX on-chain — poll up to 30s to cover RPC indexing lag.
+            # MegaETH confirms fast but receipt propagation between nodes can
+            # take a few seconds; without a retry loop a single null response
+            # 400s the request and orphans the user's on-chain tx.
+            receipt = None
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                try:
+                    receipt = _rpc("eth_getTransactionReceipt", [req.tx_hash])
+                except HTTPException:
+                    receipt = None
+                if receipt is not None:
+                    break
+                time.sleep(2)
+
             if not receipt:
-                raise HTTPException(400, "Transaction not found or not yet confirmed")
+                raise HTTPException(400, "Transaction not found after 30s — please try again in a moment")
             if receipt.get("status") != "0x1":
                 raise HTTPException(400, "Transaction failed on-chain")
 
