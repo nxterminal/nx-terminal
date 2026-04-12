@@ -156,6 +156,26 @@
   height: 100%;
 }
 
+/* NX Terminal: when maximized, widen breathing room and scale text up so the
+   handbook / lore / system info tabs are comfortable to read on big screens.
+   Scoped to nx-terminal only so chat windows (WorldChat, LiveFeed) and other
+   .terminal users aren't affected. */
+.win98-window[data-window-id="nx-terminal"].maximized .terminal {
+  max-width: 860px;
+  margin: 0 auto;
+  font-size: 18px;
+  line-height: 1.6;
+  padding: 24px;
+}
+/* Scale up inline fontSize values in NXTerminal tabs while maximized. */
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 18px"] { font-size: 26px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 16px"] { font-size: 22px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 14px"] { font-size: 18px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 13px"] { font-size: 17px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 12px"] { font-size: 15px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 11px"] { font-size: 14px !important; }
+.win98-window[data-window-id="nx-terminal"].maximized .terminal [style*="font-size: 10px"] { font-size: 13px !important; }
+
 .terminal-line {
   padding: 1px 0;
   word-break: break-word;

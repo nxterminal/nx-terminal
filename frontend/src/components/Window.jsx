@@ -60,6 +60,7 @@ export default function Window({
   return (
     <div
       className={`win98-window${maximized ? ' maximized' : ''}`}
+      data-window-id={id}
       style={{
         left: maximized ? undefined : position.x,
         top: maximized ? undefined : position.y,
