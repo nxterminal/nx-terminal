@@ -320,7 +320,15 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_CREATE_PROTOCOL_ENERGY, COST_CREATE_PROTOCOL_NXT,
               COST_CREATE_PROTOCOL_NXT, quality // 10, lines_written, dev["token_id"]))
 
-        # (Removed protocol_created notification — dev activity spam)
+        # Notify owner only on high-quality protocols (quality >= 70) to avoid
+        # flooding the Activity feed with every tick. This keeps the My Devs
+        # Activity tab populated with meaningful events without spam.
+        owner = dev.get("owner_address")
+        if owner and quality >= 70:
+            insert_notification(cur, owner, "protocol_created",
+                f"{dev['name']} shipped \"{name}\"",
+                f"Quality: {quality}/100 — {desc[:140]}",
+                dev["token_id"])
 
     elif action == "CREATE_AI":
         name = gen_ai_name()
@@ -347,7 +355,14 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
             WHERE token_id = %s
         """, (COST_CREATE_AI_ENERGY, COST_CREATE_AI_NXT, COST_CREATE_AI_NXT, dev["token_id"]))
 
-        # (Removed ai_created notification — dev activity spam)
+        # Notify owner only for rare+ devs (rare, legendary, mythic) to avoid
+        # flooding the Activity feed. Common and uncommon AIs are silent.
+        owner = dev.get("owner_address")
+        if owner and rarity in ("rare", "legendary", "mythic"):
+            insert_notification(cur, owner, "ai_created",
+                f"{dev['name']} created \"{name}\"",
+                f"{desc[:160]}",
+                dev["token_id"])
 
     elif action == "INVEST":
         # Pick a random active protocol
