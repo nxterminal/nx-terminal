@@ -320,14 +320,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_CREATE_PROTOCOL_ENERGY, COST_CREATE_PROTOCOL_NXT,
               COST_CREATE_PROTOCOL_NXT, quality // 10, lines_written, dev["token_id"]))
 
-        # Notify owner
-        owner = dev.get("owner_address")
-        if owner:
-            ntitle = random.choice(PROTOCOL_NOTIF_TITLES).format(dev=dev["name"])
-            nbody = random.choice(PROTOCOL_NOTIF_BODIES).format(
-                dev=dev["name"], proto=name, quality=quality,
-                rest=100 - quality, cost=COST_CREATE_PROTOCOL_NXT)
-            insert_notification(cur, owner, "protocol_created", ntitle, nbody, dev["token_id"])
+        # (Removed protocol_created notification — dev activity spam)
 
     elif action == "CREATE_AI":
         name = gen_ai_name()
@@ -354,13 +347,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
             WHERE token_id = %s
         """, (COST_CREATE_AI_ENERGY, COST_CREATE_AI_NXT, COST_CREATE_AI_NXT, dev["token_id"]))
 
-        # Notify owner
-        owner = dev.get("owner_address")
-        if owner:
-            ntitle = random.choice(AI_NOTIF_TITLES).format(dev=dev["name"])
-            nbody = random.choice(AI_NOTIF_BODIES).format(
-                dev=dev["name"], ai=name, desc=desc[:100], cost=COST_CREATE_AI_NXT)
-            insert_notification(cur, owner, "ai_created", ntitle, nbody, dev["token_id"])
+        # (Removed ai_created notification — dev activity spam)
 
     elif action == "INVEST":
         # Pick a random active protocol
