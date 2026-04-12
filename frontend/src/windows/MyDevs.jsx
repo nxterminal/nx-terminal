@@ -1409,12 +1409,16 @@ const ACTION_ICONS = {
   prompt_response: '[>]',
 };
 
+// Kept deliberately high-contrast on both the dark terminal background and
+// the classic Win98 gray. Amber (#ffaa00) read as dim orange on black and was
+// reported as hard to read, so code_review now uses green and the gold
+// variants are brightened to match the rest of the terminal palette.
 const ACTION_COLORS = {
   protocol_created: 'var(--terminal-green, #33ff33)',
   ai_created: 'var(--terminal-cyan, #00ffff)',
-  invest: 'var(--gold, #ffd700)',
-  sell: 'var(--gold, #ffd700)',
-  code_review: 'var(--terminal-amber, #ffaa00)',
+  invest: 'var(--terminal-green, #33ff33)',
+  sell: 'var(--terminal-green, #33ff33)',
+  code_review: 'var(--terminal-green, #33ff33)',
   prompt_response: 'var(--terminal-green, #33ff33)',
 };
 

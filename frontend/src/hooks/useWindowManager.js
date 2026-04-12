@@ -83,14 +83,42 @@ export function useWindowManager() {
   }, []);
 
   const maximizeWindow = useCallback((id) => {
-    setWindows(prev => prev.map(w =>
-      w.id === id ? { ...w, maximized: !w.maximized } : w
-    ));
+    setWindows(prev => prev.map(w => {
+      if (w.id !== id) return w;
+      if (w.maximized) {
+        // Restore previous size/position if we have them
+        return {
+          ...w,
+          maximized: false,
+          size: w.preMaximizeSize || w.size,
+          position: w.preMaximizePosition || w.position,
+        };
+      }
+      // Stash current size/position so we can restore them on un-maximize
+      return {
+        ...w,
+        maximized: true,
+        preMaximizeSize: { ...w.size },
+        preMaximizePosition: { ...w.position },
+      };
+    }));
   }, []);
 
   const moveWindow = useCallback((id, position) => {
     setWindows(prev => prev.map(w =>
       w.id === id ? { ...w, position } : w
+    ));
+  }, []);
+
+  const resizeWindow = useCallback((id, size) => {
+    setWindows(prev => prev.map(w =>
+      w.id === id ? {
+        ...w,
+        size: {
+          width: Math.max(200, size.width),
+          height: Math.max(150, size.height),
+        },
+      } : w
     ));
   }, []);
 
@@ -126,6 +154,7 @@ export function useWindowManager() {
     minimizeWindow,
     maximizeWindow,
     moveWindow,
+    resizeWindow,
     openDevProfile,
   };
 }

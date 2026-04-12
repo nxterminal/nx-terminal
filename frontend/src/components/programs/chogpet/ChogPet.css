@@ -147,7 +147,7 @@
 
 /* === Context Menu (Win98 style, no emojis) === */
 .cp-menu {
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
@@ -161,7 +161,7 @@
   padding: 4px 20px 4px 8px;
   cursor: pointer;
   white-space: nowrap;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .cp-menu-item:hover {
@@ -434,7 +434,7 @@
   padding: 3px 16px;
   font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
   font-size: 11px;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   cursor: pointer;
@@ -504,12 +504,12 @@
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 6px;
-  background: #ffffe1;
+  background: var(--win-bg);
   border: 1px solid #000;
   padding: 4px 8px;
   font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
   white-space: nowrap;
   z-index: 30;
   pointer-events: none;

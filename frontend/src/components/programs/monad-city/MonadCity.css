@@ -40,7 +40,7 @@
   z-index: 100;
   display: flex;
   align-items: center;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border-bottom: 1px solid #808080;
   padding: 0;
   height: 22px;
@@ -52,7 +52,7 @@
   position: relative;
   padding: 2px 8px;
   cursor: pointer;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .mc-menu-item:hover {
@@ -64,7 +64,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #fff #808080 #808080 #fff;
   box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
@@ -78,7 +78,7 @@
   cursor: pointer;
   white-space: nowrap;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .mc-dropdown-item:hover {

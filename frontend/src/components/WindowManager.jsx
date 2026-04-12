@@ -68,6 +68,7 @@ export default function WindowManager({
   minimizeWindow,
   maximizeWindow,
   moveWindow,
+  resizeWindow,
   openDevProfile,
   openWindow,
   onBSOD,
@@ -105,6 +106,7 @@ export default function WindowManager({
             onMinimize={() => minimizeWindow(w.id)}
             onMaximize={() => maximizeWindow(w.id)}
             onMove={(pos) => moveWindow(w.id, pos)}
+            onResize={(s) => resizeWindow(w.id, s)}
           >
             {isLocked ? (
               <LockedProgram

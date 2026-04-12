@@ -9,16 +9,16 @@
   flex-direction: column;
   height: 100%;
   position: relative;
-  background: #c0c0c0;
+  background: var(--win-bg);
   font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
 }
 
 /* ═══ MENU BAR ═══ */
 .ms-menubar {
   display: flex;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border-bottom: 1px solid #808080;
   padding: 1px 2px;
   flex-shrink: 0;
@@ -41,7 +41,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
@@ -53,7 +53,7 @@
   padding: 4px 20px;
   font-size: 11px;
   font-family: Tahoma, sans-serif;
-  color: #000;
+  color: var(--text-primary);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -179,8 +179,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: #c0c0c0;
-  color: #000;
+  background: var(--win-bg);
+  color: var(--text-primary);
 }
 
 .ms-content-scroll {
@@ -194,7 +194,7 @@
 .ms-wizard-bar {
   flex-shrink: 0;
   border-top: 2px solid #dfdfdf;
-  background: #c0c0c0;
+  background: var(--win-bg);
   padding: 6px 12px;
   display: flex;
   justify-content: flex-end;
@@ -203,13 +203,13 @@
 }
 
 .ms-wiz-btn {
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   padding: 3px 16px;
   font-size: 11px;
   font-family: Tahoma, sans-serif;
-  color: #000;
+  color: var(--text-primary);
   cursor: pointer;
   min-width: 75px;
   text-align: center;
@@ -223,13 +223,13 @@
 .ms-statusbar {
   display: flex;
   justify-content: space-between;
-  background: #c0c0c0;
+  background: var(--win-bg);
   border-top: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   padding: 2px 6px;
   font-size: 11px;
   font-family: Tahoma, sans-serif;
-  color: #000;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
@@ -272,7 +272,7 @@
 .ms-select-welcome {
   font-size: 14px;
   font-weight: bold;
-  color: #000;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
@@ -286,7 +286,7 @@
 .ms-track-label {
   font-size: 11px;
   font-weight: bold;
-  color: #000;
+  color: var(--text-primary);
   margin-bottom: 6px;
   padding-bottom: 2px;
   border-bottom: 1px solid #808080;
@@ -295,7 +295,7 @@
 .ms-mission-list-panel {
   border: 2px solid;
   border-color: #808080 #dfdfdf #dfdfdf #808080;
-  background: #fff;
+  background: var(--win-bg);
   margin-bottom: 12px;
 }
 
@@ -306,7 +306,7 @@
   padding: 5px 8px;
   border-bottom: 1px solid #e0e0e0;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -330,12 +330,12 @@
 .ms-mission-row-diff { font-size: 9px; letter-spacing: 1px; font-family: "Courier New", monospace; }
 
 .ms-start-btn {
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   font-size: 10px;
   font-family: Tahoma, sans-serif;
-  color: #000;
+  color: var(--text-primary);
   padding: 1px 8px;
   cursor: pointer;
 }
@@ -392,7 +392,7 @@
 
 .ms-mission-title {
   font-size: 15px;
-  color: #000;
+  color: var(--text-primary);
   font-weight: bold;
   margin: 2px 0;
 }
@@ -415,7 +415,7 @@
   background: #fffff0;
   padding: 8px 10px;
   font-size: 11px;
-  color: #333;
+  color: var(--text-secondary);
   line-height: 1.55;
   white-space: pre-line;
   margin-bottom: 10px;
@@ -445,12 +445,12 @@
 
 /* ═══ QUIZ ═══ */
 .ms-quiz-qnum { font-size: 11px; color: #444; margin-bottom: 6px; font-weight: bold; }
-.ms-quiz-question { font-size: 12px; color: #000; font-weight: bold; margin-bottom: 10px; line-height: 1.5; }
+.ms-quiz-question { font-size: 12px; color: var(--text-primary); font-weight: bold; margin-bottom: 10px; line-height: 1.5; }
 
 .ms-quiz-options-panel {
   border: 2px solid;
   border-color: #808080 #dfdfdf #dfdfdf #808080;
-  background: #fff;
+  background: var(--win-bg);
   margin-bottom: 10px;
 }
 
@@ -462,7 +462,7 @@
   border-bottom: 1px solid #e8e8e8;
   cursor: pointer;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
   transition: background 0.1s;
 }
 
@@ -499,7 +499,7 @@
 .ms-quiz-dots { text-align: center; font-size: 14px; letter-spacing: 4px; margin-top: 4px; }
 
 /* ═══ CODE MISSION ═══ */
-.ms-code-instruction { font-size: 11px; color: #333; margin-bottom: 8px; }
+.ms-code-instruction { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
 
 /* ═══ CODE EDITOR (dark) ═══ */
 .ms-editor {
@@ -658,7 +658,7 @@
 .ms-result-badge {
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
-  background: #c0c0c0;
+  background: var(--win-bg);
   padding: 16px 32px;
   text-align: center;
   margin-bottom: 12px;
@@ -668,7 +668,7 @@
 .ms-result-badge-icon.success { color: #008800; }
 .ms-result-badge-icon.fail { color: #cc0000; }
 
-.ms-result-badge-title { font-size: 13px; font-weight: bold; color: #000; margin-bottom: 4px; }
+.ms-result-badge-title { font-size: 13px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px; }
 .ms-result-badge-xp { font-size: 12px; color: #008800; font-weight: bold; }
 .ms-result-badge-corp { font-size: 11px; margin-top: 2px; }
 
@@ -691,12 +691,12 @@
 .ms-result-rank-up {
   font-size: 12px;
   font-weight: bold;
-  color: #000;
+  color: var(--text-primary);
   margin-bottom: 8px;
   padding: 4px 12px;
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
-  background: #c0c0c0;
+  background: var(--win-bg);
 }
 
 .ms-result-details { font-size: 11px; color: #cc0000; margin-bottom: 8px; }
@@ -714,7 +714,7 @@
 }
 
 .ms-confirm-dialog {
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   padding: 0;
@@ -735,7 +735,7 @@
   padding: 16px 12px;
   font-family: Tahoma, sans-serif;
   font-size: 12px;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .ms-confirm-buttons {
@@ -746,13 +746,13 @@
 }
 
 .ms-confirm-btn {
-  background: #c0c0c0;
+  background: var(--win-bg);
   border: 2px solid;
   border-color: #dfdfdf #808080 #808080 #dfdfdf;
   padding: 3px 16px;
   font-size: 12px;
   font-family: Tahoma, sans-serif;
-  color: #000;
+  color: var(--text-primary);
   cursor: pointer;
 }
 

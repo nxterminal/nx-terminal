@@ -1131,12 +1131,12 @@
 /* ═══ TOOLTIP ═══ */
 .flow-tooltip {
   position: fixed;
-  background: #ffffe1;
-  border: 1px solid #000;
+  background: var(--win-bg);
+  border: 1px solid var(--border-darker);
   padding: 4px 8px;
   font-family: "Tahoma", "MS Sans Serif", sans-serif;
   font-size: 11px;
-  color: #000;
+  color: var(--text-primary);
   max-width: 280px;
   line-height: 1.4;
   z-index: 10003;
