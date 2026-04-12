@@ -202,6 +202,76 @@ def _run_auto_migrations():
     except Exception as e:
         log.warning(f"⚠️ Broadcast warning: {e}")
 
+    # Fund reconciliation notice — targeted to the two testers whose
+    # /shop/fund calls orphaned before the retry loop was deployed. Runs
+    # once; the flag in system_broadcasts gates re-delivery. Mirrors the
+    # dev_camp_launch broadcast structure (stale-flag reset included).
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
+                cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'fund_reconciliation_v1'")
+                _flag = cur.fetchone()
+                _recipients = [
+                    ('0x6b85a239ecd32e0bf25e46f272a74879eb9e8495', 60, 'KIRA-11'),
+                    ('0x9acd0c4bdf6e599312f7e5e0beb24c4fe8f05764', 100, 'STORM-D4'),
+                ]
+                if _flag:
+                    # Stale-flag detection: if the two notices aren't actually
+                    # in the notifications table, reset the flag and re-run.
+                    cur.execute("""
+                        SELECT COUNT(*) as c FROM notifications
+                        WHERE type = 'broadcast' AND title = 'Transaction Reconciliation Notice'
+                          AND player_address IN (%s, %s)
+                    """, tuple(r[0] for r in _recipients))
+                    if cur.fetchone()["c"] < len(_recipients):
+                        cur.execute("DELETE FROM system_broadcasts WHERE id = 'fund_reconciliation_v1'")
+                        _flag = None
+                if not _flag:
+                    _finance_body = (
+                        "SUBJECT: Transaction Reconciliation Notice\n\n"
+                        "To: Employee\n"
+                        "From: NX Terminal Finance Department\n"
+                        "Re: Pending Fund Transfer Resolved\n\n"
+                        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+                        "  TRANSACTION STATUS: RESOLVED\n\n"
+                        "  Our systems detected a pending fund transfer\n"
+                        "  that was not properly credited to your account.\n\n"
+                        "  After a thorough audit by the Finance Department,\n"
+                        "  the funds have been located, verified, and\n"
+                        "  deposited to your developer's balance.\n\n"
+                        "  Amount: {amount} $NXT\n"
+                        "  Developer: {dev}\n"
+                        "  Status: CREDITED\n\n"
+                        "  We apologize for the delay. A sync issue between\n"
+                        "  our banking nodes caused a temporary processing\n"
+                        "  gap. This has been corrected.\n\n"
+                        "  If you notice any further discrepancies,\n"
+                        "  please file a report. Or don't. We'll find\n"
+                        "  them anyway. That's what audits are for.\n\n"
+                        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+                        "\u2014 NX Terminal Finance Department\n"
+                        "   (Your funds are safe. Probably safer than ours.)"
+                    )
+                    _sent = 0
+                    for _addr, _amount, _dev in _recipients:
+                        try:
+                            cur.execute("""
+                                INSERT INTO notifications (player_address, type, title, body)
+                                VALUES (%s, 'broadcast', %s, %s)
+                            """, (_addr,
+                                  "Transaction Reconciliation Notice",
+                                  _finance_body.format(amount=_amount, dev=_dev)))
+                            _sent += 1
+                        except Exception as _fe:
+                            log.warning(f"⚠️ fund_reconciliation_v1 insert failed for {_addr}: {_fe}")
+                    cur.execute("INSERT INTO system_broadcasts (id) VALUES ('fund_reconciliation_v1')")
+                    log.info(f"✅ Broadcast 'fund_reconciliation_v1' sent to {_sent} recipients")
+                else:
+                    log.info("ℹ️ Broadcast 'fund_reconciliation_v1' already sent")
+    except Exception as e:
+        log.warning(f"⚠️ Broadcast warning: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
