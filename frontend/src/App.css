@@ -206,12 +206,25 @@
   background: var(--selection);
 }
 .desktop-icon-img {
+  position: relative;
   font-size: 28px;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.desktop-icon-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--terminal-red);
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 4px rgba(244, 63, 94, 0.6);
+  pointer-events: none;
 }
 .desktop-icon-label {
   color: white;
@@ -227,11 +240,13 @@
 .desktop-icons.scale-small .desktop-icon { width: 56px; }
 .desktop-icons.scale-small .desktop-icon-img { width: 24px; height: 24px; font-size: 20px; }
 .desktop-icons.scale-small .desktop-icon-label { font-size: 9px; max-width: 56px; }
+.desktop-icons.scale-small .desktop-icon-badge { width: 8px; height: 8px; top: -1px; right: -1px; border-width: 1px; }
 
 .desktop-icons.scale-large { gap: 12px; }
 .desktop-icons.scale-large .desktop-icon { width: 88px; }
 .desktop-icons.scale-large .desktop-icon-img { width: 48px; height: 48px; font-size: 40px; }
 .desktop-icons.scale-large .desktop-icon-label { font-size: 13px; max-width: 88px; }
+.desktop-icons.scale-large .desktop-icon-badge { width: 14px; height: 14px; top: -3px; right: -3px; }
 
 /* Ultrawide */
 @media (min-width: 2560px) {

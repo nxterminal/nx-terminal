@@ -7,10 +7,12 @@ export default function FixBugLesson({ lesson, corp, onComplete }) {
   const [feedback, setFeedback] = useState(null);
   const [showHint, setShowHint] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
+  const [revealed, setRevealed] = useState(false);
 
   const hints = lesson.hints || [lesson.hint || "Look carefully at each line."];
 
   const checkFix = () => {
+    if (revealed) return;
     const clean = s => s.replace(/\s+/g, ' ').replace(/['"]/g, '"').trim();
     const userClean = clean(code);
     const solutionClean = clean(lesson.solution);
@@ -79,27 +81,33 @@ export default function FixBugLesson({ lesson, corp, onComplete }) {
             <span style={{ color: '#475569', fontSize: 11, fontFamily: 'system-ui, sans-serif', marginLeft: 8 }}>buggy.js</span>
             <span style={{ color: '#f43f5e', fontSize: 10, fontFamily: 'system-ui, sans-serif', marginLeft: 'auto' }}>Find and fix the bug</span>
           </div>
-          <textarea value={code} onChange={e => setCode(e.target.value)} spellCheck={false}
+          <textarea value={code} onChange={e => setCode(e.target.value)} spellCheck={false} disabled={revealed}
             style={{
               width: '100%', minHeight: 150, background: '#020617', color: '#e2e8f0',
               fontFamily: 'monospace', fontSize: 13, lineHeight: 1.7, padding: 14,
               border: 'none', outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+              opacity: revealed ? 0.7 : 1,
             }}
           />
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-          <button onClick={checkFix} style={{
-            background: 'linear-gradient(135deg, #f43f5e, #e11d48)', color: '#fff', border: 'none',
-            borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+          <button onClick={checkFix} disabled={revealed} style={{
+            background: revealed ? '#334155' : 'linear-gradient(135deg, #f43f5e, #e11d48)',
+            color: revealed ? '#64748b' : '#fff', border: 'none',
+            borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500,
+            cursor: revealed ? 'not-allowed' : 'pointer', fontFamily: 'system-ui, sans-serif',
+            opacity: revealed ? 0.6 : 1,
           }}>Test Fix</button>
           <button onClick={revealNextHint} style={{
             background: '#1e293b', color: '#94a3b8', border: '1px solid #334155',
             borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
           }}>Hint {hintLevel > 0 ? `(${hintLevel}/${hints.length})` : ''}</button>
-          <button onClick={() => setCode(lesson.solution)} style={{
+          <button onClick={() => { setCode(lesson.solution); setRevealed(true); setFeedback(null); }} disabled={revealed} style={{
             background: 'transparent', color: '#475569', border: '1px solid #1e293b',
-            borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'system-ui, sans-serif', marginLeft: 'auto',
+            borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500,
+            cursor: revealed ? 'not-allowed' : 'pointer', fontFamily: 'system-ui, sans-serif', marginLeft: 'auto',
+            opacity: revealed ? 0.4 : 1,
           }}>Show Fix</button>
         </div>
 
@@ -123,11 +131,28 @@ export default function FixBugLesson({ lesson, corp, onComplete }) {
           }}>{feedback.msg}</div>
         )}
 
-        {feedback?.success && (
+        {feedback?.success && !revealed && (
           <button onClick={() => onComplete(true)} style={{
             background: 'linear-gradient(135deg, #10b981, #06b6d4)', color: '#fff', border: 'none',
             borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
           }}>Next Lesson</button>
+        )}
+
+        {revealed && (
+          <>
+            <div style={{
+              background: '#eab30812', border: '1px solid #eab30825', borderRadius: 10,
+              padding: 14, marginBottom: 14, color: '#eab308', fontSize: 13,
+              fontFamily: 'system-ui, sans-serif',
+            }}>
+              Solution revealed — no XP awarded. Click Next Lesson to continue.
+            </div>
+            <button onClick={() => onComplete(false)} style={{
+              background: 'linear-gradient(135deg, #64748b, #475569)', color: '#fff', border: 'none',
+              borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'system-ui, sans-serif',
+            }}>Next Lesson</button>
+          </>
         )}
       </div>
     </div>

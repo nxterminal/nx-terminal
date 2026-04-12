@@ -311,6 +311,7 @@ export default function Desktop() {
             label={item.label}
             iconSize={iconScale === 'small' ? 24 : iconScale === 'large' ? 48 : 32}
             onDoubleClick={() => openWindowWithBSOD(item.id)}
+            unreadCount={item.id === 'inbox' ? unreadCount : 0}
           />
         ))}
       </div>

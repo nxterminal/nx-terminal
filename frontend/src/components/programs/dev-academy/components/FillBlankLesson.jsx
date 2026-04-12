@@ -7,6 +7,7 @@ export default function FillBlankLesson({ lesson, corp, onComplete }) {
   const [answers, setAnswers] = useState(blanks.map(() => ""));
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState(null);
+  const [revealed, setRevealed] = useState(false);
 
   const handleChange = (idx, val) => {
     const next = [...answers];
@@ -49,7 +50,7 @@ export default function FillBlankLesson({ lesson, corp, onComplete }) {
           <input
             value={answers[currentBlankIdx]}
             onChange={e => handleChange(currentBlankIdx, e.target.value)}
-            disabled={submitted && isCorrect}
+            disabled={(submitted && isCorrect) || revealed}
             placeholder={blanks[currentBlankIdx]?.placeholder || '...'}
             style={{
               background: submitted
@@ -102,39 +103,63 @@ export default function FillBlankLesson({ lesson, corp, onComplete }) {
           }}>Check Answers</button>
         )}
 
-        {submitted && (
+        {submitted && allCorrect && (
           <>
             <div style={{
-              background: allCorrect ? '#10b9810c' : '#f43f5e0c',
-              border: `1px solid ${allCorrect ? '#10b98125' : '#f43f5e25'}`,
+              background: '#10b9810c', border: '1px solid #10b98125',
               borderRadius: 10, padding: 14, marginBottom: 14,
               fontSize: 13, fontFamily: 'system-ui, sans-serif',
             }}>
-              {allCorrect ? (
-                <span style={{ color: '#10b981' }}>All blanks correct! +{lesson.xp} XP earned.</span>
-              ) : (
-                <div>
-                  <span style={{ color: '#f43f5e' }}>Some answers need fixing. </span>
-                  {results.map((r, i) => !r && (
-                    <div key={i} style={{ color: '#94a3b8', marginTop: 6, fontSize: 12 }}>
-                      Blank {i + 1}: expected <code style={{ color: '#10b981' }}>{blanks[i].answer}</code>
-                      {blanks[i].explanation && <span style={{ color: '#64748b' }}> — {blanks[i].explanation}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <span style={{ color: '#10b981' }}>All blanks correct! +{lesson.xp} XP earned.</span>
             </div>
-            {allCorrect ? (
-              <button onClick={() => onComplete(true)} style={{
-                background: 'linear-gradient(135deg, #10b981, #06b6d4)', color: '#fff', border: 'none',
-                borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
-              }}>Next Lesson</button>
-            ) : (
+            <button onClick={() => onComplete(true)} style={{
+              background: 'linear-gradient(135deg, #10b981, #06b6d4)', color: '#fff', border: 'none',
+              borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+            }}>Next Lesson</button>
+          </>
+        )}
+
+        {submitted && !allCorrect && !revealed && (
+          <>
+            <div style={{
+              background: '#f43f5e0c', border: '1px solid #f43f5e25',
+              borderRadius: 10, padding: 14, marginBottom: 14,
+              fontSize: 13, fontFamily: 'system-ui, sans-serif', color: '#f43f5e',
+            }}>
+              Some answers need fixing — try again, or reveal the answers to move on without XP.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setSubmitted(false); setResults(null); }} style={{
                 background: 'linear-gradient(135deg, #f43f5e, #e11d48)', color: '#fff', border: 'none',
                 borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
               }}>Try Again</button>
-            )}
+              <button onClick={() => setRevealed(true)} style={{
+                background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+              }}>Show answers</button>
+            </div>
+          </>
+        )}
+
+        {revealed && (
+          <>
+            <div style={{
+              background: '#eab30812', border: '1px solid #eab30825',
+              borderRadius: 10, padding: 14, marginBottom: 14,
+              fontSize: 13, fontFamily: 'system-ui, sans-serif',
+            }}>
+              <div style={{ color: '#eab308', marginBottom: 6 }}>Answers revealed — no XP awarded.</div>
+              {blanks.map((b, i) => (
+                <div key={i} style={{ color: '#94a3b8', marginTop: 4, fontSize: 12 }}>
+                  Blank {i + 1}: <code style={{ color: '#10b981' }}>{b.answer}</code>
+                  {b.explanation && <span style={{ color: '#64748b' }}> — {b.explanation}</span>}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => onComplete(false)} style={{
+              background: 'linear-gradient(135deg, #64748b, #475569)', color: '#fff', border: 'none',
+              borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+            }}>Next Lesson</button>
           </>
         )}
       </div>
