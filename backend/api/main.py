@@ -152,6 +152,8 @@ def _run_auto_migrations():
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
+                # Cleanup: remove dev activity spam notifications from inbox
+                cur.execute("DELETE FROM notifications WHERE type IN ('protocol_created', 'ai_created')")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:

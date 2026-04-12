@@ -98,7 +98,9 @@ const TYPE_SENDERS = {
   dev_deployed: 'NX Terminal Deployment <deploy@nxterminal.corp>',
   hack_received: 'NX Terminal Security <security@nxterminal.corp>',
   world_event: 'NX Terminal Ops <ops@nxterminal.corp>',
+  prompt_response: 'NX Terminal <prompts@nxterminal.corp>',
 };
+const ALLOWED_NOTIF_TYPES = new Set(Object.keys(TYPE_SENDERS));
 
 function notifToEmail(n) {
   const d = new Date(n.created_at);
@@ -148,7 +150,9 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     let cancelled = false;
     api.getNotifications(wallet).then(notifs => {
       if (cancelled || !Array.isArray(notifs)) return;
-      const backendEmails = notifs.map(notifToEmail);
+      const backendEmails = notifs
+        .filter(n => ALLOWED_NOTIF_TYPES.has(n.type))
+        .map(notifToEmail);
       setEmails(prev => {
         // Preserve welcome email (static) and merge backend notifications
         const welcome = prev.find(e => e.id === WELCOME_EMAIL.id) || {
