@@ -241,6 +241,13 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
+    // Mark any unread-but-deleted backend notifications as read first,
+    // otherwise the desktop unread poll will reinstate the red dot 30s later.
+    emails.forEach(e => {
+      if (selectedIds.has(e.id) && !e.read && e.notifId) {
+        api.markNotificationRead(e.notifId).catch(() => {});
+      }
+    });
     const updated = emails.filter(e => !selectedIds.has(e.id));
     setEmails(updated);
     saveEmails(updated);
