@@ -10,7 +10,7 @@ import httpx
 router = APIRouter()
 log = logging.getLogger("sentinel")
 
-MEGAETH_RPC = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
+MEGAETH_RPC = os.getenv("MEGAETH_RPC_URL", "https://mainnet.megaeth.com/rpc")
 MEGAETH_CHAIN_ID = 4326
 WETH = "0x4200000000000000000000000000000000000006"
 QUOTER_V2 = "0x1F1a8dC7E138C34b503Ca080962aC10B75384a27"
