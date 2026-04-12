@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { CORPS } from '../data/corps';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
-
 export default function CodeLesson({ lesson, corp, onComplete }) {
   const [code, setCode] = useState(lesson.starter || "");
   const [showHint, setShowHint] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [aiHelp, setAiHelp] = useState("");
-  const [loadingAi, setLoadingAi] = useState(false);
   const c = CORPS[corp];
 
   const checkCode = () => {
@@ -20,25 +16,6 @@ export default function CodeLesson({ lesson, corp, onComplete }) {
     if (ratio > 0.8) setFeedback({ success: true, msg: `Correct! +${lesson.xp} XP earned.` });
     else if (ratio > 0.5) setFeedback({ success: false, msg: "Almost there! Check the syntax and try again." });
     else setFeedback({ success: false, msg: "Not quite. Review the hint and try a different approach." });
-  };
-
-  const getAiHelp = async () => {
-    setLoadingAi(true); setAiHelp("");
-    try {
-      const resp = await fetch(`${API_BASE}/api/academy/ai-mentor`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: lesson.prompt, expected: lesson.solution, studentCode: code }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        setAiHelp(data.hint || "No hint available.");
-      } else {
-        const err = await resp.json().catch(() => ({}));
-        setAiHelp(err.detail || "AI Mentor temporarily unavailable.");
-      }
-    } catch { setAiHelp("AI Mentor offline. Try the hint button."); }
-    setLoadingAi(false);
   };
 
   const btnBase = { border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "system-ui, sans-serif" };
@@ -78,9 +55,6 @@ export default function CodeLesson({ lesson, corp, onComplete }) {
           <button onClick={() => setShowHint(!showHint)} style={{ ...btnBase, background: "#1e293b", color: "#94a3b8", border: "1px solid #334155" }}>
             {showHint ? "Hide Hint" : "Hint"}
           </button>
-          <button onClick={getAiHelp} disabled={loadingAi} style={{ ...btnBase, background: "#1e293b", color: "#c4b5fd", border: "1px solid #334155", cursor: loadingAi ? "wait" : "pointer" }}>
-            {loadingAi ? "Thinking..." : "AI Mentor"}
-          </button>
           <button onClick={() => setCode(lesson.solution)} style={{ ...btnBase, background: "transparent", color: "#475569", border: "1px solid #1e293b", marginLeft: "auto" }}>
             Show Solution
           </button>
@@ -89,13 +63,6 @@ export default function CodeLesson({ lesson, corp, onComplete }) {
         {showHint && (
           <div style={{ background: "#eab30808", border: "1px solid #eab30818", borderRadius: 10, padding: 13, marginBottom: 14, color: "#eab308", fontSize: 13, fontFamily: "system-ui, sans-serif", lineHeight: 1.5 }}>
             {lesson.hint}
-          </div>
-        )}
-
-        {aiHelp && (
-          <div style={{ background: "#8b5cf608", border: "1px solid #8b5cf618", borderRadius: 10, padding: 14, marginBottom: 14 }}>
-            <div style={{ color: "#8b5cf6", fontSize: 12, fontWeight: 600, marginBottom: 5, fontFamily: "system-ui, sans-serif" }}>AI Mentor</div>
-            <pre style={{ color: "#c4b5fd", fontSize: 13, fontFamily: "system-ui, sans-serif", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>{aiHelp}</pre>
           </div>
         )}
 

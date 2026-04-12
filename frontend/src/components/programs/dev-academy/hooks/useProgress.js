@@ -18,25 +18,43 @@ export function useProgress(wallet, devId) {
 
   useEffect(() => {
     const key = isDemo ? getSessionId() : wallet;
+    let cancelled = false;
+
+    // Load from localStorage — used as fallback when the backend has no data
+    // (brand-new key, empty response, HTTP error, or network failure). This is
+    // critical: without this, any non-200 from the backend silently wipes progress.
+    const loadLocal = () => {
+      try {
+        const saved = localStorage.getItem(`da-progress-${key}`);
+        if (saved && !cancelled) {
+          const parsed = JSON.parse(saved);
+          setProgress(parsed.progress || {});
+          setXp(parsed.xp || 0);
+        }
+      } catch { /* ignore */ }
+    };
+
     fetch(`${API_BASE}/api/academy/progress?key=${encodeURIComponent(key)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data) {
-          setProgress(data.progress || {});
-          setXp(data.xp || 0);
+        if (cancelled) return;
+        const backendProgress = data?.progress || {};
+        const backendXp = data?.xp || 0;
+        // Only trust the backend when it actually has data — otherwise fall back
+        // to localStorage so offline/broken-backend doesn't clobber real progress.
+        if (Object.keys(backendProgress).length > 0 || backendXp > 0) {
+          setProgress(backendProgress);
+          setXp(backendXp);
+          try {
+            localStorage.setItem(`da-progress-${key}`, JSON.stringify({ progress: backendProgress, xp: backendXp }));
+          } catch { /* ignore */ }
+        } else {
+          loadLocal();
         }
       })
-      .catch(() => {
-        // Offline: load from localStorage fallback
-        try {
-          const saved = localStorage.getItem(`da-progress-${key}`);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            setProgress(parsed.progress || {});
-            setXp(parsed.xp || 0);
-          }
-        } catch { /* ignore */ }
-      });
+      .catch(() => { loadLocal(); });
+
+    return () => { cancelled = true; };
   }, [wallet, isDemo]);
 
   const completeLesson = useCallback(async (lessonId, pathId, lessonXp) => {
