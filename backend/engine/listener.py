@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 # CONFIG
 # ═══════════════════════════════════════════════════════════
 
-RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://carrot.megaeth.com/rpc")
+RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://mainnet.megaeth.com/rpc")
 NFT_CONTRACT = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
 IMAGE_CID = "bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4"
 
