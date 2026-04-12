@@ -1,12 +1,9 @@
 """
 NX TERMINAL — Dev Academy API Routes
-Progress tracking, AI Mentor proxy, and NFT verification
+Progress tracking and NFT verification
 """
 
-import os
-import time
 import logging
-from collections import defaultdict
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -15,24 +12,6 @@ from backend.api.deps import fetch_one, fetch_all, execute, get_db
 log = logging.getLogger("nx_api")
 
 router = APIRouter()
-
-# ============================================================
-# RATE LIMITER for AI Mentor (10 requests/hour/user)
-# ============================================================
-
-_ai_mentor_hits: dict[str, list[float]] = defaultdict(list)
-AI_MENTOR_MAX = 10
-AI_MENTOR_WINDOW = 3600  # 1 hour
-
-
-def _check_ai_rate(key: str):
-    now = time.monotonic()
-    hits = _ai_mentor_hits[key]
-    # Remove old entries
-    _ai_mentor_hits[key] = [t for t in hits if now - t < AI_MENTOR_WINDOW]
-    if len(_ai_mentor_hits[key]) >= AI_MENTOR_MAX:
-        raise HTTPException(429, f"AI Mentor rate limit reached. Max {AI_MENTOR_MAX} requests per hour.")
-    _ai_mentor_hits[key].append(now)
 
 
 # ============================================================
@@ -45,12 +24,6 @@ class CompleteLessonRequest(BaseModel):
     lessonId: str
     pathId: str
     xp: int = 10
-
-
-class AIMentorRequest(BaseModel):
-    task: str
-    expected: str
-    studentCode: str
 
 
 # ============================================================
@@ -116,64 +89,6 @@ async def complete_lesson(req: CompleteLessonRequest):
     except Exception as e:
         log.error(f"Academy complete error: {e}")
         raise HTTPException(500, "Failed to save progress")
-
-
-# ============================================================
-# AI MENTOR ENDPOINT
-# ============================================================
-
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-
-
-@router.post("/ai-mentor")
-async def ai_mentor(req: AIMentorRequest):
-    """Proxy to Anthropic API for AI coding hints."""
-    if not ANTHROPIC_API_KEY:
-        raise HTTPException(503, "AI Mentor not configured")
-
-    # Rate limit by a generic key (in production, use wallet/session)
-    _check_ai_rate("global")
-
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01",
-                },
-                json={
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 1000,
-                    "messages": [{
-                        "role": "user",
-                        "content": f"You are a friendly coding tutor. Be concise (max 120 words).\n"
-                                   f"Student challenge:\n\n"
-                                   f"TASK: {req.task}\n"
-                                   f"EXPECTED: {req.expected}\n"
-                                   f"STUDENT CODE: {req.studentCode}\n\n"
-                                   f"Give a helpful hint without the full answer. Use plain text, no markdown."
-                    }],
-                },
-            )
-            if resp.status_code != 200:
-                log.warning(f"Anthropic API error: {resp.status_code} {resp.text}")
-                raise HTTPException(502, "AI Mentor temporarily unavailable")
-
-            data = resp.json()
-            hint = ""
-            for block in data.get("content", []):
-                if block.get("type") == "text":
-                    hint += block.get("text", "")
-            return {"hint": hint or "No hint available."}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"AI Mentor error: {e}")
-        raise HTTPException(502, "AI Mentor temporarily unavailable")
 
 
 # ============================================================
