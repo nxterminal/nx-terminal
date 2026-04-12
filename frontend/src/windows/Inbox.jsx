@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
 
 const TODAY = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -75,13 +76,7 @@ function loadSavedEmails() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      // Filter out old notification emails (notifId means it came from backend).
-      // Only keep the static welcome email.
-      const filtered = parsed.filter(e => e.id === WELCOME_EMAIL.id || !e.notifId);
-      if (filtered.length !== parsed.length) {
-        localStorage.setItem('nx-inbox-emails', JSON.stringify(filtered));
-      }
-      return filtered;
+      return parsed;
     } catch {}
   }
   return null;
@@ -90,6 +85,32 @@ function loadSavedEmails() {
 function saveEmails(emails) {
   const toSave = emails.map(({ id, from, subject, date, read, body, notifId }) => ({ id, from, subject, date, read, body, notifId }));
   localStorage.setItem('nx-inbox-emails', JSON.stringify(toSave));
+}
+
+// Map backend notification type → display sender
+const TYPE_SENDERS = {
+  broadcast: 'NX Terminal System <system@nxterminal.corp>',
+  streak_claim: 'NX Terminal HR <hr@nxterminal.corp>',
+  achievement: 'NX Terminal Systems <alerts@nxterminal.corp>',
+  vip_welcome: 'Ariel <founder@nxterminal.corp>',
+  vip_alert: 'NX Terminal Ops <ops@nxterminal.corp>',
+  vip_mint: 'NX Terminal Ops <ops@nxterminal.corp>',
+  dev_deployed: 'NX Terminal Deployment <deploy@nxterminal.corp>',
+  hack_received: 'NX Terminal Security <security@nxterminal.corp>',
+  world_event: 'NX Terminal Ops <ops@nxterminal.corp>',
+};
+
+function notifToEmail(n) {
+  const d = new Date(n.created_at);
+  return {
+    id: `notif-${n.id}`,
+    notifId: n.id,
+    from: TYPE_SENDERS[n.type] || 'NX Terminal <system@nxterminal.corp>',
+    subject: n.title,
+    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    read: !!n.read,
+    body: n.body,
+  };
 }
 
 // Extract sender group from email.from field
@@ -101,6 +122,8 @@ function getSenderGroup(from) {
 }
 
 export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
+  const { address: walletHookAddr } = useWallet();
+  const wallet = walletProp || walletHookAddr;
   const [emails, setEmails] = useState(() => {
     const saved = loadSavedEmails();
     if (saved) return saved;
@@ -118,6 +141,37 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     if (onUnreadCount) onUnreadCount(unreadCount);
     window.dispatchEvent(new CustomEvent('nx-inbox-unread', { detail: unreadCount }));
   }, [unreadCount, onUnreadCount]);
+
+  // Fetch backend notifications and merge with local state
+  useEffect(() => {
+    if (!wallet) return;
+    let cancelled = false;
+    api.getNotifications(wallet).then(notifs => {
+      if (cancelled || !Array.isArray(notifs)) return;
+      const backendEmails = notifs.map(notifToEmail);
+      setEmails(prev => {
+        // Preserve welcome email (static) and merge backend notifications
+        const welcome = prev.find(e => e.id === WELCOME_EMAIL.id) || {
+          ...WELCOME_EMAIL,
+          read: JSON.parse(localStorage.getItem('nx-inbox-read') || '[]').includes(WELCOME_EMAIL.id),
+        };
+        // Preserve local read-state for backend emails the user already interacted with
+        const prevById = new Map(prev.map(e => [e.id, e]));
+        const merged = backendEmails.map(be => {
+          const existing = prevById.get(be.id);
+          return existing?.read ? { ...be, read: true } : be;
+        });
+        // Preserve any locally-created emails that don't have a notifId (legacy)
+        const localOnly = prev.filter(e =>
+          e.id !== WELCOME_EMAIL.id && !e.notifId && !merged.find(m => m.id === e.id)
+        );
+        const next = [welcome, ...merged, ...localOnly];
+        saveEmails(next);
+        return next;
+      });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [wallet]);
 
   const handleSelect = (email) => {
     setSelectedId(email.id);
