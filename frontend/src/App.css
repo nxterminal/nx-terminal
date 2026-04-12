@@ -66,6 +66,30 @@
   height: calc(100% - 34px) !important;
 }
 
+/* Drag-to-resize handle in the bottom-right corner. Hidden when maximized. */
+.win98-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  z-index: 10;
+  background:
+    linear-gradient(135deg,
+      transparent 0, transparent 45%,
+      var(--border-light) 45%, var(--border-light) 52%,
+      transparent 52%, transparent 62%,
+      var(--border-light) 62%, var(--border-light) 69%,
+      transparent 69%, transparent 80%,
+      var(--border-light) 80%, var(--border-light) 87%,
+      transparent 87%);
+  opacity: 0.8;
+}
+.win98-resize-handle:hover {
+  opacity: 1;
+}
+
 .win98-titlebar {
   background: linear-gradient(90deg, var(--win-title-l), var(--win-title-r));
   color: white;

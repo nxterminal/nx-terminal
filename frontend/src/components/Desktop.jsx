@@ -176,6 +176,7 @@ export default function Desktop() {
     minimizeWindow,
     maximizeWindow,
     moveWindow,
+    resizeWindow,
     openDevProfile,
   } = useWindowManager();
 
@@ -359,6 +360,7 @@ export default function Desktop() {
         minimizeWindow={minimizeWindow}
         maximizeWindow={maximizeWindow}
         moveWindow={moveWindow}
+        resizeWindow={resizeWindow}
         openDevProfile={openDevProfile}
         openWindow={openWindowWithBSOD}
       />
