@@ -313,6 +313,39 @@ async def claim_sync_force(request: Request):
 # HEALTH
 # ============================================================
 
+# ── TEMPORARY: one-shot broadcast endpoint (DELETE AFTER USE) ──
+@app.get("/api/admin/send-devcamp-broadcast")
+async def admin_send_devcamp():
+    """One-shot: send Dev Camp notification to all players who don't have it yet."""
+    from backend.api.deps import get_db
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            body = (
+                "DEV CAMP IS NOW OPEN\n\n"
+                "A new training facility has been deployed to your desktop. "
+                "All developers are now eligible for enrollment.\n\n"
+                "CLASSES (8h, 15 $NXT): +4 permanent stat boost\n"
+                "INTENSIVE COURSES (2h, 40 $NXT): +2 permanent stat boost\n\n"
+                "Skills: Hacking, Coding, Trading, Social, Endurance\n\n"
+                "Open Dev Camp from your desktop to get started. "
+                "Trained devs qualify for harder missions with bigger rewards.\n\n"
+                "— NX Terminal Training Division"
+            )
+            cur.execute("""
+                INSERT INTO notifications (player_address, type, title, body)
+                SELECT DISTINCT p.wallet_address, 'broadcast', 'New Program: Dev Camp', %s
+                FROM players p
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM notifications n
+                    WHERE n.player_address = p.wallet_address AND n.title = 'New Program: Dev Camp'
+                )
+            """, (body,))
+            sent = cur.rowcount
+            cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
+            cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch') ON CONFLICT DO NOTHING")
+    return {"sent": sent, "message": f"Dev Camp broadcast sent to {sent} players"}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "nx-terminal-api"}
