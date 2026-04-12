@@ -116,7 +116,7 @@ function DevAvatar({ dev, size = 48 }) {
       ) : (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          height: '100%', color: '#444', fontSize: size * 0.4,
+          height: '100%', color: 'var(--text-secondary)', fontSize: size * 0.4,
         }}>@</div>
       )}
     </div>
@@ -432,7 +432,7 @@ function MissionCard({ mission, onSelectDev, devCount }) {
             </span>
             <DiffBadge difficulty={mission.difficulty} />
           </div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px', lineHeight: '1.3', fontStyle: 'italic' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.3', fontStyle: 'italic' }}>
             "{mission.description}"
           </div>
           <div style={{ fontSize: '11px', color: T.textMuted, marginTop: '4px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>

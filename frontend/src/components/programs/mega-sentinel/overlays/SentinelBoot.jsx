@@ -101,7 +101,7 @@ export default function SentinelBoot({ onComplete }) {
 
       <div style={{ position: 'absolute', bottom: '12px', right: '16px' }}>
         <span onClick={handleSkip} style={{
-          color: '#555', fontSize: '11px', cursor: 'pointer',
+          color: '#a0a0a0', fontSize: '11px', cursor: 'pointer',
           fontFamily: '"Courier New", monospace',
         }}>[SKIP]</span>
       </div>

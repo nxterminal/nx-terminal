@@ -34,8 +34,8 @@
 }
 
 .ms-menu-item:hover { background: #000080; color: #fff; }
-.ms-menu-item.disabled { color: #888; cursor: default; }
-.ms-menu-item.disabled:hover { background: transparent; color: #888; }
+.ms-menu-item.disabled { color: var(--text-secondary); cursor: default; }
+.ms-menu-item.disabled:hover { background: transparent; color: var(--text-secondary); }
 
 .ms-dropdown {
   position: absolute;
@@ -216,7 +216,7 @@
 }
 
 .ms-wiz-btn:active { border-color: #808080 #dfdfdf #dfdfdf #808080; }
-.ms-wiz-btn:disabled { color: #888; cursor: default; }
+.ms-wiz-btn:disabled { color: var(--text-secondary); cursor: default; }
 .ms-wiz-btn:disabled:active { border-color: #dfdfdf #808080 #808080 #dfdfdf; }
 
 /* ═══ STATUS BAR ═══ */
@@ -240,7 +240,7 @@
 }
 
 .ms-statusbar-right {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -260,13 +260,13 @@
 
 .ms-boot-skip {
   align-self: flex-end;
-  color: #555;
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
   font-family: "Courier New", monospace;
 }
 
-.ms-boot-skip:hover { color: #888; }
+.ms-boot-skip:hover { color: var(--text-secondary); }
 
 /* ═══ MISSION SELECT ═══ */
 .ms-select-welcome {
@@ -278,7 +278,7 @@
 
 .ms-select-desc {
   font-size: 11px;
-  color: #444;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 12px;
 }
@@ -313,20 +313,20 @@
 
 .ms-mission-row:last-child { border-bottom: none; }
 .ms-mission-row:hover { background: #f0e6ff; }
-.ms-mission-row.completed { color: #555; }
+.ms-mission-row.completed { color: var(--text-muted); }
 .ms-mission-row.available { background: #f5f0ff; font-weight: bold; }
 .ms-mission-row.available:hover { background: #ebe0ff; }
-.ms-mission-row.locked { color: #aaa; cursor: default; }
+.ms-mission-row.locked { color: var(--text-muted); cursor: default; }
 .ms-mission-row.locked:hover { background: transparent; }
 
 .ms-mission-row-status { width: 16px; text-align: center; flex-shrink: 0; font-size: 12px; }
-.ms-mission-row-num { width: 26px; color: #888; flex-shrink: 0; }
+.ms-mission-row-num { width: 26px; color: var(--text-secondary); flex-shrink: 0; }
 .ms-mission-row-corp { flex-shrink: 0; }
 .ms-mission-row-info { flex: 1; min-width: 0; }
 .ms-mission-row-title { display: block; }
-.ms-mission-row-sub { display: block; font-size: 10px; color: #888; font-weight: normal; }
+.ms-mission-row-sub { display: block; font-size: 10px; color: var(--text-secondary); font-weight: normal; }
 .ms-mission-row-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.ms-mission-row-xp { font-size: 10px; color: #888; white-space: nowrap; }
+.ms-mission-row-xp { font-size: 10px; color: var(--text-secondary); white-space: nowrap; }
 .ms-mission-row-diff { font-size: 9px; letter-spacing: 1px; font-family: "Courier New", monospace; }
 
 .ms-start-btn {
@@ -348,7 +348,7 @@
   background: #f0f0f0;
   padding: 10px 12px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -370,7 +370,7 @@
 }
 
 .ms-track2-locked-item {
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 10px;
   padding: 2px 0;
 }
@@ -387,7 +387,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #444;
+  color: var(--text-secondary);
 }
 
 .ms-mission-title {
@@ -404,7 +404,7 @@
 
 .ms-mission-diff {
   font-size: 10px;
-  color: #444;
+  color: var(--text-secondary);
   font-family: "Courier New", monospace;
 }
 
@@ -438,13 +438,13 @@
 .ms-briefing-label {
   font-size: 10px;
   font-weight: bold;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 2px;
   text-transform: uppercase;
 }
 
 /* ═══ QUIZ ═══ */
-.ms-quiz-qnum { font-size: 11px; color: #444; margin-bottom: 6px; font-weight: bold; }
+.ms-quiz-qnum { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: bold; }
 .ms-quiz-question { font-size: 12px; color: var(--text-primary); font-weight: bold; margin-bottom: 10px; line-height: 1.5; }
 
 .ms-quiz-options-panel {
@@ -548,7 +548,7 @@
   width: 32px;
   text-align: right;
   padding-right: 8px;
-  color: #444;
+  color: var(--text-secondary);
   user-select: none;
   flex-shrink: 0;
   font-size: 12px;
@@ -590,7 +590,7 @@
 .ms-hint-btn {
   background: none;
   border: 1px solid #333;
-  color: #555;
+  color: var(--text-muted);
   font-family: "Courier New", monospace;
   font-size: 10px;
   width: 18px;
@@ -615,7 +615,7 @@
 }
 
 .ms-hint-label { color: #7B2FBE; }
-.ms-hint-text { color: #aaa; }
+.ms-hint-text { color: var(--text-muted); }
 
 /* ═══ COMPILER OUTPUT (dark) ═══ */
 .ms-compiler-panel {
@@ -625,7 +625,7 @@
   padding: 6px 10px;
   font-family: "Courier New", monospace;
   font-size: 11px;
-  color: #888;
+  color: var(--text-secondary);
   min-height: 24px;
 }
 
@@ -700,7 +700,7 @@
 }
 
 .ms-result-details { font-size: 11px; color: #cc0000; margin-bottom: 8px; }
-.ms-result-retry-msg { font-size: 11px; color: #666; margin-bottom: 12px; }
+.ms-result-retry-msg { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; }
 
 /* ═══ CONFIRM DIALOG ═══ */
 .ms-confirm-overlay {

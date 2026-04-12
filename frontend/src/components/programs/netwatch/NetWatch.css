@@ -93,13 +93,13 @@
 }
 
 .nw-menu-item.nw-disabled {
-  color: #808080;
+  color: var(--text-muted);
   cursor: default;
 }
 
 .nw-menu-item.nw-disabled:hover {
   background: transparent;
-  color: #808080;
+  color: var(--text-muted);
 }
 
 .nw-dropdown {
@@ -128,13 +128,13 @@
 }
 
 .nw-dropdown-item.nw-disabled {
-  color: #808080;
+  color: var(--text-muted);
   cursor: default;
 }
 
 .nw-dropdown-item.nw-disabled:hover {
   background: transparent;
-  color: #808080;
+  color: var(--text-muted);
 }
 
 .nw-dropdown-separator {
@@ -166,7 +166,7 @@
 }
 
 .nw-statusbar-right {
-  color: #555;
+  color: var(--text-secondary);
   font-size: 10px;
   white-space: nowrap;
 }

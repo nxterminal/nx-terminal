@@ -941,14 +941,14 @@
   border-radius: 3px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.03);
-  color: #666;
+  color: #cfcfcf;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .flow-ai-panel__btn:hover {
   background: rgba(255,255,255,0.08);
-  color: #ccc;
+  color: #ffffff;
 }
 
 .flow-ai-panel__btn--close:hover {

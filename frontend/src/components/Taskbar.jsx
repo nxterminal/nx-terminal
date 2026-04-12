@@ -198,7 +198,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         <div className="taskbar-clock">
           <div style={{ fontSize: '10px', lineHeight: 1.1, textAlign: 'center' }}>
             <div>{timeStr}</div>
-            {cycle != null && <div style={{ fontSize: '9px', color: '#666' }}>Cycle: {cycle}</div>}
+            {cycle != null && <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>Cycle: {cycle}</div>}
           </div>
         </div>
       </div>

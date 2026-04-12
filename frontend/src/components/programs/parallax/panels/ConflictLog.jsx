@@ -27,14 +27,14 @@ export default function ConflictLog({ events }) {
       <InfoTooltip text="Conflict Log — Real-time feed of state access conflicts, re-executions, and resolutions. CONFLICT = two lanes accessed same state. RE-EXEC = tx replayed. CLEAR = conflict resolved.">
         <div className="plx-log-header">
           CONFLICT LOG
-          <span style={{ color: '#666', fontWeight: 'normal', marginLeft: '8px', fontSize: '9px' }}>
+          <span style={{ color: '#cfcfcf', fontWeight: 'normal', marginLeft: '8px', fontSize: '9px' }}>
             {events.length} events
           </span>
         </div>
       </InfoTooltip>
       <div className="plx-log-scroll" ref={scrollRef}>
         {visible.length === 0 && (
-          <div style={{ color: '#444', fontStyle: 'italic', padding: '4px 0' }}>
+          <div style={{ color: '#a0a0a0', fontStyle: 'italic', padding: '4px 0' }}>
             Awaiting block data...
           </div>
         )}
@@ -42,11 +42,11 @@ export default function ConflictLog({ events }) {
           const evtType = EVENT_TYPES[evt.type] || EVENT_TYPES.PARALLEL;
           return (
             <div key={evt.id} className="plx-log-entry plx-log-enter">
-              <span style={{ color: '#555' }}>{formatTime(evt.timestamp)} </span>
+              <span style={{ color: '#a0a0a0' }}>{formatTime(evt.timestamp)} </span>
               <span style={{ color: evtType.color, fontWeight: 'bold' }}>
                 [{evtType.label}]
               </span>
-              <span style={{ color: '#aaa' }}> {evt.message}</span>
+              <span style={{ color: '#cfcfcf' }}> {evt.message}</span>
             </div>
           );
         })}

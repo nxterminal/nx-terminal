@@ -193,7 +193,7 @@ function TrainingRow({ item, disabled, onBuy }) {
     }}>
       <div>
         <div style={{ fontSize: 14, color: '#e0e0e0' }}>{item.name}</div>
-        <div style={{ fontSize: 11, color: '#888' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
           {item.duration_hours}h — +{item.boost} {item.stat?.toUpperCase()} — {item.cost} $NXT
         </div>
       </div>

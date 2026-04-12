@@ -21,10 +21,10 @@ export default function MissionHeader({ mission }) {
       <div className="ps-mission-title">{mission.title}</div>
       <div className="ps-mission-corp-line">
         <span style={{ color: corp.color }}>{corp.icon} {corp.name}</span>
-        <span style={{ color: '#666', fontStyle: 'italic' }}> {'\u2014'} "{corp.motto}"</span>
+        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}> {'\u2014'} "{corp.motto}"</span>
       </div>
       <div className="ps-mission-diff">
-        <span style={{ color: '#666' }}>DIFF: </span>
+        <span style={{ color: 'var(--text-secondary)' }}>DIFF: </span>
         <span style={{ color: diff.color }}>
           {'\u2588'.repeat(diff.bars)}{'\u2591'.repeat(4 - diff.bars)}
         </span>

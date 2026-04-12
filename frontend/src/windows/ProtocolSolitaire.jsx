@@ -337,7 +337,7 @@ export default function ProtocolSolitaire() {
           Draw {drawCount === 1 ? '3' : '1'}
         </button>
         <div style={{ fontSize: '11px' }}>Time: <b>{time}s</b></div>
-        <div style={{ fontSize: '10px', color: '#666' }}>Mode: Draw {drawCount}</div>
+        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Mode: Draw {drawCount}</div>
       </div>
 
       {won && (

@@ -51,7 +51,7 @@ export default function CorpActivityBar({ tick }) {
       flexWrap: 'wrap',
       borderTop: '1px solid #222',
     }}>
-      <span style={{ color: '#555', fontSize: '9px', marginRight: '4px' }}>CORP:</span>
+      <span style={{ color: '#a0a0a0', fontSize: '9px', marginRight: '4px' }}>CORP:</span>
       {corpKeys.map((key) => {
         const corp = CORPORATIONS[key];
         const bars = '\u2588'.repeat(activity[key]);

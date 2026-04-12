@@ -94,13 +94,13 @@
 }
 
 .ndw-menu-item.ndw-disabled {
-  color: #808080;
+  color: var(--text-muted);
   cursor: default;
 }
 
 .ndw-menu-item.ndw-disabled:hover {
   background: transparent;
-  color: #808080;
+  color: var(--text-muted);
 }
 
 .ndw-dropdown {
@@ -129,13 +129,13 @@
 }
 
 .ndw-dropdown-item.ndw-disabled {
-  color: #808080;
+  color: var(--text-muted);
   cursor: default;
 }
 
 .ndw-dropdown-item.ndw-disabled:hover {
   background: transparent;
-  color: #808080;
+  color: var(--text-muted);
 }
 
 .ndw-dropdown-separator {
@@ -167,7 +167,7 @@
 }
 
 .ndw-statusbar-right {
-  color: #555;
+  color: var(--text-secondary);
   font-size: 10px;
   white-space: nowrap;
 }

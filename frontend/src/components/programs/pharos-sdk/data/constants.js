@@ -52,7 +52,7 @@ export const CORPORATIONS = {
 
 // ═══ RANK SYSTEM ═══
 export const RANKS = [
-  { name: "RECRUIT",    xpRequired: 0,    color: "#888888" },
+  { name: "RECRUIT",    xpRequired: 0,    color: "#cfcfcf" },
   { name: "OPERATIVE",  xpRequired: 150,  color: "#00ff41" },
   { name: "SPECIALIST", xpRequired: 350,  color: "#00bfff" },
   { name: "AGENT",      xpRequired: 600,  color: "#ffff00" },
@@ -78,19 +78,19 @@ export const EXERCISE_TYPES = {
 // ═══ BOOT SEQUENCE MESSAGES ═══
 export const BOOT_MESSAGES = [
   { text: "MEGA_SDK v1.0 \u2014 Developer Training Simulator", color: "#00bfff", delay: 0 },
-  { text: "Corporate Onboarding Division", color: "#888", delay: 200 },
+  { text: "Corporate Onboarding Division", color: "#cfcfcf", delay: 200 },
   { text: "", delay: 400 },
   { text: "Initializing training environment...", color: "#00ff41", delay: 500 },
   { text: "Loading mission database...", color: "#00ff41", delay: 900 },
-  { text: "  [OK] Track 1: Basic Training (5 missions)", color: "#aaa", delay: 1200 },
-  { text: "  [OK] Track 2: Corporate Warfare (LOCKED)", color: "#666", delay: 1400 },
-  { text: "  [OK] Track 3: MegaETH Deep Dive (LOCKED)", color: "#666", delay: 1600 },
+  { text: "  [OK] Track 1: Basic Training (5 missions)", color: "#cfcfcf", delay: 1200 },
+  { text: "  [OK] Track 2: Corporate Warfare (LOCKED)", color: "#a0a0a0", delay: 1400 },
+  { text: "  [OK] Track 3: MegaETH Deep Dive (LOCKED)", color: "#a0a0a0", delay: 1600 },
   { text: "Connecting to MegaETH...", color: "#00ff41", delay: 2000 },
-  { text: "  Chain ID: 4326 \u2014 Connection established", color: "#aaa", delay: 2400 },
+  { text: "  Chain ID: 4326 \u2014 Connection established", color: "#cfcfcf", delay: 2400 },
   { text: "Loading compiler modules...", color: "#00ff41", delay: 2800 },
-  { text: "  [OK] Solidity 0.8.19", color: "#aaa", delay: 3000 },
-  { text: "  [OK] Code validator", color: "#aaa", delay: 3150 },
-  { text: "  [OK] Mission verifier", color: "#aaa", delay: 3300 },
+  { text: "  [OK] Solidity 0.8.19", color: "#cfcfcf", delay: 3000 },
+  { text: "  [OK] Code validator", color: "#cfcfcf", delay: 3150 },
+  { text: "  [OK] Mission verifier", color: "#cfcfcf", delay: 3300 },
   { text: "", delay: 3500 },
   { text: "\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557", color: "#ffff00", delay: 3700 },
   { text: "\u2551  NOTICE: All recruits must complete Basic        \u2551", color: "#ffff00", delay: 3800 },
@@ -99,7 +99,7 @@ export const BOOT_MESSAGES = [
   { text: "\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D", color: "#ffff00", delay: 4100 },
   { text: "", delay: 4300 },
   { text: "WARNING: This is BETA software. Training data", color: "#ff6600", delay: 4500 },
-  { text: "is saved locally. Full version for NX Terminal holders.", color: "#888", delay: 4700 },
+  { text: "is saved locally. Full version for NX Terminal holders.", color: "#cfcfcf", delay: 4700 },
   { text: "", delay: 4900 },
   { text: "Press [ENTER TRAINING] to begin orientation...", color: "#fff", delay: 5100 },
 ];

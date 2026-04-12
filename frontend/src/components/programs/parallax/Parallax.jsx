@@ -185,10 +185,10 @@ export default function Parallax({ onClose }) {
               <div className="plx-offline-text">
                 {'[!]'} NETWORK OFFLINE
               </div>
-              <div style={{ color: '#888', fontSize: '12px', marginTop: '16px' }}>
+              <div style={{ color: '#cfcfcf', fontSize: '12px', marginTop: '16px' }}>
                 Unable to connect to MegaETH<br />RPC endpoint.
               </div>
-              <div style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
+              <div style={{ color: '#cfcfcf', fontSize: '12px', marginTop: '8px' }}>
                 {retryCountdown > 0
                   ? `Retrying in ${retryCountdown} seconds...`
                   : 'Retrying...'
@@ -210,7 +210,7 @@ export default function Parallax({ onClose }) {
                 [RETRY NOW]
               </button>
               {rpc.lastUpdated > 0 && (
-                <div style={{ color: '#888', fontSize: '12px', marginTop: '12px' }}>
+                <div style={{ color: '#cfcfcf', fontSize: '12px', marginTop: '12px' }}>
                   Last block: #{rpc.blockNumber.toLocaleString()}
                 </div>
               )}

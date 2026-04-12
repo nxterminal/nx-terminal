@@ -69,7 +69,7 @@ export const EXERCISE_TYPES = {
 
 // ═══ MEGAETH-THEMED RANKS ═══
 export const RANKS = [
-  { name: 'INITIATE',   xpRequired: 0,    color: '#888888' },
+  { name: 'INITIATE',   xpRequired: 0,    color: '#cfcfcf' },
   { name: 'VALIDATOR',  xpRequired: 150,  color: '#30FF60' },
   { name: 'EXECUTOR',   xpRequired: 350,  color: '#00FFFF' },
   { name: 'PARALLEL',   xpRequired: 600,  color: '#FFD700' },
@@ -92,19 +92,19 @@ export const MEGAETH_INFO = {
 // ═══ BOOT SEQUENCE MESSAGES ═══
 export const BOOT_MESSAGES = [
   { text: 'MEGA_SDK v1.0 \u2014 Developer Training Simulator', color: '#7B2FBE', delay: 0 },
-  { text: 'MegaETH Training Division', color: '#888', delay: 200 },
+  { text: 'MegaETH Training Division', color: '#cfcfcf', delay: 200 },
   { text: '', delay: 400 },
   { text: 'Initializing training environment...', color: '#30FF60', delay: 500 },
   { text: 'Loading mission database...', color: '#30FF60', delay: 900 },
-  { text: '  [OK] Track 1: MegaETH Fundamentals (5 missions)', color: '#aaa', delay: 1200 },
-  { text: '  [OK] Track 2: Advanced MegaETH (LOCKED)', color: '#666', delay: 1400 },
+  { text: '  [OK] Track 1: MegaETH Fundamentals (5 missions)', color: '#cfcfcf', delay: 1200 },
+  { text: '  [OK] Track 2: Advanced MegaETH (LOCKED)', color: '#a0a0a0', delay: 1400 },
   { text: 'Connecting to MegaETH Testnet...', color: '#30FF60', delay: 1800 },
-  { text: '  Chain ID: 4326 \u2014 Connection established', color: '#aaa', delay: 2200 },
-  { text: '  Block time: Sub-second \u2014 Parallel execution: ACTIVE', color: '#aaa', delay: 2500 },
+  { text: '  Chain ID: 4326 \u2014 Connection established', color: '#cfcfcf', delay: 2200 },
+  { text: '  Block time: Sub-second \u2014 Parallel execution: ACTIVE', color: '#cfcfcf', delay: 2500 },
   { text: 'Loading compiler modules...', color: '#30FF60', delay: 2800 },
-  { text: '  [OK] Solidity 0.8.19', color: '#aaa', delay: 3000 },
-  { text: '  [OK] Code validator', color: '#aaa', delay: 3150 },
-  { text: '  [OK] Mission verifier', color: '#aaa', delay: 3300 },
+  { text: '  [OK] Solidity 0.8.19', color: '#cfcfcf', delay: 3000 },
+  { text: '  [OK] Code validator', color: '#cfcfcf', delay: 3150 },
+  { text: '  [OK] Mission verifier', color: '#cfcfcf', delay: 3300 },
   { text: '', delay: 3500 },
   { text: '\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557', color: '#7B2FBE', delay: 3700 },
   { text: '\u2551  MEGAETH: WHERE REAL-TIME EXECUTION MEETS         \u2551', color: '#7B2FBE', delay: 3800 },
@@ -112,7 +112,7 @@ export const BOOT_MESSAGES = [
   { text: '\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D', color: '#7B2FBE', delay: 4000 },
   { text: '', delay: 4200 },
   { text: 'WARNING: BETA. Progress saved locally.', color: '#ff6600', delay: 4400 },
-  { text: 'Full version for NX Terminal NFT holders.', color: '#888', delay: 4600 },
+  { text: 'Full version for NX Terminal NFT holders.', color: '#cfcfcf', delay: 4600 },
   { text: '', delay: 4800 },
   { text: 'Press [ENTER TRAINING] to begin...', color: '#fff', delay: 5000 },
 ];

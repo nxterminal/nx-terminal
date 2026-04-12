@@ -57,9 +57,9 @@
   --red-on-grey: #cc4444;
   --common-on-grey: #999999;
   --blue-on-grey: #5588cc;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b0b0b0;
-  --text-muted: #808080;
+  --text-primary: #e8e8e8;
+  --text-secondary: #cfcfcf;
+  --text-muted: #b0b0b0;
   color: var(--text-primary);
 }
 

@@ -86,7 +86,7 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
         <span style={{ color: '#fff' }}>MEGAETH</span>
         <span style={{ color: '#333' }}> {'═'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 4326</span>
+        <span style={{ color: '#cfcfcf' }}>CHAIN 4326</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -160,7 +160,7 @@ export default function NetworkVitals({ data }) {
         <Tooltip text={METRIC_TOOLTIPS.val}>
           <div style={rowStyle}>
             <span style={labelStyle}>VAL</span>
-            <span style={{ color: '#888' }}>~175 active</span>
+            <span style={{ color: '#cfcfcf' }}>~175 active</span>
           </div>
         </Tooltip>
       </div>
@@ -168,7 +168,7 @@ export default function NetworkVitals({ data }) {
       {data.tpsHistory.length > 0 && (
         <Tooltip text={METRIC_TOOLTIPS.sparkline}>
           <div style={{ marginTop: '10px', fontSize: '11px' }}>
-            <span style={{ color: '#888', fontSize: '9px' }}>TPS: </span>
+            <span style={{ color: '#cfcfcf', fontSize: '9px' }}>TPS: </span>
             {sparkline.split('').map((ch, i) => (
               <span
                 key={i}

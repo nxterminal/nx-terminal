@@ -63,7 +63,7 @@ export default function DailyStreakPopup() {
         }}>
           <span style={{ color: '#66ff66', fontSize: 14 }}>NX Terminal — Daily Check-in</span>
           <button onClick={() => setDismissed(true)} style={{
-            background: 'none', border: '1px solid #555', color: '#aaa',
+            background: 'none', border: '1px solid #555', color: '#cfcfcf',
             cursor: 'pointer', padding: '2px 8px', fontFamily: "'VT323', monospace",
           }}>X</button>
         </div>
@@ -72,7 +72,7 @@ export default function DailyStreakPopup() {
         <div style={{ padding: 20, textAlign: 'center' }}>
           {!result ? (
             <>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 12 }}>
                 DAILY ATTENDANCE — DAY {data.next_day}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -90,7 +90,7 @@ export default function DailyStreakPopup() {
               <div style={{ color: '#ffdd44', fontSize: 28, marginBottom: 8 }}>
                 +{data.next_reward} $NXT
               </div>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 16 }}>
+              <div style={{ color: '#cfcfcf', fontSize: 12, marginBottom: 16 }}>
                 Streak: {data.current_streak} days | Record: {data.longest_streak}
               </div>
               <button onClick={handleClaim} disabled={claiming} style={{
@@ -108,7 +108,7 @@ export default function DailyStreakPopup() {
               <button onClick={() => setDismissed(true)} style={{
                 width: '100%', padding: 8, fontSize: 14,
                 fontFamily: "'VT323', monospace", cursor: 'pointer',
-                background: '#333', color: '#aaa', border: '1px solid #555',
+                background: '#333', color: '#cfcfcf', border: '1px solid #555',
               }}>OK</button>
             </>
           ) : (
@@ -119,10 +119,10 @@ export default function DailyStreakPopup() {
               <div style={{ color: '#ffdd44', fontSize: 28, marginBottom: 8 }}>
                 +{result.reward} $NXT
               </div>
-              <div style={{ color: '#888', fontSize: 13, marginBottom: 4 }}>
+              <div style={{ color: '#cfcfcf', fontSize: 13, marginBottom: 4 }}>
                 Day {result.streak} streak — {result.dev_name}
               </div>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 16 }}>
+              <div style={{ color: '#cfcfcf', fontSize: 12, marginBottom: 16 }}>
                 Check your inbox for confirmation.
               </div>
               <button onClick={() => setDismissed(true)} style={{

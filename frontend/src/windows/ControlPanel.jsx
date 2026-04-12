@@ -484,12 +484,12 @@ export default function ControlPanel() {
                       {t.name}
                       {theme === t.id && <span style={{ color: 'var(--terminal-green)', marginLeft: '8px', fontSize: '10px' }}>[ACTIVE]</span>}
                     </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted, #666)' }}>{t.desc}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary, #444)' }}>{t.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: '9px', color: 'var(--text-muted, #999)', marginTop: '8px', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted, #666)', marginTop: '8px', fontStyle: 'italic' }}>
               Theme changes are applied immediately and persist across sessions.
             </div>
           </div>
@@ -546,7 +546,7 @@ export default function ControlPanel() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted, #666)' }}>before activating</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary, #444)' }}>before activating</span>
             </div>
 
             {/* Preview + Apply */}
@@ -597,7 +597,7 @@ export default function ControlPanel() {
               </div>
             )}
 
-            <div style={{ fontSize: '10px', color: '#666', padding: '8px', marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '8px', marginTop: '4px' }}>
               The NX Assistant appears periodically with helpful (useless) tips and observations.
               Disabling it will not affect your performance review. Probably.
             </div>
@@ -609,7 +609,7 @@ export default function ControlPanel() {
             <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>Corporate Settings</div>
 
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '10px', color: '#444', marginBottom: '4px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-primary)', marginBottom: '4px' }}>
                 CORPORATE MORALE INDEX: {morale}%
               </div>
               <input
@@ -617,13 +617,13 @@ export default function ControlPanel() {
                 onChange={(e) => setMorale(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
-              <div style={{ fontSize: '9px', color: '#999' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
                 (This slider does absolutely nothing)
               </div>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '10px', color: '#444', marginBottom: '4px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-primary)', marginBottom: '4px' }}>
                 SYNERGY LEVEL: {synergy}%
               </div>
               <input
@@ -631,14 +631,14 @@ export default function ControlPanel() {
                 onChange={(e) => setSynergy(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
-              <div style={{ fontSize: '9px', color: '#999' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
                 (Adjusting synergy has no measurable impact on anything)
               </div>
             </div>
 
             <div className="win-panel" style={{ padding: '8px', marginTop: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>CORPORATE DISCLAIMER</div>
-              <div style={{ fontSize: '9px', color: '#666' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
                 NX Terminal Corp. is not responsible for any loss of motivation, productivity, or will to live
                 that may result from adjusting these settings. All complaints will be forwarded to /dev/null.
               </div>
@@ -667,7 +667,7 @@ export default function ControlPanel() {
               ))}
             </div>
             <div className="win-panel" style={{ padding: '8px' }}>
-              <div style={{ fontSize: '9px', color: '#666' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
                 Changes the size of desktop icons. Takes effect immediately.
               </div>
             </div>
@@ -690,7 +690,7 @@ export default function ControlPanel() {
           )}
           <div style={{
             position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-            color: '#666', fontSize: '12px', fontFamily: 'monospace',
+            color: 'var(--text-secondary)', fontSize: '12px', fontFamily: 'monospace',
           }}>
             Move mouse or press any key to exit preview
           </div>
