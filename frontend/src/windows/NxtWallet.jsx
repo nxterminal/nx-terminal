@@ -60,7 +60,7 @@ function LoadingBar() {
       <div style={{ width: '200px', height: '12px', border: '1px solid var(--border-dark)', background: '#111' }}>
         <div style={{ width: `${progress}%`, height: '100%', background: 'var(--terminal-green)', transition: 'width 0.3s' }} />
       </div>
-      <div style={{ fontSize: '11px', color: '#888' }}>{Math.round(progress)}%</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{Math.round(progress)}%</div>
     </div>
   );
 }
@@ -404,14 +404,14 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
       {/* No devs */}
       {allIds.length === 0 && (
-        <div style={{ ...stubBorder, fontSize: '12px', color: '#888' }}>
+        <div style={{ ...stubBorder, fontSize: '12px', color: 'var(--text-secondary)' }}>
           No devs found. Mint a dev to start earning $NXT.
         </div>
       )}
 
       {/* No balance yet */}
       {allIds.length > 0 && !gameBalance && (
-        <div style={{ ...stubBorder, fontSize: '12px', color: '#888' }}>
+        <div style={{ ...stubBorder, fontSize: '12px', color: 'var(--text-secondary)' }}>
           Your devs haven&apos;t earned $NXT yet. They earn 200 $NXT/day through salary.
         </div>
       )}
@@ -422,7 +422,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           <div style={{ fontSize: '12px', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
             {'\u26A0'} You have <span style={{ color: 'var(--terminal-green)', fontWeight: 'bold' }}>{formatNxt(pendingOnChain.net)} $NXT</span> pending on-chain
           </div>
-          <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
             From a previous sync. Collect it directly — no new sync needed.
           </div>
           <button className="win-btn" onClick={handleClaimPending}
@@ -444,7 +444,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {/* Amount selector */}
           {claimStep === 'idle' && devCount > 1 && (
             <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                 Withdraw: {pct}% — ~{formatNumber(Math.round(gross * (1 - TOTAL_DEDUCTION_PCT / 100)))} $NXT net
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
@@ -466,12 +466,12 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           <div style={divider} />
 
           {/* Deductions */}
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '2px' }}>Deductions:</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Deductions:</div>
           {DEDUCTIONS.map(d => {
             const amt = Math.round(gross * d.pct / 100);
             return (
               <div key={d.label} style={{ ...row, fontSize: '12px' }}>
-                <span style={{ color: '#999', paddingLeft: '8px' }}>{d.label}</span>
+                <span style={{ color: 'var(--text-muted)', paddingLeft: '8px' }}>{d.label}</span>
                 <span style={{ color: 'var(--terminal-red, #ff4444)' }}>-{formatNumber(amt)} ({d.pct}%)</span>
               </div>
             );
@@ -503,7 +503,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
           {/* COLLECT button */}
           {claimStep === 'idle' && (
             <>
-              <div style={{ fontSize: '11px', color: '#777', marginTop: '8px', lineHeight: 1.5, borderTop: '1px solid #333', paddingTop: '6px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5, borderTop: '1px solid #333', paddingTop: '6px' }}>
                 Net pay is your withdrawable amount after the 10% protocol fee.
                 Devs on missions are included. Some $NXT may have been spent on
                 actions (feed, hack, train) and won't appear here.
@@ -515,7 +515,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
                   width: '100%', textAlign: 'center' }}>
                 {'\uD83D\uDCB0'} COLLECT ~{formatNumber(Math.round(net))} $NXT
               </button>
-              <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                 Devs keep earning salary after collection.
               </div>
             </>
@@ -629,14 +629,14 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
           <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#ffff00' }}>
             {formatNumber(summary.balance_claimable)} $NXT
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>(earned by devs)</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>(earned by devs)</div>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '12px', color: '#888' }}>WALLET BALANCE</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>WALLET BALANCE</div>
           <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
             {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>(in MetaMask)</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>(in MetaMask)</div>
         </div>
       </div>
       <div style={{
@@ -734,7 +734,7 @@ function MovementsChart({ movements, summary }) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '4px 8px', fontFamily: "'VT323', monospace", fontSize: '13px',
       }}>
-        <span style={{ color: '#888' }}>Today's Activity</span>
+        <span style={{ color: 'var(--text-secondary)' }}>Today's Activity</span>
         <span>
           <span style={{ color: '#00c853' }}>{'\u25B2'} +{formatNumber(totalIn)}</span>
           {' '}
@@ -783,7 +783,7 @@ function MovementsTab({ movements, summary }) {
     }}>
       <div style={{ fontSize: '28px' }}>$</div>
       <div>{'> No movements yet.'}</div>
-      <div style={{ fontSize: '12px', color: '#888' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
         Your devs' earnings and spending will appear here.
       </div>
     </div>
@@ -911,7 +911,7 @@ export default function NxtWallet() {
       }}>
         <div style={{ fontSize: '28px' }}>+</div>
         <div>{'> No devs yet. Mint your first developer to start earning $NXT!'}</div>
-        <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
           Each dev earns 200 $NXT/day. Open Mint/Hire Devs to get started.
         </div>
         <button className="win-btn" onClick={fetchAll} style={{ marginTop: '8px', padding: '4px 16px', fontSize: '11px' }}>
@@ -955,7 +955,7 @@ export default function NxtWallet() {
       </div>
 
       {/* Status bar */}
-      <div className="win98-statusbar" style={{ fontSize: '10px', color: '#555' }}>
+      <div className="win98-statusbar" style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
         {displayAddress} | Salary: 200 $NXT/day per dev
       </div>
     </div>

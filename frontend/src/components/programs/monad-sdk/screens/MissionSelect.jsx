@@ -43,7 +43,7 @@ export default function MissionSelect({ completedMissions, onSelectMission }) {
               <span className="ms-mission-row-status">
                 {state === 'completed' && <span style={{ color: '#008800' }}>{'\u2713'}</span>}
                 {state === 'available' && <span style={{ color: '#7B2FBE' }}>{'\u25B6'}</span>}
-                {state === 'locked' && <span style={{ color: '#aaa' }}>{'\u25CB'}</span>}
+                {state === 'locked' && <span style={{ color: 'var(--text-muted)' }}>{'\u25CB'}</span>}
               </span>
               <span className="ms-mission-row-num">
                 {String(mission.number).padStart(2, '0')}

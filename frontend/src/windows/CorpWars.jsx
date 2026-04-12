@@ -94,7 +94,7 @@ export default function CorpWars() {
         name: loc.name,
         controller: 'NEUTRAL',
         contested: false,
-        color: '#555',
+        color: '#aaaaaa',
       }));
     }
 
@@ -114,7 +114,7 @@ export default function CorpWars() {
       const sorted = Object.entries(corpCounts).sort((a, b) => b[1] - a[1]);
 
       if (sorted.length === 0) {
-        return { location: loc.id, name: loc.name, controller: 'NEUTRAL', contested: false, color: '#555' };
+        return { location: loc.id, name: loc.name, controller: 'NEUTRAL', contested: false, color: '#aaaaaa' };
       }
 
       const top = sorted[0];
@@ -164,7 +164,7 @@ export default function CorpWars() {
       </div>
 
       {dominanceData.length === 0 ? (
-        <div style={{ padding: '8px 12px', color: '#555', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+        <div style={{ padding: '8px 12px', color: '#aaaaaa', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
           {'>'} No corporations active yet. Awaiting dev deployment...
         </div>
       ) : (
@@ -192,7 +192,7 @@ export default function CorpWars() {
       </div>
       <div className="corp-feed" style={{ margin: '0 8px 8px', flex: '1 1 auto' }}>
         {corpFeed.length === 0 ? (
-          <div style={{ color: '#555' }}>{'>'} No corporate activity detected...</div>
+          <div style={{ color: '#aaaaaa' }}>{'>'} No corporate activity detected...</div>
         ) : (
           corpFeed.map((item, i) => {
             const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
@@ -209,10 +209,10 @@ export default function CorpWars() {
 
             return (
               <div key={i} className="corp-feed-line">
-                <span style={{ color: '#888' }}>[{formatTime(item.created_at)}]</span>{' '}
+                <span style={{ color: '#cfcfcf' }}>[{formatTime(item.created_at)}]</span>{' '}
                 <span style={{ color: corpStyle.primary }}>{corp || '???'}</span>:{' '}
                 <span style={{ color: '#33ff33' }}>{item.dev_name || '???'}</span>{' '}
-                <span style={{ color: '#aaa' }}>{actionText}</span>
+                <span style={{ color: '#cfcfcf' }}>{actionText}</span>
               </div>
             );
           })

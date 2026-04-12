@@ -953,7 +953,7 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: bold;
-  color: #666;
+  color: var(--text-secondary);
   padding: 0 2px;
   line-height: 1;
 }
@@ -978,7 +978,7 @@
   display: block;
   background: none;
   border: none;
-  color: #999;
+  color: var(--text-muted);
   font-size: 9px;
   cursor: pointer;
   padding: 0;
@@ -1251,7 +1251,7 @@
   background: #0c0c0c;
   font-family: 'VT323', monospace;
   font-size: 13px;
-  color: #888;
+  color: #cfcfcf;
   border-top: 1px solid #222;
 }
 
@@ -1327,7 +1327,7 @@
 }
 
 .territory-cell-name {
-  color: #888;
+  color: #cfcfcf;
   font-size: 11px;
 }
 

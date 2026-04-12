@@ -36,18 +36,18 @@ export default function ConsensusPipeline({ blockNumber = 0 }) {
           {stages.map((s, i) => (
             <span key={s.label}>
               <span style={{ color: s.color }}>{s.label}</span>
-              <span style={{ color: '#666' }}>:</span>
-              <span style={{ color: '#aaa' }}>{formatBlockNum(s.block)}</span>
+              <span style={{ color: '#cfcfcf' }}>:</span>
+              <span style={{ color: '#cfcfcf' }}>{formatBlockNum(s.block)}</span>
               {i < stages.length - 1 && <span style={{ color: '#333', margin: '0 2px' }}>|</span>}
             </span>
           ))}
-          <span style={{ color: '#444', marginLeft: 'auto', fontSize: '9px' }}>[click to expand]</span>
+          <span style={{ color: '#a0a0a0', marginLeft: 'auto', fontSize: '9px' }}>[click to expand]</span>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
             <span style={{ color: COLORS.primary, fontWeight: 'bold' }}>ASYNCBFT PIPELINE</span>
-            <span style={{ color: '#444', fontSize: '9px' }}>[click to collapse]</span>
+            <span style={{ color: '#a0a0a0', fontSize: '9px' }}>[click to collapse]</span>
           </div>
           {stages.map((s) => (
             <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

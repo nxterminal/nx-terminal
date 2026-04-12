@@ -34,7 +34,7 @@ export default function ProtocolChart({
   if (dataPoints.length < 2) {
     return (
       <div className="protocol-chart" style={{ width: '100%', height: H, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#555', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+        <span style={{ color: 'var(--text-secondary)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
           {'>'} Insufficient data for chart rendering...
         </span>
       </div>

@@ -27,7 +27,7 @@ const SHOP_ITEMS_MAP = {
 const BOOT_LINES = [
   { text: 'NX TERMINAL — Developer Retrieval System v4.2', color: '#8B0000', delay: 0 },
   { text: 'Establishing secure connection to MegaETH...', color: '#333', delay: 300 },
-  { text: 'Chain ID: 4326 .......................... OK', color: '#555', delay: 600 },
+  { text: 'Chain ID: 4326 .......................... OK', color: 'var(--text-secondary)', delay: 600 },
   { text: 'Scanning contract for owned tokens...', color: '#333', delay: 900 },
   { text: 'Decrypting personnel files...', color: '#333', delay: 1300 },
   { text: 'Compiling developer profiles...', color: '#333', delay: 1700 },
@@ -362,7 +362,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
 
           {/* Amount input */}
           <div style={{ marginBottom: '6px' }}>
-            <label style={{ fontSize: '11px', color: '#555' }}>Amount:</label>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Amount:</label>
             <input
               type="number"
               min="1"
@@ -416,7 +416,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
             </button>
           )}
 
-          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
             Transfers $NXT from your MetaMask to your dev's in-game balance.
           </div>
         </div>
@@ -492,7 +492,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
 
           {/* Dev selector */}
           <div style={{ marginBottom: '8px' }}>
-            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>To:</label>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>To:</label>
             <select
               value={toDevId}
               onChange={e => setToDevId(e.target.value)}
@@ -517,7 +517,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
 
           {/* Amount input */}
           <div style={{ marginBottom: '10px' }}>
-            <label style={{ fontSize: '11px', color: '#555', display: 'block', marginBottom: '2px' }}>Amount:</label>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Amount:</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
                 type="number"
@@ -535,7 +535,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
                 }}
                 placeholder="0"
               />
-              <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#888' }}>
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: 'var(--text-secondary)' }}>
                 / {formatNumber(dev.balance_nxt)} $NXT
               </span>
             </div>
@@ -565,7 +565,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
             </button>
           )}
 
-          <div style={{ fontSize: '10px', color: '#888', marginTop: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
             Moves $NXT between your devs. No blockchain transaction needed.
           </div>
         </div>
@@ -799,20 +799,20 @@ function HackResultModal({ result, onClose }) {
             {ok ? '> ACCESS GRANTED' : '> ACCESS DENIED'}
           </span>
           <button onClick={onClose} style={{
-            background: 'none', border: '1px solid #555', color: '#aaa',
+            background: 'none', border: '1px solid #555', color: '#cfcfcf',
             fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
           }}>X</button>
         </div>
         {/* Body */}
         <div style={{ padding: 16, textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: '#888', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 8 }}>
             {isPlayer ? '\uD83D\uDC64 PLAYER HACK' : '\uD83D\uDDA5\uFE0F MAINFRAME HACK'}
           </div>
-          <div style={{ fontSize: 14, color: '#aaa', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 16 }}>
             TARGET: {result.target_name}
             {result.target_corp && ` [${result.target_corp}]`}
             {result.target_owner && (
-              <span style={{ display: 'block', fontSize: 11, color: '#666', marginTop: 2 }}>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                 {result.target_owner}
               </span>
             )}
@@ -839,7 +839,7 @@ function HackResultModal({ result, onClose }) {
             </div>
           </div>
           <div style={{
-            fontSize: 12, color: '#666', fontStyle: 'italic',
+            fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic',
             borderTop: '1px solid #333', paddingTop: 10,
           }}>
             {result.message}
@@ -860,7 +860,7 @@ const HACK_ERROR_CONFIG = {
   cooldown:           { icon: '🔒', title: '> SYSTEM LOCKDOWN',    color: '#ff9800' },
   insufficient_funds: { icon: '💰', title: '> INSUFFICIENT FUNDS', color: '#ff4444' },
   low_social:         { icon: '👤', title: '> LOW REPUTATION',     color: '#ff6644' },
-  no_targets:         { icon: '🔍', title: '> NO TARGETS',         color: '#888888' },
+  no_targets:         { icon: '🔍', title: '> NO TARGETS',         color: '#cfcfcf' },
 };
 const HACK_ERROR_DEFAULT = { icon: '❌', title: '> HACK ERROR', color: '#ff4444' };
 
@@ -887,7 +887,7 @@ function HackErrorModal({ error, onClose }) {
             {c.title}
           </span>
           <button onClick={onClose} style={{
-            background: 'none', border: '1px solid #555', color: '#aaa',
+            background: 'none', border: '1px solid #555', color: '#cfcfcf',
             fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
           }}>X</button>
         </div>
@@ -902,12 +902,12 @@ function HackErrorModal({ error, onClose }) {
             </div>
           )}
           {error.error === 'insufficient_funds' && (
-            <div style={{ color: '#aaa', fontSize: 13 }}>
+            <div style={{ color: '#cfcfcf', fontSize: 13 }}>
               Required: {error.required} $NXT | Available: {error.current} $NXT
             </div>
           )}
           {error.error === 'low_social' && (
-            <div style={{ color: '#aaa', fontSize: 13 }}>
+            <div style={{ color: '#cfcfcf', fontSize: 13 }}>
               Required: {error.required} Social | Current: {error.current}
             </div>
           )}
@@ -1279,7 +1279,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               onClick={doGraduate} disabled={busy}
               title="Complete training and apply stat bonus" />
           ) : dev.training_ends_at ? (
-            <span style={{ color: '#888' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
+            <span style={{ color: 'var(--text-secondary)' }}> ({Math.max(0, Math.ceil((new Date(dev.training_ends_at) - new Date()) / 3600000))}h left)</span>
           ) : null}
         </div>
       )}
@@ -1529,12 +1529,12 @@ function ActivityTab({ walletAddress, devs }) {
                     <span style={{ fontWeight: 'bold', color, fontSize: '13px', fontFamily: "'VT323', monospace" }}>
                       {a.title}
                     </span>
-                    <span style={{ marginLeft: 'auto', color: '#999', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
                       {formatActivityTime(a.created_at)}
                     </span>
                   </div>
                   <div style={{
-                    fontSize: '12px', color: '#bbb',
+                    fontSize: '12px', color: '#cfcfcf',
                     marginTop: '2px', paddingLeft: '30px',
                     whiteSpace: 'pre-wrap',
                     fontFamily: "'VT323', monospace",

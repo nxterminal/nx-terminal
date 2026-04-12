@@ -111,7 +111,7 @@ export default function BootSequence({ onComplete }) {
         <span
           onClick={handleSkip}
           style={{
-            color: '#555',
+            color: '#a0a0a0',
             fontSize: '11px',
             cursor: 'pointer',
             fontFamily: '"Courier New", monospace',

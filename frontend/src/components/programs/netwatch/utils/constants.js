@@ -56,7 +56,7 @@ export const CORPORATIONS = {
 // ═══ TRANSACTION TYPE INFERENCE ═══
 export const TX_METHOD_SIGNATURES = {
   "0xa9059cbb": { name: "Transfer", color: "#00ff41" },
-  "0x095ea7b3": { name: "Approve", color: "#888888" },
+  "0x095ea7b3": { name: "Approve", color: "#b0b0b0" },
   "0x23b872dd": { name: "TransferFrom", color: "#33ff99" },
   "0x38ed1739": { name: "Swap", color: "#ffff00" },
   "0x7ff36ab5": { name: "SwapETH", color: "#ffff00" },
@@ -67,7 +67,7 @@ export const TX_METHOD_SIGNATURES = {
   "0x2e1a7d4d": { name: "Withdraw", color: "#ffff00" },
   "0x3593564c": { name: "Execute", color: "#00bfff" },
   "0x": { name: "Transfer", color: "#00ff41" },
-  default: { name: "Contract", color: "#aaaaaa" },
+  default: { name: "Contract", color: "#cfcfcf" },
 };
 
 // ═══ VISUAL CONFIGURATION ═══
@@ -85,25 +85,25 @@ export const VISUAL = {
 // ═══ BOOT SEQUENCE MESSAGES ═══
 export const BOOT_MESSAGES = [
   { text: "MEGAWATCH v1.0 \u2014 Protocol Surveillance Division", color: "#00bfff", delay: 0 },
-  { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#888", delay: 200 },
+  { text: "NX Terminal Corp\u2122 \u2014 Authorized Personnel Only", color: "#cfcfcf", delay: 200 },
   { text: "", color: "", delay: 400 },
   { text: "Initializing secure connection...", color: "#00ff41", delay: 500 },
   { text: "Connecting to MEGAETH NETWORK...", color: "#00ff41", delay: 900 },
-  { text: "RPC endpoint: " + MEGAETH_CONFIG.RPC_URL, color: "#888", delay: 1200 },
-  { text: "Handshake complete. Chain ID: " + MEGAETH_CONFIG.CHAIN_ID, color: "#888", delay: 1600 },
+  { text: "RPC endpoint: " + MEGAETH_CONFIG.RPC_URL, color: "#cfcfcf", delay: 1200 },
+  { text: "Handshake complete. Chain ID: " + MEGAETH_CONFIG.CHAIN_ID, color: "#cfcfcf", delay: 1600 },
   { text: "", color: "", delay: 1800 },
   { text: "Loading surveillance modules...", color: "#00ff41", delay: 2000 },
-  { text: "  [OK] Block monitor", color: "#aaa", delay: 2200 },
-  { text: "  [OK] Transaction analyzer", color: "#aaa", delay: 2400 },
-  { text: "  [OK] Network vitals", color: "#aaa", delay: 2600 },
-  { text: "  [OK] Corp activity tracker", color: "#aaa", delay: 2800 },
-  { text: "  [OK] CRT display driver", color: "#aaa", delay: 3000 },
+  { text: "  [OK] Block monitor", color: "#cfcfcf", delay: 2200 },
+  { text: "  [OK] Transaction analyzer", color: "#cfcfcf", delay: 2400 },
+  { text: "  [OK] Network vitals", color: "#cfcfcf", delay: 2600 },
+  { text: "  [OK] Corp activity tracker", color: "#cfcfcf", delay: 2800 },
+  { text: "  [OK] CRT display driver", color: "#cfcfcf", delay: 3000 },
   { text: "", color: "", delay: 3200 },
   { text: "All systems operational.", color: "#00ff41", delay: 3400 },
   { text: "CLEARANCE LEVEL: OBSERVER", color: "#ffff00", delay: 3700 },
   { text: "", color: "", delay: 3900 },
   { text: "WARNING: This is BETA software.", color: "#ff6600", delay: 4100 },
-  { text: "Full version available for NX Terminal holders.", color: "#888", delay: 4400 },
+  { text: "Full version available for NX Terminal holders.", color: "#cfcfcf", delay: 4400 },
   { text: "", color: "", delay: 4600 },
   { text: "Starting surveillance feed...", color: "#fff", delay: 4800 },
 ];

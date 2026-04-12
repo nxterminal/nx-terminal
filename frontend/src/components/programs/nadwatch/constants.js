@@ -36,13 +36,13 @@ export const TX_TYPES = {
   mint: { label: 'MINT', color: '#FFD700' },
   swap: { label: 'SWAP', color: '#00FFFF' },
   stake: { label: 'STAKE', color: '#9B59B6' },
-  unknown: { label: 'TX', color: '#666666' },
+  unknown: { label: 'TX', color: '#a0a0a0' },
 };
 
 // Transaction method signatures (same as NETWATCH but rebranded)
 export const TX_METHOD_SIGNATURES = {
   '0xa9059cbb': { name: 'Transfer', color: '#30FF60' },
-  '0x095ea7b3': { name: 'Approve', color: '#888888' },
+  '0x095ea7b3': { name: 'Approve', color: '#b0b0b0' },
   '0x23b872dd': { name: 'TransferFrom', color: '#30FF60' },
   '0x38ed1739': { name: 'Swap', color: '#00FFFF' },
   '0x7ff36ab5': { name: 'SwapMON', color: '#00FFFF' },
@@ -68,12 +68,12 @@ export const CORPS = [
 // Boot sequence messages
 export const BOOT_MESSAGES = [
   { text: 'NADWATCH v1.0 — MEGAETH NETWORK SURVEILLANCE TERMINAL', color: '#7B2FBE', delay: 0 },
-  { text: '(C) 2026 NX TERMINAL CORP — FOR THE NADS', color: '#888', delay: 200 },
+  { text: '(C) 2026 NX TERMINAL CORP — FOR THE NADS', color: '#cfcfcf', delay: 200 },
   { text: '', color: '', delay: 400 },
   { text: 'ESTABLISHING MEGAETH RPC CONNECTION...', color: '#30FF60', delay: 500 },
-  { text: 'CHAIN ID: 4326............................ OK', color: '#888', delay: 900 },
-  { text: 'BLOCK TIME: sub-second...................... OK', color: '#888', delay: 1200 },
-  { text: 'TARGET TPS: 30,000+......................... OK', color: '#888', delay: 1500 },
+  { text: 'CHAIN ID: 4326............................ OK', color: '#cfcfcf', delay: 900 },
+  { text: 'BLOCK TIME: sub-second...................... OK', color: '#cfcfcf', delay: 1200 },
+  { text: 'TARGET TPS: 30,000+......................... OK', color: '#cfcfcf', delay: 1500 },
   { text: '', color: '', delay: 1700 },
   { text: 'INITIALIZING BLOCK RAIN ENGINE.............. OK', color: '#30FF60', delay: 1900 },
   { text: '  > COLOR MODE: PURPLE/GREEN BICOLOR', color: '#9B59B6', delay: 2100 },

@@ -266,11 +266,11 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
         fontSize: '11px',
       }}>
         <span style={{ fontWeight: 'bold' }}>NX Mail</span>
-        <span style={{ color: '#666' }}>|</span>
+        <span style={{ color: 'var(--text-secondary)' }}>|</span>
         <span>{unreadCount} unread</span>
         {selectedEmail ? (
           <>
-            <span style={{ color: '#666' }}>|</span>
+            <span style={{ color: 'var(--text-secondary)' }}>|</span>
             <button
               className="win-btn"
               onClick={() => setSelectedId(null)}
@@ -283,7 +283,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
           <>
             {selectedIds.size > 0 && (
               <>
-                <span style={{ color: '#666' }}>|</span>
+                <span style={{ color: 'var(--text-secondary)' }}>|</span>
                 <span style={{ fontWeight: 'bold' }}>{selectedIds.size} selected</span>
                 <button
                   className="win-btn"
@@ -368,7 +368,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             <tbody>
               {filteredEmails.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: '#888', fontStyle: 'italic' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                     No messages in this group
                   </td>
                 </tr>
@@ -409,8 +409,8 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
         <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
           <div style={{ marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-dark)' }}>
             <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>{selectedEmail.subject}</div>
-            <div style={{ fontSize: '10px', color: '#444' }}>From: {selectedEmail.from}</div>
-            <div style={{ fontSize: '10px', color: '#444' }}>Date: {selectedEmail.date}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>From: {selectedEmail.from}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Date: {selectedEmail.date}</div>
           </div>
           <pre style={{
             fontFamily: "'Tahoma', sans-serif",

@@ -117,7 +117,7 @@ export default function Achievements() {
                     }}>+{a.reward_nxt}</button>
                   )}
                   {a.claimed && <span style={{ color: '#2d8a2d', fontSize: 12 }}>CLAIMED</span>}
-                  {!a.unlocked && <span style={{ color: '#444', fontSize: 12 }}>LOCKED</span>}
+                  {!a.unlocked && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>LOCKED</span>}
                 </div>
               </div>
             );

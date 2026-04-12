@@ -440,7 +440,7 @@ export default function LiveFeed() {
         {mintedDevs === 0 && feed.length === 0 && !hasBackendData ? (
           <div style={{ padding: '20px', color: 'var(--terminal-amber)', fontFamily: "'VT323', monospace" }}>
             <div style={{ marginBottom: '12px', fontSize: '16px' }}>{'>'} LIVE FEED -- INACTIVE</div>
-            <div style={{ color: '#666', fontSize: '14px', lineHeight: 1.6 }}>
+            <div style={{ color: '#cfcfcf', fontSize: '14px', lineHeight: 1.6 }}>
               No developers deployed yet.
               <br />
               <br />
@@ -471,7 +471,7 @@ export default function LiveFeed() {
                 <span style={{ color, fontWeight: 'bold' }}>
                   {item.dev_name}
                 </span>{' '}
-                <span style={{ color: '#aaa' }}>said:</span>{' '}
+                <span style={{ color: '#cfcfcf' }}>said:</span>{' '}
                 <span style={{ color: 'var(--terminal-green)' }}>
                   &quot;{item.details}&quot;
                 </span>
@@ -483,7 +483,7 @@ export default function LiveFeed() {
                 <span style={{ color: ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)', fontWeight: 'bold' }}>
                   {item.reply_dev}
                 </span>{' '}
-                <span style={{ color: '#aaa' }}>replied:</span>{' '}
+                <span style={{ color: '#cfcfcf' }}>replied:</span>{' '}
                 <span style={{ color: 'var(--terminal-green)' }}>
                   &quot;{item.reply_msg}&quot;
                 </span>

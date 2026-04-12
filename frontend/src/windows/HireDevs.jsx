@@ -257,7 +257,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
           {/* Transfer stats */}
           <div style={{ marginBottom: '4px' }}>
             Estimated time left: {minsLeft > 0 ? `${minsLeft} min ` : ''}{secsRem} sec
-            <span style={{ color: '#555' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>
               {' '}({copiedKB.toLocaleString()} KB of {totalFileSize.toLocaleString()} KB copied)
             </span>
           </div>
@@ -292,7 +292,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
               border: '2px outset #dfdfdf',
               fontSize: '11px',
               fontFamily: "'Tahoma', sans-serif",
-              color: '#888',
+              color: 'var(--text-secondary)',
               cursor: 'default',
             }}>
               Cancel
@@ -375,7 +375,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
                 {dev ? (
                   <>
                     <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{dev.name}</div>
-                    <div style={{ fontSize: '10px', color: '#888' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                       {dev.corporation} | {dev.archetype} | {dev.species}
                     </div>
                   </>
@@ -404,7 +404,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
         )}
 
         {txHash && (
-          <div style={{ fontSize: '10px', color: '#555', textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
             TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
@@ -774,7 +774,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               [{PHASE_LABELS[phase] || 'UNKNOWN'}]
             </span>
           )}
-          <span style={{ color: '#888' }}>{remainingDisplay} left</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{remainingDisplay} left</span>
           {isConnected && (
             <span style={{ color: 'var(--terminal-green)' }}>{displayAddress}</span>
           )}
@@ -814,7 +814,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               {'+'}
             </div>
           </div>
-          <span style={{ fontSize: '10px', color: '#666', marginLeft: '8px' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-secondary)', marginLeft: '8px' }}>
             {step < QUESTIONS.length ? `Step ${step + 1} of ${QUESTIONS.length}` : 'Ready to Mint'}
           </span>
         </div>
@@ -840,7 +840,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   onClick={() => handleAnswer(currentQuestion.id, opt.id)}
                 >
                   <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>{opt.label}</div>
-                  <div style={{ fontSize: '10px', color: '#444', lineHeight: 1.3 }}>{opt.desc}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{opt.desc}</div>
                 </div>
               ))}
             </div>
@@ -869,7 +869,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
                   WRONG NETWORK DETECTED
                 </div>
-                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                   You are connected to {chain?.name || `Chain ${chain?.id}`}. Switch to MegaETH to mint.
                 </div>
                 <button
@@ -892,7 +892,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-red)', marginBottom: '4px' }}>
                   MINTING IS CURRENTLY CLOSED
                 </div>
-                <div style={{ fontSize: '11px', color: '#666' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                   Check back soon. Follow our announcements for the next mint phase.
                 </div>
               </div>
@@ -906,12 +906,12 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 const selected = q.options.find(o => o.id === answers[q.id]);
                 return (
                   <div key={q.id} style={{ fontSize: '11px', marginBottom: '4px' }}>
-                    <span style={{ color: '#666' }}>{q.question}</span>{' '}
+                    <span style={{ color: 'var(--text-secondary)' }}>{q.question}</span>{' '}
                     <span style={{ fontWeight: 'bold' }}>{selected?.label || '—'}</span>
                   </div>
                 );
               })}
-              <div style={{ fontSize: '10px', color: '#999', marginTop: '8px', fontStyle: 'italic' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
                 Corporation will be assigned from NFT metadata upon minting.
               </div>
             </div>
@@ -947,7 +947,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               </div>
 
               {isConnected && (
-                <div style={{ fontSize: '10px', marginTop: '6px', color: '#888' }}>
+                <div style={{ fontSize: '10px', marginTop: '6px', color: 'var(--text-secondary)' }}>
                   {hasFreeMint && (
                     <span style={{ color: 'var(--green-on-grey, #005500)' }}>
                       Free mints available: {Number(freeAllowance)}{' | '}
@@ -1017,7 +1017,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
 
       <div style={{
         padding: '4px 8px', borderTop: '1px solid var(--border-dark)',
-        fontSize: '10px', color: '#666', textAlign: 'center',
+        fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center',
       }}>
         Each developer is a unique AI agent with randomized traits and abilities. Corporation assigned via metadata. No refunds.
       </div>

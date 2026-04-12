@@ -66,7 +66,7 @@ export default function CompilingOverlay({ success, onComplete }) {
       <div style={{ color, fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', textShadow: `0 0 10px ${color}` }}>
         COMPILING...
       </div>
-      <div style={{ fontFamily: '"Courier New", monospace', fontSize: '12px', marginBottom: '12px', color: '#888' }}>
+      <div style={{ fontFamily: '"Courier New", monospace', fontSize: '12px', marginBottom: '12px', color: '#cfcfcf' }}>
         [{bar}] {progress}%
       </div>
       <div style={{ fontFamily: '"Courier New", monospace', fontSize: '12px', textAlign: 'left', minWidth: '300px' }}>

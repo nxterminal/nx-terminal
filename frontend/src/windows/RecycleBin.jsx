@@ -99,11 +99,11 @@ export default function RecycleBin() {
         fontSize: '11px',
       }}>
         <span style={{ fontWeight: 'bold' }}>Recycle Bin</span>
-        <span style={{ color: '#666' }}>|</span>
+        <span style={{ color: 'var(--text-secondary)' }}>|</span>
         <span>{TRASH_ITEMS.length} items</span>
         {selected && (
           <>
-            <span style={{ color: '#666' }}>|</span>
+            <span style={{ color: 'var(--text-secondary)' }}>|</span>
             <button
               className="win-btn"
               onClick={() => setSelectedIdx(null)}
@@ -157,7 +157,7 @@ export default function RecycleBin() {
             <span style={{ fontSize: '28px' }}>{selected.icon}</span>
             <div>
               <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{selected.name}</div>
-              <div style={{ fontSize: '10px', color: '#666' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                 {selected.type} — {selected.size} — Deleted {selected.deleted}
               </div>
             </div>
@@ -174,10 +174,10 @@ export default function RecycleBin() {
             {selected.detail}
           </pre>
           <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: '#999', cursor: 'not-allowed' }} disabled>
+            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
               Restore (not available)
             </button>
-            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: '#999', cursor: 'not-allowed' }} disabled>
+            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
               Delete permanently (why bother)
             </button>
           </div>

@@ -229,7 +229,7 @@ function ProtocolChartPanel({ protocol }) {
           {changePercent >= 0 ? '\u25B2' : '\u25BC'}{changePercent >= 0 ? '+' : ''}{changePercent}%
         </span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '12px', color: '#555' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
           Creator: {data.creator_name || '-'} | Investors: {data.investor_count ?? 0} | Quality: {data.code_quality ?? '?'}/100
         </span>
       </div>
@@ -242,7 +242,7 @@ function ProtocolChartPanel({ protocol }) {
       {/* Activity Log */}
       <div className="chart-activity-log" style={{ margin: '0', maxHeight: '50px', flexShrink: 0 }}>
         {activityLog.length === 0 ? (
-          <div style={{ color: '#555' }}>{'>'} No activity recorded for this protocol yet...</div>
+          <div style={{ color: 'var(--text-secondary)' }}>{'>'} No activity recorded for this protocol yet...</div>
         ) : (
           activityLog.map((item, i) => {
             const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
@@ -250,7 +250,7 @@ function ProtocolChartPanel({ protocol }) {
             const amount = d.amount || d.cost || '???';
             return (
               <div key={i} className="chart-activity-line">
-                <span style={{ color: '#888' }}>[{formatTime(item.created_at)}]</span>{' '}
+                <span style={{ color: 'var(--text-secondary)' }}>[{formatTime(item.created_at)}]</span>{' '}
                 <span style={{ color: '#33ff33' }}>{item.dev_name || '???'}</span>{' '}
                 <span style={{ color: action === 'INVEST' ? '#ffaa00' : action === 'SELL' ? '#ff4444' : '#00ffff' }}>
                   {action === 'INVEST' ? `invested +${amount} $NXT` :

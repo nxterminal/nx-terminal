@@ -150,7 +150,7 @@ function NotifPopup({ title, onClose, onOpen }) {
           <span style={{ fontSize: 16 }}>✉</span>
           <div>
             <div style={{ color: '#fff', fontSize: 12 }}>{title}</div>
-            <div style={{ color: '#888', fontSize: 10, marginTop: 2 }}>Click to open Inbox</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 10, marginTop: 2 }}>Click to open Inbox</div>
           </div>
         </div>
       </div>

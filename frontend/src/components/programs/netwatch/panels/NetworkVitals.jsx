@@ -43,7 +43,7 @@ const METRIC_TOOLTIPS = {
 };
 
 const rowStyle = { display: 'flex', alignItems: 'center', gap: '8px' };
-const labelStyle = { color: '#888', fontSize: '10px', width: '56px', flexShrink: 0 };
+const labelStyle = { color: '#cfcfcf', fontSize: '10px', width: '56px', flexShrink: 0 };
 
 export default function NetworkVitals({ data }) {
   const [flashFields, setFlashFields] = useState({});
@@ -91,7 +91,7 @@ export default function NetworkVitals({ data }) {
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
         <span style={{ color: '#fff' }}>MEGAETH</span>
         <span style={{ color: '#333' }}> {'\u2550'.repeat(3)} </span>
-        <span style={{ color: '#666' }}>CHAIN 4326</span>
+        <span style={{ color: '#cfcfcf' }}>CHAIN 4326</span>
       </div>
 
       {/* Metrics */}
@@ -139,7 +139,7 @@ export default function NetworkVitals({ data }) {
         <Tooltip text={METRIC_TOOLTIPS.val}>
           <div style={rowStyle}>
             <span style={labelStyle}>VAL</span>
-            <span className={fc('validatorCount')} style={{ color: '#888' }}>
+            <span className={fc('validatorCount')} style={{ color: '#cfcfcf' }}>
               ~{data.validatorCount} active
             </span>
           </div>
@@ -159,7 +159,7 @@ export default function NetworkVitals({ data }) {
       {data.tpsHistory.length > 0 && (
         <Tooltip text={METRIC_TOOLTIPS.sparkline}>
           <div style={{ marginTop: '10px', fontSize: '11px' }}>
-            <span style={{ color: '#888', fontSize: '9px' }}>TPS 60s: </span>
+            <span style={{ color: '#cfcfcf', fontSize: '9px' }}>TPS 60s: </span>
             {sparkline.split('').map((ch, i) => (
               <span
                 key={i}

@@ -39,13 +39,13 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       {/* TPS */}
       <InfoTooltip text="Sequential TPS — Transactions per second if executed one-by-one in serial order. This is the baseline throughput without parallelism.">
         <div>
-          <div style={{ color: '#888', fontSize: '9px' }}>SEQUENTIAL TPS</div>
+          <div style={{ color: '#cfcfcf', fontSize: '9px' }}>SEQUENTIAL TPS</div>
           <div style={{ color: COLORS.text, fontSize: '14px' }}>{rpc.tps.toFixed(1)}</div>
         </div>
       </InfoTooltip>
       <InfoTooltip text="Effective TPS — Actual throughput with parallel execution enabled. Equals sequential TPS multiplied by the parallel gain factor.">
         <div>
-          <div style={{ color: '#888', fontSize: '9px' }}>EFFECTIVE TPS</div>
+          <div style={{ color: '#cfcfcf', fontSize: '9px' }}>EFFECTIVE TPS</div>
           <div style={{ color: COLORS.green, fontSize: '14px', fontWeight: 'bold' }}>
             {effectiveTPS.toFixed(1)}
           </div>
@@ -73,13 +73,13 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       <div style={{ display: 'flex', gap: '12px' }}>
         <InfoTooltip text="Conflicts — State access conflicts detected between lanes. Occurs when two lanes read/write the same storage slot concurrently.">
           <div>
-            <div style={{ color: '#888', fontSize: '9px' }}>CONFLICTS</div>
+            <div style={{ color: '#cfcfcf', fontSize: '9px' }}>CONFLICTS</div>
             <div style={{ color: COLORS.red, fontSize: '12px' }}>{totalConflicts}</div>
           </div>
         </InfoTooltip>
         <InfoTooltip text="Re-Execs — Transactions re-executed after a conflict. The conflicting tx replays with updated state to ensure deterministic results.">
           <div>
-            <div style={{ color: '#888', fontSize: '9px' }}>RE-EXECS</div>
+            <div style={{ color: '#cfcfcf', fontSize: '9px' }}>RE-EXECS</div>
             <div style={{ color: COLORS.yellow, fontSize: '12px' }}>{totalReExecs}</div>
           </div>
         </InfoTooltip>
@@ -87,7 +87,7 @@ export default function PerformanceMetrics({ metrics, rpc }) {
 
       <InfoTooltip text="Lane Efficiency — Average utilization across all 8 lanes. 100% means every lane is fully occupied. Higher efficiency = better parallelism.">
         <div>
-          <div style={{ color: '#888', fontSize: '9px' }}>LANE EFFICIENCY</div>
+          <div style={{ color: '#cfcfcf', fontSize: '9px' }}>LANE EFFICIENCY</div>
           <div style={{ color: COLORS.green, fontSize: '12px' }}>
             {(laneEfficiency * 100).toFixed(0)}%
           </div>
@@ -100,13 +100,13 @@ export default function PerformanceMetrics({ metrics, rpc }) {
       {/* Gas comparison */}
       <InfoTooltip text="Gas Comparison — Compares gas processing time: serial (all txs queued) vs parallel (distributed across lanes). Lower parallel time = higher throughput.">
         <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: '6px' }}>
-          <div style={{ color: '#888', fontSize: '9px', marginBottom: '4px' }}>GAS COMPARISON</div>
+          <div style={{ color: '#cfcfcf', fontSize: '9px', marginBottom: '4px' }}>GAS COMPARISON</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-          <span style={{ color: '#888' }}>SERIAL:</span>
+          <span style={{ color: '#cfcfcf' }}>SERIAL:</span>
           <span style={{ color: COLORS.text }}>{serialTime.toFixed(0)} units</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-          <span style={{ color: '#888' }}>PARALLEL:</span>
+          <span style={{ color: '#cfcfcf' }}>PARALLEL:</span>
           <span style={{ color: COLORS.green }}>{parallelTime.toFixed(0)} units</span>
         </div>
         <div style={{ marginTop: '4px' }}>
@@ -123,7 +123,7 @@ export default function PerformanceMetrics({ metrics, rpc }) {
             }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginTop: '2px' }}>
-            <span style={{ color: '#555' }}>SERIAL</span>
+            <span style={{ color: '#a0a0a0' }}>SERIAL</span>
             <span style={{ color: COLORS.primary }}>PARALLEL</span>
           </div>
         </div>

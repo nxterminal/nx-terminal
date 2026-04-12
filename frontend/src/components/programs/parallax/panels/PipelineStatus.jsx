@@ -75,7 +75,7 @@ export default function PipelineStatus({ blockNumber = 0 }) {
         );
       })}
 
-      <div style={{ color: '#444', fontSize: '9px', marginTop: '2px' }}>
+      <div style={{ color: '#a0a0a0', fontSize: '9px', marginTop: '2px' }}>
         4 stages process different blocks simultaneously
       </div>
     </div>

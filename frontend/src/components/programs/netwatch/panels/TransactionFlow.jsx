@@ -33,7 +33,7 @@ export default function TransactionFlow({ transactions }) {
 
       <div style={{ overflow: 'hidden' }}>
         {displayTxs.length === 0 && (
-          <div style={{ color: '#555', fontStyle: 'italic', padding: '10px 0' }}>
+          <div style={{ color: '#a0a0a0', fontStyle: 'italic', padding: '10px 0' }}>
             Awaiting transactions...
           </div>
         )}
@@ -53,13 +53,13 @@ export default function TransactionFlow({ transactions }) {
                 textShadow: isNewest ? `0 0 6px ${tx.typeColor}` : 'none',
               }}
             >
-              <span style={{ color: '#555' }}>{'\u25B6'} </span>
-              <span style={{ color: '#666' }}>{tx.fromShort}</span>
-              <span style={{ color: '#555' }}> {'\u2192'} </span>
+              <span style={{ color: '#a0a0a0' }}>{'\u25B6'} </span>
+              <span style={{ color: '#cfcfcf' }}>{tx.fromShort}</span>
+              <span style={{ color: '#a0a0a0' }}> {'\u2192'} </span>
               <span style={{ color: tx.typeColor, display: 'inline-block', width: '80px' }}>
                 {tx.typeName}
               </span>
-              <span style={{ color: '#aaa' }}>
+              <span style={{ color: '#cfcfcf' }}>
                 {tx.valueEth !== '0' ? tx.valueEth + '\u039E' : ''}
               </span>
             </div>

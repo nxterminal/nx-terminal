@@ -217,7 +217,7 @@ export default function Notepad() {
         justifyContent: 'space-between',
         padding: '2px 8px',
         fontSize: '10px',
-        color: '#666',
+        color: 'var(--text-secondary)',
         borderTop: '1px solid var(--border-dark)',
         background: 'var(--win-bg)',
       }}>
