@@ -39,12 +39,23 @@ export default function DevAcademy({ openWindow }) {
   const handleStartLesson = (mod, lesson) => { setCurrentModule(mod); setCurrentLesson(lesson); setScreen("lesson"); };
 
   const handleLessonComplete = correct => {
-    if (!correct) return;
     const pathId = selectedPath.id;
-    completeLesson(currentLesson.id, pathId, currentLesson.xp);
-
     const all = selectedPath.modules.flatMap(m => m.lessons.map(l => ({ mod: m, lesson: l })));
     const idx = all.findIndex(x => x.lesson.id === currentLesson.id);
+
+    // Skip path: advance without awarding XP or completing lesson.
+    // Used when a lesson component reveals the answer — user moves on but earns nothing.
+    if (!correct) {
+      if (idx < all.length - 1) {
+        setCurrentModule(all[idx + 1].mod);
+        setCurrentLesson(all[idx + 1].lesson);
+      } else {
+        setScreen("modules");
+      }
+      return;
+    }
+
+    completeLesson(currentLesson.id, pathId, currentLesson.xp);
 
     // Check if this completes a module
     const modLessons = currentModule.lessons;

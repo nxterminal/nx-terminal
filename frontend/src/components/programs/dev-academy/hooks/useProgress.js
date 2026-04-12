@@ -3,10 +3,10 @@ import { useState, useEffect, useCallback } from 'react';
 const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
 
 function getSessionId() {
-  let sid = sessionStorage.getItem('da-session-id');
+  let sid = localStorage.getItem('da-session-id-v2');
   if (!sid) {
     sid = 'demo-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    sessionStorage.setItem('da-session-id', sid);
+    localStorage.setItem('da-session-id-v2', sid);
   }
   return sid;
 }

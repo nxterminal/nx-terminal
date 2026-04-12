@@ -5,8 +5,10 @@ export default function OutputPredictLesson({ lesson, corp, onComplete }) {
   const c = CORPS[corp];
   const [selected, setSelected] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   const isCorrect = selected === lesson.correct;
+  const locked = submitted || revealed;
 
   return (
     <div style={{ padding: '24px 24px 80px' }}>
@@ -51,14 +53,19 @@ export default function OutputPredictLesson({ lesson, corp, onComplete }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
           {lesson.options.map((opt, i) => {
             let bg = '#0f172a', border = '#1e293b', color = '#cbd5e1';
-            if (submitted) {
+            if (submitted && isCorrect) {
               if (i === lesson.correct) { bg = '#10b98112'; border = '#10b981'; color = '#10b981'; }
               else if (i === selected) { bg = '#f43f5e12'; border = '#f43f5e'; color = '#f43f5e'; }
+            } else if (revealed) {
+              if (i === lesson.correct) { bg = '#10b98112'; border = '#10b981'; color = '#10b981'; }
+              else if (i === selected) { bg = '#f43f5e12'; border = '#f43f5e'; color = '#f43f5e'; }
+            } else if (submitted && !isCorrect && i === selected) {
+              bg = '#f43f5e12'; border = '#f43f5e'; color = '#f43f5e';
             } else if (i === selected) { bg = '#1e293b'; border = '#3b82f6'; color = '#f1f5f9'; }
             return (
-              <button key={i} onClick={() => !submitted && setSelected(i)} style={{
+              <button key={i} onClick={() => !locked && setSelected(i)} style={{
                 background: bg, border: `1px solid ${border}`, borderRadius: 10,
-                padding: '10px 16px', textAlign: 'left', cursor: submitted ? 'default' : 'pointer',
+                padding: '10px 16px', textAlign: 'left', cursor: locked ? 'default' : 'pointer',
                 color, fontSize: 13, fontFamily: 'monospace', transition: 'all 0.15s',
               }}>
                 <code>{opt}</code>
@@ -67,33 +74,24 @@ export default function OutputPredictLesson({ lesson, corp, onComplete }) {
           })}
         </div>
 
-        {!submitted && selected !== null && (
+        {!submitted && !revealed && selected !== null && (
           <button onClick={() => setSubmitted(true)} style={{
             background: 'linear-gradient(135deg, #3b82f6, #6366f1)', color: '#fff', border: 'none',
             borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
           }}>Submit Prediction</button>
         )}
 
-        {submitted && (
+        {submitted && isCorrect && (
           <>
             <div style={{
-              background: isCorrect ? '#10b9810c' : '#f43f5e0c',
-              border: `1px solid ${isCorrect ? '#10b98125' : '#f43f5e25'}`,
+              background: '#10b9810c', border: '1px solid #10b98125',
               borderRadius: 10, padding: 14, marginBottom: 14,
               fontSize: 13, fontFamily: 'system-ui, sans-serif',
             }}>
-              {isCorrect ? (
-                <span style={{ color: '#10b981' }}>Correct prediction! +{lesson.xp} XP earned.</span>
-              ) : (
-                <div>
-                  <div style={{ color: '#f43f5e', marginBottom: 6 }}>Not quite. The output is: <code style={{ color: '#10b981' }}>{lesson.options[lesson.correct]}</code></div>
-                  {lesson.explanation && <div style={{ color: '#94a3b8', lineHeight: 1.6 }}>{lesson.explanation}</div>}
-                </div>
-              )}
+              <span style={{ color: '#10b981' }}>Correct prediction! +{lesson.xp} XP earned.</span>
             </div>
 
-            {/* Show execution trace if available */}
-            {submitted && lesson.trace && (
+            {lesson.trace && (
               <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: 14, marginBottom: 14 }}>
                 <div style={{ color: '#06b6d4', fontSize: 12, fontWeight: 600, marginBottom: 8, fontFamily: 'system-ui, sans-serif' }}>Step-by-step execution:</div>
                 {lesson.trace.map((step, i) => (
@@ -105,13 +103,67 @@ export default function OutputPredictLesson({ lesson, corp, onComplete }) {
               </div>
             )}
 
-            <button onClick={() => onComplete(isCorrect)} style={{
-              background: isCorrect
-                ? 'linear-gradient(135deg, #10b981, #06b6d4)'
-                : 'linear-gradient(135deg, #f43f5e, #e11d48)',
+            <button onClick={() => onComplete(true)} style={{
+              background: 'linear-gradient(135deg, #10b981, #06b6d4)',
               color: '#fff', border: 'none', borderRadius: 10, padding: '11px 24px',
               fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
-            }}>{isCorrect ? 'Next Lesson' : 'Try Again'}</button>
+            }}>Next Lesson</button>
+          </>
+        )}
+
+        {submitted && !isCorrect && !revealed && (
+          <>
+            <div style={{
+              background: '#f43f5e0c', border: '1px solid #f43f5e25',
+              borderRadius: 10, padding: 14, marginBottom: 14,
+              fontSize: 13, fontFamily: 'system-ui, sans-serif', color: '#f43f5e',
+            }}>
+              Not quite — try again, or reveal the answer to move on without XP.
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setSelected(null); setSubmitted(false); }} style={{
+                background: 'linear-gradient(135deg, #f43f5e, #e11d48)', color: '#fff', border: 'none',
+                borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+              }}>Try Again</button>
+              <button onClick={() => setRevealed(true)} style={{
+                background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                borderRadius: 10, padding: '11px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+              }}>Show correct answer</button>
+            </div>
+          </>
+        )}
+
+        {revealed && (
+          <>
+            <div style={{
+              background: '#eab30812', border: '1px solid #eab30825',
+              borderRadius: 10, padding: 14, marginBottom: 14,
+              fontSize: 13, fontFamily: 'system-ui, sans-serif',
+            }}>
+              <div style={{ color: '#eab308', marginBottom: 6 }}>
+                Answer revealed — no XP awarded. The output is: <code style={{ color: '#10b981' }}>{lesson.options[lesson.correct]}</code>
+              </div>
+              {lesson.explanation && <div style={{ color: '#94a3b8', lineHeight: 1.6 }}>{lesson.explanation}</div>}
+            </div>
+
+            {lesson.trace && (
+              <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <div style={{ color: '#06b6d4', fontSize: 12, fontWeight: 600, marginBottom: 8, fontFamily: 'system-ui, sans-serif' }}>Step-by-step execution:</div>
+                {lesson.trace.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 12, fontFamily: 'monospace' }}>
+                    <span style={{ color: '#475569', minWidth: 20 }}>{i + 1}.</span>
+                    <span style={{ color: '#cbd5e1' }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={() => onComplete(false)} style={{
+              background: 'linear-gradient(135deg, #64748b, #475569)',
+              color: '#fff', border: 'none', borderRadius: 10, padding: '11px 24px',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+            }}>Next Lesson</button>
           </>
         )}
       </div>
