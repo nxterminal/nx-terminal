@@ -78,7 +78,7 @@ export default function Window({
         <span className="win98-titlebar-title">{title}</span>
         <div className="win98-titlebar-buttons">
           <button className="win98-titlebar-btn" onClick={onMinimize} title="Minimize">
-            <span style={{ fontSize: '10px', marginTop: '4px' }}>_</span>
+            <span style={{ fontSize: '14px', lineHeight: 1 }}>&#8722;</span>
           </button>
           <button className="win98-titlebar-btn" onClick={onMaximize} title="Maximize">
             <span style={{ fontSize: '8px' }}>&#9633;</span>
