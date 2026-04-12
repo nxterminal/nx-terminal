@@ -100,6 +100,32 @@
   background: #1a1a2e;
 }
 
+/* Dark-mode overrides for taskbar chrome + disabled button text.
+   App.css hardcodes Win98-grey gradients on .taskbar / .start-btn and
+   a near-black disabled color via var(--border-dark); these rules
+   remap them to the dark palette without touching the classic look. */
+[data-theme="dark"] .taskbar {
+  background: linear-gradient(180deg, #3a3a4e 0%, #2d2d3f 6%, #2d2d3f 94%, #1a1a2e 100%);
+  box-shadow: inset 0 1px 0 #4a4a5e, 0 -1px 2px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .start-btn {
+  background: linear-gradient(180deg, #3f3f52 0%, #2d2d3f 45%, #1f1f2e 100%);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .start-btn:active,
+[data-theme="dark"] .start-btn.active {
+  background: #252535;
+}
+
+/* Disabled Win98 buttons: the base rule uses var(--border-dark), which
+   resolves to near-black in dark mode and is invisible on --win-bg.
+   Bump to --text-muted so the label stays visible but clearly inactive.
+   Fixes the Control Panel "Apply" button and every other disabled .win-btn. */
+[data-theme="dark"] .win-btn:disabled {
+  color: var(--text-muted);
+}
+
 * {
   margin: 0;
   padding: 0;
