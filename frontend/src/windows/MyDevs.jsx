@@ -264,6 +264,10 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   const [walletBal, setWalletBal] = useState(null);
   const [stage, setStage] = useState('idle'); // idle | signing | mining | success | error
   const [errorMsg, setErrorMsg] = useState('');
+  // If the on-chain tx confirmed but the backend POST failed, we keep the
+  // hash + amount here so "Try Again" retries the backend call with the same
+  // tx instead of signing (and paying for) a fresh one.
+  const [pendingTx, setPendingTx] = useState(null); // { hash, amount } | null
 
   useEffect(() => {
     if (!address) return;
@@ -273,36 +277,55 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   }, [address]);
 
   const amountNum = parseInt(amount, 10) || 0;
-  const canFund = amountNum > 0 && walletBal !== null && amountNum <= walletBal && stage === 'idle';
+  const hasPending = pendingTx !== null;
+  const canFund = (
+    stage === 'idle'
+    && (hasPending || (amountNum > 0 && walletBal !== null && amountNum <= walletBal))
+  );
 
   const doFund = async () => {
     if (!canFund) return;
-    setStage('signing');
     setErrorMsg('');
     try {
-      // Build ERC-20 transfer(address,uint256) calldata
-      // selector: 0xa9059cbb
-      const toAddr = TREASURY_ADDRESS.slice(2).toLowerCase().padStart(64, '0');
-      const amountWei = BigInt(amountNum) * BigInt(10 ** 18);
-      const amountHex = amountWei.toString(16).padStart(64, '0');
-      const calldata = '0xa9059cbb' + toAddr + amountHex;
+      let txHash = pendingTx?.hash;
+      let committedAmount = pendingTx?.amount ?? amountNum;
 
-      const txHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: address.toLowerCase(),
-          to: NXT_TOKEN_ADDRESS,
-          data: calldata,
-        }],
-      });
+      if (!txHash) {
+        // No pending tx — sign and send a fresh on-chain transfer.
+        setStage('signing');
+        // Build ERC-20 transfer(address,uint256) calldata
+        // selector: 0xa9059cbb
+        const toAddr = TREASURY_ADDRESS.slice(2).toLowerCase().padStart(64, '0');
+        const amountWei = BigInt(amountNum) * BigInt(10 ** 18);
+        const amountHex = amountWei.toString(16).padStart(64, '0');
+        const calldata = '0xa9059cbb' + toAddr + amountHex;
 
-      setStage('mining');
-      const receipt = await waitForReceipt(txHash);
-      if (receipt.status !== '0x1') throw new Error('Transaction reverted');
+        txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: address.toLowerCase(),
+            to: NXT_TOKEN_ADDRESS,
+            data: calldata,
+          }],
+        });
 
-      // Report to backend
-      const res = await api.fundDev(address, dev.token_id, amountNum, txHash);
+        setStage('mining');
+        const receipt = await waitForReceipt(txHash);
+        if (receipt.status !== '0x1') throw new Error('Transaction reverted');
+
+        // Tx is on-chain — persist before we call the backend so a failed
+        // backend POST doesn't orphan the user's funds.
+        setPendingTx({ hash: txHash, amount: amountNum });
+        committedAmount = amountNum;
+      } else {
+        // Retry path — the on-chain tx already confirmed previously.
+        setStage('mining');
+      }
+
+      // Report to backend (new or retried).
+      const res = await api.fundDev(address, dev.token_id, committedAmount, txHash);
       setStage('success');
+      setPendingTx(null);
       if (res.updated_dev && onDevUpdate) onDevUpdate(res.updated_dev);
       setTimeout(() => onClose(), 2500);
     } catch (err) {
@@ -310,13 +333,30 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
       const msg = err?.message || 'Unknown error';
       if (msg.includes('User denied') || msg.includes('rejected')) {
         setErrorMsg('Transaction rejected by user');
+        // Wallet prompt rejected — nothing was signed, don't stash a pending.
       } else {
         setErrorMsg(msg.length > 80 ? msg.slice(0, 80) + '...' : msg);
       }
+      // Keep pendingTx (if set) so the next click retries the backend POST
+      // instead of signing a brand new on-chain tx.
     }
   };
 
   const presets = [25, 50, 100];
+
+  const handleClose = () => {
+    // Guard against closing with an unresolved on-chain tx — the hash would
+    // be lost and the user would have to rely on the backfill reconciler.
+    if (hasPending && stage !== 'success') {
+      const ok = window.confirm(
+        'Your on-chain $NXT transfer confirmed but the credit retry is still pending. '
+        + 'Closing will drop the tx hash from this session — the backfill worker will '
+        + 'still credit your dev, but it may take a few minutes. Close anyway?'
+      );
+      if (!ok) return;
+    }
+    onClose();
+  };
 
   return (
     <div onClick={e => e.stopPropagation()} style={{
@@ -335,7 +375,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
           <span>Fund Dev</span>
-          <button onClick={onClose} style={{
+          <button onClick={handleClose} style={{
             background: '#c0c0c0', border: '1px outset #fff',
             fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
             padding: '0 4px', lineHeight: 1,
@@ -367,9 +407,9 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               type="number"
               min="1"
               max={walletBal ? Math.floor(walletBal) : 999999}
-              value={amount}
+              value={hasPending ? String(pendingTx.amount) : amount}
               onChange={e => setAmount(e.target.value)}
-              disabled={stage !== 'idle'}
+              disabled={stage !== 'idle' || hasPending}
               style={{
                 width: '100%', padding: '4px 6px', fontSize: '14px',
                 fontFamily: "'VT323', monospace",
@@ -383,13 +423,23 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
           <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
             {presets.map(v => (
               <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
-                disabled={stage !== 'idle'}
+                disabled={stage !== 'idle' || hasPending}
                 style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
             ))}
             <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
-              disabled={stage !== 'idle' || !walletBal}
+              disabled={stage !== 'idle' || !walletBal || hasPending}
               style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
           </div>
+
+          {hasPending && stage !== 'success' && (
+            <div style={{
+              fontSize: '11px', color: 'var(--amber-on-grey, #7a5500)',
+              background: 'rgba(255, 204, 0, 0.12)', border: '1px solid rgba(255, 204, 0, 0.4)',
+              padding: '6px 8px', marginBottom: '8px', lineHeight: 1.4,
+            }}>
+              On-chain tx confirmed. Retrying credit — do NOT sign a new one.
+            </div>
+          )}
 
           {/* Action button */}
           <button className="win-btn" onClick={doFund}
@@ -399,9 +449,10 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               color: canFund ? '#005500' : '#888',
               border: canFund ? '2px outset #aaa' : undefined,
             }}>
-            {stage === 'idle' && `\uD83D\uDCB0 FUND ${dev.name}`}
+            {stage === 'idle' && !hasPending && `\uD83D\uDCB0 FUND ${dev.name}`}
+            {stage === 'idle' && hasPending && `\uD83D\uDD04 Retry credit (${pendingTx.amount} $NXT)`}
             {stage === 'signing' && 'Confirm in MetaMask...'}
-            {stage === 'mining' && 'Processing...'}
+            {stage === 'mining' && (hasPending ? 'Retrying credit...' : 'Processing...')}
             {stage === 'success' && '\u2705 Funded!'}
             {stage === 'error' && '\u274C Failed — Try Again'}
           </button>
@@ -412,7 +463,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
           {stage === 'error' && (
             <button className="win-btn" onClick={() => setStage('idle')}
               style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
-              Try Again
+              {hasPending ? 'Retry credit' : 'Try Again'}
             </button>
           )}
 
