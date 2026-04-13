@@ -577,10 +577,10 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
       }
 
       // Ultimate fallback: hardcoded known values from deployed contract
-      // mintPhase = 2 (PUBLIC), mintPrice = 100000000000000 (0.0001 ETH)
+      // mintPhase = 2 (PUBLIC), mintPrice = 2500000000000000 (0.0025 ETH)
       if (!cancelled) {
         setRpcFallback({
-          mintPrice: 100000000000000n,
+          mintPrice: 2500000000000000n,
           mintPhase: 2,
           remaining: null,
         });
