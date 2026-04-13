@@ -7,7 +7,7 @@ export const megaeth = {
   name: 'MegaETH',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://carrot.megaeth.com/rpc'] },
+    default: { http: ['https://mainnet.megaeth.com/rpc'] },
   },
   blockExplorers: {
     default: { name: 'MegaEtherscan', url: 'https://mega.etherscan.io' },
