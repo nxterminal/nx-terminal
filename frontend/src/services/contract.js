@@ -1,8 +1,9 @@
 // NXDevNFT v8 & NXTToken v4 on MegaETH Mainnet (chain 4326)
 export const NXDEVNFT_ADDRESS = '0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7';
 export const NXT_TOKEN_ADDRESS = '0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47';
+export const TREASURY_ADDRESS = '0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC';
 export const MEGAETH_CHAIN_ID = 4326;
-export const MEGAETH_RPC = 'https://carrot.megaeth.com/rpc';
+export const MEGAETH_RPC = 'https://mainnet.megaeth.com/rpc';
 export const EXPLORER_BASE = 'https://mega.etherscan.io';
 // Backwards compat alias — remove once all imports updated
 export const MONAD_CHAIN_ID = MEGAETH_CHAIN_ID;
