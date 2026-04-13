@@ -8,6 +8,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
   const [startOpen, setStartOpen] = useState(false);
   const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError } = useWallet();
   const [walletError, setWalletError] = useState(null);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [assistantOn, setAssistantOn] = useState(
     () => localStorage.getItem('nx-assistant-enabled') !== 'false'
   );
@@ -41,11 +42,28 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
 
   const handleWalletClick = () => {
     if (isConnected) {
-      disconnect();
+      // Ask for confirmation before disconnecting so a stray click
+      // doesn't blow away the user's wallet session mid-task.
+      setShowDisconnectConfirm(true);
     } else {
       connect();
     }
   };
+
+  const confirmDisconnect = useCallback(() => {
+    disconnect();
+    setShowDisconnectConfirm(false);
+  }, [disconnect]);
+
+  // Escape key closes the confirm modal while it's open.
+  useEffect(() => {
+    if (!showDisconnectConfirm) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowDisconnectConfirm(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showDisconnectConfirm]);
 
   // Sync assistant state when toggled from Settings
   useEffect(() => {
@@ -116,6 +134,105 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
             <button className="win-btn" onClick={() => setWalletError(null)} style={{ padding: '3px 20px', fontSize: '11px' }}>
               OK
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {showDisconnectConfirm && (
+      <div
+        onClick={() => setShowDisconnectConfirm(false)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 10010,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '320px',
+            background: 'var(--win-bg)',
+            boxShadow:
+              'inset -1px -1px 0 #000,' +
+              'inset 1px 1px 0 var(--border-light),' +
+              'inset -2px -2px 0 var(--border-dark),' +
+              'inset 2px 2px 0 #dfdfdf',
+            fontFamily: "'Tahoma', 'MS Sans Serif', sans-serif",
+          }}
+        >
+          {/* Title bar */}
+          <div
+            style={{
+              background: 'linear-gradient(90deg, var(--win-title-l), var(--win-title-r))',
+              color: '#fff',
+              padding: '3px 6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>NX Terminal — Disconnect Wallet</span>
+            <button
+              onClick={() => setShowDisconnectConfirm(false)}
+              aria-label="Close"
+              className="win98-titlebar-btn"
+              style={{
+                width: '16px',
+                height: '14px',
+                background: 'var(--win-bg)',
+                border: 'none',
+                outline: 'none',
+                fontSize: '10px',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow:
+                  'inset -1px -1px 0 var(--border-darker),' +
+                  'inset 1px 1px 0 var(--border-light),' +
+                  'inset -2px -2px 0 var(--border-dark)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <span style={{ fontSize: '10px', fontWeight: 'bold', lineHeight: 1 }}>x</span>
+            </button>
+          </div>
+          {/* Body */}
+          <div style={{ padding: '18px 16px 14px', textAlign: 'center' }}>
+            <div
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-primary)',
+                marginBottom: '18px',
+                lineHeight: 1.4,
+              }}
+            >
+              Are you sure you want to disconnect your wallet?
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+              <button
+                className="win-btn"
+                onClick={confirmDisconnect}
+                style={{ padding: '4px 24px', fontSize: '11px', fontWeight: 'bold', minWidth: '72px' }}
+                autoFocus
+              >
+                Yes
+              </button>
+              <button
+                className="win-btn"
+                onClick={() => setShowDisconnectConfirm(false)}
+                style={{ padding: '4px 24px', fontSize: '11px', minWidth: '72px' }}
+              >
+                No
+              </button>
+            </div>
           </div>
         </div>
       </div>
