@@ -5,7 +5,7 @@
   outline: none;
   padding: 3px 12px;
   font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
-  font-size: 11px;
+  font-size: var(--text-base, 11px);
   cursor: pointer;
   box-shadow:
     inset -1px -1px 0 var(--border-darker),
@@ -323,7 +323,7 @@
   height: 26px;
   padding: 2px 10px 2px 4px;
   font-weight: bold;
-  font-size: 11px;
+  font-size: var(--text-base, 11px);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -347,7 +347,7 @@
 .taskbar-wallet-btn {
   height: 24px;
   padding: 2px 8px;
-  font-size: 10px;
+  font-size: var(--text-sm, 10px);
   flex-shrink: 0;
 }
 
@@ -373,7 +373,7 @@
   max-width: 160px;
   min-width: 40px;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--text-base, 11px);
   text-align: left;
   overflow: hidden;
   white-space: nowrap;
@@ -433,7 +433,7 @@
 .taskbar-clock {
   flex-shrink: 0;
   padding: 2px 6px 2px 4px;
-  font-size: 11px;
+  font-size: var(--text-sm, 10px);
   border-left: 1px solid var(--border-dark);
   margin-left: 2px;
 }
@@ -450,6 +450,7 @@
 
 .win-tab {
   padding: 3px 12px;
+  font-size: var(--text-base, 11px);
   background: #b0b0b0;
   border: none;
   cursor: pointer;
@@ -475,7 +476,7 @@
 .win-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: var(--text-base, 11px);
 }
 .win-table th {
   background: var(--win-bg);

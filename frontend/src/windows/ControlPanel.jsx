@@ -248,6 +248,7 @@ export default function ControlPanel() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
+  const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale') || 'medium');
 
   // Pending (selected but not yet applied) values
   const [pendingWallpaper, setPendingWallpaper] = useState(null);
@@ -666,9 +667,36 @@ export default function ControlPanel() {
                 </button>
               ))}
             </div>
-            <div className="win-panel" style={{ padding: '8px' }}>
+            <div className="win-panel" style={{ padding: '8px', marginBottom: '16px' }}>
               <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
                 Changes the size of desktop icons. Takes effect immediately.
+              </div>
+            </div>
+
+            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>UI Text Size</div>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+              {['small', 'medium', 'large'].map(s => (
+                <button key={s} className="win-btn"
+                  onClick={() => {
+                    setTextScale(s);
+                    localStorage.setItem('nx-text-scale', s);
+                    document.documentElement.setAttribute('data-text-scale', s);
+                    window.dispatchEvent(new CustomEvent('nx-text-scale', { detail: s }));
+                  }}
+                  style={{
+                    flex: 1, padding: '6px', fontSize: '11px', fontWeight: textScale === s ? 'bold' : 'normal',
+                    background: textScale === s ? '#000080' : undefined,
+                    color: textScale === s ? '#fff' : undefined,
+                  }}>
+                  {s.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="win-panel" style={{ padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                Scales the Windows chrome (buttons, taskbar, tabs, tables).
+                Programs with their own UI (Dev Academy, Mega Sentinel, etc.)
+                are not affected.
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { playToggleClick } from '../utils/sound';
 import StartMenu from './StartMenu';
 
 export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0 }) {
@@ -11,6 +12,9 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [assistantOn, setAssistantOn] = useState(
     () => localStorage.getItem('nx-assistant-enabled') !== 'false'
+  );
+  const [soundOn, setSoundOn] = useState(
+    () => localStorage.getItem('nx-sound') !== 'off'
   );
 
   useEffect(() => {
@@ -78,6 +82,24 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
     setAssistantOn(next);
     window.dispatchEvent(new Event('nx-assistant-changed'));
   }, [assistantOn]);
+
+  // Sync sound state in case it's flipped from another tab/component.
+  useEffect(() => {
+    const sync = () => setSoundOn(localStorage.getItem('nx-sound') !== 'off');
+    window.addEventListener('nx-sound-changed', sync);
+    return () => window.removeEventListener('nx-sound-changed', sync);
+  }, []);
+
+  const toggleSound = useCallback(() => {
+    const next = !soundOn;
+    localStorage.setItem('nx-sound', next ? 'on' : 'off');
+    setSoundOn(next);
+    // Give feedback only when turning sound ON — muting silently is the
+    // whole point of muting. playToggleClick() ignores the mute flag so
+    // the click you just made to re-enable sound actually plays.
+    if (next) playToggleClick();
+    window.dispatchEvent(new Event('nx-sound-changed'));
+  }, [soundOn]);
 
 
   const now = new Date();
@@ -295,6 +317,28 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: assistantOn ? 1 : 0.4, display: 'block' }}>
             <path d="M8 1 C8 1 6 3 6 6 L6 8 C6 9 5 10 4 10 L3 10 C2 10 2 11 3 11 L6 11 C6 11 6 12 7 13 L9 13 C10 12 10 11 10 11 L13 11 C14 11 14 10 13 10 L12 10 C11 10 10 9 10 8 L10 6 C10 3 8 1 8 1Z" fill="#808080" stroke="#333" strokeWidth="0.6"/>
             <circle cx="8" cy="5" r="1" fill="#333"/>
+          </svg>
+        </button>
+
+        <button
+          className="tray-icon"
+          onClick={toggleSound}
+          title={soundOn ? 'Sound ON — click to mute' : 'Sound OFF — click to unmute'}
+          aria-label={soundOn ? 'Mute sound' : 'Unmute sound'}
+        >
+          {/* Win98-style speaker. When muted, a darker grey icon with a
+              diagonal red slash across it. */}
+          <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: soundOn ? 1 : 0.55, display: 'block' }}>
+            <path d="M2 6 L5 6 L9 3 L9 13 L5 10 L2 10 Z" fill="#808080" stroke="#333" strokeWidth="0.6" strokeLinejoin="round"/>
+            {soundOn && (
+              <>
+                <path d="M11 5 Q13 8 11 11" fill="none" stroke="#333" strokeWidth="0.8" strokeLinecap="round"/>
+                <path d="M12.5 3.5 Q15 8 12.5 12.5" fill="none" stroke="#333" strokeWidth="0.8" strokeLinecap="round"/>
+              </>
+            )}
+            {!soundOn && (
+              <line x1="10" y1="4" x2="15" y2="12" stroke="#cc0000" strokeWidth="1.2" strokeLinecap="round"/>
+            )}
           </svg>
         </button>
 

@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
 import { NXT_TOKEN_ADDRESS, TREASURY_ADDRESS } from '../services/contract';
+import { playSpendSound, playGainSound, playActionSound } from '../utils/sound';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
 
@@ -996,59 +997,6 @@ function HackErrorModal({ error, onClose }) {
       </div>
     </div>
   );
-}
-
-// ── Spend Animation + Sound ─────────────────────────────
-// ── Sound Effects ───────────────────────────────────────
-function playSpendSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(800, ctx.currentTime);
-    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
-    osc.frequency.setValueAtTime(400, ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
-    setTimeout(() => ctx.close(), 500);
-  } catch {}
-}
-
-function playGainSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(400, ctx.currentTime);
-    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
-    osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
-    osc.frequency.setValueAtTime(1000, ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
-    setTimeout(() => ctx.close(), 500);
-  } catch {}
-}
-
-function playActionSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(500, ctx.currentTime);
-    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
-    setTimeout(() => ctx.close(), 500);
-  } catch {}
 }
 
 // ── Animation Color Map ────────────────────────────────
