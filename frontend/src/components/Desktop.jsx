@@ -5,23 +5,9 @@ import WindowManager from './WindowManager';
 import NXAssistant from './NXAssistant';
 import DailyStreakPopup from './DailyStreakPopup';
 import WorldEventBanner from './WorldEventBanner';
+import { playSpendSound, playGainSound } from '../utils/sound';
 
 // ── Global floating stat animation (for achievements, etc.) ──
-function _playSound(freqs, dur = 0.2) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.connect(g); g.connect(ctx.destination);
-    osc.type = 'square';
-    freqs.forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i * 0.05));
-    g.gain.setValueAtTime(0.1, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur);
-    setTimeout(() => ctx.close(), 500);
-  } catch {}
-}
-
 function GlobalStatAnimation() {
   const [anims, setAnims] = useState([]);
   useEffect(() => {
@@ -34,9 +20,9 @@ function GlobalStatAnimation() {
       }));
       setAnims(prev => [...prev, ...items]);
       setTimeout(() => setAnims(prev => prev.filter(a => !items.includes(a))), 2000);
-      // Play one sound per event
-      if (changes.some(c => c.type === 'spend')) _playSound([800, 600, 400]);
-      else if (changes.some(c => c.type === 'gain')) _playSound([400, 600, 800, 1000], 0.25);
+      // Play one sound per event — helpers no-op when sound is muted.
+      if (changes.some(c => c.type === 'spend')) playSpendSound();
+      else if (changes.some(c => c.type === 'gain')) playGainSound();
     };
     window.addEventListener('nx-stat-animation', handler);
     return () => window.removeEventListener('nx-stat-animation', handler);
@@ -251,6 +237,9 @@ export default function Desktop() {
     // Apply theme on mount
     const theme = localStorage.getItem('nx-theme') || 'classic';
     document.documentElement.setAttribute('data-theme', theme);
+    // Apply text scale on mount (Win98 chrome only; programs keep their own sizing)
+    const textScale = localStorage.getItem('nx-text-scale') || 'medium';
+    document.documentElement.setAttribute('data-text-scale', textScale);
   }, []);
 
   useEffect(() => {
