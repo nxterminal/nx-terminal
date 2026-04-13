@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { resolveMegaName } from '../hooks/useMegaName';
 
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
@@ -15,13 +16,35 @@ export default function WorldChat() {
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  // addr (lowercased) -> resolved .mega name. Populated in batches as
+  // messages come in so old rows (whose stored display_name is the old
+  // truncated wallet) can be re-rendered with the human name.
+  const [megaNames, setMegaNames] = useState({});
   const terminalRef = useRef(null);
+
+  // Batch-resolve every unique player_address in the current message list.
+  // Called after each fetch; resolveMegaName is cached so re-runs are cheap.
+  const resolveMessageSenders = async (msgs) => {
+    const uniqueAddrs = Array.from(new Set(
+      msgs.map(m => m.player_address?.toLowerCase()).filter(Boolean)
+    ));
+    if (uniqueAddrs.length === 0) return;
+    const results = await Promise.all(uniqueAddrs.map(async a => [a, await resolveMegaName(a)]));
+    const next = {};
+    for (const [a, name] of results) {
+      if (name) next[a] = name;
+    }
+    if (Object.keys(next).length > 0) {
+      setMegaNames(prev => ({ ...prev, ...next }));
+    }
+  };
 
   useEffect(() => {
     api.getWorldChat()
       .then(d => {
         const msgs = Array.isArray(d) ? d : d.messages || [];
         setMessages(msgs);
+        resolveMessageSenders(msgs);
       })
       .catch(() => {
         setMessages([]);
@@ -35,6 +58,7 @@ export default function WorldChat() {
         .then(d => {
           const msgs = Array.isArray(d) ? d : d.messages || [];
           setMessages(msgs);
+          resolveMessageSenders(msgs);
         })
         .catch(() => {});
     }, 10000);
@@ -51,11 +75,15 @@ export default function WorldChat() {
     if (!address || !inputValue.trim() || sending) return;
     setSending(true);
     try {
+      // useWallet's displayAddress already upgrades to a .mega name when
+      // available, so new messages land in the DB with the human name as
+      // their stored display_name — no further resolution needed for them.
       await api.postWorldChat(address, displayAddress, inputValue.trim());
       setInputValue('');
       const d = await api.getWorldChat();
       const msgs = Array.isArray(d) ? d : d.messages || [];
       setMessages(msgs);
+      resolveMessageSenders(msgs);
     } catch {
       setError('Failed to send message. Try again.');
       setTimeout(() => setError(null), 3000);
@@ -127,19 +155,27 @@ export default function WorldChat() {
             No messages yet. {isConnected ? 'Be the first to say something.' : 'Connect your wallet to start chatting.'}
           </div>
         ) : (
-          messages.map((msg, i) => (
-            <div key={msg.id || i} className="terminal-line">
-              <span style={{ color: 'var(--border-dark)' }}>
-                [{formatTime(msg.created_at)}]
-              </span>{' '}
-              <span style={{ color: 'var(--terminal-cyan)', fontWeight: 'bold' }}>
-                {msg.display_name || msg.username || 'Anon'}
-              </span>
-              <span style={{ color: 'var(--terminal-green)' }}>
-                : {msg.message || msg.content}
-              </span>
-            </div>
-          ))
+          messages.map((msg, i) => {
+            // Prefer the freshly-resolved .mega name for this sender's wallet,
+            // then the stored display_name (which may itself be a .mega name
+            // from a recent post), then the legacy username, then Anon.
+            const senderAddr = msg.player_address?.toLowerCase();
+            const senderLabel = (senderAddr && megaNames[senderAddr])
+              || msg.display_name || msg.username || 'Anon';
+            return (
+              <div key={msg.id || i} className="terminal-line">
+                <span style={{ color: 'var(--border-dark)' }}>
+                  [{formatTime(msg.created_at)}]
+                </span>{' '}
+                <span style={{ color: 'var(--terminal-cyan)', fontWeight: 'bold' }}>
+                  {senderLabel}
+                </span>
+                <span style={{ color: 'var(--terminal-green)' }}>
+                  : {msg.message || msg.content}
+                </span>
+              </div>
+            );
+          })
         )}
       </div>
 

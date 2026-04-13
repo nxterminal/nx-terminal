@@ -1,12 +1,17 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { MEGAETH_CHAIN_ID } from '../services/contract';
+import { useMegaName } from './useMegaName';
 
 export function useWallet() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
   const { connect, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
+  // Resolves the current user's wallet to a .mega name when available.
+  // Falls back to the truncated 0x… format automatically below, so all
+  // ~8 consumers of `displayAddress` get the upgrade for free.
+  const megaName = useMegaName(address);
 
   const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
 
@@ -62,6 +67,11 @@ export function useWallet() {
     // Backwards compat alias
     switchToMonad: switchToMegaETH,
     formatAddress,
-    displayAddress: address ? formatAddress(address) : null,
+    // If the wallet has a .mega name registered, displayAddress upgrades
+    // to e.g. "bread.mega". Otherwise it keeps the existing 0x1234…abcd
+    // format. Consumers don't need to change — every existing call site
+    // reads this field and the upgrade is automatic.
+    displayAddress: address ? (megaName || formatAddress(address)) : null,
+    megaName,
   };
 }
