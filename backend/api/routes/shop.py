@@ -469,6 +469,30 @@ HACK_PLAYER_STEAL_MAX = 60
 HACK_PLAYER_SOCIAL_GAIN = 8
 
 
+def _resolve_mega_name(addr: str) -> str:
+    """Resolve a wallet to a .mega name via dotmega.domains, falling back
+    to the truncated 0x…abcd format on any failure. Always returns a
+    printable label — never raises — so a dotmega outage can't break
+    /shop/hack-player or any other caller. Called once per successful
+    PvP hack (capped by the 24h per-attacker cooldown), so the extra
+    HTTPS latency is bounded.
+    """
+    if not addr:
+        return "???"
+    fallback = f"{addr[:6]}...{addr[-4:]}"
+    try:
+        r = http_requests.get(
+            f"https://api.dotmega.domains/resolve?address={addr.lower()}",
+            timeout=3,
+        )
+        if r.status_code != 200:
+            return fallback
+        data = r.json()
+        return data.get("name") or fallback
+    except Exception:
+        return fallback
+
+
 @router.post("/hack-mainframe")
 async def hack_mainframe(req: HackRequest):
     """Hack the corporate mainframe. Reward from treasury."""
@@ -696,7 +720,11 @@ async def hack_player(req: HackRequest):
                 )
                 # Notify target owner
                 if target.get("owner_address"):
-                    attacker_wallet = attacker["owner_address"][:6] + "..." + attacker["owner_address"][-4:]
+                    # Prefer the attacker's .mega name in the breach notice
+                    # for a friendlier UX. Falls back to truncated wallet on
+                    # any dotmega failure so the hack still notifies on
+                    # schedule even if the resolver is down.
+                    attacker_wallet = _resolve_mega_name(attacker["owner_address"])
                     cur.execute(
                         """INSERT INTO notifications (player_address, type, title, body, dev_id)
                            VALUES (%s, 'hack_received', %s, %s, %s)""",
