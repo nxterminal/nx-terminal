@@ -150,6 +150,7 @@ def _run_auto_migrations():
                     ("0x5c25e6bc8a2842fd56ac2bac10f6dfdce08510a6", "Naers"),
                     ("0xb533d993c40c11528ab557201d7c197d145f0081", "Kaps240"),
                     ("0xfecb26fe05ef20f5e616912f3a4f2060dc7f6d70", "drmeed01"),
+                    ("0x5581dc6bfacb1d2ff7d1ec09d4f7cd6ba9d9e91e", "coinjuniortr"),
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
