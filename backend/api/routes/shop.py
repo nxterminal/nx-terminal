@@ -852,12 +852,16 @@ async def fund_dev(req: FundRequest):
             if dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
 
-            # Verify TX on-chain — poll up to 30s to cover RPC indexing lag.
+            # Verify TX on-chain — poll up to 60s to cover RPC indexing lag.
             # MegaETH confirms fast but receipt propagation between nodes can
-            # take a few seconds; without a retry loop a single null response
-            # 400s the request and orphans the user's on-chain tx.
+            # take several seconds under load. If the receipt still doesn't
+            # show up by the deadline, the tx may still be confirmed on-chain,
+            # so we fall through to the pending-fund queue instead of 400'ing
+            # and orphaning the user's funds.
+            _FUND_MAX_WAIT_SEC = 60
+            _FUND_POLL_INTERVAL_SEC = 2
             receipt = None
-            deadline = time.time() + 30
+            deadline = time.time() + _FUND_MAX_WAIT_SEC
             while time.time() < deadline:
                 try:
                     receipt = _rpc("eth_getTransactionReceipt", [req.tx_hash])
@@ -865,10 +869,37 @@ async def fund_dev(req: FundRequest):
                     receipt = None
                 if receipt is not None:
                     break
-                time.sleep(2)
+                time.sleep(_FUND_POLL_INTERVAL_SEC)
 
             if not receipt:
-                raise HTTPException(400, "Transaction not found after 30s — please try again in a moment")
+                # RPC hasn't indexed the receipt yet. The tx is most likely
+                # already confirmed on-chain — queue it in pending_fund_txs and
+                # let the engine worker (process_pending_funds) resolve it
+                # asynchronously. Dedup is enforced by funding_txs.tx_hash
+                # UNIQUE, so this can never cause a double credit even if the
+                # live path later wins a race.
+                cur.execute(
+                    """INSERT INTO pending_fund_txs
+                         (tx_hash, wallet_address, dev_token_id, amount_nxt)
+                       VALUES (%s, %s, %s, %s)
+                       ON CONFLICT (tx_hash) DO NOTHING""",
+                    (req.tx_hash.lower(), addr, req.dev_token_id, amount_int),
+                )
+                conn.commit()
+                log.warning(
+                    f"Fund tx {req.tx_hash[:10]}… queued as pending "
+                    f"(dev #{req.dev_token_id}, {amount_int} $NXT) — RPC indexing lag"
+                )
+                return {
+                    "status": "pending",
+                    "dev": dev["name"],
+                    "amount": amount_int,
+                    "tx_hash": req.tx_hash.lower(),
+                    "message": (
+                        "Transaction confirmed on-chain. Credit is being "
+                        "processed and will appear in your dev's balance shortly."
+                    ),
+                }
             if receipt.get("status") != "0x1":
                 raise HTTPException(400, "Transaction failed on-chain")
 

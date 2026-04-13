@@ -3,6 +3,7 @@ NX TERMINAL: PROTOCOL WARS — Simulation Engine v2
 100% sin LLM. Weighted random + templates. PostgreSQL.
 """
 
+import os
 import random
 import random as _random
 import time
@@ -14,6 +15,7 @@ from contextlib import contextmanager
 
 import psycopg2
 import psycopg2.extras
+import requests  # eth_getTransactionReceipt for process_pending_funds
 
 from config import *
 from templates import (
@@ -1068,6 +1070,221 @@ def check_and_rotate_weekly_event(conn):
     log.info(f"🌍 New weekly event: {event['title']}")
 
 
+# ============================================================
+# FUND RECONCILIATION — Resolves pending_fund_txs orphans
+# ============================================================
+#
+# Context: /shop/fund occasionally can't fetch a just-sent tx receipt because
+# the RPC node hasn't indexed it yet. Instead of 400'ing (and orphaning the
+# user's on-chain $NXT), the endpoint persists the request in pending_fund_txs
+# and returns "pending". This worker runs every ~5 minutes and resolves those
+# rows: re-fetches the receipt, validates the Transfer event, credits the
+# dev's balance_nxt, and inserts into funding_txs. Dedup is guaranteed by
+# funding_txs.tx_hash UNIQUE.
+
+_FUND_RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://mainnet.megaeth.com/rpc")
+_FUND_NXT_TOKEN = "0x2F55e14F0b2B2118d2026d20Ad2C39EAcBdCAc47".lower()
+_FUND_TREASURY = "0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC".lower()
+_FUND_TRANSFER_TOPIC = (
+    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+)
+_FUND_MAX_ATTEMPTS = 10
+
+
+def _fund_rpc(method, params):
+    """Minimal JSON-RPC call for the fund reconciler. Returns None on any
+    error so the worker keeps running across individual RPC hiccups."""
+    try:
+        r = requests.post(
+            _FUND_RPC_URL,
+            json={"jsonrpc": "2.0", "method": method, "params": params, "id": 1},
+            timeout=15,
+        )
+        data = r.json()
+        if "error" in data:
+            return None
+        return data.get("result")
+    except Exception:
+        return None
+
+
+def _mark_pending_resolved(cur, row_id, error_msg=None):
+    """Flag a pending_fund_txs row as resolved with an optional reason."""
+    cur.execute(
+        """UPDATE pending_fund_txs
+              SET resolved = true,
+                  resolved_at = NOW(),
+                  last_error = %s
+            WHERE id = %s""",
+        (error_msg, row_id),
+    )
+
+
+def process_pending_funds(conn):
+    """Resolve pending_fund_txs rows whose RPC receipt is now available.
+
+    For each unresolved row (attempts < _FUND_MAX_ATTEMPTS):
+      - Dedup: if tx_hash is already in funding_txs (live path won the race
+        or backfill script already ran), mark resolved and skip.
+      - Fetch receipt; if still null, bump attempts and move on.
+      - If tx reverted on-chain (status != 0x1), mark resolved (never credit).
+      - Otherwise apply the same verification rules as shop.py fund_dev:
+        tx.to == NXT_TOKEN, tx.from == wallet, a Transfer log to treasury
+        whose amount_wei // 1e18 >= the requested NXT amount.
+      - Credit devs.balance_nxt, insert funding_txs, log FUND_DEV action,
+        mark resolved.
+    """
+    cur = get_cursor(conn)
+    cur.execute(
+        """
+        SELECT id, tx_hash, wallet_address, dev_token_id, amount_nxt, attempts
+          FROM pending_fund_txs
+         WHERE resolved = false AND attempts < %s
+         ORDER BY created_at ASC
+         LIMIT 50
+        """,
+        (_FUND_MAX_ATTEMPTS,),
+    )
+    rows = cur.fetchall()
+    if not rows:
+        return
+
+    log.info(f"🔄 process_pending_funds: {len(rows)} pending tx(s) to check")
+
+    for row in rows:
+        tx_hash = row["tx_hash"]
+        wallet = row["wallet_address"].lower()
+        dev_id = row["dev_token_id"]
+        amount_requested = int(row["amount_nxt"])
+
+        try:
+            # Always bump attempts first so a crash doesn't loop forever.
+            cur.execute(
+                """UPDATE pending_fund_txs
+                      SET attempts = attempts + 1, last_attempt_at = NOW()
+                    WHERE id = %s""",
+                (row["id"],),
+            )
+
+            # Dedup: if the live path already credited this tx, stop here.
+            cur.execute("SELECT 1 FROM funding_txs WHERE tx_hash = %s", (tx_hash,))
+            if cur.fetchone():
+                _mark_pending_resolved(cur, row["id"],
+                                       "already credited via live path")
+                conn.commit()
+                continue
+
+            receipt = _fund_rpc("eth_getTransactionReceipt", [tx_hash])
+            if not receipt:
+                # Still not indexed — persist the attempt bump and try again
+                # next cycle.
+                conn.commit()
+                continue
+
+            if receipt.get("status") != "0x1":
+                _mark_pending_resolved(cur, row["id"], "tx reverted on-chain")
+                conn.commit()
+                log.warning(f"  pending {tx_hash[:10]}… REVERTED on-chain, skipped")
+                continue
+
+            if (receipt.get("to") or "").lower() != _FUND_NXT_TOKEN:
+                _mark_pending_resolved(cur, row["id"], "tx is not an NXT transfer")
+                conn.commit()
+                continue
+
+            if (receipt.get("from") or "").lower() != wallet:
+                _mark_pending_resolved(cur, row["id"], "tx sender mismatch")
+                conn.commit()
+                continue
+
+            # Find the Transfer log from wallet -> treasury
+            verified_wei = None
+            for log_entry in (receipt.get("logs") or []):
+                topics = log_entry.get("topics") or []
+                if len(topics) >= 3 and topics[0] == _FUND_TRANSFER_TOPIC:
+                    log_from = ("0x" + topics[1][-40:]).lower()
+                    log_to = ("0x" + topics[2][-40:]).lower()
+                    if log_from == wallet and log_to == _FUND_TREASURY:
+                        verified_wei = int(log_entry.get("data", "0x0"), 16)
+                        break
+
+            if verified_wei is None:
+                _mark_pending_resolved(cur, row["id"],
+                                       "no Transfer event to treasury")
+                conn.commit()
+                continue
+
+            verified_nxt = verified_wei // (10 ** 18)
+            if verified_nxt < amount_requested:
+                _mark_pending_resolved(cur, row["id"],
+                                       "on-chain amount < requested")
+                conn.commit()
+                continue
+
+            credit_amount = verified_nxt
+
+            cur.execute(
+                "SELECT name, archetype FROM devs WHERE token_id = %s",
+                (dev_id,),
+            )
+            dev = cur.fetchone()
+            if not dev:
+                _mark_pending_resolved(cur, row["id"], "dev not found")
+                conn.commit()
+                continue
+
+            # Credit — mirrors shop.py fund_dev success path
+            cur.execute(
+                """INSERT INTO funding_txs
+                     (wallet_address, dev_token_id, amount_nxt, tx_hash, verified)
+                   VALUES (%s, %s, %s, %s, true)""",
+                (wallet, dev_id, credit_amount, tx_hash),
+            )
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt + %s, "
+                "total_earned = total_earned + %s WHERE token_id = %s",
+                (credit_amount, credit_amount, dev_id),
+            )
+            cur.execute(
+                """INSERT INTO actions
+                     (dev_id, dev_name, archetype, action_type, details,
+                      energy_cost, nxt_cost)
+                   VALUES (%s, %s, %s, 'FUND_DEV', %s::jsonb, 0, 0)""",
+                (
+                    dev_id,
+                    dev["name"],
+                    dev["archetype"],
+                    json.dumps({
+                        "event": "fund_dev",
+                        "amount": credit_amount,
+                        "tx_hash": tx_hash,
+                        "source": "pending_fund_worker",
+                    }),
+                ),
+            )
+            _mark_pending_resolved(cur, row["id"], None)
+            conn.commit()
+            log.info(
+                f"  ✅ resolved pending {tx_hash[:10]}… → dev #{dev_id} "
+                f"+{credit_amount} $NXT"
+            )
+
+        except Exception as e:
+            conn.rollback()
+            log.error(f"  ❌ error processing pending {tx_hash[:10]}…: {e}")
+            # Best-effort write of the error msg in a fresh transaction
+            try:
+                cur.execute(
+                    """UPDATE pending_fund_txs
+                          SET last_error = %s, last_attempt_at = NOW()
+                        WHERE id = %s""",
+                    (str(e)[:500], row["id"]),
+                )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+
 def run_engine():
     """Main simulation loop. Runs forever."""
     log.info("=" * 60)
@@ -1079,6 +1296,7 @@ def run_engine():
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
     claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
+    pending_funds_interval = timedelta(minutes=5)
 
     # Auto-migrate new columns before any queries
     try:
@@ -1087,6 +1305,27 @@ def run_engine():
             cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
             cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
             cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS knowledge SMALLINT NOT NULL DEFAULT 50")
+            # pending_fund_txs — fallback queue for RPC indexing lag on /shop/fund
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pending_fund_txs (
+                    id               SERIAL PRIMARY KEY,
+                    tx_hash          TEXT UNIQUE NOT NULL,
+                    wallet_address   TEXT NOT NULL,
+                    dev_token_id     INT NOT NULL,
+                    amount_nxt       NUMERIC NOT NULL,
+                    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    resolved         BOOLEAN NOT NULL DEFAULT false,
+                    resolved_at      TIMESTAMPTZ,
+                    attempts         INT NOT NULL DEFAULT 0,
+                    last_attempt_at  TIMESTAMPTZ,
+                    last_error       TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_fund_unresolved
+                    ON pending_fund_txs(resolved, created_at)
+                    WHERE resolved = false
+            """)
             conn.commit()
             log.info("✅ Engine auto-migrations complete")
     except Exception as e:
@@ -1102,6 +1341,8 @@ def run_engine():
 
     last_salary = datetime.now(timezone.utc)
     last_snapshot = datetime.now(timezone.utc)
+    # Run pending-fund reconciliation on the first loop pass.
+    last_pending_funds = datetime.now(timezone.utc) - pending_funds_interval
 
     while True:
         try:
@@ -1119,6 +1360,14 @@ def run_engine():
                 if now - last_snapshot >= snapshot_interval:
                     take_balance_snapshots(conn)
                     last_snapshot = now
+
+                # Reconcile pending fund txs (RPC indexing lag fallback)
+                if now - last_pending_funds >= pending_funds_interval:
+                    try:
+                        process_pending_funds(conn)
+                    except Exception as e:
+                        log.error(f"process_pending_funds error: {e}")
+                    last_pending_funds = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
