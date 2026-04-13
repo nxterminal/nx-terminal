@@ -231,7 +231,7 @@ function Contracts() {
         <div style={line}><span style={label}>Address: </span><span style={addr}>{NXDEVNFT_ADDRESS}</span></div>
         <div style={line}><span style={label}>Network: </span><span style={val}>MegaETH (4326)</span></div>
         <div style={line}><span style={label}>Supply:  </span><span style={val}>{minted} / 35,000 minted</span></div>
-        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0001 ETH</span></div>
+        <div style={line}><span style={label}>Price:   </span><span style={val}>0.0025 ETH</span></div>
         <ExplorerLink address={NXDEVNFT_ADDRESS} />
       </div>
 

@@ -21,7 +21,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 # SIMULATION
 # ============================================================
 MAX_DEVS = 35_000
-MINT_PRICE_MON = 0.0001
+MINT_PRICE_MON = 0.0025
 MAX_PER_WALLET = 20
 
 # Scheduling
