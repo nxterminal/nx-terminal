@@ -262,7 +262,7 @@ async function waitForReceipt(txHash, maxWait = 60) {
 function FundModal({ dev, address, onClose, onDevUpdate }) {
   const [amount, setAmount] = useState('');
   const [walletBal, setWalletBal] = useState(null);
-  const [stage, setStage] = useState('idle'); // idle | signing | mining | success | error
+  const [stage, setStage] = useState('idle'); // idle | signing | mining | pending | success | error
   const [errorMsg, setErrorMsg] = useState('');
   // If the on-chain tx confirmed but the backend POST failed, we keep the
   // hash + amount here so "Try Again" retries the backend call with the same
@@ -324,6 +324,16 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
 
       // Report to backend (new or retried).
       const res = await api.fundDev(address, dev.token_id, committedAmount, txHash);
+      if (res && res.status === 'pending') {
+        // Backend couldn't fetch the receipt in time but persisted the tx
+        // in pending_fund_txs — the engine worker will credit the dev once
+        // the RPC node indexes it. Clear the client-side pendingTx so the
+        // user can close without the warning dialog.
+        setStage('pending');
+        setPendingTx(null);
+        setTimeout(() => onClose(), 4500);
+        return;
+      }
       setStage('success');
       setPendingTx(null);
       if (res.updated_dev && onDevUpdate) onDevUpdate(res.updated_dev);
@@ -347,7 +357,9 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   const handleClose = () => {
     // Guard against closing with an unresolved on-chain tx — the hash would
     // be lost and the user would have to rely on the backfill reconciler.
-    if (hasPending && stage !== 'success') {
+    // In 'pending' stage the backend already persisted the tx in
+    // pending_fund_txs, so no warning is needed.
+    if (hasPending && stage !== 'success' && stage !== 'pending') {
       const ok = window.confirm(
         'Your on-chain $NXT transfer confirmed but the credit retry is still pending. '
         + 'Closing will drop the tx hash from this session — the backfill worker will '
@@ -431,13 +443,31 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
           </div>
 
-          {hasPending && stage !== 'success' && (
+          {hasPending && stage !== 'success' && stage !== 'pending' && (
             <div style={{
               fontSize: '11px', color: 'var(--amber-on-grey, #7a5500)',
               background: 'rgba(255, 204, 0, 0.12)', border: '1px solid rgba(255, 204, 0, 0.4)',
               padding: '6px 8px', marginBottom: '8px', lineHeight: 1.4,
             }}>
               On-chain tx confirmed. Retrying credit — do NOT sign a new one.
+            </div>
+          )}
+
+          {stage === 'pending' && (
+            <div style={{
+              fontSize: '12px', color: 'var(--amber-on-grey, #7a5500)',
+              background: 'rgba(255, 170, 0, 0.12)',
+              border: '1px solid rgba(255, 170, 0, 0.4)',
+              padding: '8px 10px', marginBottom: '8px', lineHeight: 1.45,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                {'\u23F3'} Transfer confirmed
+              </div>
+              <div>
+                Your $NXT is on-chain. Credit is being processed and will
+                appear in {dev.name}'s balance shortly. You can close this window.
+              </div>
             </div>
           )}
 
@@ -453,6 +483,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
             {stage === 'idle' && hasPending && `\uD83D\uDD04 Retry credit (${pendingTx.amount} $NXT)`}
             {stage === 'signing' && 'Confirm in MetaMask...'}
             {stage === 'mining' && (hasPending ? 'Retrying credit...' : 'Processing...')}
+            {stage === 'pending' && '\u23F3 Processing credit...'}
             {stage === 'success' && '\u2705 Funded!'}
             {stage === 'error' && '\u274C Failed — Try Again'}
           </button>

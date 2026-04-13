@@ -80,6 +80,29 @@ def _run_auto_migrations():
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_type_dev ON actions(action_type, dev_id)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_player_read ON notifications(player_address, read, created_at DESC)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_player_missions_wallet_dev ON player_missions(wallet_address, dev_token_id)")
+                # pending_fund_txs — fallback queue for /shop/fund when the RPC
+                # node has not yet indexed a freshly-sent receipt. Resolved by
+                # engine worker process_pending_funds() every ~5 min.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS pending_fund_txs (
+                        id               SERIAL PRIMARY KEY,
+                        tx_hash          TEXT UNIQUE NOT NULL,
+                        wallet_address   TEXT NOT NULL,
+                        dev_token_id     INT NOT NULL,
+                        amount_nxt       NUMERIC NOT NULL,
+                        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        resolved         BOOLEAN NOT NULL DEFAULT false,
+                        resolved_at      TIMESTAMPTZ,
+                        attempts         INT NOT NULL DEFAULT 0,
+                        last_attempt_at  TIMESTAMPTZ,
+                        last_error       TEXT
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pending_fund_unresolved
+                        ON pending_fund_txs(resolved, created_at)
+                        WHERE resolved = false
+                """)
                 # Achievements tables
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS achievements (
