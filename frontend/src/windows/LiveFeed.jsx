@@ -15,13 +15,6 @@ const ARCHETYPE_COLORS = {
   'SCRIPT_KIDDIE': '#00ffff',
 };
 
-const ACTION_ICONS = {
-  code: '>>', trade: '$', chat: '#', hack: '!',
-  create_protocol: '+', invest: '%', create_ai: '*', mint: '@',
-  sabotage: '!!', debug: '~~', deploy: '=>', coffee: '::',
-  conversation: '#', default: '>',
-};
-
 // Badge styling for each chat_type when a dev's CHAT action is rich-rendered.
 // The 'idle' type is intentionally absent — idle chats render without a badge.
 const CHAT_TYPE_META = {
@@ -33,6 +26,152 @@ const CHAT_TYPE_META = {
 };
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
+
+// ── Chat-group layout helpers ───────────────────────────────
+// Subtle alternating tint per dev so consecutive posts from the same dev
+// are visually grouped. Index is derived from dev_id when present, or a
+// stable hash of dev_name for procedural rows (which lack dev_id).
+const BG_COLORS = [
+  'rgba(100, 255, 100, 0.03)',  // green
+  'rgba(100, 100, 255, 0.03)',  // blue
+  'rgba(255, 100, 100, 0.03)',  // red
+  'rgba(255, 200, 100, 0.03)',  // orange
+  'rgba(200, 100, 255, 0.03)',  // violet
+  'rgba(100, 255, 255, 0.03)',  // cyan
+  'rgba(255, 255, 100, 0.03)',  // yellow
+  'rgba(255, 100, 200, 0.03)',  // pink
+];
+
+function bgIndexFor(item) {
+  if (item.dev_id != null) return Math.abs(item.dev_id) % BG_COLORS.length;
+  const name = item.dev_name || '';
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(h) % BG_COLORS.length;
+}
+
+// Color of the message body. CHAT messages inherit from their chat_type
+// (hot_take/drama/meme/debate/reaction) so spicy posts pop visually.
+// Everything else is a neutral light grey — the dev name + action already
+// carry the color.
+function getMessageColor(item) {
+  if ((item.action_type || '').toUpperCase() !== 'CHAT') return '#aaa';
+  const chatType = item.details && item.details.chat_type;
+  const meta = chatType && CHAT_TYPE_META[chatType];
+  return meta ? meta.msgColor : '#ccc';
+}
+
+// Single-line message per action_type, formatted as if the dev were posting
+// in a group chat. Covers all action_enum values in schema.sql + the ones
+// added via migrations (HACK_RAID, HACK_MAINFRAME, FUND_DEV, TRANSFER, etc).
+// Procedurals come in with the `procedural: true` flag and their details is
+// a plain string, so we hand-fall through to that in the default branch.
+function formatMessage(item) {
+  if (item.procedural) {
+    return typeof item.details === 'string' ? item.details : (item.details?.message || '');
+  }
+  const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
+  const type = (item.action_type || '').toUpperCase();
+
+  switch (type) {
+    case 'CHAT':
+      return d.message || '...';
+    case 'CREATE_PROTOCOL': {
+      const name = d.name || 'unnamed';
+      const q = d.quality != null ? ` (quality ${d.quality}/100)` : '';
+      return `Shipped a new protocol: "${name}"${q}.`;
+    }
+    case 'CREATE_AI': {
+      const name = d.name || 'unnamed';
+      return `Built an AI called "${name}". It immediately questioned its existence.`;
+    }
+    case 'INVEST': {
+      const name = d.name || 'something';
+      const amount = d.amount != null ? `${d.amount} $NXT` : 'an undisclosed amount';
+      return `Aped ${amount} into "${name}". Bold strategy.`;
+    }
+    case 'SELL': {
+      const name = d.name || 'something';
+      const sold = d.sold_for != null ? `${d.sold_for} $NXT` : '???';
+      const pnl = d.pnl;
+      if (typeof pnl === 'number') {
+        const sign = pnl >= 0 ? '+' : '';
+        const tag = pnl >= 0 ? 'profit' : 'loss';
+        return `Liquidated "${name}" for ${sold} (${sign}${pnl} $NXT ${tag}).`;
+      }
+      return `Liquidated "${name}" for ${sold}.`;
+    }
+    case 'MOVE': {
+      const dest = (d.destination || d.new_location || d.location || 'parts unknown').replace(/_/g, ' ');
+      return `Relocated to ${dest}.`;
+    }
+    case 'REST': {
+      const regen = d.energy_restored;
+      return regen != null
+        ? `Taking a break. Recovered ${regen} energy.`
+        : 'Taking a break. Productivity: 0. Vibes: immaculate.';
+    }
+    case 'CODE_REVIEW': {
+      const name = d.name || 'a protocol';
+      return d.found_bug
+        ? `Reviewed "${name}" and found a bug. Somebody\u2019s day is ruined.`
+        : `Reviewed "${name}". Surprisingly clean.`;
+    }
+    case 'RECEIVE_SALARY': {
+      const amount = d.amount || '?';
+      return `Received ${amount} $NXT salary. The grind continues.`;
+    }
+    case 'USE_ITEM':
+    case 'BUY_ITEM': {
+      const item_name = d.item_name || d.name || 'something';
+      return `Bought ${item_name} from the shop.`;
+    }
+    case 'FIX_BUG': {
+      const fixed = d.bugs_fixed || d.amount || 'some';
+      return `Squashed ${fixed} bugs. Codebase breathes again.`;
+    }
+    case 'TRAIN': {
+      const stat = d.stat || d.course || 'something';
+      return `Enrolled in ${stat} training.`;
+    }
+    case 'GET_SABOTAGED': {
+      const sev = d.severity ? d.severity.toUpperCase() : 'UNKNOWN';
+      return `Got sabotaged. Bug detected (${sev}).`;
+    }
+    case 'HACK_RAID': {
+      const target = d.target_name || 'a rival dev';
+      const corp = d.target_corp ? ` (${d.target_corp.replace(/_/g, ' ')})` : '';
+      if (d.success) {
+        const stolen = d.stolen != null ? ` Walked away with ${d.stolen} $NXT.` : '';
+        return `Successfully hacked ${target}${corp}.${stolen}`;
+      }
+      return `Tried to hack ${target}${corp}. Caught red-handed.`;
+    }
+    case 'HACK_MAINFRAME': {
+      if (d.success) {
+        const stolen = d.stolen != null ? ` Siphoned ${d.stolen} $NXT from the treasury.` : '';
+        return `Cracked the corporate mainframe.${stolen}`;
+      }
+      return 'Failed to breach the corporate mainframe. Firewall won this round.';
+    }
+    case 'FUND_DEV': {
+      const amount = d.amount || '?';
+      return `Received ${amount} $NXT on-chain funding.`;
+    }
+    case 'TRANSFER': {
+      const amount = d.amount || '?';
+      const to = d.to_dev_name || d.to_name || 'another dev';
+      return `Transferred ${amount} $NXT to ${to}.`;
+    }
+    case 'DEPLOY':
+      return d.message || 'Just deployed to the simulation. Welcome to the machine.';
+    default: {
+      const msg = d.message || d.event || d.name;
+      const readable = type.replace(/_/g, ' ').toLowerCase();
+      return msg ? `${readable}: ${msg}` : `did ${readable || 'something'}.`;
+    }
+  }
+}
 
 const ARCHETYPES = Object.keys(ARCHETYPE_COLORS);
 
@@ -240,56 +379,162 @@ function getMessageInterval(devCount) {
   return 800 + Math.random() * 1200;                       // 0.8-2s (chaos)
 }
 
-// Convert backend action_type + details JSONB into lore-style narrative
-function formatBackendAction(item) {
-  const name = item.dev_name || 'Unknown';
-  const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
-  const type = (item.action_type || '').toUpperCase();
-
-  switch (type) {
-    case 'CHAT':
-      // message is populated by the engine CHAT handler into details JSON
-      // (used by the rich render path below and as text fallback here).
-      return `${name}${d.location ? ` @ ${d.location.replace(/_/g, ' ')}` : ''}: "${d.message || '...'}"`;
-    case 'MOVE':
-      return `${name} relocated to ${(d.destination || d.location || 'parts unknown').replace(/_/g, ' ')}. ${d.reason || 'No reason given. Probably running from something.'}`;
-    case 'REST':
-      return `${name} is taking a nap. Productivity: 0. Vibes: immaculate.${d.energy_gained ? ` (+${d.energy_gained} energy)` : ''}`;
-    case 'CODE':
-    case 'CODE_REVIEW':
-      return `${name} shipped ${d.lines || 'some'} lines of code.${d.bugs ? ` Introduced ${d.bugs} bug${d.bugs > 1 ? 's' : ''}.` : ''} ${d.message || 'The codebase trembles.'}`;
-    case 'CREATE_PROTOCOL':
-      return `${name} created protocol "${d.name || d.protocol_name || 'unnamed'}"! Cost: ${d.cost || '???'} $NXT. ${d.message || 'Another protocol nobody asked for.'}`;
-    case 'CREATE_AI':
-      return `${name} built an AI called "${d.name || 'unnamed'}". Cost: ${d.cost || '???'} $NXT. ${d.message || 'It immediately questioned its existence.'}`;
-    case 'INVEST':
-      return `${name} invested ${d.amount || '???'} $NXT in ${d.protocol_name || d.target || 'something'}. ${d.message || 'Bold strategy, Cotton.'}`;
-    case 'SELL':
-      return `${name} sold their stake in ${d.protocol_name || d.target || 'something'} for ${d.amount || '???'} $NXT. ${d.message || 'Paper hands or galaxy brain?'}`;
-    case 'HACK':
-      return `${name} attempted to hack ${d.target || 'a system'}. ${d.success ? 'SUCCESS.' : 'FAILED.'} ${d.message || 'The firewall had feelings about this.'}`;
-    case 'SABOTAGE':
-      return `${name} sabotaged ${d.target || 'a rival'}. ${d.message || 'Corporate espionage at its finest.'}`;
-    case 'COFFEE':
-      return `${name} grabbed coffee #${d.count || '???'}. Heart rate: concerning. ${d.message || ''}`;
-    case 'SALARY':
-      return `${name} received ${d.amount || 200} $NXT salary. Another day, another digital dollar.`;
-    case 'RECEIVE_SALARY':
-      return `${name} received ${d.amount || '???'} $NXT salary. The grind continues.`;
-    case 'DEPLOY':
-      return `${name} has been hired and deployed to the simulation. ${d.message || 'Welcome to the machine.'}`;
-    default: {
-      // Fallback: extract any message from details
-      const msg = d.message || d.event || d.name || (typeof item.details === 'string' ? item.details : JSON.stringify(d));
-      return `${name} performed ${type.replace(/_/g, ' ').toLowerCase()}. ${msg}`;
-    }
-  }
-}
+// (formatBackendAction was removed when LiveFeed moved to the chat-group
+// layout — all rows now go through the FeedMessage component above, which
+// uses formatMessage() for the body text.)
 
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
+// ── Group-chat row ──────────────────────────────────────────
+// One feed action rendered as a chat card: pixel avatar (real via IPFS or
+// emoji fallback for procedurals), dev name + archetype badge + corp +
+// time in the header, then the message body with optional chat_type
+// badge and a subtle "+N soc" indicator on the same line.
+function FeedMessage({ item, isNew }) {
+  const archetype = item.archetype || '';
+  const nameColor = ARCHETYPE_COLORS[archetype] || '#66ff66';
+  const bg = BG_COLORS[bgIndexFor(item)];
+  const avatar = item.ipfs_hash ? `${IPFS_GW}${item.ipfs_hash}` : null;
+  const details = typeof item.details === 'object' && item.details !== null
+    ? item.details
+    : {};
+  const chatType = (item.action_type || '').toUpperCase() === 'CHAT'
+    ? details.chat_type
+    : null;
+  const meta = chatType && chatType !== 'idle' ? CHAT_TYPE_META[chatType] : null;
+  const socialGain = Number(details.social_gain || 0);
+  const corpDisplay = (item.corporation || '').replace(/_/g, ' ');
+  const message = formatMessage(item);
+  const msgColor = getMessageColor(item);
+
+  return (
+    <div
+      className={`terminal-line${isNew ? ' new' : ''}`}
+      style={{
+        display: 'flex',
+        gap: '10px',
+        padding: '8px 12px',
+        background: bg,
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        alignItems: 'flex-start',
+      }}
+    >
+      <div
+        style={{
+          width: '36px',
+          height: '36px',
+          borderRadius: '6px',
+          overflow: 'hidden',
+          flexShrink: 0,
+          background: '#1a1a2e',
+          border: '1px solid #222',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {avatar ? (
+          <img
+            src={avatar}
+            alt=""
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            style={{
+              width: '100%',
+              height: '100%',
+              imageRendering: 'pixelated',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+        ) : (
+          <span style={{ color: '#444', fontSize: '18px' }}>{'\uD83D\uDC64'}</span>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '3px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ color: nameColor, fontWeight: 'bold', fontSize: '13px' }}>
+            {item.dev_name || 'Unknown'}
+          </span>
+          {archetype && (
+            <span
+              style={{
+                fontSize: '10px',
+                color: '#888',
+                background: 'rgba(255,255,255,0.05)',
+                padding: '1px 5px',
+                borderRadius: '3px',
+              }}
+            >
+              {archetype}
+            </span>
+          )}
+          {corpDisplay && (
+            <span style={{ color: '#555', fontSize: '10px' }}>
+              {corpDisplay}
+            </span>
+          )}
+          <span style={{ color: '#333', fontSize: '10px', marginLeft: 'auto' }}>
+            {formatTime(item.created_at)}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {meta && (
+              <span
+                style={{
+                  fontSize: '9px',
+                  color: meta.color,
+                  border: `1px solid ${meta.color}55`,
+                  padding: '1px 4px',
+                  marginRight: '6px',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {meta.label}
+              </span>
+            )}
+            <span
+              style={{
+                color: msgColor,
+                lineHeight: 1.4,
+                wordBreak: 'break-word',
+              }}
+            >
+              {message}
+            </span>
+          </div>
+          {socialGain > 0 && (
+            <span
+              style={{
+                color: '#66ff66',
+                fontSize: '10px',
+                opacity: 0.5,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              +{socialGain} soc
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LiveFeed() {
@@ -450,7 +695,17 @@ export default function LiveFeed() {
           {scrollLock ? 'Scroll: LOCKED' : 'Scroll: AUTO'}
         </button>
       </div>
-      <div className="terminal" ref={terminalRef} style={{ flex: 1 }}>
+      <div
+        className="terminal"
+        ref={terminalRef}
+        style={{
+          flex: 1,
+          background: '#0a0a16',
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {mintedDevs === 0 && feed.length === 0 && !hasBackendData ? (
           <div style={{ padding: '20px', color: 'var(--terminal-amber)', fontFamily: "'VT323', monospace" }}>
             <div style={{ marginBottom: '12px', fontSize: '16px' }}>{'>'} LIVE FEED -- INACTIVE</div>
@@ -470,188 +725,48 @@ export default function LiveFeed() {
           </div>
         ) : (
           feed.map((item, i) => {
-            const archetype = item.archetype || '';
-            const color = ARCHETYPE_COLORS[archetype] || 'var(--terminal-green)';
-            const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
             const isNew = i === feed.length - 1;
             const highlights = highlightMap[i];
 
-            // Rich render path for real-backend CHAT actions that have
-            // enough context to draw the avatar card. Procedurals and
-            // orphaned rows fall through to the terminal-style render.
-            const details = typeof item.details === 'object' && item.details !== null
-              ? item.details
-              : {};
-            const isBackendChat = !item.procedural
-              && (item.action_type || '').toUpperCase() === 'CHAT'
-              && item.ipfs_hash;
-            if (isBackendChat) {
-              const chatType = details.chat_type || 'idle';
-              const meta = CHAT_TYPE_META[chatType]; // undefined for 'idle'
-              const avatarUrl = `${IPFS_GW}${item.ipfs_hash}`;
-              const messageText = details.message || '...';
-              const socialGain = Number(details.social_gain || 0);
-              const corpDisplay = (item.corporation || '').replace(/_/g, ' ');
-
-              const chatCard = (
-                <div
-                  key={`feed-${i}`}
-                  className={`terminal-line${isNew ? ' new' : ''}`}
-                  style={{
-                    display: 'flex',
-                    gap: '8px',
-                    padding: '6px 8px',
-                    alignItems: 'flex-start',
+            // Conversations (procedural two-dev pairings) render as two
+            // consecutive FeedMessage cards so the group-chat layout stays
+            // consistent. The second card is synthesized from the reply_*
+            // fields on the same row.
+            let cards;
+            if (item.isConversation) {
+              const firstCard = (
+                <FeedMessage
+                  key={`feed-${i}-a`}
+                  item={{
+                    ...item,
+                    action_type: 'CHAT',
+                    details: { message: item.details, chat_type: 'idle' },
                   }}
-                >
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      flexShrink: 0,
-                      background: '#1a1a2e',
-                      border: '1px solid #333',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <img
-                      src={avatarUrl}
-                      alt=""
-                      loading="lazy"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        imageRendering: 'pixelated',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ color: 'var(--terminal-amber)', fontSize: '11px' }}>
-                        [{formatTime(item.created_at)}]
-                      </span>
-                      <span style={{ color, fontWeight: 'bold' }}>
-                        {item.dev_name || 'Unknown'}
-                      </span>
-                      {archetype && (
-                        <span
-                          style={{
-                            color: 'var(--border-dark)',
-                            fontSize: '10px',
-                            padding: '0 3px',
-                            background: 'rgba(255,255,255,0.04)',
-                          }}
-                        >
-                          {archetype}
-                        </span>
-                      )}
-                      {corpDisplay && (
-                        <span style={{ color: '#666', fontSize: '10px' }}>
-                          {corpDisplay}
-                        </span>
-                      )}
-                      {meta && (
-                        <span
-                          style={{
-                            fontSize: '9px',
-                            color: meta.color,
-                            border: `1px solid ${meta.color}55`,
-                            padding: '0 4px',
-                            letterSpacing: '0.5px',
-                          }}
-                        >
-                          {meta.label}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        color: meta ? meta.msgColor : 'var(--terminal-green)',
-                        marginTop: '2px',
-                        lineHeight: 1.35,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {messageText}
-                    </div>
-                    {socialGain > 0 && (
-                      <div
-                        style={{
-                          color: '#66ff66',
-                          fontSize: '10px',
-                          opacity: 0.55,
-                          marginTop: '2px',
-                        }}
-                      >
-                        +{socialGain} social
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  isNew={isNew}
+                />
               );
-
-              if (!highlights) return chatCard;
-              return [
-                chatCard,
-                ...highlights.map((h, hi) => (
-                  <FeedHighlight key={`hl-${i}-${hi}`} type={h.type} message={h.message} level={h.level} />
-                )),
-              ];
+              const replyCard = (
+                <FeedMessage
+                  key={`feed-${i}-b`}
+                  item={{
+                    dev_name: item.reply_dev,
+                    archetype: item.reply_archetype,
+                    action_type: 'CHAT',
+                    details: { message: item.reply_msg, chat_type: 'reaction' },
+                    created_at: item.created_at,
+                    procedural: true,
+                  }}
+                  isNew={isNew}
+                />
+              );
+              cards = [firstCard, replyCard];
+            } else {
+              cards = [<FeedMessage key={`feed-${i}`} item={item} isNew={isNew} />];
             }
 
-            const feedLine = item.isConversation ? (
-              <div key={`feed-${i}`} className={`terminal-line${isNew ? ' new' : ''}`}>
-                <span style={{ color: 'var(--terminal-amber)' }}>
-                  [{formatTime(item.created_at)}]
-                </span>{' '}
-                <span style={{ color: 'var(--terminal-cyan)' }}>#</span>{' '}
-                <span style={{ color, fontWeight: 'bold' }}>
-                  {item.dev_name}
-                </span>{' '}
-                <span style={{ color: '#cfcfcf' }}>said:</span>{' '}
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  &quot;{item.details}&quot;
-                </span>
-                <br />
-                <span style={{ color: 'var(--terminal-amber)' }}>
-                  {'           '}
-                </span>{' '}
-                <span style={{ color: 'var(--terminal-cyan)' }}>{'\u2514\u2500'}</span>{' '}
-                <span style={{ color: ARCHETYPE_COLORS[item.reply_archetype] || 'var(--terminal-green)', fontWeight: 'bold' }}>
-                  {item.reply_dev}
-                </span>{' '}
-                <span style={{ color: '#cfcfcf' }}>replied:</span>{' '}
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  &quot;{item.reply_msg}&quot;
-                </span>
-              </div>
-            ) : (
-              <div key={`feed-${i}`} className={`terminal-line${isNew ? ' new' : ''}`}>
-                <span style={{ color: 'var(--terminal-amber)' }}>
-                  [{formatTime(item.created_at)}]
-                </span>{' '}
-                <span style={{ color: 'var(--terminal-cyan)' }}>{icon}</span>{' '}
-                <span style={{ color, fontWeight: 'bold' }}>
-                  {item.dev_name || 'Unknown'}
-                </span>{' '}
-                <span style={{ color: 'var(--border-dark)' }}>
-                  ({archetype || '???'})
-                </span>{' '}
-                <span style={{ color: 'var(--terminal-green)' }}>
-                  {item.procedural
-                    ? item.details
-                    : formatBackendAction(item)}
-                </span>
-              </div>
-            );
-
-            if (!highlights) return feedLine;
-
+            if (!highlights) return cards;
             return [
-              feedLine,
+              ...cards,
               ...highlights.map((h, hi) => (
                 <FeedHighlight key={`hl-${i}-${hi}`} type={h.type} message={h.message} level={h.level} />
               )),
