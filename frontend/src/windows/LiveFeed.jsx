@@ -415,6 +415,11 @@ function FeedMessage({ item, isNew }) {
   const nameColor = ARCHETYPE_COLORS[archetype] || '#66ff66';
   const bg = BG_COLORS[bgIndexFor(item)];
   const avatar = item.ipfs_hash ? `${IPFS_GW}${item.ipfs_hash}` : null;
+  // Track img load failure (stale CID, 404 from Pinata gateway, CORS,
+  // etc.) so we can fall back to the 👤 icon instead of leaving an empty
+  // dark square. Resets whenever avatar URL changes.
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => { setAvatarFailed(false); }, [avatar]);
   const details = typeof item.details === 'object' && item.details !== null
     ? item.details
     : {};
@@ -453,12 +458,12 @@ function FeedMessage({ item, isNew }) {
           justifyContent: 'center',
         }}
       >
-        {avatar ? (
+        {avatar && !avatarFailed ? (
           <img
             src={avatar}
             alt=""
             loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            onError={() => setAvatarFailed(true)}
             style={{
               width: '100%',
               height: '100%',
