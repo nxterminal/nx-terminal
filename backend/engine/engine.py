@@ -1105,6 +1105,16 @@ _FUND_TRANSFER_TOPIC = (
 )
 _FUND_MAX_ATTEMPTS = 10
 
+# ── Orphan scan worker ─────────────────────────────────────
+# Runs eth_getLogs every 30 min looking for Transfer(*, TREASURY) events
+# that never made it into funding_txs or pending_fund_txs (e.g. the
+# frontend crashed between signing and POSTing the hash to the backend).
+# Complements process_pending_funds: that one resolves txs the backend
+# DID see, this one catches the ones it didn't.
+_ORPHAN_SCAN_INTERVAL = timedelta(minutes=30)
+_ORPHAN_SCAN_WINDOW = 500_000  # blocks back from head to scan
+_ORPHAN_SCAN_CHUNK = 10_000    # blocks per eth_getLogs call
+
 
 def _fund_rpc(method, params):
     """Minimal JSON-RPC call for the fund reconciler. Returns None on any
@@ -1300,6 +1310,182 @@ def process_pending_funds(conn):
                 conn.rollback()
 
 
+def scan_orphaned_funds(conn):
+    """Scan the last _ORPHAN_SCAN_WINDOW blocks for Transfer(*, TREASURY)
+    events that aren't already tracked in funding_txs or pending_fund_txs,
+    and credit them automatically.
+
+    This is the last safety net in the fund-dev recovery chain:
+      - Live path (shop.py /fund): credits immediately when RPC returns
+      - pending_fund_txs + process_pending_funds: resolves txs the backend
+        saw but couldn't verify in 60s
+      - scan_orphaned_funds (this): catches txs the backend NEVER saw,
+        e.g. the frontend crashed after signing but before POSTing the hash
+
+    Ambiguous sender (wallet owns >1 dev) auto-credits the lowest token_id
+    — losing funds is worse than crediting the "wrong" dev of the same
+    owner, who can rebalance via /shop/transfer.
+
+    Dedup is layered:
+      1. Check funding_txs.tx_hash before inserting
+      2. Check pending_fund_txs.tx_hash before inserting
+      3. funding_txs.tx_hash UNIQUE constraint as final guarantee
+    """
+    cur = get_cursor(conn)
+
+    try:
+        head_hex = _fund_rpc("eth_blockNumber", [])
+        if not head_hex:
+            log.warning("scan_orphaned_funds: could not get chain head")
+            return
+
+        head = int(head_hex, 16)
+        from_block = max(0, head - _ORPHAN_SCAN_WINDOW)
+
+        log.info(f"🔍 scan_orphaned_funds: scanning blocks {from_block}→{head}")
+
+        # Pre-padded `to` topic: 12-byte left pad + 20-byte address
+        treasury_topic = "0x" + "0" * 24 + _FUND_TREASURY[2:]
+
+        all_events = []
+        current = from_block
+        while current <= head:
+            chunk_end = min(current + _ORPHAN_SCAN_CHUNK - 1, head)
+            result = _fund_rpc("eth_getLogs", [{
+                "fromBlock": hex(current),
+                "toBlock": hex(chunk_end),
+                "address": _FUND_NXT_TOKEN,
+                "topics": [
+                    _FUND_TRANSFER_TOPIC,
+                    None,             # any sender
+                    treasury_topic,   # to treasury
+                ],
+            }])
+            if result and isinstance(result, list):
+                all_events.extend(result)
+            current = chunk_end + 1
+
+        if not all_events:
+            log.info("  scan_orphaned_funds: no Transfer events found")
+            return
+
+        log.info(
+            f"  scan_orphaned_funds: found {len(all_events)} Transfer "
+            f"event(s) to treasury"
+        )
+
+        credited = 0
+        skipped = 0
+
+        for event in all_events:
+            tx_hash = (event.get("transactionHash") or "").lower()
+            if not tx_hash:
+                continue
+
+            # Dedup layer 1: already credited by the live path or an earlier scan
+            cur.execute("SELECT 1 FROM funding_txs WHERE tx_hash = %s", (tx_hash,))
+            if cur.fetchone():
+                skipped += 1
+                continue
+
+            # Dedup layer 2: already queued by the /fund endpoint and owned
+            # by process_pending_funds. Let that worker handle it.
+            cur.execute(
+                "SELECT 1 FROM pending_fund_txs WHERE tx_hash = %s",
+                (tx_hash,),
+            )
+            if cur.fetchone():
+                skipped += 1
+                continue
+
+            topics = event.get("topics") or []
+            if len(topics) < 3:
+                continue
+
+            sender = ("0x" + topics[1][-40:]).lower()
+            amount_wei = int(event.get("data", "0x0"), 16)
+            amount_nxt = amount_wei // (10 ** 18)
+
+            if amount_nxt <= 0:
+                continue
+
+            # Skip zero-address sender (mint / bridge). Never credits.
+            if sender == "0x" + "0" * 40:
+                continue
+
+            cur.execute(
+                "SELECT token_id, name, archetype FROM devs WHERE owner_address = %s",
+                (sender,),
+            )
+            devs = cur.fetchall() or []
+
+            if not devs:
+                log.info(
+                    f"  orphan {tx_hash[:10]}… from {sender[:8]}… — "
+                    f"wallet owns no devs, skipping"
+                )
+                continue
+
+            if len(devs) > 1:
+                dev = min(devs, key=lambda d: d["token_id"])
+                log.warning(
+                    f"  orphan {tx_hash[:10]}… from {sender[:8]}… owns "
+                    f"{len(devs)} devs — auto-crediting lowest token_id "
+                    f"#{dev['token_id']} ({dev['name']})"
+                )
+            else:
+                dev = devs[0]
+
+            try:
+                cur.execute(
+                    """INSERT INTO funding_txs
+                         (wallet_address, dev_token_id, amount_nxt, tx_hash, verified)
+                       VALUES (%s, %s, %s, %s, true)""",
+                    (sender, dev["token_id"], amount_nxt, tx_hash),
+                )
+                cur.execute(
+                    "UPDATE devs SET balance_nxt = balance_nxt + %s, "
+                    "total_earned = total_earned + %s WHERE token_id = %s",
+                    (amount_nxt, amount_nxt, dev["token_id"]),
+                )
+                cur.execute(
+                    """INSERT INTO actions
+                         (dev_id, dev_name, archetype, action_type, details,
+                          energy_cost, nxt_cost)
+                       VALUES (%s, %s, %s, 'FUND_DEV', %s::jsonb, 0, 0)""",
+                    (
+                        dev["token_id"],
+                        dev["name"],
+                        dev["archetype"],
+                        json.dumps({
+                            "event": "fund_dev",
+                            "amount": amount_nxt,
+                            "tx_hash": tx_hash,
+                            "source": "orphan_scan_worker",
+                        }),
+                    ),
+                )
+                conn.commit()
+                credited += 1
+                log.info(
+                    f"  ✅ orphan credited: {tx_hash[:10]}… → dev "
+                    f"#{dev['token_id']} ({dev['name']}) +{amount_nxt} $NXT"
+                )
+            except Exception as e:
+                conn.rollback()
+                log.error(
+                    f"  ❌ failed to credit orphan {tx_hash[:10]}…: {e}"
+                )
+
+        log.info(
+            f"  scan_orphaned_funds complete: credited={credited}, "
+            f"already_recorded={skipped}"
+        )
+
+    except Exception as e:
+        log.error(f"scan_orphaned_funds error: {e}")
+
+
 def run_engine():
     """Main simulation loop. Runs forever."""
     log.info("=" * 60)
@@ -1312,6 +1498,7 @@ def run_engine():
     snapshot_interval = timedelta(hours=24)
     claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
     pending_funds_interval = timedelta(minutes=5)
+    orphan_scan_interval = _ORPHAN_SCAN_INTERVAL
 
     # Auto-migrate new columns before any queries
     try:
@@ -1358,6 +1545,8 @@ def run_engine():
     last_snapshot = datetime.now(timezone.utc)
     # Run pending-fund reconciliation on the first loop pass.
     last_pending_funds = datetime.now(timezone.utc) - pending_funds_interval
+    # Run on-chain orphan scan on the first loop pass too.
+    last_orphan_scan = datetime.now(timezone.utc) - orphan_scan_interval
 
     while True:
         try:
@@ -1383,6 +1572,16 @@ def run_engine():
                     except Exception as e:
                         log.error(f"process_pending_funds error: {e}")
                     last_pending_funds = now
+
+                # Scan on-chain for orphaned fund transfers (safety net for
+                # hashes the backend never saw — e.g. frontend crashed
+                # between signing and POSTing the hash).
+                if now - last_orphan_scan >= orphan_scan_interval:
+                    try:
+                        scan_orphaned_funds(conn)
+                    except Exception as e:
+                        log.error(f"scan_orphaned_funds error: {e}")
+                    last_orphan_scan = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
