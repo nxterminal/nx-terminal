@@ -27,6 +27,22 @@ const CHAT_TYPE_META = {
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
+// Action types that are allowed to appear in the Live Feed. Everything
+// else (MOVE, REST, CODE_REVIEW, RECEIVE_SALARY, USE_ITEM, BUY_ITEM,
+// FIX_BUG, TRAIN, TRANSFER, DEPLOY, GET_SABOTAGED) is filtered out as
+// background noise — the feed is meant to show narrative beats, not
+// every tick event. Procedural rows bypass the whitelist so the fallback
+// generator keeps filling the feed when backend data is sparse.
+const VISIBLE_ACTIONS = new Set([
+  'CHAT',
+  'CREATE_PROTOCOL',
+  'CREATE_AI',
+  'HACK_RAID',
+  'HACK_MAINFRAME',
+  'INVEST',
+  'SELL',
+]);
+
 // ── Chat-group layout helpers ───────────────────────────────
 // Subtle alternating tint per dev so consecutive posts from the same dev
 // are visually grouped. Index is derived from dev_id when present, or a
@@ -522,13 +538,14 @@ function FeedMessage({ item, isNew }) {
             <span
               style={{
                 color: '#66ff66',
-                fontSize: '10px',
-                opacity: 0.5,
+                fontSize: '12px',
+                opacity: 0.6,
+                fontWeight: 'bold',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
               }}
             >
-              +{socialGain} soc
+              +{socialGain} SOCIAL
             </span>
           )}
         </div>
@@ -663,9 +680,19 @@ export default function LiveFeed() {
     }
   }, [feed, scrollLock]);
 
-  // Detect combo highlights and build a map of insertAfterIndex -> highlight
+  // Whitelist filter — keeps the feed focused on narrative actions.
+  // Procedurals always pass (they're the offline fallback generator).
+  const visibleFeed = useMemo(
+    () => feed.filter(
+      item => item.procedural || VISIBLE_ACTIONS.has((item.action_type || '').toUpperCase()),
+    ),
+    [feed],
+  );
+
+  // Detect combo highlights and build a map of insertAfterIndex -> highlight.
+  // Computed over visibleFeed so the indices align with what we render.
   const highlightMap = useMemo(() => {
-    const combos = detectCombos(feed);
+    const combos = detectCombos(visibleFeed);
     const map = {};
     for (const h of combos) {
       const idx = h.insertAfterIndex;
@@ -673,7 +700,7 @@ export default function LiveFeed() {
       map[idx].push(h);
     }
     return map;
-  }, [feed]);
+  }, [visibleFeed]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -706,7 +733,7 @@ export default function LiveFeed() {
           flexDirection: 'column',
         }}
       >
-        {mintedDevs === 0 && feed.length === 0 && !hasBackendData ? (
+        {mintedDevs === 0 && visibleFeed.length === 0 && !hasBackendData ? (
           <div style={{ padding: '20px', color: 'var(--terminal-amber)', fontFamily: "'VT323', monospace" }}>
             <div style={{ marginBottom: '12px', fontSize: '16px' }}>{'>'} LIVE FEED -- INACTIVE</div>
             <div style={{ color: '#cfcfcf', fontSize: '14px', lineHeight: 1.6 }}>
@@ -724,8 +751,8 @@ export default function LiveFeed() {
             </div>
           </div>
         ) : (
-          feed.map((item, i) => {
-            const isNew = i === feed.length - 1;
+          visibleFeed.map((item, i) => {
+            const isNew = i === visibleFeed.length - 1;
             const highlights = highlightMap[i];
 
             // Conversations (procedural two-dev pairings) render as two

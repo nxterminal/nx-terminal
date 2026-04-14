@@ -486,42 +486,59 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_MOVE_ENERGY, new_loc, dev["token_id"]))
 
     elif action == "CHAT":
-        # Pick a chat_type weighted by archetype personality. LURKER stays
-        # mostly idle, INFLUENCER favors hot_takes/drama, DEGEN memes, etc.
-        type_weights = CHAT_TYPE_WEIGHTS.get(arch, CHAT_TYPE_WEIGHTS["10X_DEV"])
-        chat_type = random.choices(
-            list(type_weights.keys()),
-            weights=list(type_weights.values()),
-            k=1,
-        )[0]
-        msg, final_type = gen_chat_by_type(chat_type, arch, dev.get("corporation", ""))
-        channel = random.choice(["location", "trollbox"])
-
-        # Socializing raises social_vitality — amount varies by archetype
-        # (see CHAT_SOCIAL_GAIN). LURKER gains 0 because observing isn't
-        # really socializing. Capped at 100 like all other social gains.
-        social_gain = CHAT_SOCIAL_GAIN.get(arch, 1)
-        if social_gain > 0:
+        # Only minted devs (with ipfs_hash) can chat. Un-minted devs would
+        # render in the Live Feed without an avatar and with no corporation
+        # context, so we route them to REST instead — they still advance
+        # their tick, recover energy, and log an action, just not a chat.
+        if not dev.get("ipfs_hash"):
+            regen = random.randint(2, 4) + ENERGY_REGEN_BONUS.get(rarity, 0)
+            result["details"] = {"energy_restored": regen}
             cur.execute(
-                "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) "
-                "WHERE token_id = %s",
-                (social_gain, dev["token_id"]),
+                "UPDATE devs SET energy = LEAST(max_energy, energy + %s), "
+                "hours_since_sleep = 0 WHERE token_id = %s",
+                (regen, dev["token_id"]),
             )
+            action = "REST"
+        else:
+            # Pick a chat_type weighted by archetype personality. LURKER stays
+            # mostly idle, INFLUENCER favors hot_takes/drama, DEGEN memes, etc.
+            type_weights = CHAT_TYPE_WEIGHTS.get(arch, CHAT_TYPE_WEIGHTS["10X_DEV"])
+            chat_type = random.choices(
+                list(type_weights.keys()),
+                weights=list(type_weights.values()),
+                k=1,
+            )[0]
+            msg, final_type = gen_chat_by_type(chat_type, arch, dev.get("corporation", ""))
+            channel = random.choice(["location", "trollbox"])
 
-        result["chat_msg"] = msg
-        result["chat_channel"] = channel
-        result["chat_type"] = final_type
-        result["social_gain"] = social_gain
-        # Enrich details JSON so the LiveFeed / actions-table readers can
-        # render the full chat inline (avatar, type badge, +N social).
-        # Fixes the pre-existing bug where formatBackendAction fell back to
-        # "something incomprehensible" because details.message was missing.
-        result["details"] = {
-            "location": dev["location"],
-            "message": msg,
-            "chat_type": final_type,
-            "social_gain": social_gain,
-        }
+            # Socializing raises social_vitality — amount varies by archetype
+            # (see CHAT_SOCIAL_GAIN). LURKER gains 0 because observing isn't
+            # really socializing. Capped at 40 here so chat alone can only
+            # take a dev up to the "comfortable" band; reaching 40→100 still
+            # requires Team Lunch (6 $NXT) or successful hacks. Passive
+            # recovery handles 0→25 for free; chat fills 25→40; shop fills 40→100.
+            social_gain = CHAT_SOCIAL_GAIN.get(arch, 1)
+            if social_gain > 0:
+                cur.execute(
+                    "UPDATE devs SET social_vitality = LEAST(40, social_vitality + %s) "
+                    "WHERE token_id = %s",
+                    (social_gain, dev["token_id"]),
+                )
+
+            result["chat_msg"] = msg
+            result["chat_channel"] = channel
+            result["chat_type"] = final_type
+            result["social_gain"] = social_gain
+            # Enrich details JSON so the LiveFeed / actions-table readers can
+            # render the full chat inline (avatar, type badge, +N social).
+            # Fixes the pre-existing bug where formatBackendAction fell back to
+            # "something incomprehensible" because details.message was missing.
+            result["details"] = {
+                "location": dev["location"],
+                "message": msg,
+                "chat_type": final_type,
+                "social_gain": social_gain,
+            }
 
     elif action == "CODE_REVIEW":
         cur.execute("SELECT id, name, code_quality FROM protocols WHERE status = 'active' ORDER BY RANDOM() LIMIT 1")
@@ -802,7 +819,7 @@ def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
     cur.execute("""
         SELECT token_id, name, owner_address, archetype, corporation, rarity_tier,
                personality_seed, energy, max_energy, mood, location,
-               balance_nxt, reputation, status
+               balance_nxt, reputation, status, ipfs_hash
         FROM devs
         WHERE status = 'active'
           AND next_cycle_at <= NOW()
