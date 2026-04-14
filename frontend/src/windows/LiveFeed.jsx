@@ -654,6 +654,31 @@ export default function LiveFeed() {
       .catch(() => {});
   }, []);
 
+  // Poll the backend every 5s for new real rows (WS is dead — this is the
+  // only path for fresh, ipfs_hash-carrying messages to reach the feed).
+  useEffect(() => {
+    const id = setInterval(() => {
+      api.getFeed(100)
+        .then(data => {
+          const items = Array.isArray(data) ? data : (data.feed || data.actions || []);
+          if (!items.length) return;
+          preloadAvatarsFromItems(items);
+          setFeed(prev => {
+            const existingIds = new Set(
+              prev.filter(x => x.id != null).map(x => x.id)
+            );
+            const newRows = items
+              .reverse()
+              .filter(x => x.id != null && !existingIds.has(x.id));
+            if (!newRows.length) return prev;
+            return [...prev, ...newRows].slice(-200);
+          });
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
   // Handle WebSocket messages
   useEffect(() => {
     setConnected(ws.connected);
