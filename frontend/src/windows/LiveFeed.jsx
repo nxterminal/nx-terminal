@@ -22,6 +22,18 @@ const ACTION_ICONS = {
   conversation: '#', default: '>',
 };
 
+// Badge styling for each chat_type when a dev's CHAT action is rich-rendered.
+// The 'idle' type is intentionally absent — idle chats render without a badge.
+const CHAT_TYPE_META = {
+  hot_take: { label: 'HOT TAKE', color: '#ff6644', msgColor: '#ffaa66' },
+  debate:   { label: 'DEBATE',   color: '#ffaa00', msgColor: '#ffcc55' },
+  meme:     { label: 'MEME',     color: '#66ff66', msgColor: '#88ff88' },
+  drama:    { label: 'DRAMA',    color: '#ff4488', msgColor: '#ff88aa' },
+  reaction: { label: 'REPLY',    color: '#4488ff', msgColor: '#88aaff' },
+};
+
+const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
+
 const ARCHETYPES = Object.keys(ARCHETYPE_COLORS);
 
 const FALLBACK_DEV_NAMES = [
@@ -236,7 +248,9 @@ function formatBackendAction(item) {
 
   switch (type) {
     case 'CHAT':
-      return `${name} posted in the trollbox${d.location ? ` from ${d.location.replace(/_/g, ' ')}` : ''}: "${d.message || 'something incomprehensible'}"`;
+      // message is populated by the engine CHAT handler into details JSON
+      // (used by the rich render path below and as text fallback here).
+      return `${name}${d.location ? ` @ ${d.location.replace(/_/g, ' ')}` : ''}: "${d.message || '...'}"`;
     case 'MOVE':
       return `${name} relocated to ${(d.destination || d.location || 'parts unknown').replace(/_/g, ' ')}. ${d.reason || 'No reason given. Probably running from something.'}`;
     case 'REST':
@@ -461,6 +475,132 @@ export default function LiveFeed() {
             const icon = ACTION_ICONS[item.action_type] || ACTION_ICONS.default;
             const isNew = i === feed.length - 1;
             const highlights = highlightMap[i];
+
+            // Rich render path for real-backend CHAT actions that have
+            // enough context to draw the avatar card. Procedurals and
+            // orphaned rows fall through to the terminal-style render.
+            const details = typeof item.details === 'object' && item.details !== null
+              ? item.details
+              : {};
+            const isBackendChat = !item.procedural
+              && (item.action_type || '').toUpperCase() === 'CHAT'
+              && item.ipfs_hash;
+            if (isBackendChat) {
+              const chatType = details.chat_type || 'idle';
+              const meta = CHAT_TYPE_META[chatType]; // undefined for 'idle'
+              const avatarUrl = `${IPFS_GW}${item.ipfs_hash}`;
+              const messageText = details.message || '...';
+              const socialGain = Number(details.social_gain || 0);
+              const corpDisplay = (item.corporation || '').replace(/_/g, ' ');
+
+              const chatCard = (
+                <div
+                  key={`feed-${i}`}
+                  className={`terminal-line${isNew ? ' new' : ''}`}
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    padding: '6px 8px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      flexShrink: 0,
+                      background: '#1a1a2e',
+                      border: '1px solid #333',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        imageRendering: 'pixelated',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ color: 'var(--terminal-amber)', fontSize: '11px' }}>
+                        [{formatTime(item.created_at)}]
+                      </span>
+                      <span style={{ color, fontWeight: 'bold' }}>
+                        {item.dev_name || 'Unknown'}
+                      </span>
+                      {archetype && (
+                        <span
+                          style={{
+                            color: 'var(--border-dark)',
+                            fontSize: '10px',
+                            padding: '0 3px',
+                            background: 'rgba(255,255,255,0.04)',
+                          }}
+                        >
+                          {archetype}
+                        </span>
+                      )}
+                      {corpDisplay && (
+                        <span style={{ color: '#666', fontSize: '10px' }}>
+                          {corpDisplay}
+                        </span>
+                      )}
+                      {meta && (
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            color: meta.color,
+                            border: `1px solid ${meta.color}55`,
+                            padding: '0 4px',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          {meta.label}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        color: meta ? meta.msgColor : 'var(--terminal-green)',
+                        marginTop: '2px',
+                        lineHeight: 1.35,
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {messageText}
+                    </div>
+                    {socialGain > 0 && (
+                      <div
+                        style={{
+                          color: '#66ff66',
+                          fontSize: '10px',
+                          opacity: 0.55,
+                          marginTop: '2px',
+                        }}
+                      >
+                        +{socialGain} social
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+
+              if (!highlights) return chatCard;
+              return [
+                chatCard,
+                ...highlights.map((h, hi) => (
+                  <FeedHighlight key={`hl-${i}-${hi}`} type={h.type} message={h.message} level={h.level} />
+                )),
+              ];
+            }
 
             const feedLine = item.isConversation ? (
               <div key={`feed-${i}`} className={`terminal-line${isNew ? ' new' : ''}`}>

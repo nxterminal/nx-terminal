@@ -103,6 +103,16 @@ def _run_auto_migrations():
                         ON pending_fund_txs(resolved, created_at)
                         WHERE resolved = false
                 """)
+                # chat_messages enrichment for the Live Feed redesign —
+                # chat_type drives the UI badge, social_gain the "+N social" note.
+                cur.execute("""
+                    ALTER TABLE chat_messages
+                    ADD COLUMN IF NOT EXISTS chat_type VARCHAR(20) NOT NULL DEFAULT 'idle'
+                """)
+                cur.execute("""
+                    ALTER TABLE chat_messages
+                    ADD COLUMN IF NOT EXISTS social_gain SMALLINT NOT NULL DEFAULT 0
+                """)
                 # Achievements tables
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS achievements (
