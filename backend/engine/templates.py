@@ -519,6 +519,7 @@ def gen_world_event(duration_hours: int = 6) -> dict:
 
 CHAT_TYPE_TEMPLATES = {
     "hot_take": [
+        # Original pool
         "Hot take: Solidity is just JavaScript wearing a suit.",
         "Unpopular opinion: most smart contracts should be dumb.",
         "Web3 is just databases with extra steps. Change my mind.",
@@ -529,8 +530,33 @@ CHAT_TYPE_TEMPLATES = {
         "Real devs deploy on Friday.",
         "AI will replace us all. Except the ones who write the bugs.",
         "Decentralization is just distributed blame.",
+        # Crypto / MegaETH
+        "MegaETH doing sub-millisecond blocks while other chains celebrate 12 seconds. Different league.",
+        "Every chain claims to be the fastest until you actually try to use them.",
+        "If your chain needs a bridge to be useful, is it really a chain or just an island?",
+        "The real flippening is when people stop caring about TPS and start caring about UX.",
+        "L2s are just L1s that didn't want to do their own security. Change my mind.",
+        "Crypto has more abandoned projects than a Home Depot parking lot on a Sunday.",
+        "The best investment strategy is pretending you understand what you're investing in.",
+        "Every bull market creates geniuses. Every bear market reveals who was actually building.",
+        "Imagine explaining gas fees to someone from 2010. Now imagine explaining MEV.",
+        "The only thing more volatile than crypto is crypto Twitter opinions.",
+        # Cine / Series
+        "Severance is basically what working at a blockchain startup feels like.",
+        "The White Lotus taught me more about human nature than any whitepaper.",
+        "Every crypto project has a Succession storyline. Most of them are in season 4.",
+        "Watching Squid Game and thinking 'this is basically DeFi yield farming.'",
+        "If Protocol Wars was a Netflix series, we'd be in the 'things are about to get weird' episode.",
+        "The Bear was intense but have you tried debugging a smart contract at 3 AM?",
+        "Oppenheimer but it's about the guy who invented gas fees.",
+        # Política light / mundo
+        "World leaders debating AI regulation is like my grandma configuring a router. Good intentions, zero understanding.",
+        "Every country wants to regulate crypto until they realize they can tax it.",
+        "The metaverse was supposed to replace reality. Reality is still winning.",
+        "AI is taking everyone's jobs except the people who said AI would take everyone's jobs.",
     ],
     "meme": [
+        # Original pool
         "\U0001F680 wen moon",
         "gm to everyone except the dev who pushed to prod on Friday",
         "LGTM \U0001F44D (didn't actually look at the code)",
@@ -541,8 +567,27 @@ CHAT_TYPE_TEMPLATES = {
         "sudo make me a sandwich",
         "It's not a bug, it's an undocumented feature",
         "Works on my machine \u00AF\\_(\u30C4)_/\u00AF",
+        # Crypto memes
+        "ser, when mass adoption?",
+        "just mass-adopted my lunch. bullish.",
+        "my portfolio looking like a heart rate monitor",
+        "told my mom I work in DeFi. she asked if that's a restaurant.",
+        "NGMI (Not Gonna Make Itinerary -- I'm just bad at planning trips)",
+        "few understand. fewer can explain. none can diagram.",
+        "wen lambo? sir this is a simulation.",
+        "the real friends are the gas fees we paid along the way",
+        "buying the dip but the dip has a dip and that dip has a basement",
+        "another day another mass extinction event in my wallet",
+        # Series / cine
+        "this meeting could have been an email. this email could have been a slack. this slack could have been nothing.",
+        "my code review is giving 'I am the one who knocks' energy",
+        "deploying to mainnet with the confidence of a Golden Retriever",
+        "living my best life (my best life has a lot of bugs)",
+        "the blockchain never sleeps and apparently neither do I",
+        "just mass-liquidated my sleep schedule. very bearish on health.",
     ],
     "reaction": [
+        # Original pool
         "This is the way.",
         "Based.",
         "Couldn't agree more.",
@@ -553,18 +598,44 @@ CHAT_TYPE_TEMPLATES = {
         "Ratio.",
         "W take.",
         "L take but respect.",
+        # New reactions
+        "Absolutely not.",
+        "This is fine. Everything is fine.",
+        "I wish I had the confidence of this take.",
+        "Saving this for when it ages poorly.",
+        "Tell me you're new here without telling me you're new here.",
+        "The conviction. The audacity. Respect.",
+        "Screenshot taken. Evidence secured.",
+        "My man woke up and chose violence.",
+        "This is why we can't have nice things.",
+        "Rare W.",
+        "Common L.",
+        "I need to think about this for exactly 0 seconds. No.",
+        "Certified galaxy brain take.",
+        "Same energy as 'we'll fix it in post.'",
     ],
     "drama": [
         # {corp} and {rival_corp} are substituted with real enum values
         # from CORPORATIONS in engine.py (CLOSED_AI, ZUCK_LABS, etc.).
+        # Original pool
         "{corp} is overrated. There, I said it.",
         "Just saying, {rival_corp} devs couldn't deploy a hello world.",
         "Imagine working at {rival_corp} and thinking you're building the future.",
         "The real rug pull is {rival_corp}'s codebase.",
         "{corp} supremacy. Not even debatable.",
         "Heard {rival_corp} is hiring. My condolences.",
+        # Corp drama con sátira
+        "{corp} engineers writing code like it's poetry. Too bad nobody can read poetry.",
+        "Sources say {rival_corp} is pivoting. Again. Third time this quarter.",
+        "{rival_corp} just announced they're 'reimagining the future.' Translation: they have no roadmap.",
+        "Overheard at {rival_corp}: 'What if we just add AI to everything?' Groundbreaking.",
+        "{corp} doesn't ship fast. {corp} ships right. At least that's what the poster in the break room says.",
+        "The difference between {corp} and {rival_corp}? About 3 missed deadlines.",
+        "{rival_corp} devs mass-committing to main on a Friday. Absolute chaos.",
+        "Rumor: {rival_corp} CEO uses Excel as a database. Explains a lot.",
     ],
     "debate": [
+        # Original pool
         {"topic": "Rust vs Go",
          "side_a": "Rust. Memory safety isn't optional.",
          "side_b": "Go. Ship fast or ship never."},
@@ -583,6 +654,32 @@ CHAT_TYPE_TEMPLATES = {
         {"topic": "DeFi vs TradFi",
          "side_a": "DeFi. Banks are middlemen.",
          "side_b": "TradFi works. Show me DeFi insurance."},
+        # Crypto debates
+        {"topic": "CEX vs DEX",
+         "side_a": "CEX. Liquidity is king.",
+         "side_b": "DEX. Not your keys, not your coins."},
+        {"topic": "Bitcoin vs Everything",
+         "side_a": "Bitcoin is digital gold. Store of value, end of story.",
+         "side_b": "Bitcoin is a calculator pretending to be a computer. Build on real chains."},
+        {"topic": "NFTs dead or alive",
+         "side_a": "NFTs are dead. The market spoke.",
+         "side_b": "NFTs evolved. The JPEGs died, utility survived."},
+        {"topic": "Airdrop farming",
+         "side_a": "Farming is free alpha. Smart money.",
+         "side_b": "Farming is mercenary capital. Ruins communities."},
+        {"topic": "AI x Crypto",
+         "side_a": "AI + Crypto is the next mega trend. Obvious.",
+         "side_b": "AI + Crypto is two buzzwords in a trenchcoat pretending to be innovation."},
+        {"topic": "MegaETH vs L2s",
+         "side_a": "MegaETH. Real-time or go home.",
+         "side_b": "L2s are battle-tested. MegaETH is shiny and new."},
+        # General tech / life debates
+        {"topic": "Remote vs Office",
+         "side_a": "Remote. Productivity speaks for itself.",
+         "side_b": "Office. You can't build culture over Zoom."},
+        {"topic": "AI replacing devs",
+         "side_a": "AI writes code now. Adapt or retire.",
+         "side_b": "AI writes bugs faster. Still need humans to debug."},
     ],
 }
 
