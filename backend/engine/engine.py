@@ -882,6 +882,21 @@ def pay_salaries(conn):
         WHERE status = 'active'
     """, (caff_decay, social_decay, knowledge_decay))
 
+    # Passive social recovery: if social_vitality dropped below 20, give +2/hour
+    # so devs don't get stuck at 0 and unable to hack (hack_raid requires ≥15).
+    # Effective net change below the threshold: -1 (decay) + 2 (recovery) = +1/hour.
+    # At or above 20, recovery is skipped and only decay applies.
+    # Threshold is deliberately 5 points above the hack minimum (15) so the player
+    # has a small buffer before getting locked out again.
+    # Runs AFTER decay so a dev that ticks 20→19 from decay gets bumped back to 20
+    # in the same cycle (the stable idle point).
+    cur.execute("""
+        UPDATE devs SET
+            social_vitality = LEAST(20, social_vitality + 2)
+        WHERE status = 'active'
+          AND social_vitality < 20
+    """)
+
     # Low knowledge penalty: generate extra bugs
     # knowledge < 15: +2 bugs/hour, knowledge 15-29: +1 bug/hour
     cur.execute("""
