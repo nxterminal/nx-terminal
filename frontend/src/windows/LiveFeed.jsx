@@ -680,11 +680,18 @@ export default function LiveFeed() {
     }
   }, [feed, scrollLock]);
 
-  // Whitelist filter — keeps the feed focused on narrative actions.
-  // Procedurals always pass (they're the offline fallback generator).
+  // Whitelist filter — keeps the feed focused on narrative actions,
+  // and requires an ipfs_hash on backend rows so only minted devs
+  // (with a real avatar) appear. The backend already routes un-minted
+  // devs to REST for CHAT, but CREATE_PROTOCOL / INVEST / SELL / HACK_*
+  // aren't gated there — the ipfs_hash check catches them here so the
+  // feed never shows a chat card with a 👤 fallback.
+  // Procedurals always pass (they're the offline fallback generator and
+  // intentionally use the 👤 icon).
   const visibleFeed = useMemo(
     () => feed.filter(
-      item => item.procedural || VISIBLE_ACTIONS.has((item.action_type || '').toUpperCase()),
+      item => item.procedural
+        || (item.ipfs_hash && VISIBLE_ACTIONS.has((item.action_type || '').toUpperCase())),
     ),
     [feed],
   );
