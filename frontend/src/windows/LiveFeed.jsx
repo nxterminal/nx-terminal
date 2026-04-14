@@ -27,6 +27,31 @@ const CHAT_TYPE_META = {
 
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
+// Avatar pre-cache: before FeedMessage mounts its <img>, we warm the
+// browser's HTTP cache by instantiating new Image() for each unique
+// ipfs_hash. This way the <img> tag in FeedMessage paints from cache
+// immediately instead of cold-loading a 200KB GIF on first mount —
+// which used to cause the "avatars pop in 500ms after the text" flash.
+//
+// The Set dedupes so the same hash only triggers one preload across
+// the whole session. Failures are silent — the FeedMessage's own
+// onError handler still runs if the cached request ends up 404'ing.
+const preloadedAvatars = new Set();
+
+function preloadAvatar(ipfsHash) {
+  if (!ipfsHash || preloadedAvatars.has(ipfsHash)) return;
+  preloadedAvatars.add(ipfsHash);
+  const img = new Image();
+  img.src = `${IPFS_GW}${ipfsHash}`;
+}
+
+function preloadAvatarsFromItems(items) {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    if (item && item.ipfs_hash) preloadAvatar(item.ipfs_hash);
+  }
+}
+
 // Action types that are allowed to appear in the Live Feed. Everything
 // else (MOVE, REST, CODE_REVIEW, RECEIVE_SALARY, USE_ITEM, BUY_ITEM,
 // FIX_BUG, TRAIN, TRANSFER, DEPLOY, GET_SABOTAGED) is filtered out as
@@ -462,7 +487,7 @@ function FeedMessage({ item, isNew }) {
           <img
             src={avatar}
             alt=""
-            loading="lazy"
+            decoding="async"
             onError={() => setAvatarFailed(true)}
             style={{
               width: '100%',
@@ -618,6 +643,10 @@ export default function LiveFeed() {
       .then(data => {
         const items = Array.isArray(data) ? data : (data.feed || data.actions || []);
         if (items.length > 0) {
+          // Warm the browser cache for every unique avatar BEFORE the
+          // rows mount — avoids the "text first, avatar 500ms later"
+          // flash on initial paint.
+          preloadAvatarsFromItems(items);
           setFeed(items.reverse());
           setHasBackendData(true);
         }
@@ -632,7 +661,11 @@ export default function LiveFeed() {
       const latest = ws.messages[0];
       if (latest.type === 'action' || latest.data) {
         setHasBackendData(true);
-        setFeed(prev => [...prev, latest.data || latest].slice(-200));
+        const incoming = latest.data || latest;
+        // Same cache-warm trick for live messages so new rows arriving
+        // via WS paint their avatar synchronously with the text.
+        if (incoming && incoming.ipfs_hash) preloadAvatar(incoming.ipfs_hash);
+        setFeed(prev => [...prev, incoming].slice(-200));
       }
     }
   }, [ws.messages, ws.connected]);
@@ -767,6 +800,15 @@ export default function LiveFeed() {
             const isNew = i === visibleFeed.length - 1;
             const highlights = highlightMap[i];
 
+            // Stable React key — avoids remounting FeedMessage every
+            // time a new row shifts the array indices. Backend rows have
+            // item.id (BIGSERIAL from actions); procedurals don't, so
+            // fall back to dev_name + created_at which stays constant
+            // for the lifetime of the row in-memory.
+            const rowKey = item.id != null
+              ? `feed-${item.id}`
+              : `feed-proc-${item.dev_name || 'anon'}-${item.created_at || i}`;
+
             // Conversations (procedural two-dev pairings) render as two
             // consecutive FeedMessage cards so the group-chat layout stays
             // consistent. The second card is synthesized from the reply_*
@@ -775,7 +817,7 @@ export default function LiveFeed() {
             if (item.isConversation) {
               const firstCard = (
                 <FeedMessage
-                  key={`feed-${i}-a`}
+                  key={`${rowKey}-a`}
                   item={{
                     ...item,
                     action_type: 'CHAT',
@@ -786,7 +828,7 @@ export default function LiveFeed() {
               );
               const replyCard = (
                 <FeedMessage
-                  key={`feed-${i}-b`}
+                  key={`${rowKey}-b`}
                   item={{
                     dev_name: item.reply_dev,
                     archetype: item.reply_archetype,
@@ -800,14 +842,19 @@ export default function LiveFeed() {
               );
               cards = [firstCard, replyCard];
             } else {
-              cards = [<FeedMessage key={`feed-${i}`} item={item} isNew={isNew} />];
+              cards = [<FeedMessage key={rowKey} item={item} isNew={isNew} />];
             }
 
             if (!highlights) return cards;
             return [
               ...cards,
               ...highlights.map((h, hi) => (
-                <FeedHighlight key={`hl-${i}-${hi}`} type={h.type} message={h.message} level={h.level} />
+                <FeedHighlight
+                  key={`${rowKey}-hl-${hi}`}
+                  type={h.type}
+                  message={h.message}
+                  level={h.level}
+                />
               )),
             ];
           })
