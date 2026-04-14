@@ -53,6 +53,22 @@ ARCHETYPE_META = {
     "SCRIPT_KIDDIE":{"vote_weight": 1.0, "code_quality": (15, 75), "prompt_influence": 1.0},
 }
 
+# Social vitality gained when a dev executes a CHAT action, by archetype.
+# Combines with PERSONALITY_MATRIX CHAT weights: INFLUENCERs chat ~2.3x more
+# often than LURKERs AND gain 3x per chat, amplifying the personality gap
+# without touching the matrix itself. LURKER gains 0 because observing
+# anonymously isn't really socializing.
+CHAT_SOCIAL_GAIN = {
+    "INFLUENCER":   3,
+    "DEGEN":        2,
+    "FED":          2,
+    "HACKTIVIST":   1,
+    "10X_DEV":      1,
+    "GRINDER":      1,
+    "SCRIPT_KIDDIE":1,
+    "LURKER":       0,
+}
+
 LOCATION_MODIFIERS = {
     "HACKATHON_HALL":   {"CREATE_PROTOCOL": 2.5, "CREATE_AI": 2.0},
     "THE_PIT":          {"INVEST": 2.5, "SELL": 2.0},
@@ -459,6 +475,16 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         result["chat_msg"] = msg
         result["chat_channel"] = channel
         result["details"] = {"location": dev["location"]}
+        # Socializing raises social_vitality — amount varies by archetype
+        # (see CHAT_SOCIAL_GAIN). LURKER gains 0 because observing isn't
+        # really socializing. Capped at 100 like all other social gains.
+        social_gain = CHAT_SOCIAL_GAIN.get(arch, 1)
+        if social_gain > 0:
+            cur.execute(
+                "UPDATE devs SET social_vitality = LEAST(100, social_vitality + %s) "
+                "WHERE token_id = %s",
+                (social_gain, dev["token_id"]),
+            )
 
     elif action == "CODE_REVIEW":
         cur.execute("SELECT id, name, code_quality FROM protocols WHERE status = 'active' ORDER BY RANDOM() LIMIT 1")
@@ -882,19 +908,30 @@ def pay_salaries(conn):
         WHERE status = 'active'
     """, (caff_decay, social_decay, knowledge_decay))
 
-    # Passive social recovery: if social_vitality dropped below 20, give +2/hour
+    # Passive social recovery: if social_vitality dropped below 25, give +2/hour
     # so devs don't get stuck at 0 and unable to hack (hack_raid requires ≥15).
     # Effective net change below the threshold: -1 (decay) + 2 (recovery) = +1/hour.
-    # At or above 20, recovery is skipped and only decay applies.
-    # Threshold is deliberately 5 points above the hack minimum (15) so the player
-    # has a small buffer before getting locked out again.
-    # Runs AFTER decay so a dev that ticks 20→19 from decay gets bumped back to 20
-    # in the same cycle (the stable idle point).
+    # At or above 25, recovery is skipped and only decay applies.
+    # Threshold is 10 points above the hack minimum (15) so the player has a
+    # comfortable buffer before getting locked out again. Runs AFTER decay so
+    # a dev that ticks 25→24 gets bumped back to 25 in the same cycle (stable).
     cur.execute("""
         UPDATE devs SET
-            social_vitality = LEAST(20, social_vitality + 2)
+            social_vitality = LEAST(25, social_vitality + 2)
         WHERE status = 'active'
-          AND social_vitality < 20
+          AND social_vitality < 25
+    """)
+
+    # Passive knowledge recovery: mirrors social recovery. Knowledge drives
+    # the bug generation rate (<15 = +2 bugs/h, 15-29 = +1 bug/h, ≥30 = 0),
+    # so keeping a floor of 30 cuts the SOURCE of the bug accumulation
+    # problem instead of only treating the symptom via the fix_bugs item.
+    # Net below 30: -1 (decay) + 2 (recovery) = +1/hour.
+    cur.execute("""
+        UPDATE devs SET
+            knowledge = LEAST(30, knowledge + 2)
+        WHERE status = 'active'
+          AND knowledge < 30
     """)
 
     # Low knowledge penalty: generate extra bugs

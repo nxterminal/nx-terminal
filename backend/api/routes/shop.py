@@ -46,10 +46,10 @@ SHOP_ITEMS = {
     },
     "fix_bugs": {
         "name": "Bug Fix",
-        "description": "Fix 8 bugs (costs 5 energy, +3 knowledge)",
+        "description": "Fix 15 bugs (costs 5 energy, +3 knowledge)",
         "cost_nxt": 0,
         "cost_energy": 5,
-        "effect": {"type": "fix_bugs", "value": 8},
+        "effect": {"type": "fix_bugs", "value": 15},
     },
     "mood_reset": {
         "name": "Mood Reset",
