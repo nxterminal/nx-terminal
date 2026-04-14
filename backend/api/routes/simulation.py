@@ -54,14 +54,19 @@ async def get_world_events(active_only: bool = True):
 
 @router.get("/feed")
 async def get_action_feed(limit: int = 50, offset: int = 0):
-    """Get recent actions across all devs."""
+    """Get recent actions across all devs. LEFT JOIN devs so the Live Feed
+    can render rich cards for CHAT actions (avatar via ipfs_hash, corporation
+    badge) without a second round-trip. LEFT JOIN (not INNER) so rows from
+    devs that have been deleted still show up in the feed."""
     if limit > 100:
         limit = 100
     return fetch_all(
-        """SELECT id, dev_id, dev_name, archetype, action_type, details,
-                  energy_cost, nxt_cost, created_at
-           FROM actions
-           ORDER BY created_at DESC
+        """SELECT a.id, a.dev_id, a.dev_name, a.archetype, a.action_type,
+                  a.details, a.energy_cost, a.nxt_cost, a.created_at,
+                  d.corporation, d.ipfs_hash
+           FROM actions a
+           LEFT JOIN devs d ON d.token_id = a.dev_id
+           ORDER BY a.created_at DESC
            LIMIT %s OFFSET %s""",
         (limit, offset)
     )

@@ -21,6 +21,7 @@ from config import *
 from templates import (
     gen_dev_name, gen_protocol_name, gen_protocol_description,
     gen_ai_name, gen_ai_description, gen_chat_message, gen_visual_traits,
+    gen_chat_by_type,
 )
 from prompt_system import process_prompt
 
@@ -67,6 +68,21 @@ CHAT_SOCIAL_GAIN = {
     "GRINDER":      1,
     "SCRIPT_KIDDIE":1,
     "LURKER":       0,
+}
+
+# Chat-type selection weights per archetype for Live Feed enrichment.
+# These drive gen_chat_by_type(): INFLUENCER leans hot_take/drama,
+# LURKER stays mostly idle, DEGEN favors memes, etc. Each row sums to
+# 100 for readability but random.choices normalizes automatically.
+CHAT_TYPE_WEIGHTS = {
+    "INFLUENCER":    {"idle": 20, "hot_take": 30, "meme": 20, "drama": 15, "reaction": 15},
+    "DEGEN":         {"idle": 25, "hot_take": 15, "meme": 30, "drama": 15, "reaction": 15},
+    "HACKTIVIST":    {"idle": 30, "hot_take": 25, "meme": 10, "drama": 20, "reaction": 15},
+    "10X_DEV":       {"idle": 40, "hot_take": 20, "meme": 15, "drama":  5, "reaction": 20},
+    "GRINDER":       {"idle": 50, "hot_take": 10, "meme": 15, "drama":  5, "reaction": 20},
+    "FED":           {"idle": 35, "hot_take": 15, "meme": 10, "drama": 25, "reaction": 15},
+    "SCRIPT_KIDDIE": {"idle": 30, "hot_take": 10, "meme": 35, "drama": 10, "reaction": 15},
+    "LURKER":        {"idle": 60, "hot_take":  5, "meme": 15, "drama":  5, "reaction": 15},
 }
 
 LOCATION_MODIFIERS = {
@@ -470,11 +486,17 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (COST_MOVE_ENERGY, new_loc, dev["token_id"]))
 
     elif action == "CHAT":
-        msg = gen_chat_message(arch, "idle")
+        # Pick a chat_type weighted by archetype personality. LURKER stays
+        # mostly idle, INFLUENCER favors hot_takes/drama, DEGEN memes, etc.
+        type_weights = CHAT_TYPE_WEIGHTS.get(arch, CHAT_TYPE_WEIGHTS["10X_DEV"])
+        chat_type = random.choices(
+            list(type_weights.keys()),
+            weights=list(type_weights.values()),
+            k=1,
+        )[0]
+        msg, final_type = gen_chat_by_type(chat_type, arch, dev.get("corporation", ""))
         channel = random.choice(["location", "trollbox"])
-        result["chat_msg"] = msg
-        result["chat_channel"] = channel
-        result["details"] = {"location": dev["location"]}
+
         # Socializing raises social_vitality — amount varies by archetype
         # (see CHAT_SOCIAL_GAIN). LURKER gains 0 because observing isn't
         # really socializing. Capped at 100 like all other social gains.
@@ -485,6 +507,21 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 "WHERE token_id = %s",
                 (social_gain, dev["token_id"]),
             )
+
+        result["chat_msg"] = msg
+        result["chat_channel"] = channel
+        result["chat_type"] = final_type
+        result["social_gain"] = social_gain
+        # Enrich details JSON so the LiveFeed / actions-table readers can
+        # render the full chat inline (avatar, type badge, +N social).
+        # Fixes the pre-existing bug where formatBackendAction fell back to
+        # "something incomprehensible" because details.message was missing.
+        result["details"] = {
+            "location": dev["location"],
+            "message": msg,
+            "chat_type": final_type,
+            "social_gain": social_gain,
+        }
 
     elif action == "CODE_REVIEW":
         cur.execute("SELECT id, name, code_quality FROM protocols WHERE status = 'active' ORDER BY RANDOM() LIMIT 1")
@@ -562,12 +599,16 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
     # --- Log chat message ---
     if result["chat_msg"] and result["chat_channel"]:
         cur.execute("""
-            INSERT INTO chat_messages (dev_id, dev_name, archetype, channel, location, message)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO chat_messages
+                (dev_id, dev_name, archetype, channel, location, message,
+                 chat_type, social_gain)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (dev["token_id"], dev["name"], dev["archetype"],
               result["chat_channel"],
               dev["location"] if result["chat_channel"] == "location" else None,
-              result["chat_msg"]))
+              result["chat_msg"],
+              result.get("chat_type", "idle"),
+              result.get("social_gain", 0)))
 
     # --- Random bug generation (5% chance per action) ---
     if random.random() < 0.05:
@@ -1564,6 +1605,16 @@ def run_engine():
                 CREATE INDEX IF NOT EXISTS idx_pending_fund_unresolved
                     ON pending_fund_txs(resolved, created_at)
                     WHERE resolved = false
+            """)
+            # chat_messages enrichment for the Live Feed redesign —
+            # chat_type drives the UI badge, social_gain the "+N social" note.
+            cur.execute("""
+                ALTER TABLE chat_messages
+                ADD COLUMN IF NOT EXISTS chat_type VARCHAR(20) NOT NULL DEFAULT 'idle'
+            """)
+            cur.execute("""
+                ALTER TABLE chat_messages
+                ADD COLUMN IF NOT EXISTS social_gain SMALLINT NOT NULL DEFAULT 0
             """)
             conn.commit()
             log.info("✅ Engine auto-migrations complete")

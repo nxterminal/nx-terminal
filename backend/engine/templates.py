@@ -507,3 +507,116 @@ def gen_world_event(duration_hours: int = 6) -> dict:
         "event_type": template["type"],
         "effects": template["effects"],
     }
+
+
+# ============================================================
+# CHAT TYPE TEMPLATES (Live Feed enrichment)
+# ============================================================
+# Shared pools per chat_type. Not archetype-specific — the personality
+# layer comes from CHAT_TYPE_WEIGHTS in engine.py which biases which
+# type a given archetype picks. 'idle' still falls back to the per-
+# archetype CHAT_TEMPLATES above so the stable vibes stay intact.
+
+CHAT_TYPE_TEMPLATES = {
+    "hot_take": [
+        "Hot take: Solidity is just JavaScript wearing a suit.",
+        "Unpopular opinion: most smart contracts should be dumb.",
+        "Web3 is just databases with extra steps. Change my mind.",
+        "If your protocol needs a 40-page whitepaper, it's not decentralized.",
+        "Tabs vs spaces doesn't matter when your code doesn't compile.",
+        "The best blockchain is the one that works.",
+        "Every token is a memecoin if you believe hard enough.",
+        "Real devs deploy on Friday.",
+        "AI will replace us all. Except the ones who write the bugs.",
+        "Decentralization is just distributed blame.",
+    ],
+    "meme": [
+        "\U0001F680 wen moon",
+        "gm to everyone except the dev who pushed to prod on Friday",
+        "LGTM \U0001F44D (didn't actually look at the code)",
+        "404: motivation not found",
+        "git commit -m 'fix: fixed the fix that was supposed to fix the fix'",
+        "My portfolio is down 80% but at least my code compiles",
+        "Trust me bro, I tested it locally",
+        "sudo make me a sandwich",
+        "It's not a bug, it's an undocumented feature",
+        "Works on my machine \u00AF\\_(\u30C4)_/\u00AF",
+    ],
+    "reaction": [
+        "This is the way.",
+        "Based.",
+        "Couldn't agree more.",
+        "Sir, this is a blockchain.",
+        "Who let you near a keyboard?",
+        "\U0001F480\U0001F480\U0001F480",
+        "Fax no printer.",
+        "Ratio.",
+        "W take.",
+        "L take but respect.",
+    ],
+    "drama": [
+        # {corp} and {rival_corp} are substituted with real enum values
+        # from CORPORATIONS in engine.py (CLOSED_AI, ZUCK_LABS, etc.).
+        "{corp} is overrated. There, I said it.",
+        "Just saying, {rival_corp} devs couldn't deploy a hello world.",
+        "Imagine working at {rival_corp} and thinking you're building the future.",
+        "The real rug pull is {rival_corp}'s codebase.",
+        "{corp} supremacy. Not even debatable.",
+        "Heard {rival_corp} is hiring. My condolences.",
+    ],
+    "debate": [
+        {"topic": "Rust vs Go",
+         "side_a": "Rust. Memory safety isn't optional.",
+         "side_b": "Go. Ship fast or ship never."},
+        {"topic": "Tabs vs Spaces",
+         "side_a": "Tabs. My indentation, my rules.",
+         "side_b": "Spaces. Consistency across editors."},
+        {"topic": "Monolith vs Microservices",
+         "side_a": "Monolith first. You're not Netflix.",
+         "side_b": "Microservices. Scale from day one."},
+        {"topic": "On-chain vs Off-chain",
+         "side_a": "Everything on-chain. Trust no one.",
+         "side_b": "Off-chain for speed. On-chain for settlement."},
+        {"topic": "PoW vs PoS",
+         "side_a": "PoW. Real security costs real energy.",
+         "side_b": "PoS. Green and fast."},
+        {"topic": "DeFi vs TradFi",
+         "side_a": "DeFi. Banks are middlemen.",
+         "side_b": "TradFi works. Show me DeFi insurance."},
+    ],
+}
+
+
+def gen_chat_by_type(chat_type: str, archetype: str, corp: str):
+    """Return (message, final_chat_type) for the chosen chat_type.
+
+    - 'idle' falls back to archetype-specific templates so the personality
+      voice stays intact when the weight roll picks idle.
+    - 'drama' substitutes the dev's own corp and a random rival corp.
+    - 'debate' picks a topic and one side of the argument.
+    - 'hot_take' / 'meme' / 'reaction' draw from shared generic pools.
+    - Unknown types fall back to idle so the engine never crashes on a
+      missing key (defensive — shouldn't happen if weights are correct).
+    """
+    if chat_type == "idle":
+        return gen_chat_message(archetype, "idle"), "idle"
+
+    if chat_type == "drama":
+        all_corps = [
+            "CLOSED_AI", "ZUCK_LABS", "MISANTHROPIC",
+            "SHALLOW_MIND", "Y_AI", "MISTRIAL_SYSTEMS",
+        ]
+        rivals = [c for c in all_corps if c != corp]
+        rival = random.choice(rivals) if rivals else "that other corp"
+        tmpl = random.choice(CHAT_TYPE_TEMPLATES["drama"])
+        return tmpl.format(corp=corp or "my corp", rival_corp=rival), "drama"
+
+    if chat_type == "debate":
+        debate = random.choice(CHAT_TYPE_TEMPLATES["debate"])
+        side = random.choice(["side_a", "side_b"])
+        return f"[{debate['topic']}] {debate[side]}", "debate"
+
+    pool = CHAT_TYPE_TEMPLATES.get(chat_type, [])
+    if not pool:
+        return gen_chat_message(archetype, "idle"), "idle"
+    return random.choice(pool), chat_type
