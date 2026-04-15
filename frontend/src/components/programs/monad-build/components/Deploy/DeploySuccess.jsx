@@ -60,7 +60,7 @@ export default function DeploySuccess() {
           className="mb-btn mb-btn-secondary"
           style={{ textDecoration: 'none', justifyContent: 'center' }}
         >
-          View on MegaExplorer <ExternalLink size={14} />
+          View on MegaEtherscan <ExternalLink size={14} />
         </a>
         {state.txHash && (
           <a
