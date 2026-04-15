@@ -249,6 +249,12 @@ export default function ControlPanel() {
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
   const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale') || 'medium');
+  const [tooltipsEnabled, setTooltipsEnabled] = useState(
+    () => localStorage.getItem('nx-tooltips') !== 'off',
+  );
+  const [clickMode, setClickMode] = useState(
+    () => localStorage.getItem('nx-click-mode') || 'double',
+  );
 
   // Pending (selected but not yet applied) values
   const [pendingWallpaper, setPendingWallpaper] = useState(null);
@@ -697,6 +703,65 @@ export default function ControlPanel() {
                 Scales the Windows chrome (buttons, taskbar, tabs, tables).
                 Programs with their own UI (Dev Academy, Mega Sentinel, etc.)
                 are not affected.
+              </div>
+            </div>
+
+            <div style={{ fontWeight: 'bold', marginTop: '16px', marginBottom: '8px', fontSize: '11px' }}>
+              Icon Tooltips
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={tooltipsEnabled}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setTooltipsEnabled(next);
+                  localStorage.setItem('nx-tooltips', next ? 'on' : 'off');
+                  window.dispatchEvent(new CustomEvent('nx-tooltips-changed', { detail: next }));
+                }}
+              />
+              Show tooltips when hovering desktop icons
+            </label>
+            <div className="win-panel" style={{ padding: '8px', marginTop: '6px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                A small yellow tooltip with a short description appears
+                after half a second of hover. Disable if you already
+                know every program by heart.
+              </div>
+            </div>
+
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>
+              Desktop Click Mode
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
+              {[
+                { id: 'double', label: 'Classic (Double-click)', hint: 'Windows 98 default — double-click to open' },
+                { id: 'single', label: 'Single-click',           hint: 'Web-style — one click opens, labels underlined' },
+              ].map(opt => (
+                <label key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="nx-click-mode"
+                    value={opt.id}
+                    checked={clickMode === opt.id}
+                    onChange={() => {
+                      setClickMode(opt.id);
+                      localStorage.setItem('nx-click-mode', opt.id);
+                      window.dispatchEvent(new CustomEvent('nx-click-mode-changed', { detail: opt.id }));
+                    }}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <div>
+                    <div>{opt.label}</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>{opt.hint}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="win-panel" style={{ padding: '8px', marginTop: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                Only affects desktop icons. Items inside windows (lists,
+                buttons, menus) keep their standard behavior.
               </div>
             </div>
           </div>
