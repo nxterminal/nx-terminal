@@ -196,11 +196,18 @@
 }
 
 /* ====== TERMINAL STYLE ====== */
+/* Bumped from 14px to 15px in this commit. VT323 is a bitmap-style
+   pixel font designed for integer-multiple sizes; at 14px the
+   browser's sub-pixel AA on bright `#33ff33` smears the gaps inside
+   triple-stroke glyphs (m, w) into solid blocks so testers reported
+   they couldn't tell `m` from a green smudge. 15px puts each design
+   pixel a hair closer to a whole CSS pixel and the gaps survive AA.
+   Audit notes: §5 of plans/moonlit-growing-waffle.md. */
 .terminal {
   background: var(--terminal-bg);
   color: var(--terminal-green);
   font-family: 'VT323', 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.4;
   padding: 8px;
   overflow-y: auto;
