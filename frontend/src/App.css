@@ -382,11 +382,13 @@
 }
 .taskbar-btn.active {
   box-shadow:
-    inset 1px 1px 0 var(--border-darker),
+    inset 1px 1px 0 #000,
     inset -1px -1px 0 var(--border-light),
     inset 2px 2px 0 var(--border-dark);
-  background: repeating-conic-gradient(#d4d0c8 0% 25%, #c8c4bc 0% 50%) 50% / 2px 2px;
+  background: #000080;
+  color: #ffffff;
 }
+.taskbar-btn.active span { color: #ffffff; }
 
 .taskbar-tray {
   display: flex;
