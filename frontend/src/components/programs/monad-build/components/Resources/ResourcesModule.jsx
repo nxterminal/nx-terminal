@@ -47,7 +47,7 @@ const megaeth = {
   name: 'MegaETH',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
   rpcUrls: { default: { http: ['https://carrot.megaeth.com/rpc'] } },
-  blockExplorers: { default: { name: 'MegaExplorer', url: 'https://mega.etherscan.io' } },
+  blockExplorers: { default: { name: 'MegaEtherscan', url: 'https://mega.etherscan.io' } },
 };
 
 const client = createPublicClient({

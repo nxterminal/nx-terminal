@@ -8,7 +8,7 @@ const ITEMS = [
   { text: 'Contract size under 128 KB (MegaETH limit)', critical: false },
   { text: 'Tested on MegaETH (Chain ID 4326)', critical: true },
   { text: 'Wallet funded with ETH for deployment gas', critical: true },
-  { text: 'Contract verified on MegaExplorer', critical: false },
+  { text: 'Contract verified on MegaEtherscan', critical: false },
   { text: 'Access control configured (Ownable or AccessControl)', critical: false },
   { text: 'Events emitted for all important state changes', critical: false },
   { text: 'Re-entrancy guards on external calls', critical: true },
