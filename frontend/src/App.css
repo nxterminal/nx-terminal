@@ -233,6 +233,58 @@
   align-content: flex-start;
 }
 
+/* ── Hover tooltip on desktop icons ─────────────────────────
+   CSS-only so React state stays out of hover paths. The 500ms
+   transition-delay on opacity AND visibility makes sure the tip
+   never flashes on quick pass-overs. data-tip is set by
+   DesktopIcon when tooltipsEnabled && desc. */
+.desktop-icon.has-tip {
+  position: relative;
+}
+.desktop-icon.has-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
+  background: #ffffe1;
+  color: #000;
+  border: 1px solid #000;
+  padding: 2px 6px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease-out 0.5s, visibility 0s 0.5s;
+  z-index: 10100;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+.desktop-icon.has-tip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Single-click mode — labels look like web links and the cursor
+   becomes a pointer. Keeps existing icon/badge layout intact. */
+.desktop-icon.single-click {
+  cursor: pointer;
+}
+.desktop-icon.single-click .desktop-icon-label {
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+  text-underline-offset: 2px;
+}
+.desktop-icon.single-click:hover .desktop-icon-label {
+  color: #a8d8ff;
+  text-decoration-color: #a8d8ff;
+}
+
 .desktop-icon {
   width: 72px;
   display: flex;

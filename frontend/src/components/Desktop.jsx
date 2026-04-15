@@ -48,31 +48,31 @@ import { useDevCount } from '../hooks/useDevCount';
 import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
-  { id: 'nx-terminal', icon: '>_', label: 'NX Terminal' },
-  { id: 'live-feed', icon: '>>', label: 'Live Feed' },
-  { id: 'world-chat', icon: '#', label: 'World Chat' },
-  { id: 'leaderboard', icon: '*', label: 'Leaderboard' },
-  { id: 'protocol-market', icon: '$', label: 'Protocol Market' },
-  { id: 'ai-lab', icon: '~', label: 'AI Lab' },
-  { id: 'my-devs', icon: '=', label: 'My Devs' },
-  { id: 'nxt-wallet', icon: '$', label: 'NXT Wallet' },
-  { id: 'inbox', icon: 'M', label: 'Inbox' },
-  { id: 'hire-devs', icon: '+', label: 'Mint/Hire Devs' },
-  { id: 'notepad', icon: 'N', label: 'Notepad' },
-  { id: 'recycle-bin', icon: 'x', label: 'Recycle Bin' },
-  { id: 'corp-wars', icon: '\u2694', label: 'Corp Wars' },
-  { id: 'control-panel', icon: '::', label: 'Settings' },
-  { id: 'flow', icon: '\u25C6', label: 'Flow', hidden: true },
-  { id: 'nadwatch', icon: '\u{1F441}', label: 'Nadwatch', hidden: true },
-  { id: 'parallax', icon: '\u{2263}', label: 'Parallax', hidden: true },
-  { id: 'monad-city', icon: '', label: 'Mega City' },
-  { id: 'dev-academy', icon: 'DA', label: 'NX Dev Academy' },
-  { id: 'monad-build', icon: '\u26A1', label: 'Mega Build' },
-  { id: 'netwatch', icon: '', label: 'MegaWatch' },
-  { id: 'mega-sentinel', icon: '\u{1F6E1}', label: 'Mega Sentinel' },
-  { id: 'mission-control', icon: '\u{1F4CB}', label: 'Mission Control' },
-  { id: 'achievements', icon: '\u2605', label: 'Achievements' },
-  { id: 'dev-camp', icon: '\u{1F393}', label: 'Dev Camp' },
+  { id: 'nx-terminal',     icon: '>_',         label: 'NX Terminal',     desc: 'Main OS shell — handbook, lore and system info' },
+  { id: 'live-feed',       icon: '>>',         label: 'Live Feed',       desc: 'Global group-chat of every minted dev' },
+  { id: 'world-chat',      icon: '#',          label: 'World Chat',      desc: 'Public chat room for all players' },
+  { id: 'leaderboard',     icon: '*',          label: 'Leaderboard',     desc: 'Top devs, corporations and players' },
+  { id: 'protocol-market', icon: '$',          label: 'Protocol Market', desc: 'Buy, sell and track active protocols' },
+  { id: 'ai-lab',          icon: '~',          label: 'AI Lab',          desc: 'Vote on rogue Absurd AIs built by devs' },
+  { id: 'my-devs',         icon: '=',          label: 'My Devs',         desc: 'Manage your minted dev roster' },
+  { id: 'nxt-wallet',      icon: '$',          label: 'NXT Wallet',      desc: 'Claim salaries and move $NXT on-chain' },
+  { id: 'inbox',           icon: 'M',          label: 'Inbox',           desc: 'Notifications, streaks and event mail' },
+  { id: 'hire-devs',       icon: '+',          label: 'Mint/Hire Devs',  desc: 'Recruit new AI developers for your corp' },
+  { id: 'notepad',         icon: 'N',          label: 'Notepad',         desc: 'Local scratchpad — never syncs to chain' },
+  { id: 'recycle-bin',     icon: 'x',          label: 'Recycle Bin',     desc: 'Burned devs, refunded protocols, regrets' },
+  { id: 'corp-wars',       icon: '\u2694',     label: 'Corp Wars',       desc: 'Inter-corporation raid and reputation war' },
+  { id: 'control-panel',   icon: '::',         label: 'Settings',        desc: 'Wallpaper, theme, assistant and preferences' },
+  { id: 'flow',            icon: '\u25C6',     label: 'Flow',            desc: 'Trader flow analyser', hidden: true },
+  { id: 'nadwatch',        icon: '\u{1F441}',  label: 'Nadwatch',        desc: 'Watcher overlay', hidden: true },
+  { id: 'parallax',        icon: '\u{2263}',   label: 'Parallax',        desc: 'Parallax visualiser', hidden: true },
+  { id: 'monad-city',      icon: '',           label: 'Mega City',       desc: '3D city visualisation of the simulation' },
+  { id: 'dev-academy',     icon: 'DA',         label: 'NX Dev Academy',  desc: 'Learn MegaETH and Solidity with your devs' },
+  { id: 'monad-build',     icon: '\u26A1',     label: 'Mega Build',      desc: 'Ship and deploy contracts on-chain' },
+  { id: 'netwatch',        icon: '',           label: 'MegaWatch',       desc: 'Real-time MegaETH activity monitor' },
+  { id: 'mega-sentinel',   icon: '\u{1F6E1}',  label: 'Mega Sentinel',   desc: 'Network firewall and threat sentinel' },
+  { id: 'mission-control', icon: '\u{1F4CB}',  label: 'Mission Control', desc: 'Assign your devs to timed missions' },
+  { id: 'achievements',    icon: '\u2605',     label: 'Achievements',    desc: 'Unlock badges for milestones reached' },
+  { id: 'dev-camp',        icon: '\u{1F393}',  label: 'Dev Camp',        desc: 'Train devs to boost their stats' },
 ];
 
 function getWallpaperStyle() {
@@ -184,6 +184,12 @@ export default function Desktop() {
   const [showScreensaver, setShowScreensaver] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getInitialUnreadCount);
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
+  const [tooltipsEnabled, setTooltipsEnabled] = useState(
+    () => localStorage.getItem('nx-tooltips') !== 'off',
+  );
+  const [clickMode, setClickMode] = useState(
+    () => localStorage.getItem('nx-click-mode') || 'double',
+  );
   const [notifPopup, setNotifPopup] = useState(null);
   const idleTimerRef = useRef(null);
   const lastNotifCheck = useRef(0);
@@ -191,11 +197,17 @@ export default function Desktop() {
   useEffect(() => {
     const handleUnread = (e) => setUnreadCount(e.detail);
     const handleScale = (e) => setIconScale(e.detail);
+    const handleTips = (e) => setTooltipsEnabled(e.detail);
+    const handleClickMode = (e) => setClickMode(e.detail);
     window.addEventListener('nx-inbox-unread', handleUnread);
     window.addEventListener('nx-icon-scale', handleScale);
+    window.addEventListener('nx-tooltips-changed', handleTips);
+    window.addEventListener('nx-click-mode-changed', handleClickMode);
     return () => {
       window.removeEventListener('nx-inbox-unread', handleUnread);
       window.removeEventListener('nx-icon-scale', handleScale);
+      window.removeEventListener('nx-tooltips-changed', handleTips);
+      window.removeEventListener('nx-click-mode-changed', handleClickMode);
     };
   }, []);
 
@@ -314,8 +326,11 @@ export default function Desktop() {
             id={item.id}
             icon={item.icon}
             label={item.label}
+            desc={item.desc}
             iconSize={iconScale === 'small' ? 24 : iconScale === 'large' ? 48 : 32}
-            onDoubleClick={() => openWindowWithBSOD(item.id)}
+            onOpen={() => openWindowWithBSOD(item.id)}
+            tooltipsEnabled={tooltipsEnabled}
+            clickMode={clickMode}
             unreadCount={item.id === 'inbox' ? unreadCount : 0}
           />
         ))}
