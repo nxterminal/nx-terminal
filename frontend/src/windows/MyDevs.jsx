@@ -812,6 +812,71 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
   );
 }
 
+// ── Feed Dropdown (CARROT / PIZZA / BURGER) ─────────────
+// Mirrors EconDropdown / HackDropdown — inline styles, mousedown
+// click-outside, opens upward over the button. Each option routes
+// through the parent's doShopAction (passed in as onBuy) so the
+// toast / updated_dev / triggerChanges plumbing is free.
+function FeedDropdown({ dev, busy, onBuy }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  const FOOD_ITEMS = [
+    { id: 'carrot', emoji: '\uD83E\uDD55', label: 'CARROT',
+      cost: 8,  energy: 5,  hint: 'Carrot — 8 $NXT (+5E)' },
+    { id: 'pizza',  emoji: '\uD83C\uDF55', label: 'PIZZA',
+      cost: 20, energy: 10, hint: 'Pizza — 20 $NXT (+10E)' },
+    { id: 'burger', emoji: '\uD83C\uDF54', label: 'BURGER',
+      cost: 40, energy: 18, hint: 'Burger — 40 $NXT (+18E)' },
+  ];
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <StoneBtn emoji={'\uD83C\uDF54'} label={'FEED \u25BE'}
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Feed your dev: Carrot (8), Pizza (20), Burger (40)" />
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
+          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
+          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
+        }}>
+          {FOOD_ITEMS.map((f, i) => {
+            const cannotAfford = dev.balance_nxt < f.cost;
+            return (
+              <button
+                key={f.id}
+                onClick={(e) => { onBuy(e, f.id, `${f.emoji} ${f.label}`); setOpen(false); }}
+                disabled={cannotAfford}
+                title={cannotAfford ? `Not enough $NXT (need ${f.cost})` : f.hint}
+                style={{
+                  display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+                  borderTop: i === 0 ? 'none' : '2px solid #3a4654',
+                  background: 'transparent',
+                  color: cannotAfford ? '#555' : '#1a2030',
+                  cursor: cannotAfford ? 'default' : 'pointer',
+                  fontFamily: "'VT323', monospace", fontSize: '14px',
+                  textAlign: 'left',
+                }}
+              >
+                {f.emoji} {f.label} — {f.cost} $NXT (+{f.energy}E)
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Hack Dropdown (MAINFRAME + PLAYER) ─────────────────
 function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
   const [open, setOpen] = useState(false);
@@ -1320,10 +1385,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
             title="Coffee: 3 $NXT \u2192 +25 Caffeine" />
-          <StoneBtn emoji={'\uD83C\uDF54'} label="FEED"
-            onClick={(e) => doShopAction(e, 'pizza', 'Hamburger')}
-            disabled={busy || energyHigh}
-            title={energyHigh ? "Energy is OK" : "Hamburger: 8 $NXT \u2192 +15 Energy"} />
+          <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} />
           <HackDropdown dev={dev} busy={busy}
             onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer} />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}

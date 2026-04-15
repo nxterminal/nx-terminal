@@ -363,15 +363,20 @@ export default function DevProfile({ devId }) {
             style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
             ☕ Coffee 3
           </button>
-          <button className="win-btn" onClick={() => doShopAction('pizza', '🍔 Hamburger')}
-            title={energyFull ? "Energy is full" : "🍔 Hamburger: 8 $NXT → +15 energy"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🍔 Hamburger 8
+          <button className="win-btn" onClick={() => doShopAction('carrot', '🥕 Carrot')}
+            title="🥕 Carrot: 8 $NXT → +5 energy"
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            🥕 Carrot 8
           </button>
-          <button className="win-btn" onClick={() => doShopAction('mega_meal', '🍔 MegaMeal')}
-            title={energyFull ? "Energy is full" : "🍔 MegaMeal: 20 $NXT → +30 energy"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy || energyFull}>
-            🍔 MegaMeal 20
+          <button className="win-btn" onClick={() => doShopAction('pizza', '🍕 Pizza')}
+            title="🍕 Pizza: 20 $NXT → +10 energy"
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            🍕 Pizza 20
+          </button>
+          <button className="win-btn" onClick={() => doShopAction('burger', '🍔 Burger')}
+            title="🍔 Burger: 40 $NXT → +18 energy"
+            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            🍔 Burger 40
           </button>
           <button className="win-btn" onClick={() => doShopAction('pc_repair', '🔧 PC Repair')}
             title={"🔧 PC Repair: 8 $NXT → restore PC health to 100%"}
