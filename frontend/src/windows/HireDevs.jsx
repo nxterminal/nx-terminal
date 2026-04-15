@@ -6,7 +6,7 @@ import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '.
 import { api } from '../services/api';
 
 // ── Post-mint deploy animation ──────────────────────────────
-const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4';
+const IPFS_GIF_BASE = 'https://gateway.pinata.cloud/ipfs/bafybeibax74y4go2ygcj5ukuk2jc46duiwxbu73v4g4lataigy23cfuema';
 
 const DEPLOY_STEPS = [
   { text: 'Connecting to MegaETH...', duration: 800 },

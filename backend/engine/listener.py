@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 RPC_URL = os.getenv("MEGAETH_RPC_URL", "https://mainnet.megaeth.com/rpc")
 NFT_CONTRACT = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
-IMAGE_CID = "bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4"
+IMAGE_CID = "bafybeibax74y4go2ygcj5ukuk2jc46duiwxbu73v4g4lataigy23cfuema"
 
 # DevMinted(address indexed owner, uint256 indexed tokenId)
 DEV_MINTED_TOPIC = "0x" + "0" * 24  # Will compute below
