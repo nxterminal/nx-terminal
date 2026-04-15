@@ -10,7 +10,7 @@ import random
 # GENERATION POOLS
 # ═══════════════════════════════════════════════════════════
 
-IMAGE_CID = "bafybeicz5ilcu6i36ljkacix37c4r3qrtrpjhwgylp2buxfea443cxc7i4"
+IMAGE_CID = "bafybeibax74y4go2ygcj5ukuk2jc46duiwxbu73v4g4lataigy23cfuema"
 
 DEV_NAME_PREFIXES = [
     "NEX", "CIPHER", "VOID", "FLUX", "NOVA", "PULSE", "ZERO", "GHOST",
