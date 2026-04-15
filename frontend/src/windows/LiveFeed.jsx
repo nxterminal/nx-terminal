@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../services/api';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWallet } from '../hooks/useWallet';
 import { detectCombos } from '../utils/comboDetector';
 import FeedHighlight from '../components/FeedHighlight';
 
@@ -78,29 +78,6 @@ function useAvatarLoadTick() {
     return () => { avatarSubs.delete(fn); };
   }, []);
   return tick;
-}
-
-// ── Chat-group layout helpers ───────────────────────────────
-// Subtle alternating tint per dev so consecutive posts from the same dev
-// are visually grouped. Index is derived from dev_id (defensive hash of
-// dev_name kept as a safety fallback if a row ever lacks dev_id).
-const BG_COLORS = [
-  'rgba(100, 255, 100, 0.03)',  // green
-  'rgba(100, 100, 255, 0.03)',  // blue
-  'rgba(255, 100, 100, 0.03)',  // red
-  'rgba(255, 200, 100, 0.03)',  // orange
-  'rgba(200, 100, 255, 0.03)',  // violet
-  'rgba(100, 255, 255, 0.03)',  // cyan
-  'rgba(255, 255, 100, 0.03)',  // yellow
-  'rgba(255, 100, 200, 0.03)',  // pink
-];
-
-function bgIndexFor(item) {
-  if (item.dev_id != null) return Math.abs(item.dev_id) % BG_COLORS.length;
-  const name = item.dev_name || '';
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(h) % BG_COLORS.length;
 }
 
 // Color of the message body. CHAT messages inherit from their chat_type
@@ -233,15 +210,15 @@ function formatTime(dateStr) {
 }
 
 // ── Group-chat row ──────────────────────────────────────────
-// One feed action rendered as a chat card: pixel avatar (IPFS-hosted,
-// already preload-verified by the visible-feed filter before we ever
-// mount this row), dev name + archetype badge + corp + time in the
-// header, then the message body with optional chat_type badge and a
-// subtle "+N soc" indicator on the same line.
-function FeedMessage({ item, isNew }) {
+// One feed action rendered as a chat bubble, WhatsApp-style:
+//   - isOwnDev=true  → right-aligned, greenish tint, +N SOCIAL badge visible
+//   - isOwnDev=false → left-aligned, neutral tint, no SOCIAL badge
+// Avatar is IPFS-hosted and already preload-verified by the visible-feed
+// filter before we ever mount this row. The bubble caps at ~80% width so
+// long chats wrap cleanly and the directional alignment stays visible.
+function FeedMessage({ item, isNew, isOwnDev }) {
   const archetype = item.archetype || '';
   const nameColor = ARCHETYPE_COLORS[archetype] || '#66ff66';
-  const bg = BG_COLORS[bgIndexFor(item)];
   const avatar = `${IPFS_GW}${item.ipfs_hash}`;
   const details = typeof item.details === 'object' && item.details !== null
     ? item.details
@@ -255,122 +232,161 @@ function FeedMessage({ item, isNew }) {
   const message = formatMessage(item);
   const msgColor = getMessageColor(item);
 
+  // Bubble palette — own devs get a subtle green tint + brighter border so
+  // the player's messages pop on the right, everything else is a neutral
+  // dark bubble on the left. Glow on new own-dev messages is a bit more
+  // intense than the default .new flash to celebrate "my dev just spoke".
+  const bubbleBg = isOwnDev
+    ? 'rgba(70, 200, 110, 0.08)'
+    : 'rgba(255, 255, 255, 0.025)';
+  const bubbleBorder = isOwnDev
+    ? '1px solid rgba(102, 255, 120, 0.35)'
+    : '1px solid rgba(255, 255, 255, 0.08)';
+  const ownGlow = isOwnDev && isNew
+    ? '0 0 12px rgba(102, 255, 120, 0.45)'
+    : 'none';
+
   return (
     <div
       className={`terminal-line${isNew ? ' new' : ''}`}
       style={{
         display: 'flex',
-        gap: '10px',
-        padding: '8px 12px',
-        background: bg,
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
-        alignItems: 'flex-start',
+        justifyContent: isOwnDev ? 'flex-end' : 'flex-start',
+        padding: '6px 12px',
       }}
     >
       <div
         style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '6px',
-          overflow: 'hidden',
-          flexShrink: 0,
-          background: '#1a1a2e',
-          border: '1px solid #222',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          flexDirection: isOwnDev ? 'row-reverse' : 'row',
+          gap: '8px',
+          maxWidth: '82%',
+          alignItems: 'flex-start',
         }}
       >
-        <img
-          src={avatar}
-          alt=""
-          decoding="async"
-          style={{
-            width: '100%',
-            height: '100%',
-            imageRendering: 'pixelated',
-            objectFit: 'cover',
-            display: 'block',
-          }}
-        />
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '3px',
-            flexWrap: 'wrap',
+            width: '36px',
+            height: '36px',
+            borderRadius: '6px',
+            overflow: 'hidden',
+            flexShrink: 0,
+            background: '#1a1a2e',
+            border: '1px solid #222',
           }}
         >
-          <span style={{ color: nameColor, fontWeight: 'bold', fontSize: '13px' }}>
-            {item.dev_name || 'Unknown'}
-          </span>
-          {archetype && (
-            <span
-              style={{
-                fontSize: '10px',
-                color: '#888',
-                background: 'rgba(255,255,255,0.05)',
-                padding: '1px 5px',
-                borderRadius: '3px',
-              }}
-            >
-              {archetype}
-            </span>
-          )}
-          {corpDisplay && (
-            <span style={{ color: '#555', fontSize: '10px' }}>
-              {corpDisplay}
-            </span>
-          )}
-          <span style={{ color: '#333', fontSize: '10px', marginLeft: 'auto' }}>
-            {formatTime(item.created_at)}
-          </span>
+          <img
+            src={avatar}
+            alt=""
+            decoding="async"
+            style={{
+              width: '100%',
+              height: '100%',
+              imageRendering: 'pixelated',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {meta && (
+        <div
+          style={{
+            background: bubbleBg,
+            border: bubbleBorder,
+            borderRadius: '10px',
+            padding: '6px 10px',
+            minWidth: 0,
+            boxShadow: ownGlow,
+            transition: 'box-shadow 600ms ease-out',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '3px',
+              flexWrap: 'wrap',
+              justifyContent: isOwnDev ? 'flex-end' : 'flex-start',
+            }}
+          >
+            <span style={{ color: nameColor, fontWeight: 'bold', fontSize: '13px' }}>
+              {item.dev_name || 'Unknown'}
+            </span>
+            {archetype && (
               <span
                 style={{
-                  fontSize: '9px',
-                  color: meta.color,
-                  border: `1px solid ${meta.color}55`,
-                  padding: '1px 4px',
-                  marginRight: '6px',
-                  letterSpacing: '0.5px',
+                  fontSize: '10px',
+                  color: '#888',
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '1px 5px',
+                  borderRadius: '3px',
                 }}
               >
-                {meta.label}
+                {archetype}
               </span>
             )}
-            <span
-              style={{
-                color: msgColor,
-                lineHeight: 1.4,
-                wordBreak: 'break-word',
-              }}
-            >
-              {message}
+            {corpDisplay && (
+              <span style={{ color: '#555', fontSize: '10px' }}>
+                {corpDisplay}
+              </span>
+            )}
+            <span style={{ color: '#333', fontSize: '10px' }}>
+              {formatTime(item.created_at)}
             </span>
           </div>
-          {socialGain > 0 && (
-            <span
-              style={{
-                color: '#66ff66',
-                fontSize: '12px',
-                opacity: 0.6,
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-            >
-              +{socialGain} SOCIAL
-            </span>
-          )}
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '8px',
+              flexDirection: isOwnDev ? 'row-reverse' : 'row',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0, textAlign: isOwnDev ? 'right' : 'left' }}>
+              {meta && (
+                <span
+                  style={{
+                    fontSize: '9px',
+                    color: meta.color,
+                    border: `1px solid ${meta.color}55`,
+                    padding: '1px 4px',
+                    marginRight: '6px',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  {meta.label}
+                </span>
+              )}
+              <span
+                style={{
+                  color: msgColor,
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {message}
+              </span>
+            </div>
+            {/* +N SOCIAL badge is private: only shown on the player's own
+                devs. Other players' social progress stays hidden from view
+                even though the backend tracks it. */}
+            {isOwnDev && socialGain > 0 && (
+              <span
+                style={{
+                  color: '#66ff66',
+                  fontSize: '12px',
+                  opacity: 0.7,
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                +{socialGain} SOCIAL
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -380,7 +396,6 @@ function FeedMessage({ item, isNew }) {
 export default function LiveFeed() {
   const [feed, setFeed] = useState([]);
   const [scrollLock, setScrollLock] = useState(false);
-  const [connected, setConnected] = useState(false);
   const [hasBackendData, setHasBackendData] = useState(false);
   const [mintedDevs, setMintedDevs] = useState(() => {
     // One-time cleanup: clear old mint data after Monad migration
@@ -392,7 +407,12 @@ export default function LiveFeed() {
     return parseInt(localStorage.getItem('nx-minted-devs') || '0', 10);
   });
   const terminalRef = useRef(null);
-  const ws = useWebSocket();
+  // Connected wallet drives right/left alignment — rows whose owner_address
+  // matches `address` are rendered as "my dev" (right, green tint, +SOCIAL
+  // visible). Everyone else lands on the left. With no wallet, every row
+  // goes left (spectator mode).
+  const { address } = useWallet();
+  const myAddr = (address || '').toLowerCase();
 
   // Listen for mint events
   useEffect(() => {
@@ -445,22 +465,6 @@ export default function LiveFeed() {
     return () => clearInterval(id);
   }, []);
 
-  // Handle WebSocket messages
-  useEffect(() => {
-    setConnected(ws.connected);
-    if (ws.messages.length > 0) {
-      const latest = ws.messages[0];
-      if (latest.type === 'action' || latest.data) {
-        setHasBackendData(true);
-        const incoming = latest.data || latest;
-        // Same cache-warm trick for live messages so new rows arriving
-        // via WS paint their avatar synchronously with the text.
-        if (incoming && incoming.ipfs_hash) preloadAvatar(incoming.ipfs_hash);
-        setFeed(prev => [...prev, incoming].slice(-200));
-      }
-    }
-  }, [ws.messages, ws.connected]);
-
   // Auto-scroll
   useEffect(() => {
     if (!scrollLock && terminalRef.current) {
@@ -503,11 +507,17 @@ export default function LiveFeed() {
       <div style={{ padding: '2px 4px', display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--win-bg)' }}>
         <span style={{
           width: 8, height: 8, borderRadius: 0,
-          background: connected || (!hasBackendData && mintedDevs > 0) ? 'var(--terminal-green)' : mintedDevs === 0 ? 'var(--border-dark)' : 'var(--terminal-red)',
+          background: hasBackendData
+            ? 'var(--terminal-green)'
+            : mintedDevs === 0 ? 'var(--border-dark)' : 'var(--terminal-amber)',
           display: 'inline-block',
         }} />
         <span style={{ fontSize: '11px' }}>
-          {connected ? 'LIVE' : hasBackendData ? 'CONNECTING...' : mintedDevs > 0 ? `SIMULATION ACTIVE -- ${mintedDevs} dev${mintedDevs !== 1 ? 's' : ''} deployed` : 'AWAITING FIRST DEPLOYMENT'}
+          {hasBackendData
+            ? 'LIVE'
+            : mintedDevs > 0
+              ? `SIMULATION ACTIVE -- ${mintedDevs} dev${mintedDevs !== 1 ? 's' : ''} deployed`
+              : 'AWAITING FIRST DEPLOYMENT'}
         </span>
         <div style={{ flex: 1 }} />
         <button
@@ -555,7 +565,17 @@ export default function LiveFeed() {
             // time a new row shifts the array indices. All rows are now
             // backend CHAT actions with a BIGSERIAL id.
             const rowKey = `feed-${item.id}`;
-            const card = <FeedMessage key={rowKey} item={item} isNew={isNew} />;
+            const isOwnDev = !!myAddr
+              && !!item.owner_address
+              && item.owner_address.toLowerCase() === myAddr;
+            const card = (
+              <FeedMessage
+                key={rowKey}
+                item={item}
+                isNew={isNew}
+                isOwnDev={isOwnDev}
+              />
+            );
 
             if (!highlights) return card;
             return [

@@ -34,13 +34,13 @@ log = logging.getLogger("nx_engine")
 
 PERSONALITY_MATRIX = {
     "10X_DEV":      {"CREATE_PROTOCOL": 12, "CREATE_AI": 6,  "INVEST": 5,  "SELL": 2,  "MOVE": 10, "CHAT": 25, "CODE_REVIEW": 25, "REST": 15},
-    "LURKER":       {"CREATE_PROTOCOL": 5,  "CREATE_AI": 4,  "INVEST": 8,  "SELL": 5,  "MOVE": 15, "CHAT": 15, "CODE_REVIEW": 20, "REST": 28},
-    "DEGEN":        {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 12, "SELL": 5,  "MOVE": 10, "CHAT": 22, "CODE_REVIEW": 12, "REST": 25},
-    "GRINDER":      {"CREATE_PROTOCOL": 10, "CREATE_AI": 5,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 20, "CODE_REVIEW": 30, "REST": 19},
-    "INFLUENCER":   {"CREATE_PROTOCOL": 5,  "CREATE_AI": 8,  "INVEST": 4,  "SELL": 3,  "MOVE": 12, "CHAT": 35, "CODE_REVIEW": 8,  "REST": 25},
-    "HACKTIVIST":   {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 4,  "SELL": 3,  "MOVE": 18, "CHAT": 20, "CODE_REVIEW": 25, "REST": 16},
-    "FED":          {"CREATE_PROTOCOL": 7,  "CREATE_AI": 4,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 20, "CODE_REVIEW": 30, "REST": 23},
-    "SCRIPT_KIDDIE":{"CREATE_PROTOCOL": 10, "CREATE_AI": 8,  "INVEST": 5,  "SELL": 3,  "MOVE": 12, "CHAT": 22, "CODE_REVIEW": 15, "REST": 25},
+    "LURKER":       {"CREATE_PROTOCOL": 5,  "CREATE_AI": 4,  "INVEST": 8,  "SELL": 5,  "MOVE": 15, "CHAT": 18, "CODE_REVIEW": 20, "REST": 25},
+    "DEGEN":        {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 12, "SELL": 5,  "MOVE": 10, "CHAT": 35, "CODE_REVIEW": 12, "REST": 12},
+    "GRINDER":      {"CREATE_PROTOCOL": 10, "CREATE_AI": 5,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 25, "CODE_REVIEW": 30, "REST": 14},
+    "INFLUENCER":   {"CREATE_PROTOCOL": 5,  "CREATE_AI": 8,  "INVEST": 4,  "SELL": 3,  "MOVE": 12, "CHAT": 45, "CODE_REVIEW": 8,  "REST": 15},
+    "HACKTIVIST":   {"CREATE_PROTOCOL": 8,  "CREATE_AI": 6,  "INVEST": 4,  "SELL": 3,  "MOVE": 18, "CHAT": 28, "CODE_REVIEW": 25, "REST": 8},
+    "FED":          {"CREATE_PROTOCOL": 7,  "CREATE_AI": 4,  "INVEST": 4,  "SELL": 2,  "MOVE": 10, "CHAT": 30, "CODE_REVIEW": 30, "REST": 13},
+    "SCRIPT_KIDDIE":{"CREATE_PROTOCOL": 10, "CREATE_AI": 8,  "INVEST": 5,  "SELL": 3,  "MOVE": 12, "CHAT": 30, "CODE_REVIEW": 15, "REST": 17},
 }
 
 ARCHETYPE_META = {
@@ -69,6 +69,33 @@ CHAT_SOCIAL_GAIN = {
     "SCRIPT_KIDDIE":1,
     "LURKER":       0,
 }
+
+
+def _apply_chat_social_gain(cur, dev_token_id: int, archetype: str) -> int:
+    """Apply CHAT_SOCIAL_GAIN honestly, respecting the 40 cap.
+
+    Returns the effective gain — the value that actually hit the DB. If
+    the dev was already at cap, returns 0 so the Live Feed's "+N SOCIAL"
+    badge reflects reality instead of lying (bug #4 in the audit).
+    """
+    raw = CHAT_SOCIAL_GAIN.get(archetype, 1)
+    if raw <= 0:
+        return 0
+    cur.execute(
+        "SELECT social_vitality FROM devs WHERE token_id = %s",
+        (dev_token_id,),
+    )
+    row = cur.fetchone()
+    current = row["social_vitality"] if row else 0
+    effective = max(0, min(raw, 40 - current))
+    if effective > 0:
+        cur.execute(
+            "UPDATE devs SET social_vitality = social_vitality + %s "
+            "WHERE token_id = %s",
+            (effective, dev_token_id),
+        )
+    return effective
+
 
 # Chat-type selection weights per archetype for Live Feed enrichment.
 # These drive gen_chat_by_type(): INFLUENCER leans hot_take/drama,
@@ -517,13 +544,11 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
             # take a dev up to the "comfortable" band; reaching 40→100 still
             # requires Team Lunch (6 $NXT) or successful hacks. Passive
             # recovery handles 0→25 for free; chat fills 25→40; shop fills 40→100.
-            social_gain = CHAT_SOCIAL_GAIN.get(arch, 1)
-            if social_gain > 0:
-                cur.execute(
-                    "UPDATE devs SET social_vitality = LEAST(40, social_vitality + %s) "
-                    "WHERE token_id = %s",
-                    (social_gain, dev["token_id"]),
-                )
+            #
+            # _apply_chat_social_gain returns the EFFECTIVE gain (what actually
+            # persisted to the DB), which is 0 if the dev is already at cap —
+            # so the Live Feed "+N SOCIAL" badge never lies.
+            social_gain = _apply_chat_social_gain(cur, dev["token_id"], arch)
 
             result["chat_msg"] = msg
             result["chat_channel"] = channel
@@ -612,6 +637,36 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (dev["token_id"], dev["name"], dev["archetype"], action,
           json.dumps(result["details"]), result["energy_cost"], result["nxt_cost"]))
+
+    # --- Contextual CHAT row for Live Feed ---
+    # Actions like CREATE_PROTOCOL / CREATE_AI / INVEST / SELL / CODE_REVIEW
+    # generate a contextual chat_msg (e.g. "Just deployed {name}") but log
+    # the event under the original action_type, not CHAT. The Live Feed
+    # filter only shows action_type='CHAT' rows, so ~60-70% of the
+    # narrative content was invisible. Here we emit an additional CHAT
+    # row carrying the same message so the feed shows real reactions to
+    # real events — and we grant social_vitality for it too, since
+    # reacting to your own work out loud counts as socializing.
+    if (
+        action != "CHAT"
+        and result.get("chat_msg")
+        and result.get("chat_channel")
+        and dev.get("ipfs_hash")
+    ):
+        contextual_gain = _apply_chat_social_gain(cur, dev["token_id"], arch)
+        contextual_details = {
+            "location": dev["location"],
+            "message": result["chat_msg"],
+            "chat_type": "reaction",
+            "social_gain": contextual_gain,
+            "contextual": True,
+            "trigger_action": action,
+        }
+        cur.execute("""
+            INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
+            VALUES (%s, %s, %s, 'CHAT', %s, 0, 0)
+        """, (dev["token_id"], dev["name"], dev["archetype"],
+              json.dumps(contextual_details)))
 
     # --- Log chat message ---
     if result["chat_msg"] and result["chat_channel"]:
