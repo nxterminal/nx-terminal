@@ -25,17 +25,23 @@ SHOP_ITEMS = {
         "cost_nxt": 3,
         "effect": {"type": "caffeine_boost", "value": 25},
     },
-    "pizza": {
-        "name": "Hamburger",
-        "description": "Hamburger boosts energy by 15",
+    "carrot": {
+        "name": "Carrot",
+        "description": "Quick snack. Light energy boost.",
         "cost_nxt": 8,
-        "effect": {"type": "energy_boost", "value": 15},
+        "effect": {"type": "energy_boost", "value": 5},
     },
-    "mega_meal": {
-        "name": "MegaMeal",
-        "description": "Premium meal boosts energy by 30",
+    "pizza": {
+        "name": "Pizza",
+        "description": "Solid meal. Good energy restore.",
         "cost_nxt": 20,
-        "effect": {"type": "energy_boost", "value": 30},
+        "effect": {"type": "energy_boost", "value": 10},
+    },
+    "burger": {
+        "name": "Burger",
+        "description": "Full meal. Maximum energy.",
+        "cost_nxt": 40,
+        "effect": {"type": "energy_boost", "value": 18},
     },
     # ── Maintenance & Fixes ─────────────────────────────────
     "pc_repair": {
@@ -160,7 +166,7 @@ SHOP_ITEMS = {
     },
 }
 
-COFFEE_ITEMS = {"coffee", "pizza", "mega_meal"}
+COFFEE_ITEMS = {"coffee", "carrot", "pizza", "burger"}
 
 
 @router.get("")
