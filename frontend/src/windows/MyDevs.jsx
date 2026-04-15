@@ -119,6 +119,14 @@ function GifImage({ src, alt, arcColor, tokenId }) {
           loading="lazy"
           style={{
             width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated',
+            // Tight PFP crop: scale 2.2× and pin the origin to 32% from
+            // the top so the bunny's head / neck / whiskers land in the
+            // middle of the 80×80 frame. The parent div is already
+            // overflow: hidden so the extra pixels get clipped. This
+            // only applies to MyDevs cards — DevProfile renders its own
+            // inline <img> and is untouched.
+            transform: 'scale(2.2)',
+            transformOrigin: 'center 32%',
             opacity: status === 'loaded' ? 1 : 0,
             transition: 'opacity 0.3s',
           }}
@@ -1344,6 +1352,66 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               textTransform: 'uppercase', fontWeight: 'bold',
             }}>{dev.status || 'active'}</span>
           </div>
+          {/* VIEW full image button — opens a 1000×1000 popup with the
+              GIF at 500×500 and two download buttons (GIF via fetch+blob,
+              PNG via canvas). Click stops propagation so the DevCard's
+              own onClick (which opens DevProfile) doesn't also fire. */}
+          {dev.ipfs_hash && (
+            <div style={{ marginTop: '2px' }}>
+              <button
+                className="win-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const gifUrl = `${IPFS_GW}${dev.ipfs_hash}`;
+                  const esc = (s) => String(s).replace(/[&<>"']/g, c =>
+                    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                  const safeName = esc(dev.name || 'Dev');
+                  const safeFileBase = String(dev.name || `dev_${dev.token_id}`).replace(/[^A-Za-z0-9_-]/g, '_');
+                  const w = window.open('', '_blank', 'width=1000,height=1000');
+                  if (!w) return;
+                  w.document.write(`
+<!DOCTYPE html>
+<html><head><title>${safeName} #${dev.token_id}</title>
+<style>
+  body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column;
+         align-items: center; justify-content: center; min-height: 100vh;
+         font-family: 'VT323', monospace; color: #c8ccd8; }
+  h2 { margin: 0 0 16px; font-weight: normal; }
+  img { width: 500px; height: 500px; image-rendering: pixelated; }
+  .btns { margin-top: 16px; display: flex; gap: 12px; }
+  .btn { padding: 8px 20px; background: #30d868; color: #080810; border: none;
+         cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 700; }
+  .btn:hover { background: #40e878; }
+</style></head><body>
+  <h2>${safeName} #${dev.token_id}</h2>
+  <img src="${gifUrl}" id="devImg" crossorigin="anonymous" />
+  <div class="btns">
+    <button class="btn" onclick="
+      fetch('${gifUrl}').then(r=>r.blob()).then(b=>{
+        const a=document.createElement('a');a.href=URL.createObjectURL(b);
+        a.download='${safeFileBase}_${dev.token_id}.gif';a.click();
+      })">&#8595; GIF</button>
+    <button class="btn" onclick="
+      const img=document.getElementById('devImg');
+      const c=document.createElement('canvas');c.width=1000;c.height=1000;
+      const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(img,0,0,1000,1000);
+      c.toBlob(b=>{
+        const a=document.createElement('a');a.href=URL.createObjectURL(b);
+        a.download='${safeFileBase}_${dev.token_id}.png';a.click();
+      },'image/png')">&#8595; PNG</button>
+  </div>
+</body></html>
+                  `);
+                  w.document.close();
+                }}
+                style={{ fontSize: '9px', padding: '1px 6px' }}
+                title="View & download full image"
+              >
+                {'\uD83D\uDDBC\uFE0F'} VIEW
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
