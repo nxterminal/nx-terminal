@@ -54,16 +54,18 @@ async def get_world_events(active_only: bool = True):
 
 @router.get("/feed")
 async def get_action_feed(limit: int = 50, offset: int = 0):
-    """Get recent actions across all devs. LEFT JOIN devs so the Live Feed
-    can render rich cards for CHAT actions (avatar via ipfs_hash, corporation
-    badge) without a second round-trip. LEFT JOIN (not INNER) so rows from
-    devs that have been deleted still show up in the feed."""
+    """Get recent actions across ALL devs globally — no wallet filter.
+
+    The Live Feed is a global group-chat where every minted dev from every
+    player participates. LEFT JOIN devs (not INNER) so rows from deleted
+    devs still surface. owner_address ships with each row so the frontend
+    can align messages right (my devs) vs left (everyone else)."""
     if limit > 100:
         limit = 100
     return fetch_all(
         """SELECT a.id, a.dev_id, a.dev_name, a.archetype, a.action_type,
                   a.details, a.energy_cost, a.nxt_cost, a.created_at,
-                  d.corporation, d.ipfs_hash
+                  d.corporation, d.ipfs_hash, d.owner_address
            FROM actions a
            LEFT JOIN devs d ON d.token_id = a.dev_id
            ORDER BY a.created_at DESC
