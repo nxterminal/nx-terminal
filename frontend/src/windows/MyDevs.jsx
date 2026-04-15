@@ -839,7 +839,7 @@ function FeedDropdown({ dev, busy, onBuy }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'\uD83C\uDF54'} label={'FEED \u25BE'}
+      <StoneBtn emoji={'\uD83E\uDD55'} label={'FEED \u25BE'}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
         title="Feed your dev: Carrot (8), Pizza (20), Burger (40)" />
