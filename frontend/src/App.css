@@ -90,6 +90,33 @@
   opacity: 1;
 }
 
+/* Invisible edge/corner resize hit-areas. The visible dotted grip in
+   the bottom-right is still .win98-resize-handle above; these only
+   provide cursor + drag surface. Top/bottom strips skip the corners
+   so the corner squares "win" the cursor on overlap. The west edge
+   skips the titlebar (top: 24px) so dragging the title still moves
+   the window. */
+.win98-resize {
+  position: absolute;
+  z-index: 9;
+  background: transparent;
+}
+.win98-resize.n  { top: 0;     left: 8px;  right: 8px;  height: 4px; cursor: ns-resize; }
+.win98-resize.s  { bottom: 0;  left: 8px;  right: 16px; height: 4px; cursor: ns-resize; }
+.win98-resize.w  { top: 24px;  left: 0;    bottom: 8px; width: 4px;  cursor: ew-resize; }
+.win98-resize.e  { top: 24px;  right: 0;   bottom: 16px; width: 4px; cursor: ew-resize; }
+.win98-resize.nw { top: 0;     left: 0;    width: 8px;  height: 8px; cursor: nwse-resize; }
+.win98-resize.ne { top: 0;     right: 0;   width: 8px;  height: 8px; cursor: nesw-resize; }
+.win98-resize.sw { bottom: 0;  left: 0;    width: 8px;  height: 8px; cursor: nesw-resize; }
+/* SE corner keeps its existing .win98-resize-handle with cursor
+   se-resize from the rule above. */
+
+/* Maximized windows have no resize affordance at all. */
+.win98-window.maximized .win98-resize,
+.win98-window.maximized .win98-resize-handle {
+  display: none;
+}
+
 .win98-titlebar {
   background: linear-gradient(90deg, var(--win-title-l), var(--win-title-r));
   color: white;
