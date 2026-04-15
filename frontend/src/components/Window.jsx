@@ -62,21 +62,71 @@ export default function Window({
     dragListenersRef.current = { move: handleMouseMove, up: handleMouseUp };
   }, [position, maximized, onFocus, onMove]);
 
-  const handleResizeStart = useCallback((e) => {
+  // Resize handler factory. `dir` is a compass string like 'n', 'se',
+  // 'sw'… and the move handler branches on which characters appear in
+  // it. North/west edges also shift the window position so the
+  // opposite edge stays pinned. Min size (200×150) is enforced via the
+  // resizeWindow store action plus an explicit clamp here so the X/Y
+  // delta calculation doesn't overshoot. Window is held inside the
+  // viewport top/left at 0,0 so it can't be dragged off-screen.
+  const handleResizeStart = useCallback((dir) => (e) => {
     if (maximized || !onResize) return;
     e.preventDefault();
     e.stopPropagation();
     onFocus();
+
     const startX = e.clientX;
     const startY = e.clientY;
     const startWidth = size.width;
     const startHeight = size.height;
+    const startPosX = position.x;
+    const startPosY = position.y;
+    const MIN_W = 200;
+    const MIN_H = 150;
 
     const handleResizeMove = (ev) => {
-      onResize({
-        width: startWidth + (ev.clientX - startX),
-        height: startHeight + (ev.clientY - startY),
-      });
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newX = startPosX;
+      let newY = startPosY;
+
+      if (dir.includes('e')) {
+        newWidth = Math.max(MIN_W, startWidth + dx);
+      }
+      if (dir.includes('w')) {
+        const proposedWidth = startWidth - dx;
+        newWidth = Math.max(MIN_W, proposedWidth);
+        newX = startPosX + (startWidth - newWidth);
+      }
+      if (dir.includes('s')) {
+        newHeight = Math.max(MIN_H, startHeight + dy);
+      }
+      if (dir.includes('n')) {
+        const proposedHeight = startHeight - dy;
+        newHeight = Math.max(MIN_H, proposedHeight);
+        newY = startPosY + (startHeight - newHeight);
+      }
+
+      // Pin top-left to the viewport — west/north drags can't go
+      // below 0. When the new edge would cross 0, swallow the
+      // overshoot into the size delta so the window keeps shrinking
+      // smoothly instead of teleporting.
+      if (newX < 0) {
+        newWidth += newX;
+        newX = 0;
+      }
+      if (newY < 0) {
+        newHeight += newY;
+        newY = 0;
+      }
+
+      if (newX !== startPosX || newY !== startPosY) {
+        onMove({ x: newX, y: newY });
+      }
+      onResize({ width: newWidth, height: newHeight });
     };
 
     const handleResizeEnd = () => {
@@ -88,7 +138,7 @@ export default function Window({
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
     resizeListenersRef.current = { move: handleResizeMove, up: handleResizeEnd };
-  }, [maximized, size, onFocus, onResize]);
+  }, [maximized, size, position, onFocus, onResize, onMove]);
 
   if (minimized) return null;
 
@@ -131,11 +181,22 @@ export default function Window({
         <div className="win98-statusbar">{statusBar}</div>
       )}
       {!maximized && onResize && (
-        <div
-          className="win98-resize-handle"
-          onMouseDown={handleResizeStart}
-          title="Drag to resize"
-        />
+        <>
+          <div className="win98-resize n"  onMouseDown={handleResizeStart('n')}  />
+          <div className="win98-resize s"  onMouseDown={handleResizeStart('s')}  />
+          <div className="win98-resize w"  onMouseDown={handleResizeStart('w')}  />
+          <div className="win98-resize e"  onMouseDown={handleResizeStart('e')}  />
+          <div className="win98-resize nw" onMouseDown={handleResizeStart('nw')} />
+          <div className="win98-resize ne" onMouseDown={handleResizeStart('ne')} />
+          <div className="win98-resize sw" onMouseDown={handleResizeStart('sw')} />
+          {/* The visible bottom-right grip stays the same Win98 dotted
+              corner from before — just hooked up to the new factory. */}
+          <div
+            className="win98-resize-handle"
+            onMouseDown={handleResizeStart('se')}
+            title="Drag to resize"
+          />
+        </>
       )}
     </div>
   );

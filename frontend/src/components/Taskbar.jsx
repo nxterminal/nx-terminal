@@ -296,16 +296,27 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
       <div className="taskbar-divider" />
 
       <div className="taskbar-windows">
-        {windows.map(w => (
-          <button
-            key={w.id}
-            className={`win-btn taskbar-btn${!w.minimized ? ' active' : ''}`}
-            onClick={() => onWindowClick(w.id)}
-            title={w.title}
-          >
-            <span>{w.icon} {w.title}</span>
-          </button>
-        ))}
+        {(() => {
+          // Only one taskbar button should look "active" at a time: the
+          // one whose window has the highest zIndex among the visible
+          // (non-minimized) windows. Minimized windows never light up.
+          const activeId = windows
+            .filter(w => !w.minimized)
+            .reduce((best, w) => (!best || w.zIndex > best.zIndex ? w : best), null)?.id;
+          return windows.map(w => {
+            const isActive = !w.minimized && w.id === activeId;
+            return (
+              <button
+                key={w.id}
+                className={`win-btn taskbar-btn${isActive ? ' active' : ''}`}
+                onClick={() => onWindowClick(w.id)}
+                title={w.title}
+              >
+                <span>{w.icon} {w.title}</span>
+              </button>
+            );
+          });
+        })()}
       </div>
 
       <div className="taskbar-tray">
