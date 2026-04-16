@@ -290,19 +290,33 @@ function DevImageModal({ dev, onClose }) {
     }
   };
 
+  // Any pointer event that starts inside the modal (click, mousedown,
+  // pointerdown) is stopped at the root of the modal so it never
+  // bubbles up to the parent DevCard whose onClick opens DevProfile.
+  // Without this, interacting with the modal tabs, buttons or drag
+  // handle would incidentally open the Dev Profile window behind it.
+  const stopAll = (e) => { e.stopPropagation(); };
+
   return (
     <>
       {/* Backdrop — separate sibling so the modal box can use
           position: fixed with dynamic left/top without fighting a
-          flex centering parent. Backdrop click still closes. */}
+          flex centering parent. Backdrop click still closes, but
+          all pointer events are stopped at the backdrop so they
+          never reach the DevCard underneath. */}
       <div
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        onMouseDown={stopAll}
+        onPointerDown={stopAll}
         style={{
           position: 'fixed', inset: 0, zIndex: 20000,
           background: 'rgba(0, 0, 0, 0.65)',
         }}
       />
       <div
+        onClick={stopAll}
+        onMouseDown={stopAll}
+        onPointerDown={stopAll}
         style={{
           position: 'fixed',
           left: pos.x, top: pos.y,
