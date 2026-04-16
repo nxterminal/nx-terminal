@@ -185,12 +185,48 @@ function DevImageModal({ dev, onClose }) {
   const imgRef = useRef(null);
   const [dlStatus, setDlStatus] = useState(null);
 
+  // ── Draggable window state ──────────────────────────────
+  // Initial position: centered on the viewport. Modal is ~440 wide
+  // and ~530 tall, so half of each gives us the centering offset.
+  // Math.max(20, …) keeps the modal on-screen on tiny viewports.
+  const [pos, setPos] = useState(() => ({
+    x: Math.max(20, Math.floor((typeof window !== 'undefined' ? window.innerWidth : 1024) / 2 - 220)),
+    y: Math.max(20, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 768) / 2 - 265)),
+  }));
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
   // Close on Escape
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Document-level mousemove/mouseup while dragging. Clamps pos so
+  // at least a sliver of the window stays on-screen in every
+  // direction (~60px horizontal, header height vertical).
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const newX = e.clientX - dragOffset.current.x;
+      const newY = e.clientY - dragOffset.current.y;
+      const maxX = window.innerWidth - 60;
+      const maxY = window.innerHeight - 36;
+      const minX = -380; // allow dragging most of the 440-wide modal off left
+      setPos({
+        x: Math.max(minX, Math.min(maxX, newX)),
+        y: Math.max(0, Math.min(maxY, newY)),
+      });
+    };
+    const onUp = () => setDragging(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging]);
 
   const gifUrl = `${IPFS_GW}${dev.ipfs_hash}`;
   const safeFileBase = String(dev.name || `dev_${dev.token_id}`).replace(/[^A-Za-z0-9_-]/g, '_');
@@ -255,30 +291,49 @@ function DevImageModal({ dev, onClose }) {
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 20000,
-        background: 'rgba(0, 0, 0, 0.65)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: "'VT323', monospace",
-      }}
-    >
+    <>
+      {/* Backdrop — separate sibling so the modal box can use
+          position: fixed with dynamic left/top without fighting a
+          flex centering parent. Backdrop click still closes. */}
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
         style={{
+          position: 'fixed', inset: 0, zIndex: 20000,
+          background: 'rgba(0, 0, 0, 0.65)',
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          left: pos.x, top: pos.y,
+          zIndex: 20001,
           width: '440px', background: '#0c0e16',
           border: '2px solid #1a1e2c',
           boxShadow: '0 0 0 1px #30d86855, 4px 4px 0 rgba(0,0,0,0.5)',
           color: '#c8ccd8',
+          fontFamily: "'VT323', monospace",
         }}
       >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', borderBottom: '1px solid #1a1e2c',
-          background: '#0a0c14',
-        }}>
+        {/* Header — acts as the drag handle (Win98 title bar style).
+            Clicks on buttons inside the header (the close X) are
+            ignored via an e.target.closest('button') check so they
+            still fire their own onClick. preventDefault stops the
+            browser from starting a text selection during drag. */}
+        <div
+          onMouseDown={(e) => {
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            setDragging(true);
+            dragOffset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', borderBottom: '1px solid #1a1e2c',
+            background: '#0a0c14',
+            cursor: dragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+          }}
+        >
           <span style={{ fontSize: '15px', letterSpacing: '0.5px' }}>
             {dev.name} <span style={{ color: '#30d868' }}>#{dev.token_id}</span>
           </span>
@@ -380,7 +435,7 @@ function DevImageModal({ dev, onClose }) {
             : 'FULL BODY: complete frame. PNG renders 1000×1000.')}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
