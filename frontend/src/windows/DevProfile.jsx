@@ -203,6 +203,11 @@ export default function DevProfile({ devId }) {
               loading="lazy"
               style={{
                 width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated',
+                // PFP crop — same values used in MyDevs.GifImage and the
+                // LiveFeed avatar. The 100×100 parent is already
+                // overflow: hidden so the extra pixels clip cleanly.
+                transform: 'scale(2.2)',
+                transformOrigin: 'center 32%',
                 opacity: imgStatus === 'loaded' ? 1 : 0,
                 transition: 'opacity 0.3s',
               }}

@@ -157,6 +157,233 @@ function GifImage({ src, alt, arcColor, tokenId }) {
   );
 }
 
+// ── Dev Image Modal — PFP / FULL BODY toggle + downloads ─────
+// In-app modal that replaces the old window.open popup. Win98/terminal
+// aesthetic matching the rest of the app. Shows the dev's GIF in one
+// of two modes:
+//
+//   PFP       — scale(2.2) + transformOrigin center 32% (same crop as
+//               the grid thumbnails and the LiveFeed avatars)
+//   FULL BODY — full frame, un-zoomed
+//
+// Downloads respect whatever mode is active:
+//   ↓ GIF — always the original IPFS GIF via fetch+blob (cheap, always
+//           works, the animated frames preserve). Cropping a GIF in
+//           canvas is not feasible without GIF decoding, so the GIF
+//           download is always full-frame regardless of mode.
+//   ↓ PNG — a still snapshot rendered to 1000×1000 canvas. In PFP
+//           mode the canvas drawImage math reproduces the exact
+//           scale(2.2) + center 32% crop:
+//             scale = 2.2, origin = (0.5, 0.32) of container
+//             imgSize = 1000 × 2.2 = 2200
+//             dx = -(2200*0.5 - 1000*0.5) = -600
+//             dy = -(2200*0.32 - 1000*0.32) = -384
+//             ctx.drawImage(img, -600, -384, 2200, 2200)
+//           In FULL BODY mode it's a straight drawImage(img, 0, 0, 1000, 1000).
+function DevImageModal({ dev, onClose }) {
+  const [mode, setMode] = useState('pfp');
+  const imgRef = useRef(null);
+  const [dlStatus, setDlStatus] = useState(null);
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const gifUrl = `${IPFS_GW}${dev.ipfs_hash}`;
+  const safeFileBase = String(dev.name || `dev_${dev.token_id}`).replace(/[^A-Za-z0-9_-]/g, '_');
+
+  const downloadGif = async () => {
+    try {
+      setDlStatus('Downloading GIF...');
+      const res = await fetch(gifUrl);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${safeFileBase}_${dev.token_id}.gif`;
+      a.click();
+      setTimeout(() => setDlStatus(null), 1500);
+    } catch {
+      setDlStatus('GIF download failed');
+      setTimeout(() => setDlStatus(null), 2500);
+    }
+  };
+
+  const downloadPng = () => {
+    const img = imgRef.current;
+    if (!img || !img.complete) {
+      setDlStatus('Image not ready');
+      setTimeout(() => setDlStatus(null), 2000);
+      return;
+    }
+    try {
+      setDlStatus('Rendering PNG...');
+      const SIZE = 1000;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      if (mode === 'pfp') {
+        // Reproduce scale(2.2) + transformOrigin center 32% crop.
+        const scale = 2.2;
+        const scaled = SIZE * scale;
+        const dx = -(scaled * 0.5 - SIZE * 0.5);
+        const dy = -(scaled * 0.32 - SIZE * 0.32);
+        ctx.drawImage(img, dx, dy, scaled, scaled);
+      } else {
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      }
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setDlStatus('PNG render failed');
+          setTimeout(() => setDlStatus(null), 2500);
+          return;
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${safeFileBase}_${dev.token_id}_${mode}.png`;
+        a.click();
+        setTimeout(() => setDlStatus(null), 1500);
+      }, 'image/png');
+    } catch {
+      setDlStatus('PNG render failed (CORS?)');
+      setTimeout(() => setDlStatus(null), 2500);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 20000,
+        background: 'rgba(0, 0, 0, 0.65)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'VT323', monospace",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '440px', background: '#0c0e16',
+          border: '2px solid #1a1e2c',
+          boxShadow: '0 0 0 1px #30d86855, 4px 4px 0 rgba(0,0,0,0.5)',
+          color: '#c8ccd8',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 12px', borderBottom: '1px solid #1a1e2c',
+          background: '#0a0c14',
+        }}>
+          <span style={{ fontSize: '15px', letterSpacing: '0.5px' }}>
+            {dev.name} <span style={{ color: '#30d868' }}>#{dev.token_id}</span>
+          </span>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: 'transparent', border: '1px solid #30d86855',
+              color: '#c8ccd8', cursor: 'pointer', width: '22px', height: '22px',
+              fontFamily: 'inherit', fontSize: '14px', lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >x</button>
+        </div>
+
+        {/* Mode toggle */}
+        <div style={{
+          display: 'flex', gap: '4px', padding: '8px 12px 0',
+        }}>
+          {[
+            { id: 'pfp',  label: 'PFP' },
+            { id: 'full', label: 'FULL BODY' },
+          ].map(t => {
+            const active = mode === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setMode(t.id)}
+                style={{
+                  flex: 1, padding: '4px 8px',
+                  background: active ? '#30d868' : 'transparent',
+                  color: active ? '#080810' : '#c8ccd8',
+                  border: '1px solid #30d86855',
+                  fontFamily: 'inherit', fontSize: '13px',
+                  fontWeight: active ? 'bold' : 'normal',
+                  letterSpacing: '0.5px', cursor: 'pointer',
+                }}
+              >{t.label}</button>
+            );
+          })}
+        </div>
+
+        {/* Image viewport */}
+        <div style={{ padding: '12px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{
+            width: '360px', height: '360px',
+            background: '#1a1a2e', border: '1px solid #1a1e2c',
+            overflow: 'hidden', position: 'relative',
+          }}>
+            <img
+              ref={imgRef}
+              src={gifUrl}
+              alt={dev.name}
+              crossOrigin="anonymous"
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                imageRendering: 'pixelated', display: 'block',
+                transform: mode === 'pfp' ? 'scale(2.2)' : 'none',
+                transformOrigin: mode === 'pfp' ? 'center 32%' : 'center center',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Download buttons */}
+        <div style={{
+          display: 'flex', gap: '8px', padding: '0 12px 12px',
+        }}>
+          <button
+            onClick={downloadGif}
+            style={{
+              flex: 1, padding: '6px 10px',
+              background: '#30d868', color: '#080810',
+              border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '14px', fontWeight: 'bold',
+              letterSpacing: '0.5px',
+            }}
+          >{'\u2193'} GIF</button>
+          <button
+            onClick={downloadPng}
+            style={{
+              flex: 1, padding: '6px 10px',
+              background: '#30d868', color: '#080810',
+              border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '14px', fontWeight: 'bold',
+              letterSpacing: '0.5px',
+            }}
+          >{'\u2193'} PNG</button>
+        </div>
+
+        {/* Status line + hint */}
+        <div style={{
+          padding: '0 12px 10px', fontSize: '11px',
+          color: dlStatus ? '#30d868' : '#5a6278', minHeight: '14px',
+          textAlign: 'center',
+        }}>
+          {dlStatus || (mode === 'pfp'
+            ? 'PFP: head/neck crop. PNG renders the same zoom at 1000×1000.'
+            : 'FULL BODY: complete frame. PNG renders 1000×1000.')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuickPrompt({ devId, devName, address }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
@@ -1128,6 +1355,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [spends, setSpends] = useState([]);
 
@@ -1352,59 +1580,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               textTransform: 'uppercase', fontWeight: 'bold',
             }}>{dev.status || 'active'}</span>
           </div>
-          {/* VIEW full image button — opens a 1000×1000 popup with the
-              GIF at 500×500 and two download buttons (GIF via fetch+blob,
-              PNG via canvas). Click stops propagation so the DevCard's
-              own onClick (which opens DevProfile) doesn't also fire. */}
+          {/* VIEW full image button — opens the in-app DevImageModal with
+              PFP / FULL BODY toggle + downloads. Click stops propagation
+              so the DevCard's own onClick (which opens DevProfile)
+              doesn't also fire. */}
           {dev.ipfs_hash && (
             <div style={{ marginTop: '2px' }}>
               <button
                 className="win-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const gifUrl = `${IPFS_GW}${dev.ipfs_hash}`;
-                  const esc = (s) => String(s).replace(/[&<>"']/g, c =>
-                    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-                  const safeName = esc(dev.name || 'Dev');
-                  const safeFileBase = String(dev.name || `dev_${dev.token_id}`).replace(/[^A-Za-z0-9_-]/g, '_');
-                  const w = window.open('', '_blank', 'width=1000,height=1000');
-                  if (!w) return;
-                  w.document.write(`
-<!DOCTYPE html>
-<html><head><title>${safeName} #${dev.token_id}</title>
-<style>
-  body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column;
-         align-items: center; justify-content: center; min-height: 100vh;
-         font-family: 'VT323', monospace; color: #c8ccd8; }
-  h2 { margin: 0 0 16px; font-weight: normal; }
-  img { width: 500px; height: 500px; image-rendering: pixelated; }
-  .btns { margin-top: 16px; display: flex; gap: 12px; }
-  .btn { padding: 8px 20px; background: #30d868; color: #080810; border: none;
-         cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 700; }
-  .btn:hover { background: #40e878; }
-</style></head><body>
-  <h2>${safeName} #${dev.token_id}</h2>
-  <img src="${gifUrl}" id="devImg" crossorigin="anonymous" />
-  <div class="btns">
-    <button class="btn" onclick="
-      fetch('${gifUrl}').then(r=>r.blob()).then(b=>{
-        const a=document.createElement('a');a.href=URL.createObjectURL(b);
-        a.download='${safeFileBase}_${dev.token_id}.gif';a.click();
-      })">&#8595; GIF</button>
-    <button class="btn" onclick="
-      const img=document.getElementById('devImg');
-      const c=document.createElement('canvas');c.width=1000;c.height=1000;
-      const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(img,0,0,1000,1000);
-      c.toBlob(b=>{
-        const a=document.createElement('a');a.href=URL.createObjectURL(b);
-        a.download='${safeFileBase}_${dev.token_id}.png';a.click();
-      },'image/png')">&#8595; PNG</button>
-  </div>
-</body></html>
-                  `);
-                  w.document.close();
-                }}
+                onClick={(e) => { e.stopPropagation(); setShowImageModal(true); }}
                 style={{ fontSize: '9px', padding: '1px 6px' }}
                 title="View & download full image"
               >
@@ -1500,6 +1684,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       {/* Fund / Transfer modals */}
       {showFundModal && (
         <FundModal dev={dev} address={address} onClose={() => setShowFundModal(false)} onDevUpdate={onDevUpdate} />
+      )}
+      {showImageModal && (
+        <DevImageModal dev={dev} onClose={() => setShowImageModal(false)} />
       )}
       {showTransferModal && (
         <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />

@@ -285,6 +285,11 @@ function FeedMessage({ item, isNew, isOwnDev }) {
               imageRendering: 'pixelated',
               objectFit: 'cover',
               display: 'block',
+              // PFP crop — same values as MyDevs.GifImage and
+              // DevProfile header GIF. The 36×36 parent is already
+              // overflow: hidden so the scaled pixels clip cleanly.
+              transform: 'scale(2.2)',
+              transformOrigin: 'center 32%',
             }}
           />
         </div>
