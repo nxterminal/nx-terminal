@@ -188,8 +188,43 @@ def _run_auto_migrations():
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
-                # Cleanup: remove dev activity spam notifications from inbox
-                cur.execute("DELETE FROM notifications WHERE type IN ('protocol_created', 'ai_created')")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS support_tickets (
+                        id SERIAL PRIMARY KEY,
+                        player_address VARCHAR(42) NOT NULL,
+                        subject TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_deleted ON notifications(deleted_at) WHERE deleted_at IS NULL")
+                # Soft-delete dev activity spam — rows stay for forensics but
+                # are hidden from all SELECT queries (deleted_at IS NULL filter).
+                cur.execute("""
+                    UPDATE notifications SET deleted_at = NOW()
+                    WHERE type IN ('protocol_created', 'ai_created')
+                    AND deleted_at IS NULL
+                """)
+                # Backfill: insert welcome notification for existing players who
+                # don't have one yet, using their real registration timestamp.
+                cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
+                if not cur.fetchone():
+                    cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
+                    from backend.api.routes.players import WELCOME_BODY
+                    cur.execute("""
+                        INSERT INTO notifications (player_address, type, title, body, created_at)
+                        SELECT p.wallet_address, 'welcome',
+                               'Welcome to NX Terminal — Protocol Wars Awaits',
+                               %s, p.created_at
+                        FROM players p
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM notifications n
+                            WHERE n.player_address = p.wallet_address AND n.type = 'welcome'
+                        )
+                    """, (WELCOME_BODY,))
+                    cur.execute("INSERT INTO system_broadcasts (id) VALUES ('welcome_backfill') ON CONFLICT DO NOTHING")
+                    log.info("✅ Backfilled welcome notifications for existing players")
             conn.commit()
         log.info("✅ Auto-migrations complete")
     except Exception as e:
