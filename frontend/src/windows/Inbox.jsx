@@ -41,17 +41,17 @@ const ALLOWED_NOTIF_TYPES = new Set(Object.keys(TYPE_SENDERS));
 const SENT_TYPES = new Set(['ticket_sent']);
 
 function notifToEmail(n) {
-  const d = new Date(n.created_at);
+  const d = n.created_at ? new Date(n.created_at) : new Date();
   return {
     id: `notif-${n.id}`,
     notifId: n.id,
     notifType: n.type,
     from: TYPE_SENDERS[n.type] || 'NX Terminal <system@nxterminal.corp>',
-    subject: n.title,
+    subject: n.title || '(no subject)',
     date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     dateRaw: d,
     read: !!n.read,
-    body: n.body,
+    body: n.body || '',
     sentByMe: SENT_TYPES.has(n.type),
   };
 }
@@ -372,7 +372,10 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                     saveEmails(backendEmails);
                   }).catch(() => {});
                 } catch (err) {
-                  setComposeStatus(err.detail || err.message || 'Failed to send. Try again.');
+                  const msg = (typeof err.detail === 'string' ? err.detail : null)
+                    || err.message
+                    || 'Failed to send. Try again.';
+                  setComposeStatus(msg);
                 }
                 setComposeSending(false);
               }}
