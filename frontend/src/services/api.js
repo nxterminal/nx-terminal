@@ -132,6 +132,7 @@ export const api = {
   submitTicket: (wallet, subject, message) =>
     fetchJSON(`${API_BASE}/api/notifications/ticket`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet, subject, message }),
     }),
 
