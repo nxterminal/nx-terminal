@@ -76,6 +76,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const [composeBody, setComposeBody] = useState('');
   const [composeSending, setComposeSending] = useState(false);
   const [composeStatus, setComposeStatus] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const unreadCount = emails.filter(e => !e.read).length;
 
@@ -262,7 +263,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                 </button>
                 <button
                   className="win-btn"
-                  onClick={handleDeleteSelected}
+                  onClick={() => setShowDeleteConfirm(true)}
                   style={{ fontSize: '10px', padding: '1px 8px' }}
                 >
                   Delete ({selectedIds.size})
@@ -467,6 +468,60 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
           }}>
             {selectedEmail.body}
           </pre>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div
+          onClick={() => setShowDeleteConfirm(false)}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10600,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              width: 320, background: 'var(--win-bg)',
+              boxShadow:
+                'inset -1px -1px 0 #000,' +
+                'inset 1px 1px 0 var(--border-light),' +
+                'inset -2px -2px 0 var(--border-dark),' +
+                'inset 2px 2px 0 #dfdfdf',
+              fontFamily: "'Tahoma', 'MS Sans Serif', sans-serif",
+            }}
+          >
+            <div style={{
+              background: 'linear-gradient(90deg, var(--win-title-l), var(--win-title-r))',
+              color: '#fff', padding: '3px 6px', fontSize: '12px', fontWeight: 'bold',
+            }}>
+              NX Terminal — Confirm Delete
+            </div>
+            <div style={{ padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', marginBottom: '14px', lineHeight: 1.4 }}>
+                {'\u26A0\uFE0F'} Are you sure you want to delete {selectedIds.size} email{selectedIds.size > 1 ? 's' : ''}?
+                <br /><br />
+                <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                  HR advises against destroying corporate correspondence.
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                <button className="win-btn"
+                  onClick={() => { handleDeleteSelected(); setShowDeleteConfirm(false); }}
+                  style={{ padding: '4px 24px', fontSize: '11px', fontWeight: 'bold', minWidth: 72 }}
+                  autoFocus
+                >Delete</button>
+                <button className="win-btn"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  style={{ padding: '4px 24px', fontSize: '11px', minWidth: 72 }}
+                >Cancel</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

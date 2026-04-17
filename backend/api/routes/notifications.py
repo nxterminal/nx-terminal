@@ -86,6 +86,7 @@ async def get_notifications(wallet: str, unread: bool = False, limit: int = 50):
             """SELECT id, type, title, body, read, dev_id, created_at
                FROM notifications
                WHERE player_address = %s AND read = FALSE
+                 AND deleted_at IS NULL
                ORDER BY created_at DESC LIMIT %s""",
             (wallet, limit)
         )
@@ -93,6 +94,7 @@ async def get_notifications(wallet: str, unread: bool = False, limit: int = 50):
         """SELECT id, type, title, body, read, dev_id, created_at
            FROM notifications
            WHERE player_address = %s
+             AND deleted_at IS NULL
            ORDER BY created_at DESC LIMIT %s""",
         (wallet, limit)
     )

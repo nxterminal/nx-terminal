@@ -197,8 +197,15 @@ def _run_auto_migrations():
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     )
                 """)
-                # Cleanup: remove dev activity spam notifications from inbox
-                cur.execute("DELETE FROM notifications WHERE type IN ('protocol_created', 'ai_created')")
+                cur.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_deleted ON notifications(deleted_at) WHERE deleted_at IS NULL")
+                # Soft-delete dev activity spam — rows stay for forensics but
+                # are hidden from all SELECT queries (deleted_at IS NULL filter).
+                cur.execute("""
+                    UPDATE notifications SET deleted_at = NOW()
+                    WHERE type IN ('protocol_created', 'ai_created')
+                    AND deleted_at IS NULL
+                """)
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
