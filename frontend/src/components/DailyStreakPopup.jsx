@@ -45,12 +45,21 @@ export default function DailyStreakPopup() {
   const reward = result ? result.reward : data.next_reward;
 
   return (
-    <div onClick={() => setDismissed(true)} style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.6)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 10500,
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <div
+      onClick={(e) => { e.stopPropagation(); setDismissed(true); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.6)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', zIndex: 10500,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
         background: '#1a1a2e', border: '2px solid #3a5a3a',
         minWidth: 340, maxWidth: 420, fontFamily: "'VT323', monospace",
         boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px rgba(0,255,100,0.1)',
