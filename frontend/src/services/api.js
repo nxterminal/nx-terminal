@@ -129,6 +129,11 @@ export const api = {
     fetchJSON(`${API_BASE}/api/notifications/${id}/read`, { method: 'POST' }),
   markAllNotificationsRead: (wallet) =>
     fetchJSON(`${API_BASE}/api/notifications/${wallet}/read-all`, { method: 'POST' }),
+  submitTicket: (wallet, subject, message) =>
+    fetchJSON(`${API_BASE}/api/notifications/ticket`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet, subject, message }),
+    }),
 
   // Prompts
   postPrompt: (devId, playerAddress, promptText) =>

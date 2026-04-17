@@ -188,6 +188,15 @@ def _run_auto_migrations():
                 ]
                 for _w, _n in _VIP_TESTERS:
                     cur.execute("INSERT INTO vip_testers (wallet_address, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (_w, _n))
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS support_tickets (
+                        id SERIAL PRIMARY KEY,
+                        player_address VARCHAR(42) NOT NULL,
+                        subject TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
                 # Cleanup: remove dev activity spam notifications from inbox
                 cur.execute("DELETE FROM notifications WHERE type IN ('protocol_created', 'ai_created')")
                 # Backfill: insert welcome notification for existing players who
