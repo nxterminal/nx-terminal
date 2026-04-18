@@ -24,6 +24,7 @@ except ImportError:
 try:
     from backend.services.logging_helpers import log_info, log_warning, log_error
     from backend.services.admin_log import log_event as admin_log_event
+    from backend.services.signer import get_signer, SignerError
     from backend.api.middleware.correlation import (
         new_correlation_id,
         set_correlation_id,
@@ -34,6 +35,8 @@ try:
 except ImportError:  # engine may run standalone without the api package on path
     log_info = log_warning = log_error = None  # type: ignore
     admin_log_event = None  # type: ignore
+    get_signer = None  # type: ignore
+    SignerError = Exception  # type: ignore
     new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
     get_correlation_id = None  # type: ignore
     NO_CORRELATION = "no-correlation"  # type: ignore
@@ -138,11 +141,12 @@ def _mark_synced(db_conn, synced_token_ids):
         log_info(logger, "claim_sync.marked_synced", count=len(synced_token_ids))
 
 
-def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True):
-    """Build, sign, and send a batchSetClaimableBalance TX via raw JSON-RPC.
+def _send_batch(batch_ids, batch_amounts, wait_for_receipt=True):
+    """Build, sign, and send a batchSetClaimableBalance TX.
 
-    Returns (success: bool, tx_hash: str, new_nonce: int).
-    When wait_for_receipt=False, returns immediately after sending (for API speed).
+    Signing + nonce management is delegated to ``SignerService`` so
+    concurrent callers never race on the nonce. Returns
+    ``(success: bool, tx_hash: str)``.
     """
     # 1. Build calldata
     calldata = _build_calldata(batch_ids, batch_amounts)
@@ -157,26 +161,32 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
     gas_price = int(gas_price_hex, 16) if gas_price_hex else 1_000_000_000  # fallback 1 gwei
     logger.info("[CLAIM_SYNC] Gas price: %d wei, gas limit: %d", gas_price, gas_limit)
 
-    # 4. Build transaction dict
+    # 4. Build transaction dict — nonce + from filled by SignerService
     tx = {
         "to": NXDEVNFT_ADDRESS,
         "value": 0,
         "gas": gas_limit,
         "gasPrice": gas_price,
-        "nonce": nonce,
         "chainId": MEGAETH_CHAIN_ID,
         "data": calldata,
     }
 
-    # 5. Sign with eth_account
-    logger.info("[CLAIM_SYNC] Signing TX with signer %s...", account.address)
-    signed = account.sign_transaction(tx)
-    raw_tx_hex = "0x" + signed.raw_transaction.hex()
-    logger.info("[CLAIM_SYNC] TX signed. Raw TX length: %d bytes", len(signed.raw_transaction))
+    # 5. Sign + send atomically via SignerService (thread-safe, uses
+    # "pending" nonce, cached next-nonce prevents race windows).
+    if get_signer is None:
+        raise RuntimeError("SignerService unavailable in this environment")
+    signer = get_signer()
+    logger.info("[CLAIM_SYNC] Signing TX with signer %s...", signer.address)
+    try:
+        send_result = signer.sign_and_send(tx, wait_for_receipt=False)
+    except SignerError as exc:
+        logger.error("[CLAIM_SYNC] signer send failed: %s", exc)
+        if log_error:
+            log_error(logger, "claim_sync.signer_send_failed", error=str(exc))
+        return False, None
 
-    # 6. Send via eth_sendRawTransaction
-    logger.info("[CLAIM_SYNC] Sending eth_sendRawTransaction...")
-    tx_hash = _rpc_call_sync("eth_sendRawTransaction", [raw_tx_hex])
+    tx_hash = send_result["tx_hash"]
+    nonce_used = send_result["nonce_used"]
     logger.info("[CLAIM_SYNC] TX sent! Hash: %s", tx_hash)
     if log_info:
         log_info(
@@ -185,15 +195,15 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
             tx_hash=tx_hash,
             count=len(batch_ids),
             amount_total_wei=sum(batch_amounts),
-            nonce=nonce,
+            nonce=nonce_used,
         )
 
     if not wait_for_receipt:
         logger.info("[CLAIM_SYNC] TX sent — skipping receipt wait (API fast mode). Hash: %s", tx_hash)
-        return True, tx_hash, nonce + 1
+        return True, tx_hash
 
-    # 7. Wait for receipt (poll every 1s, timeout 30s)
-    # MegaETH has 10ms blocks — TXs confirm almost instantly
+    # 6. Wait for receipt (poll every 1s, timeout 30s).
+    # MegaETH has 10ms blocks — TXs confirm almost instantly.
     logger.info("[CLAIM_SYNC] Waiting for receipt...")
     deadline = time.time() + 30
     receipt = None
@@ -208,8 +218,7 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
 
     if receipt is None:
         logger.warning("[CLAIM_SYNC] TX receipt timeout after 30s (TX may still confirm). Hash: %s", tx_hash)
-        # Return success=True because the TX was sent — it will likely confirm
-        return True, tx_hash, nonce + 1
+        return True, tx_hash
 
     status = int(receipt.get("status", "0x0"), 16)
     block = int(receipt.get("blockNumber", "0x0"), 16)
@@ -227,7 +236,7 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
                 gas_used=gas_used,
                 count=len(batch_ids),
             )
-        return True, tx_hash, nonce + 1
+        return True, tx_hash
     else:
         logger.error("[CLAIM_SYNC] TX REVERTED! Block: %d, Hash: %s", block, tx_hash)
         if log_error:
@@ -238,7 +247,7 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
                 block=block,
                 count=len(batch_ids),
             )
-        return False, tx_hash, nonce + 1
+        return False, tx_hash
 
 
 def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receipt=True):
@@ -283,22 +292,26 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
         return "error_no_signer_key"
 
     if not DRY_RUN:
-        account = Account.from_key(SIGNER_PRIVATE_KEY)
-        logger.info("[CLAIM_SYNC] Signer = %s", account.address)
+        signer = get_signer() if get_signer else None
+        signer_address = signer.address if signer else Account.from_key(SIGNER_PRIVATE_KEY).address
+        logger.info("[CLAIM_SYNC] Signer = %s", signer_address)
         if log_info:
-            log_info(logger, "claim_sync.signer_loaded", signer=account.address)
+            log_info(logger, "claim_sync.signer_loaded", signer=signer_address)
 
         # Check signer ETH balance
         try:
-            balance_hex = _rpc_call_sync("eth_getBalance", [account.address, "latest"])
-            balance_wei = int(balance_hex, 16)
+            if signer:
+                balance_wei = signer.get_eth_balance_wei()
+            else:
+                balance_hex = _rpc_call_sync("eth_getBalance", [signer_address, "latest"])
+                balance_wei = int(balance_hex, 16)
             balance_eth = balance_wei / 10**18
             logger.info("[CLAIM_SYNC] Signer ETH balance: %.6f ETH (%d wei)", balance_eth, balance_wei)
             if log_info:
                 log_info(
                     logger,
                     "claim_sync.signer_gas_check",
-                    signer=account.address,
+                    signer=signer_address,
                     balance_wei=balance_wei,
                     balance_eth=f"{balance_eth:.6f}",
                 )
@@ -308,7 +321,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
                     log_error(
                         logger,
                         "claim_sync.error_no_gas",
-                        signer=account.address,
+                        signer=signer_address,
                         balance_eth=f"{balance_eth:.6f}",
                     )
                 _reset_cid(_cid_token)
@@ -405,11 +418,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
 
     # -- 5. LIVE: Send transactions --
     try:
-        account = Account.from_key(SIGNER_PRIVATE_KEY)
-        nonce_hex = _rpc_call_sync("eth_getTransactionCount", [account.address, "latest"])
-        nonce = int(nonce_hex, 16)
-        logger.info("[CLAIM_SYNC] Starting nonce: %d", nonce)
-
+        # SignerService owns the nonce — no manual fetch needed here.
         total_synced = []
         last_tx_hash = None
 
@@ -421,7 +430,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
 
             logger.info("[CLAIM_SYNC] === Batch %d/%d (%d devs) ===", batch_num, total_batches, len(chunk_ids))
 
-            success, tx_hash, nonce = _send_batch(account, chunk_ids, chunk_amounts, nonce, wait_for_receipt=wait_for_receipt)
+            success, tx_hash = _send_batch(chunk_ids, chunk_amounts, wait_for_receipt=wait_for_receipt)
             last_tx_hash = tx_hash
             if success:
                 _mark_synced(db_conn, chunk_ids)
