@@ -1330,6 +1330,25 @@ _FUND_TREASURY = "0x31d6E19aAE43B5E2fbeDb01b6FF82AD1e8B576DC".lower()
 _FUND_TRANSFER_TOPIC = (
     "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 )
+
+# Pending-fund retry policy.
+#   _FUND_RETRY_INTERVAL_SEC — how often the worker polls the table
+#     for rows ready to retry (F1: was 300s, now 30s → worst-case
+#     user-visible latency drops from ~6min to ~90s).
+#   _FUND_SLOW_RETRY_AFTER — number of attempts after which we switch
+#     to a slower backoff bucket; the worker never abandons a row,
+#     it just retries less often (F3: replaces the old
+#     _FUND_MAX_ATTEMPTS=10 hard cap).
+#   _FUND_ALERT_AT_ATTEMPT — first attempt at which admin_logs gets
+#     a one-shot alert that this tx has been stuck a long time.
+_FUND_RETRY_INTERVAL_SEC = 30
+_FUND_SLOW_RETRY_AFTER = 10        # attempts 0..9 run on the fast bucket
+_FUND_MEDIUM_RETRY_AFTER = 20      # 10..19 every 2min, 20+ every 30min
+_FUND_ALERT_AT_ATTEMPT = 20
+_FUND_MEDIUM_BACKOFF_MIN = 2
+_FUND_SLOW_BACKOFF_MIN = 30
+
+# Legacy name kept only for backward-compat; nothing reads it anymore.
 _FUND_MAX_ATTEMPTS = 10
 
 # ── Orphan scan worker ─────────────────────────────────────
@@ -1372,30 +1391,104 @@ def _mark_pending_resolved(cur, row_id, error_msg=None):
     )
 
 
+def _compute_next_retry_at(next_attempts: int, now=None):
+    """Return the TIMESTAMPTZ a row should be retried at after we just
+    bumped its ``attempts`` to ``next_attempts``.
+
+    Fast bucket (0-9 attempts) matches the worker's poll interval, so
+    a stuck row is tried every ~30s. Medium bucket (10-19) backs off to
+    2 minutes, slow bucket (20+) to 30 minutes. The row is never
+    skipped permanently — that was the silent-abandonment bug.
+    """
+    now = now or datetime.now(timezone.utc)
+    if next_attempts < _FUND_SLOW_RETRY_AFTER:
+        return now + timedelta(seconds=_FUND_RETRY_INTERVAL_SEC)
+    if next_attempts < _FUND_MEDIUM_RETRY_AFTER:
+        return now + timedelta(minutes=_FUND_MEDIUM_BACKOFF_MIN)
+    return now + timedelta(minutes=_FUND_SLOW_BACKOFF_MIN)
+
+
+def _bump_pending_fund_attempt(cur, row_id, next_attempts, last_error=None):
+    """Single UPDATE that advances attempts + last_attempt_at +
+    next_retry_at, all in one place so backoff math can't drift across
+    call sites."""
+    cur.execute(
+        """
+        UPDATE pending_fund_txs
+           SET attempts        = %s,
+               last_attempt_at = NOW(),
+               next_retry_at   = %s,
+               last_error      = COALESCE(%s, last_error)
+         WHERE id = %s
+        """,
+        (next_attempts, _compute_next_retry_at(next_attempts), last_error, row_id),
+    )
+
+
+def _maybe_alert_stuck_pending(cur, row, next_attempts):
+    """One-shot admin_logs alert the first time a row crosses the slow
+    backoff threshold. Fires exactly once because the check is on
+    equality with _FUND_ALERT_AT_ATTEMPT."""
+    if next_attempts != _FUND_ALERT_AT_ATTEMPT:
+        return
+    if admin_log_event is None:
+        return
+    try:
+        created_at = row["created_at"] if isinstance(row, dict) else row[-1]
+    except Exception:  # noqa: BLE001
+        created_at = None
+    age_minutes = None
+    if created_at is not None:
+        try:
+            age_minutes = (datetime.now(timezone.utc) - created_at).total_seconds() / 60
+        except Exception:  # noqa: BLE001
+            age_minutes = None
+    try:
+        admin_log_event(
+            cur,
+            event_type="pending_fund_tx_slow_retry_threshold",
+            wallet_address=row["wallet_address"],
+            dev_token_id=row["dev_token_id"],
+            payload={
+                "tx_hash": row["tx_hash"],
+                "amount_nxt": int(row["amount_nxt"]),
+                "attempts": next_attempts,
+                "age_minutes": age_minutes,
+            },
+        )
+    except Exception as _e:  # noqa: BLE001
+        log.warning("pending_fund_alert_failed error=%s", _e)
+
+
 def process_pending_funds(conn):
     """Resolve pending_fund_txs rows whose RPC receipt is now available.
 
-    For each unresolved row (attempts < _FUND_MAX_ATTEMPTS):
-      - Dedup: if tx_hash is already in funding_txs (live path won the race
-        or backfill script already ran), mark resolved and skip.
-      - Fetch receipt; if still null, bump attempts and move on.
-      - If tx reverted on-chain (status != 0x1), mark resolved (never credit).
-      - Otherwise apply the same verification rules as shop.py fund_dev:
-        tx.to == NXT_TOKEN, tx.from == wallet, a Transfer log to treasury
-        whose amount_wei // 1e18 >= the requested NXT amount.
-      - Credit devs.balance_nxt, insert funding_txs, log FUND_DEV action,
-        mark resolved.
+    Each cycle selects rows whose ``next_retry_at`` has passed (or is
+    NULL — newly inserted rows). For each row:
+      - Dedup: if tx_hash is already in funding_txs (live path won the
+        race or backfill script already ran), mark resolved and skip.
+      - Fetch receipt; if still null, bump attempts + schedule next
+        retry according to the backoff curve.
+      - If tx reverted on-chain (status != 0x1), mark resolved (never
+        credit).
+      - Otherwise apply the same verification rules as shop.py fund_dev
+        and credit.
+
+    The worker never abandons a row (F3) — it just retries less often
+    once attempts cross the slow bucket threshold, with a one-shot
+    admin_logs alert on the 19→20 transition.
     """
     cur = get_cursor(conn)
     cur.execute(
         """
-        SELECT id, tx_hash, wallet_address, dev_token_id, amount_nxt, attempts
+        SELECT id, tx_hash, wallet_address, dev_token_id, amount_nxt,
+               attempts, created_at
           FROM pending_fund_txs
-         WHERE resolved = false AND attempts < %s
+         WHERE resolved = false
+           AND (next_retry_at IS NULL OR next_retry_at <= NOW())
          ORDER BY created_at ASC
          LIMIT 50
-        """,
-        (_FUND_MAX_ATTEMPTS,),
+        """
     )
     rows = cur.fetchall()
     if not rows:
@@ -1411,12 +1504,12 @@ def process_pending_funds(conn):
 
         try:
             # Always bump attempts first so a crash doesn't loop forever.
-            cur.execute(
-                """UPDATE pending_fund_txs
-                      SET attempts = attempts + 1, last_attempt_at = NOW()
-                    WHERE id = %s""",
-                (row["id"],),
-            )
+            # Also schedule the next retry slot up-front — if anything
+            # below raises, the row stays in the right backoff bucket
+            # instead of getting retried immediately next cycle.
+            next_attempts = int(row["attempts"]) + 1
+            _bump_pending_fund_attempt(cur, row["id"], next_attempts)
+            _maybe_alert_stuck_pending(cur, row, next_attempts)
 
             # Dedup: if the live path already credited this tx, stop here.
             cur.execute("SELECT 1 FROM funding_txs WHERE tx_hash = %s", (tx_hash,))
@@ -1552,14 +1645,15 @@ def process_pending_funds(conn):
         except Exception as e:
             conn.rollback()
             log.error(f"  ❌ error processing pending {tx_hash[:10]}…: {e}")
-            # Best-effort write of the error msg in a fresh transaction
+            # Best-effort write in a fresh tx. The rollback above also
+            # rolled back the attempts bump, so we redo it here — keeps
+            # the backoff curve correct even when a row errors.
             try:
-                cur.execute(
-                    """UPDATE pending_fund_txs
-                          SET last_error = %s, last_attempt_at = NOW()
-                        WHERE id = %s""",
-                    (str(e)[:500], row["id"]),
+                next_attempts = int(row["attempts"]) + 1
+                _bump_pending_fund_attempt(
+                    cur, row["id"], next_attempts, last_error=str(e)[:500],
                 )
+                _maybe_alert_stuck_pending(cur, row, next_attempts)
                 conn.commit()
             except Exception:
                 conn.rollback()
@@ -1776,7 +1870,7 @@ def run_engine():
     salary_interval = timedelta(hours=SALARY_INTERVAL_HOURS)
     snapshot_interval = timedelta(hours=24)
     claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
-    pending_funds_interval = timedelta(minutes=5)
+    pending_funds_interval = timedelta(seconds=_FUND_RETRY_INTERVAL_SEC)
     orphan_scan_interval = _ORPHAN_SCAN_INTERVAL
 
     # Auto-migrate new columns before any queries
@@ -1805,6 +1899,17 @@ def run_engine():
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_pending_fund_unresolved
                     ON pending_fund_txs(resolved, created_at)
+                    WHERE resolved = false
+            """)
+            # Backoff column (Fix-A). Legacy rows get NULL which the
+            # worker treats as "eligible immediately".
+            cur.execute(
+                "ALTER TABLE pending_fund_txs "
+                "ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ"
+            )
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_funds_next_retry
+                    ON pending_fund_txs(next_retry_at)
                     WHERE resolved = false
             """)
             # chat_messages enrichment for the Live Feed redesign —

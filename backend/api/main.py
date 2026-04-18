@@ -104,6 +104,17 @@ def _run_auto_migrations():
                         ON pending_fund_txs(resolved, created_at)
                         WHERE resolved = false
                 """)
+                # Backoff column: NULL = eligible immediately,
+                # > NOW() = still in backoff, <= NOW() = retry.
+                cur.execute(
+                    "ALTER TABLE pending_fund_txs "
+                    "ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ"
+                )
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pending_funds_next_retry
+                        ON pending_fund_txs(next_retry_at)
+                        WHERE resolved = false
+                """)
                 # chat_messages enrichment for the Live Feed redesign —
                 # chat_type drives the UI badge, social_gain the "+N social" note.
                 cur.execute("""
