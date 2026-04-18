@@ -12,6 +12,12 @@ from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_
 from backend.api.rate_limit import shop_limiter
 from backend.services.logging_helpers import log_info
 from backend.services.admin_log import log_event as admin_log_event
+from backend.services.ledger import (
+    LedgerSource,
+    is_shadow_write_enabled,
+    ledger_insert,
+    tx_hash_to_bigint,
+)
 import requests as http_requests
 
 log = logging.getLogger("nx_api")
@@ -572,6 +578,29 @@ async def hack_mainframe(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (steal_amount, steal_amount, req.attacker_dev_id)
                 )
+                # Shadow-write to nxt_ledger (Fase 3C). No natural id
+                # for the raid event in this codepath — using
+                # int(time.time() * 1000) gives ms-precision uniqueness;
+                # cooldown of 24h between raids per dev makes a same-ms
+                # collision practically impossible.
+                if is_shadow_write_enabled():
+                    raid_event_id = int(time.time() * 1000)
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=attacker["owner_address"],
+                            dev_token_id=req.attacker_dev_id,
+                            delta_nxt=steal_amount,
+                            source=LedgerSource.HACK_MAINFRAME_WIN,
+                            ref_table="hack_mainframe",
+                            ref_id=raid_event_id,
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=hack_mainframe_win "
+                            "dev=%s error=%s",
+                            req.attacker_dev_id, _e,
+                        )
                 # Log action
                 cur.execute(
                     """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
@@ -738,6 +767,45 @@ async def hack_player(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (steal_amount, steal_amount, req.attacker_dev_id)
                 )
+                # Shadow-write to nxt_ledger (Fase 3C). Both sides
+                # of the raid share raid_event_id so the two ledger
+                # entries can be joined back into one logical event.
+                # Cooldown of 24h between raids per attacker makes a
+                # same-ms collision practically impossible.
+                if is_shadow_write_enabled():
+                    raid_event_id = int(time.time() * 1000)
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=attacker["owner_address"],
+                            dev_token_id=req.attacker_dev_id,
+                            delta_nxt=steal_amount,
+                            source=LedgerSource.HACK_RAID_ATTACKER_WIN,
+                            ref_table="hack_raids",
+                            ref_id=raid_event_id,
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=hack_raid_attacker_win "
+                            "dev=%s error=%s",
+                            req.attacker_dev_id, _e,
+                        )
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=target["owner_address"],
+                            dev_token_id=target["token_id"],
+                            delta_nxt=-steal_amount,
+                            source=LedgerSource.HACK_RAID_TARGET_LOSS,
+                            ref_table="hack_raids",
+                            ref_id=raid_event_id,
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=hack_raid_target_loss "
+                            "dev=%s error=%s",
+                            target["token_id"], _e,
+                        )
                 # Log action
                 cur.execute(
                     """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
@@ -799,6 +867,30 @@ async def hack_player(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (effective_cost, effective_cost, target["token_id"])
                 )
+                # Shadow-write to nxt_ledger (Fase 3C). The fail path's
+                # only balance_nxt UPDATE is the target gaining the cost
+                # — the attacker's loss is the unconditional cost
+                # deduction at line ~720 which fires for both success
+                # and fail outcomes (un-ledgered for now; tracked in the
+                # PR description for follow-up).
+                if is_shadow_write_enabled():
+                    raid_event_id = int(time.time() * 1000)
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=target["owner_address"],
+                            dev_token_id=target["token_id"],
+                            delta_nxt=effective_cost,
+                            source=LedgerSource.HACK_RAID_TARGET_WIN,
+                            ref_table="hack_raids",
+                            ref_id=raid_event_id,
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=hack_raid_target_win "
+                            "dev=%s error=%s",
+                            target["token_id"], _e,
+                        )
                 result = {
                     "success": True, "hack_success": False, "hack_type": "player",
                     "stolen": 0, "cost": effective_cost,
@@ -1009,6 +1101,31 @@ async def fund_dev(req: FundRequest):
                 "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                 (credit_amount, credit_amount, req.dev_token_id)
             )
+            # Shadow-write to nxt_ledger (Fase 3C). funding_txs.tx_hash
+            # is UNIQUE on the table so tx_hash_to_bigint gives a stable
+            # cross-callsite key. Note: 3B's pending_funds path uses
+            # ref_table="pending_fund_txs" / ref_id=row.id, so a tx that
+            # ends up processed by both flows will produce two distinct
+            # ledger rows. UNIQUE on funding_txs.tx_hash already
+            # prevents the double-credit; the duplicate ledger row is
+            # cosmetic and tracked for cleanup.
+            if is_shadow_write_enabled():
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=addr,
+                        dev_token_id=req.dev_token_id,
+                        delta_nxt=credit_amount,
+                        source=LedgerSource.FUND_DEPOSIT,
+                        ref_table="funding_txs",
+                        ref_id=tx_hash_to_bigint(req.tx_hash),
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=fund_deposit "
+                        "tx_hash=%s error=%s",
+                        req.tx_hash, _e,
+                    )
 
             # Record action
             cur.execute(
@@ -1114,6 +1231,44 @@ async def transfer_nxt(req: TransferRequest):
                 "UPDATE devs SET balance_nxt = balance_nxt + %s WHERE token_id = %s",
                 (req.amount, req.to_dev_token_id)
             )
+            # Shadow-write to nxt_ledger (Fase 3C). Both sides share
+            # transfer_event_id so the two entries can be joined back
+            # into one logical transfer. ms-precision id is fine —
+            # the same wallet can't issue two transfers in the same ms.
+            if is_shadow_write_enabled():
+                transfer_event_id = int(time.time() * 1000)
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=from_dev["owner_address"],
+                        dev_token_id=req.from_dev_token_id,
+                        delta_nxt=-req.amount,
+                        source=LedgerSource.TRANSFER_OUT,
+                        ref_table="transfers",
+                        ref_id=transfer_event_id,
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=transfer_out "
+                        "from_dev=%s error=%s",
+                        req.from_dev_token_id, _e,
+                    )
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=to_dev["owner_address"],
+                        dev_token_id=req.to_dev_token_id,
+                        delta_nxt=req.amount,
+                        source=LedgerSource.TRANSFER_IN,
+                        ref_table="transfers",
+                        ref_id=transfer_event_id,
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=transfer_in "
+                        "to_dev=%s error=%s",
+                        req.to_dev_token_id, _e,
+                    )
 
             # Record actions for both devs
             cur.execute(
