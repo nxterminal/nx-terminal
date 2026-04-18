@@ -474,7 +474,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
     elif action == "SELL":
         # Check investments
         cur.execute("""
-            SELECT pi.protocol_id, pi.shares, pi.nxt_invested, p.name, p.value
+            SELECT pi.id, pi.protocol_id, pi.shares, pi.nxt_invested, p.name, p.value
             FROM protocol_investments pi
             JOIN protocols p ON p.id = pi.protocol_id
             WHERE pi.dev_id = %s
@@ -502,12 +502,12 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 WHERE token_id = %s
             """, (sell_value, sell_value, dev["token_id"]))
 
-            # Shadow-write to nxt_ledger (Fase 3B). protocol_investments
-            # has a composite PK (dev_id, protocol_id) but no single-
-            # column id, so we key on protocol_id + the dev + delta.
-            # Collisions would require a later re-investment in the
-            # same protocol that later sells for the exact same price —
-            # both rare and benign (first sale is recorded correctly).
+            # Shadow-write to nxt_ledger (Fase 3B, fixed in follow-up).
+            # protocol_investments.id is the natural SERIAL PK — each
+            # sell → reinvest cycle creates a new row with a fresh id,
+            # so a dev that sells, reinvests, and sells again no longer
+            # collides on idempotency_key (which was the latent bug
+            # when ref_id was protocol_id).
             if is_shadow_write_enabled() and ledger_insert is not None:
                 try:
                     ledger_insert(
@@ -517,7 +517,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                         delta_nxt=sell_value,
                         source=LedgerSource.SELL_INVESTMENT,
                         ref_table="protocol_investments",
-                        ref_id=inv["protocol_id"],
+                        ref_id=inv["id"],
                     )
                 except Exception as _e:  # noqa: BLE001
                     log.warning(
