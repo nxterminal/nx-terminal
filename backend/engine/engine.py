@@ -28,6 +28,12 @@ from prompt_system import process_prompt
 try:
     from backend.services.logging_helpers import log_info
     from backend.services.admin_log import log_event as admin_log_event
+    from backend.services.ledger import (
+        ledger_insert,
+        LedgerSource,
+        is_shadow_write_enabled,
+        tx_hash_to_bigint,
+    )
     from backend.api.middleware.correlation import (
         new_correlation_id,
         set_correlation_id,
@@ -36,6 +42,10 @@ try:
 except ImportError:  # engine may run with only engine_dir on sys.path
     log_info = None  # type: ignore
     admin_log_event = None  # type: ignore
+    ledger_insert = None  # type: ignore
+    LedgerSource = None  # type: ignore
+    is_shadow_write_enabled = lambda: False  # type: ignore
+    tx_hash_to_bigint = None  # type: ignore
     new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -491,6 +501,30 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                     total_earned = total_earned + %s
                 WHERE token_id = %s
             """, (sell_value, sell_value, dev["token_id"]))
+
+            # Shadow-write to nxt_ledger (Fase 3B). protocol_investments
+            # has a composite PK (dev_id, protocol_id) but no single-
+            # column id, so we key on protocol_id + the dev + delta.
+            # Collisions would require a later re-investment in the
+            # same protocol that later sells for the exact same price —
+            # both rare and benign (first sale is recorded correctly).
+            if is_shadow_write_enabled() and ledger_insert is not None:
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=dev["owner_address"],
+                        dev_token_id=dev["token_id"],
+                        delta_nxt=sell_value,
+                        source=LedgerSource.SELL_INVESTMENT,
+                        ref_table="protocol_investments",
+                        ref_id=inv["protocol_id"],
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=sell_investment "
+                        "token_id=%s error=%s",
+                        dev["token_id"], _e,
+                    )
 
     elif action == "MOVE":
         old_loc = dev["location"]
@@ -980,9 +1014,37 @@ def pay_salaries(conn):
                 END
             )
         WHERE status IN ('active', 'on_mission')
+        RETURNING token_id, owner_address
     """, (effective_salary, effective_salary))
 
-    count = cur.rowcount
+    paid_rows = cur.fetchall()
+    count = len(paid_rows)
+
+    # Shadow-write to nxt_ledger (Fase 3B). Each dev gets one row per
+    # hour; a re-run within the same hour with the same salary collides
+    # on idempotency_key and is a silent no-op. effective_salary is
+    # deterministic per tick (event multiplier × SALARY_PER_INTERVAL),
+    # so retries within one hour don't produce key drift.
+    if is_shadow_write_enabled() and ledger_insert is not None and paid_rows:
+        epoch_hour = int(time.time()) // 3600
+        for paid in paid_rows:
+            token_id = paid[0] if not isinstance(paid, dict) else paid["token_id"]
+            owner = paid[1] if not isinstance(paid, dict) else paid["owner_address"]
+            try:
+                ledger_insert(
+                    cur,
+                    wallet_address=owner,
+                    dev_token_id=token_id,
+                    delta_nxt=effective_salary,
+                    source=LedgerSource.SALARY,
+                    ref_table="salary_batches",
+                    ref_id=epoch_hour,
+                )
+            except Exception as _e:  # noqa: BLE001
+                log.warning(
+                    "ledger_shadow_write_failed source=salary token_id=%s error=%s",
+                    token_id, _e,
+                )
 
     # Batch INSERT salary actions so they appear in feed & wallet movements
     cur.execute("""
@@ -1435,6 +1497,28 @@ def process_pending_funds(conn):
                 "total_earned = total_earned + %s WHERE token_id = %s",
                 (credit_amount, credit_amount, dev_id),
             )
+
+            # Shadow-write to nxt_ledger (Fase 3B). pending_fund_txs.id
+            # is the natural unique key of the pending row being
+            # resolved here — exactly one resolution per row.
+            if is_shadow_write_enabled() and ledger_insert is not None:
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=wallet,
+                        dev_token_id=dev_id,
+                        delta_nxt=credit_amount,
+                        source=LedgerSource.FUND_DEPOSIT,
+                        ref_table="pending_fund_txs",
+                        ref_id=row["id"],
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=fund_deposit_pending "
+                        "pending_id=%s error=%s",
+                        row["id"], _e,
+                    )
+
             cur.execute(
                 """INSERT INTO actions
                      (dev_id, dev_name, archetype, action_type, details,
@@ -1613,6 +1697,30 @@ def scan_orphaned_funds(conn):
                     "total_earned = total_earned + %s WHERE token_id = %s",
                     (amount_nxt, amount_nxt, dev["token_id"]),
                 )
+
+                # Shadow-write to nxt_ledger (Fase 3B). No natural DB id
+                # at this point — the row just got inserted into
+                # funding_txs and we don't have its PK in scope. Using
+                # the tx_hash as a stable bigint keeps the key unique
+                # per transaction without an extra SELECT.
+                if is_shadow_write_enabled() and ledger_insert is not None and tx_hash_to_bigint is not None:
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=sender,
+                            dev_token_id=dev["token_id"],
+                            delta_nxt=amount_nxt,
+                            source=LedgerSource.FUND_DEPOSIT,
+                            ref_table="onchain_tx",
+                            ref_id=tx_hash_to_bigint(tx_hash),
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=fund_deposit_orphan "
+                            "tx_hash=%s error=%s",
+                            tx_hash, _e,
+                        )
+
                 cur.execute(
                     """INSERT INTO actions
                          (dev_id, dev_name, archetype, action_type, details,
