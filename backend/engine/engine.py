@@ -1498,10 +1498,16 @@ def process_pending_funds(conn):
                 (credit_amount, credit_amount, dev_id),
             )
 
-            # Shadow-write to nxt_ledger (Fase 3B). pending_fund_txs.id
-            # is the natural unique key of the pending row being
-            # resolved here — exactly one resolution per row.
-            if is_shadow_write_enabled() and ledger_insert is not None:
+            # Shadow-write to nxt_ledger (Fase 3B, unified in follow-up).
+            # All three fund_deposit paths (pending here, orphan
+            # scanner, shop.fund_dev) use the same idempotency key
+            # shape — (FUND_DEPOSIT, "funding_txs", tx_hash_to_bigint) —
+            # so a tx that passes through more than one path collides
+            # on UNIQUE(idempotency_key) and produces exactly one
+            # ledger row. funding_txs.tx_hash is UNIQUE in the DB,
+            # which guarantees no false sharing of this key across
+            # distinct deposits.
+            if is_shadow_write_enabled() and ledger_insert is not None and tx_hash_to_bigint is not None:
                 try:
                     ledger_insert(
                         cur,
@@ -1509,8 +1515,8 @@ def process_pending_funds(conn):
                         dev_token_id=dev_id,
                         delta_nxt=credit_amount,
                         source=LedgerSource.FUND_DEPOSIT,
-                        ref_table="pending_fund_txs",
-                        ref_id=row["id"],
+                        ref_table="funding_txs",
+                        ref_id=tx_hash_to_bigint(tx_hash),
                     )
                 except Exception as _e:  # noqa: BLE001
                     log.warning(
@@ -1698,11 +1704,11 @@ def scan_orphaned_funds(conn):
                     (amount_nxt, amount_nxt, dev["token_id"]),
                 )
 
-                # Shadow-write to nxt_ledger (Fase 3B). No natural DB id
-                # at this point — the row just got inserted into
-                # funding_txs and we don't have its PK in scope. Using
-                # the tx_hash as a stable bigint keeps the key unique
-                # per transaction without an extra SELECT.
+                # Shadow-write to nxt_ledger (Fase 3B, unified in
+                # follow-up). Shares idempotency key shape with the
+                # other two fund_deposit paths (pending_funds,
+                # shop.fund_dev), so a tx that reaches multiple paths
+                # only produces one ledger row.
                 if is_shadow_write_enabled() and ledger_insert is not None and tx_hash_to_bigint is not None:
                     try:
                         ledger_insert(
@@ -1711,7 +1717,7 @@ def scan_orphaned_funds(conn):
                             dev_token_id=dev["token_id"],
                             delta_nxt=amount_nxt,
                             source=LedgerSource.FUND_DEPOSIT,
-                            ref_table="onchain_tx",
+                            ref_table="funding_txs",
                             ref_id=tx_hash_to_bigint(tx_hash),
                         )
                     except Exception as _e:  # noqa: BLE001

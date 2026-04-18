@@ -1138,14 +1138,12 @@ async def fund_dev(req: FundRequest):
                 "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                 (credit_amount, credit_amount, req.dev_token_id)
             )
-            # Shadow-write to nxt_ledger (Fase 3C). funding_txs.tx_hash
-            # is UNIQUE on the table so tx_hash_to_bigint gives a stable
-            # cross-callsite key. Note: 3B's pending_funds path uses
-            # ref_table="pending_fund_txs" / ref_id=row.id, so a tx that
-            # ends up processed by both flows will produce two distinct
-            # ledger rows. UNIQUE on funding_txs.tx_hash already
-            # prevents the double-credit; the duplicate ledger row is
-            # cosmetic and tracked for cleanup.
+            # Shadow-write to nxt_ledger (Fase 3C, unified in
+            # follow-up). All three fund_deposit paths share one
+            # idempotency_key shape so a tx that races through
+            # multiple paths only produces a single ledger row.
+            # funding_txs.tx_hash is UNIQUE in the DB, anchoring the
+            # whole thing.
             if is_shadow_write_enabled():
                 try:
                     ledger_insert(
