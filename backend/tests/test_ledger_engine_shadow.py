@@ -446,7 +446,11 @@ def test_sell_investment_select_fetches_pi_id():
 
 
 def test_pending_funds_shadow_write_contract(clean):
+    """After the unification follow-up, pending_funds uses the same
+    shape as the other two fund_deposit paths: ref_table='funding_txs',
+    ref_id=tx_hash_to_bigint(tx_hash)."""
     _seed_devs([(1, "bob", WALLET_B, "LURKER", 0)])
+    tx_hash = "0x" + "aa" * 32
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             ok = ledger_insert(
@@ -455,16 +459,20 @@ def test_pending_funds_shadow_write_contract(clean):
                 dev_token_id=1,
                 delta_nxt=100,
                 source=LedgerSource.FUND_DEPOSIT,
-                ref_table="pending_fund_txs",
-                ref_id=7,  # pending_fund_txs.id
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
             )
             conn.commit()
     assert ok is True
     row = _ledger_rows()[0]
-    assert row["ref_table"] == "pending_fund_txs"
+    assert row["ref_table"] == "funding_txs"
+    assert row["ref_id"] == tx_hash_to_bigint(tx_hash)
 
 
 def test_orphan_scanner_shadow_write_contract(clean):
+    """After the unification follow-up, orphan_scanner uses
+    ref_table='funding_txs' (was 'onchain_tx' pre-fix) so a tx that
+    also flows through another fund_deposit path collides cleanly."""
     _seed_devs([(1, "bob", WALLET_B, "LURKER", 0)])
     tx_hash = "0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
     with deps.get_db() as conn:
@@ -475,11 +483,106 @@ def test_orphan_scanner_shadow_write_contract(clean):
                 dev_token_id=1,
                 delta_nxt=50,
                 source=LedgerSource.FUND_DEPOSIT,
-                ref_table="onchain_tx",
+                ref_table="funding_txs",
                 ref_id=tx_hash_to_bigint(tx_hash),
             )
             conn.commit()
     assert ok is True
     row = _ledger_rows()[0]
-    assert row["ref_table"] == "onchain_tx"
+    assert row["ref_table"] == "funding_txs"
     assert row["ref_id"] == tx_hash_to_bigint(tx_hash)
+
+
+# ---------------------------------------------------------------------------
+# Unified fund_deposit key — the whole point of this follow-up
+# ---------------------------------------------------------------------------
+
+
+def test_same_tx_hash_pending_then_orphan_collides(clean):
+    """If the pending_funds path resolves a tx, then the orphan
+    scanner independently observes the same on-chain Transfer, the
+    second ledger_insert must be a silent no-op — not a duplicate row."""
+    _seed_devs([(1, "bob", WALLET_B, "LURKER", 0)])
+    tx_hash = "0x" + "cc" * 32
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            # Path 1: pending_funds writes the ledger row first.
+            pending_ok = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
+            )
+            # Path 2: orphan scanner observes the same tx later.
+            orphan_ok = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
+            )
+            conn.commit()
+    assert pending_ok is True
+    assert orphan_ok is False
+    assert len(_ledger_rows()) == 1
+
+
+def test_same_tx_hash_orphan_then_fund_dev_collides(clean):
+    """Reverse race order: orphan scanner first, shop.fund_dev next.
+    Second path is still a silent no-op."""
+    _seed_devs([(1, "bob", WALLET_B, "LURKER", 0)])
+    tx_hash = "0x" + "dd" * 32
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            orphan_ok = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
+            )
+            fund_dev_ok = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
+            )
+            conn.commit()
+    assert orphan_ok is True
+    assert fund_dev_ok is False
+    assert len(_ledger_rows()) == 1
+
+
+def test_different_tx_hashes_do_not_collide(clean):
+    """Sanity: the unification only collapses rows with the same
+    tx_hash. Distinct tx_hashes still produce distinct ledger rows."""
+    _seed_devs([(1, "bob", WALLET_B, "LURKER", 0)])
+    tx_a = "0x" + "aa" * 32
+    tx_b = "0x" + "bb" * 32
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ok_a = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_a),
+            )
+            ok_b = ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=1,
+                delta_nxt=100, source=LedgerSource.FUND_DEPOSIT,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_b),
+            )
+            conn.commit()
+    assert ok_a is True
+    assert ok_b is True
+    assert len(_ledger_rows()) == 2
+
+
+def test_engine_source_uses_funding_txs_ref_table():
+    """Source-grep check: after the unification fix, both engine.py
+    fund_deposit callsites must reference 'funding_txs' (not the
+    pre-fix 'pending_fund_txs' / 'onchain_tx' values)."""
+    src = (Path(__file__).resolve().parent.parent / "engine" / "engine.py").read_text()
+    assert 'ref_table="pending_fund_txs"' not in src
+    assert 'ref_table="onchain_tx"' not in src
+    # Both fund_deposit paths reference funding_txs + tx_hash_to_bigint.
+    assert src.count('ref_table="funding_txs"') >= 2
