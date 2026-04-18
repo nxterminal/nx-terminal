@@ -238,6 +238,16 @@ def _run_auto_migrations():
                         ON claim_history(tx_hash)
                         WHERE tx_hash IS NOT NULL AND tx_hash <> ''
                 """)
+                # devs — 2-phase commit sync status. Source of truth:
+                # backend/db/migration_devs_sync_status.sql
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_status TEXT")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_tx_hash VARCHAR(66)")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_started_at TIMESTAMPTZ")
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_devs_sync_status
+                        ON devs(sync_status, sync_started_at)
+                        WHERE sync_status IS NOT NULL
+                """)
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""

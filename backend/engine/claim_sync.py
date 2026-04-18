@@ -84,12 +84,19 @@ def _build_calldata(token_ids, amounts_wei):
 
 
 def get_pending_claims(db_conn):
-    """Query devs with unsynchronized claimable balance."""
+    """Query devs with unsynchronized claimable balance.
+
+    Excludes devs currently in-flight (sync_status='syncing') so two
+    overlapping syncs can't grab the same balance. Previously-failed
+    devs are picked up again — the 2-phase commit protocol guarantees
+    their balance was preserved.
+    """
     query = """
         SELECT token_id, balance_nxt
         FROM nx.devs
         WHERE status IN ('active', 'on_mission')
           AND balance_nxt > 0
+          AND (sync_status IS NULL OR sync_status IN ('synced', 'failed'))
         ORDER BY token_id
     """
     cursor = db_conn.cursor()
@@ -116,52 +123,151 @@ def build_sync_batch(pending_devs):
     return token_ids, amounts_wei
 
 
-def _mark_synced(db_conn, synced_token_ids):
-    """Zero out balance_nxt for devs that were successfully synced on-chain."""
-    if not synced_token_ids:
+def _mark_syncing(db_conn, candidate_ids):
+    """Phase 1 of the 2-phase commit.
+
+    Race-safely claim the given tokens by atomically flipping their
+    ``sync_status`` to ``'syncing'``. Only rows that were eligible
+    (NULL / 'synced' / 'failed') are updated; the ``RETURNING`` clause
+    tells us exactly which ones we won. A parallel worker that races
+    us on the same ids will see zero rows and skip them.
+
+    Returns the list of token_ids actually marked.
+    """
+    if not candidate_ids:
+        return []
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        UPDATE nx.devs
+        SET sync_status     = 'syncing',
+            sync_started_at = NOW(),
+            sync_tx_hash    = NULL
+        WHERE token_id = ANY(%s)
+          AND (sync_status IS NULL OR sync_status IN ('synced', 'failed'))
+        RETURNING token_id
+        """,
+        (list(candidate_ids),),
+    )
+    rows = cursor.fetchall()
+    db_conn.commit()
+    claimed = [r[0] if not isinstance(r, dict) else r["token_id"] for r in rows]
+    logger.info("[CLAIM_SYNC] Marked %d devs as syncing", len(claimed))
+    return claimed
+
+
+def _attach_sync_tx_hash(db_conn, token_ids, tx_hash):
+    """Stash the broadcast tx_hash on each row for forensic / reconciler use."""
+    if not token_ids or not tx_hash:
         return
     cursor = db_conn.cursor()
-    placeholders = ",".join(["%s"] * len(synced_token_ids))
     cursor.execute(
-        f"UPDATE nx.devs SET balance_nxt = 0 WHERE token_id IN ({placeholders})",
-        synced_token_ids,
+        """
+        UPDATE nx.devs
+        SET sync_tx_hash = %s
+        WHERE token_id = ANY(%s) AND sync_status = 'syncing'
+        """,
+        (tx_hash, list(token_ids)),
+    )
+    db_conn.commit()
+
+
+def _finalize_success(db_conn, token_ids, tx_hash):
+    """Phase 3a: tx confirmed — zero the balance and mark synced."""
+    if not token_ids:
+        return
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        UPDATE nx.devs
+        SET balance_nxt  = 0,
+            sync_status  = 'synced'
+        WHERE token_id = ANY(%s)
+          AND sync_status = 'syncing'
+          AND sync_tx_hash = %s
+        """,
+        (list(token_ids), tx_hash),
     )
     if admin_log_event:
         admin_log_event(
             cursor,
             event_type="claim_sync_marked",
             payload={
-                "synced_token_ids": list(synced_token_ids),
-                "count": len(synced_token_ids),
+                "synced_token_ids": list(token_ids),
+                "count": len(token_ids),
+                "tx_hash": tx_hash,
             },
         )
     db_conn.commit()
-    logger.info("[CLAIM_SYNC] Marked %d devs as synced (balance_nxt = 0)", len(synced_token_ids))
+    logger.info("[CLAIM_SYNC] Confirmed %d devs (balance_nxt=0, sync_status=synced)", len(token_ids))
     if log_info:
-        log_info(logger, "claim_sync.marked_synced", count=len(synced_token_ids))
+        log_info(logger, "claim_sync.marked_synced", count=len(token_ids), tx_hash=tx_hash)
 
 
-def _send_batch(batch_ids, batch_amounts, wait_for_receipt=True):
-    """Build, sign, and send a batchSetClaimableBalance TX.
+def _finalize_failed(db_conn, token_ids, tx_hash, reason):
+    """Phase 3b: tx reverted / timed out — preserve the balance, flag failed."""
+    if not token_ids:
+        return
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        UPDATE nx.devs
+        SET sync_status = 'failed'
+        WHERE token_id = ANY(%s) AND sync_status = 'syncing'
+        """,
+        (list(token_ids),),
+    )
+    if admin_log_event:
+        admin_log_event(
+            cursor,
+            event_type="claim_sync_failed",
+            payload={
+                "token_ids": list(token_ids),
+                "count": len(token_ids),
+                "tx_hash": tx_hash,
+                "reason": reason,
+            },
+        )
+    db_conn.commit()
+    logger.warning("[CLAIM_SYNC] Marked %d devs as failed (reason=%s)", len(token_ids), reason)
+    if log_warning:
+        log_warning(logger, "claim_sync.marked_failed", count=len(token_ids), reason=reason)
 
-    Signing + nonce management is delegated to ``SignerService`` so
-    concurrent callers never race on the nonce. Returns
-    ``(success: bool, tx_hash: str)``.
+
+def _rollback_syncing(db_conn, token_ids):
+    """Abort before a tx was broadcast: release the syncing claim."""
+    if not token_ids:
+        return
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        UPDATE nx.devs
+        SET sync_status  = 'failed',
+            sync_tx_hash = NULL
+        WHERE token_id = ANY(%s) AND sync_status = 'syncing'
+        """,
+        (list(token_ids),),
+    )
+    db_conn.commit()
+
+
+def _broadcast_batch(batch_ids, batch_amounts):
+    """Build, sign, broadcast a batchSetClaimableBalance TX.
+
+    Returns the tx_hash on success, ``None`` if the broadcast itself
+    failed. No receipt polling — the caller decides whether to wait.
+    Signing + nonce management go through ``SignerService`` so
+    concurrent callers never race on the nonce.
     """
-    # 1. Build calldata
     calldata = _build_calldata(batch_ids, batch_amounts)
     logger.info("[CLAIM_SYNC] Calldata built: %d bytes, selector: 0x%s",
                 len(calldata), BATCH_SET_SELECTOR.hex())
 
-    # 2. Estimate gas (or use fixed upper bound)
     gas_limit = 500_000 + (len(batch_ids) * 30_000)
-
-    # 3. Get gas price from RPC
     gas_price_hex = _rpc_call_sync("eth_gasPrice", [])
-    gas_price = int(gas_price_hex, 16) if gas_price_hex else 1_000_000_000  # fallback 1 gwei
+    gas_price = int(gas_price_hex, 16) if gas_price_hex else 1_000_000_000
     logger.info("[CLAIM_SYNC] Gas price: %d wei, gas limit: %d", gas_price, gas_limit)
 
-    # 4. Build transaction dict — nonce + from filled by SignerService
     tx = {
         "to": NXDEVNFT_ADDRESS,
         "value": 0,
@@ -171,8 +277,6 @@ def _send_batch(batch_ids, batch_amounts, wait_for_receipt=True):
         "data": calldata,
     }
 
-    # 5. Sign + send atomically via SignerService (thread-safe, uses
-    # "pending" nonce, cached next-nonce prevents race windows).
     if get_signer is None:
         raise RuntimeError("SignerService unavailable in this environment")
     signer = get_signer()
@@ -183,10 +287,9 @@ def _send_batch(batch_ids, batch_amounts, wait_for_receipt=True):
         logger.error("[CLAIM_SYNC] signer send failed: %s", exc)
         if log_error:
             log_error(logger, "claim_sync.signer_send_failed", error=str(exc))
-        return False, None
+        return None
 
     tx_hash = send_result["tx_hash"]
-    nonce_used = send_result["nonce_used"]
     logger.info("[CLAIM_SYNC] TX sent! Hash: %s", tx_hash)
     if log_info:
         log_info(
@@ -195,59 +298,29 @@ def _send_batch(batch_ids, batch_amounts, wait_for_receipt=True):
             tx_hash=tx_hash,
             count=len(batch_ids),
             amount_total_wei=sum(batch_amounts),
-            nonce=nonce_used,
+            nonce=send_result.get("nonce_used"),
         )
+    return tx_hash
 
-    if not wait_for_receipt:
-        logger.info("[CLAIM_SYNC] TX sent — skipping receipt wait (API fast mode). Hash: %s", tx_hash)
-        return True, tx_hash
 
-    # 6. Wait for receipt (poll every 1s, timeout 30s).
-    # MegaETH has 10ms blocks — TXs confirm almost instantly.
-    logger.info("[CLAIM_SYNC] Waiting for receipt...")
-    deadline = time.time() + 30
-    receipt = None
+def _wait_for_receipt(tx_hash, timeout_seconds=30):
+    """Poll until we have a receipt or the deadline hits. Returns the
+    receipt dict on confirmation, ``None`` on timeout (tx may still
+    confirm later — the reconciler will pick it up)."""
+    deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         time.sleep(1)
         try:
             receipt = _rpc_call_sync("eth_getTransactionReceipt", [tx_hash])
             if receipt is not None:
-                break
+                return receipt
         except Exception:
             pass
-
-    if receipt is None:
-        logger.warning("[CLAIM_SYNC] TX receipt timeout after 30s (TX may still confirm). Hash: %s", tx_hash)
-        return True, tx_hash
-
-    status = int(receipt.get("status", "0x0"), 16)
-    block = int(receipt.get("blockNumber", "0x0"), 16)
-    gas_used = int(receipt.get("gasUsed", "0x0"), 16)
-
-    if status == 1:
-        logger.info("[CLAIM_SYNC] TX CONFIRMED! Block: %d, Gas used: %d, Hash: %s",
-                     block, gas_used, tx_hash)
-        if log_info:
-            log_info(
-                logger,
-                "claim_sync.tx_confirmed",
-                tx_hash=tx_hash,
-                block=block,
-                gas_used=gas_used,
-                count=len(batch_ids),
-            )
-        return True, tx_hash
-    else:
-        logger.error("[CLAIM_SYNC] TX REVERTED! Block: %d, Hash: %s", block, tx_hash)
-        if log_error:
-            log_error(
-                logger,
-                "claim_sync.tx_reverted",
-                tx_hash=tx_hash,
-                block=block,
-                count=len(batch_ids),
-            )
-        return False, tx_hash
+    logger.warning(
+        "[CLAIM_SYNC] TX receipt timeout after %ds (TX may still confirm). Hash: %s",
+        timeout_seconds, tx_hash,
+    )
+    return None
 
 
 def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receipt=True):
@@ -416,10 +489,11 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
         _reset_cid(_cid_token)
         return f"dry_run: {len(token_ids)} devs, {total_nxt} NXT"
 
-    # -- 5. LIVE: Send transactions --
+    # -- 5. LIVE: Send transactions using 2-phase commit --
     try:
-        # SignerService owns the nonce — no manual fetch needed here.
         total_synced = []
+        total_pending = []
+        total_failed = []
         last_tx_hash = None
 
         for i in range(0, len(token_ids), BATCH_SIZE):
@@ -430,22 +504,98 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
 
             logger.info("[CLAIM_SYNC] === Batch %d/%d (%d devs) ===", batch_num, total_batches, len(chunk_ids))
 
-            success, tx_hash = _send_batch(chunk_ids, chunk_amounts, wait_for_receipt=wait_for_receipt)
-            last_tx_hash = tx_hash
-            if success:
-                _mark_synced(db_conn, chunk_ids)
-                total_synced.extend(chunk_ids)
-                logger.info("[CLAIM_SYNC] Batch %d synced successfully", batch_num)
-            else:
-                logger.error("[CLAIM_SYNC] Batch %d failed — stopping. %d devs synced so far",
-                             batch_num, len(total_synced))
+            # Phase 1: atomically claim the chunk by flipping sync_status
+            # to 'syncing'. Rows claimed by another worker are skipped.
+            claimed_ids = _mark_syncing(db_conn, chunk_ids)
+            if not claimed_ids:
+                logger.info("[CLAIM_SYNC] Batch %d: no rows claimed (raced by another worker?)", batch_num)
+                continue
+
+            # Align the amounts with whatever we actually claimed so
+            # rows lost to a race don't end up in the calldata.
+            claimed_set = set(claimed_ids)
+            claimed_amounts = [
+                chunk_amounts[j] for j, tid in enumerate(chunk_ids) if tid in claimed_set
+            ]
+
+            # Phase 2: broadcast the tx. Do NOT touch balance_nxt yet.
+            tx_hash = _broadcast_batch(claimed_ids, claimed_amounts)
+            if tx_hash is None:
+                # Pre-broadcast failure — release the claim so a retry
+                # can try again; balance_nxt was never touched.
+                _rollback_syncing(db_conn, claimed_ids)
+                total_failed.extend(claimed_ids)
+                logger.error(
+                    "[CLAIM_SYNC] Batch %d broadcast failed — rolled back %d devs",
+                    batch_num, len(claimed_ids),
+                )
                 break
+
+            _attach_sync_tx_hash(db_conn, claimed_ids, tx_hash)
+            last_tx_hash = tx_hash
+
+            # Phase 3: decide finalisation. In wait mode we poll the
+            # receipt and commit success or failure here. In async mode
+            # we leave rows as 'syncing' — the reconciler will finish.
+            if wait_for_receipt:
+                receipt = _wait_for_receipt(tx_hash)
+                if receipt is None:
+                    # Timeout — leave as 'syncing' for reconciler.
+                    total_pending.extend(claimed_ids)
+                    logger.warning(
+                        "[CLAIM_SYNC] Batch %d receipt timeout — left in syncing for reconciler",
+                        batch_num,
+                    )
+                    continue
+
+                status = int(receipt.get("status", "0x0"), 16)
+                block = int(receipt.get("blockNumber", "0x0"), 16)
+                gas_used = int(receipt.get("gasUsed", "0x0"), 16)
+                if status == 1:
+                    logger.info(
+                        "[CLAIM_SYNC] TX CONFIRMED! Block: %d Gas: %d Hash: %s",
+                        block, gas_used, tx_hash,
+                    )
+                    if log_info:
+                        log_info(
+                            logger, "claim_sync.tx_confirmed",
+                            tx_hash=tx_hash, block=block,
+                            gas_used=gas_used, count=len(claimed_ids),
+                        )
+                    _finalize_success(db_conn, claimed_ids, tx_hash)
+                    total_synced.extend(claimed_ids)
+                else:
+                    logger.error("[CLAIM_SYNC] TX REVERTED! Block: %d Hash: %s", block, tx_hash)
+                    if log_error:
+                        log_error(
+                            logger, "claim_sync.tx_reverted",
+                            tx_hash=tx_hash, block=block,
+                            count=len(claimed_ids),
+                        )
+                    _finalize_failed(db_conn, claimed_ids, tx_hash, reason="reverted")
+                    total_failed.extend(claimed_ids)
+                    # Don't keep sending — something's wrong.
+                    break
+            else:
+                # Async mode: reconciler owns finalisation from here.
+                total_pending.extend(claimed_ids)
+
+        if total_pending and not total_synced and not total_failed:
+            status_label = "pending"
+        elif total_failed and not total_synced:
+            status_label = "failed"
+        elif total_synced and (total_pending or total_failed):
+            status_label = "partial"
+        else:
+            status_label = "ok" if total_synced else "pending"
 
         result = {
             "synced": len(total_synced),
+            "pending": len(total_pending),
+            "failed": len(total_failed),
             "total": len(token_ids),
             "tx_hash": last_tx_hash,
-            "status": "ok" if len(total_synced) == len(token_ids) else "partial",
+            "status": status_label,
         }
         logger.info("[CLAIM_SYNC] === Complete: %s ===", result)
         return result
