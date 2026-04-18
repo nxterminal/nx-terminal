@@ -21,7 +21,28 @@ try:
 except ImportError:
     from config import DATABASE_URL
 
+try:
+    from backend.services.logging_helpers import log_info, log_warning, log_error
+    from backend.api.middleware.correlation import (
+        new_correlation_id,
+        set_correlation_id,
+        reset_correlation_id,
+        get_correlation_id,
+        NO_CORRELATION,
+    )
+except ImportError:  # engine may run standalone without the api package on path
+    log_info = log_warning = log_error = None  # type: ignore
+    new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
+    get_correlation_id = None  # type: ignore
+    NO_CORRELATION = "no-correlation"  # type: ignore
+
 logger = logging.getLogger(__name__)
+
+
+def _reset_cid(token) -> None:
+    """Reset the correlation id ContextVar if we own the token."""
+    if token is not None and reset_correlation_id:
+        reset_correlation_id(token)
 
 # -- Contract addresses (MegaETH Mainnet) --------------------------
 NXDEVNFT_ADDRESS = "0x5fe9Cc9C0C859832620C8200fcE5617bEfE407F7"
@@ -102,6 +123,8 @@ def _mark_synced(db_conn, synced_token_ids):
     )
     db_conn.commit()
     logger.info("[CLAIM_SYNC] Marked %d devs as synced (balance_nxt = 0)", len(synced_token_ids))
+    if log_info:
+        log_info(logger, "claim_sync.marked_synced", count=len(synced_token_ids))
 
 
 def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True):
@@ -144,6 +167,15 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
     logger.info("[CLAIM_SYNC] Sending eth_sendRawTransaction...")
     tx_hash = _rpc_call_sync("eth_sendRawTransaction", [raw_tx_hex])
     logger.info("[CLAIM_SYNC] TX sent! Hash: %s", tx_hash)
+    if log_info:
+        log_info(
+            logger,
+            "claim_sync.tx_sent",
+            tx_hash=tx_hash,
+            count=len(batch_ids),
+            amount_total_wei=sum(batch_amounts),
+            nonce=nonce,
+        )
 
     if not wait_for_receipt:
         logger.info("[CLAIM_SYNC] TX sent — skipping receipt wait (API fast mode). Hash: %s", tx_hash)
@@ -175,9 +207,26 @@ def _send_batch(account, batch_ids, batch_amounts, nonce, wait_for_receipt=True)
     if status == 1:
         logger.info("[CLAIM_SYNC] TX CONFIRMED! Block: %d, Gas used: %d, Hash: %s",
                      block, gas_used, tx_hash)
+        if log_info:
+            log_info(
+                logger,
+                "claim_sync.tx_confirmed",
+                tx_hash=tx_hash,
+                block=block,
+                gas_used=gas_used,
+                count=len(batch_ids),
+            )
         return True, tx_hash, nonce + 1
     else:
         logger.error("[CLAIM_SYNC] TX REVERTED! Block: %d, Hash: %s", block, tx_hash)
+        if log_error:
+            log_error(
+                logger,
+                "claim_sync.tx_reverted",
+                tx_hash=tx_hash,
+                block=block,
+                count=len(batch_ids),
+            )
         return False, tx_hash, nonce + 1
 
 
@@ -190,22 +239,43 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
     creating a new connection.  In DRY_RUN mode (default), only logs what
     would be sent.
     """
+    # Engine/cron callers have no request scope — mint a correlation id.
+    # API callers (force_claim_sync) already have one from the middleware,
+    # don't clobber it.
+    _cid_token = None
+    if set_correlation_id and new_correlation_id and get_correlation_id:
+        current = get_correlation_id()
+        if not current or current == NO_CORRELATION:
+            _cid_token = set_correlation_id(new_correlation_id())
+
     logger.info("[CLAIM_SYNC] ========================================")
     logger.info("[CLAIM_SYNC] === Claim Sync Started ===")
     logger.info("[CLAIM_SYNC] DRY_RUN = %s", DRY_RUN)
     logger.info("[CLAIM_SYNC] BATCH_SIZE = %d", BATCH_SIZE)
     logger.info("[CLAIM_SYNC] RPC = %s", MEGAETH_RPC)
     logger.info("[CLAIM_SYNC] Contract = %s", NXDEVNFT_ADDRESS)
+    if log_info:
+        log_info(
+            logger,
+            "claim_sync.started",
+            dry_run=DRY_RUN,
+            batch_size=BATCH_SIZE,
+        )
 
     own_conn = db_conn is None  # track if we created the connection
 
     if not DRY_RUN and not SIGNER_PRIVATE_KEY:
         logger.error("[CLAIM_SYNC] BACKEND_SIGNER_PRIVATE_KEY not set!")
+        if log_error:
+            log_error(logger, "claim_sync.error_no_signer")
+        _reset_cid(_cid_token)
         return "error_no_signer_key"
 
     if not DRY_RUN:
         account = Account.from_key(SIGNER_PRIVATE_KEY)
         logger.info("[CLAIM_SYNC] Signer = %s", account.address)
+        if log_info:
+            log_info(logger, "claim_sync.signer_loaded", signer=account.address)
 
         # Check signer ETH balance
         try:
@@ -213,11 +283,29 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
             balance_wei = int(balance_hex, 16)
             balance_eth = balance_wei / 10**18
             logger.info("[CLAIM_SYNC] Signer ETH balance: %.6f ETH (%d wei)", balance_eth, balance_wei)
+            if log_info:
+                log_info(
+                    logger,
+                    "claim_sync.signer_gas_check",
+                    signer=account.address,
+                    balance_wei=balance_wei,
+                    balance_eth=f"{balance_eth:.6f}",
+                )
             if balance_wei < 10**13:  # < 0.00001 ETH (MegaETH gas is near-zero)
                 logger.error("[CLAIM_SYNC] Signer has insufficient ETH for gas! Balance: %.6f ETH", balance_eth)
+                if log_error:
+                    log_error(
+                        logger,
+                        "claim_sync.error_no_gas",
+                        signer=account.address,
+                        balance_eth=f"{balance_eth:.6f}",
+                    )
+                _reset_cid(_cid_token)
                 return f"error_no_gas: {balance_eth:.6f} ETH"
         except Exception as e:
             logger.error("[CLAIM_SYNC] Failed to check signer balance: %s", e)
+            if log_error:
+                log_error(logger, "claim_sync.signer_gas_check_failed", error=str(e))
 
     # -- 1. Connect to DB (only if no connection was passed in) --
     if db_conn is None:
@@ -240,9 +328,11 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
             logger.info("[CLAIM_SYNC] DB connected (host=%s, ssl=%s)", _host, _sslmode)
         except ImportError:
             logger.error("[CLAIM_SYNC] psycopg2 not installed")
+            _reset_cid(_cid_token)
             return "error_no_psycopg2"
         except Exception as e:
             logger.error("[CLAIM_SYNC] DB connection failed: %s", e)
+            _reset_cid(_cid_token)
             return f"error_db: {e}"
     else:
         logger.info("[CLAIM_SYNC] Using provided DB connection (API pool)")
@@ -254,12 +344,14 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
         logger.error("[CLAIM_SYNC] Query failed: %s", e)
         if own_conn:
             db_conn.close()
+        _reset_cid(_cid_token)
         return f"error_query: {e}"
 
     if not pending:
         logger.info("[CLAIM_SYNC] No pending claims to sync")
         if own_conn:
             db_conn.close()
+        _reset_cid(_cid_token)
         return "no_pending"
 
     # Filter to specific token IDs if requested (partial claims)
@@ -270,6 +362,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
             logger.info("[CLAIM_SYNC] None of the requested %d token IDs have pending balance", len(filter_set))
             if own_conn:
                 db_conn.close()
+            _reset_cid(_cid_token)
             return "no_pending"
         logger.info("[CLAIM_SYNC] Filtered to %d of %d requested devs", len(pending), len(filter_set))
 
@@ -281,6 +374,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
         logger.info("[CLAIM_SYNC] No non-zero balances")
         if own_conn:
             db_conn.close()
+        _reset_cid(_cid_token)
         return "no_pending"
 
     total_nxt = sum(a // (10 ** 18) for a in amounts_wei)
@@ -295,6 +389,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
         logger.info("[CLAIM_SYNC][DRY_RUN] Set DRY_RUN=false to enable on-chain writes")
         if own_conn:
             db_conn.close()
+        _reset_cid(_cid_token)
         return f"dry_run: {len(token_ids)} devs, {total_nxt} NXT"
 
     # -- 5. LIVE: Send transactions --
@@ -341,6 +436,7 @@ def sync_claimable_balances(db_conn=None, filter_token_ids=None, wait_for_receip
     finally:
         if own_conn:
             db_conn.close()
+        _reset_cid(_cid_token)
 
 
 if __name__ == "__main__":

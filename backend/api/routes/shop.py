@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_active_event_effects
 from backend.api.rate_limit import shop_limiter
+from backend.services.logging_helpers import log_info
 import requests as http_requests
 
 log = logging.getLogger("nx_api")
@@ -625,6 +626,15 @@ async def hack_mainframe(req: HackRequest):
                 (addr, req.attacker_dev_id, json.dumps(result), effective_cost)
             )
 
+    log_info(
+        log,
+        "shop.hack_mainframe.executed",
+        wallet=addr,
+        attacker_dev_id=req.attacker_dev_id,
+        hack_success=result.get("hack_success"),
+        cost=result.get("cost"),
+        amount_nxt=result.get("stolen"),
+    )
     return result
 
 
@@ -795,6 +805,16 @@ async def hack_player(req: HackRequest):
                 (addr, req.attacker_dev_id, json.dumps(result), effective_cost)
             )
 
+    log_info(
+        log,
+        "shop.hack_raid.executed",
+        wallet=addr,
+        attacker_dev_id=req.attacker_dev_id,
+        target_dev_id=target["token_id"],
+        hack_success=result.get("hack_success"),
+        cost=result.get("cost"),
+        amount_nxt=result.get("stolen"),
+    )
     return result
 
 
@@ -964,6 +984,14 @@ async def fund_dev(req: FundRequest):
             cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.dev_token_id,))
             updated_dev = cur.fetchone()
 
+    log_info(
+        log,
+        "shop.fund_dev.received",
+        wallet=addr,
+        dev_token_id=req.dev_token_id,
+        amount_nxt=credit_amount,
+        tx_hash=req.tx_hash.lower(),
+    )
     return {
         "status": "funded",
         "dev": dev["name"],
@@ -1059,6 +1087,14 @@ async def transfer_nxt(req: TransferRequest):
             updated = cur.fetchall()
             updated_map = {r["token_id"]: dict(r) for r in updated}
 
+    log_info(
+        log,
+        "shop.transfer.executed",
+        wallet=addr,
+        from_dev_token_id=req.from_dev_token_id,
+        to_dev_token_id=req.to_dev_token_id,
+        amount_nxt=req.amount,
+    )
     return {
         "status": "transferred",
         "amount": req.amount,

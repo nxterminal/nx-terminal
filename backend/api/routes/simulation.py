@@ -5,6 +5,7 @@ import logging
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.services.logging_helpers import log_info
 
 log = logging.getLogger("nx_api")
 
@@ -135,12 +136,14 @@ async def force_claim_sync(request: Request):
             if len(filter_ids) > 200:
                 raise HTTPException(400, "Too many token_ids (max 200)")
             log.info("[CLAIM_SYNC] Force sync for %d specific devs", len(filter_ids))
+            log_info(log, "claim_sync.force_requested", mode="partial", count=len(filter_ids))
         else:
             # Full sync without token_ids requires admin wallet
             wallet = (body.get("wallet_address") or body.get("wallet") or "").strip().lower()
             if wallet not in ADMIN_WALLETS:
                 raise HTTPException(400, "Full sync requires token_ids. Pass {token_ids: [...]}")
             log.info("[CLAIM_SYNC] Admin full sync triggered via API")
+            log_info(log, "claim_sync.force_requested", mode="full", wallet=wallet)
 
         with get_db() as conn:
             # wait_for_receipt=False: return immediately after TX is sent

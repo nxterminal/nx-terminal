@@ -25,6 +25,17 @@ from templates import (
 )
 from prompt_system import process_prompt
 
+try:
+    from backend.services.logging_helpers import log_info
+    from backend.api.middleware.correlation import (
+        new_correlation_id,
+        set_correlation_id,
+        reset_correlation_id,
+    )
+except ImportError:  # engine may run with only engine_dir on sys.path
+    log_info = None  # type: ignore
+    new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nx_engine")
 
@@ -1040,6 +1051,14 @@ def pay_salaries(conn):
 
     conn.commit()
     log.info(f"💰 Paid salary ({effective_salary} $NXT) to {count} devs + energy regen + PC wear")
+    if log_info:
+        log_info(
+            log,
+            "engine.salary_batch_paid",
+            count=count,
+            salary_nxt=effective_salary,
+            amount_total=effective_salary * count,
+        )
     return count
 
 
@@ -1691,6 +1710,11 @@ def run_engine():
     last_orphan_scan = datetime.now(timezone.utc) - orphan_scan_interval
 
     while True:
+        # Fresh correlation id per engine tick so every log emitted by the
+        # worker during this iteration shares the same id and is traceable.
+        _tick_cid_token = None
+        if set_correlation_id and new_correlation_id:
+            _tick_cid_token = set_correlation_id(new_correlation_id())
         try:
             with get_db() as conn:
                 # Pay salaries if due
@@ -1734,6 +1758,9 @@ def run_engine():
 
         except Exception as e:
             log.error(f"Engine error: {e}")
+        finally:
+            if _tick_cid_token is not None and reset_correlation_id:
+                reset_correlation_id(_tick_cid_token)
 
         time.sleep(SCHEDULER_INTERVAL_SEC)
 

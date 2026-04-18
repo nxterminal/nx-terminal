@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
+from backend.api.middleware.correlation import CorrelationIdMiddleware
 from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements
 from backend.api.ws.feed import router as ws_router
 
@@ -399,6 +400,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Correlation ID — added last so it sits outermost and every inner
+# middleware / handler log picks up the id via ContextVar.
+app.add_middleware(CorrelationIdMiddleware)
 
 
 # ============================================================
