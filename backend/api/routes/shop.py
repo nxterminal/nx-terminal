@@ -683,7 +683,7 @@ async def hack_player(req: HackRequest):
 
             # Find random target from another corporation
             cur.execute(
-                "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1",
+                "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
                 (attacker["corporation"],)
             )
             target = cur.fetchone()
