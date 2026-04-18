@@ -146,13 +146,16 @@ export const api = {
 
   // Claim Sync
   getClaimSyncStatus: () => fetchJSON(`${API_BASE}/api/claim-sync/status`),
-  forceClaimSync: (tokenIds) => {
+  forceClaimSync: (tokenIds, walletAddress) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120000); // 120s — sync waits for TX receipt
+    const payload = {};
+    if (walletAddress) payload.wallet_address = walletAddress.toLowerCase();
+    if (tokenIds && tokenIds.length) payload.token_ids = tokenIds;
     return fetchJSON(`${API_BASE}/api/claim-sync/force`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: tokenIds ? JSON.stringify({ token_ids: tokenIds }) : undefined,
+      body: Object.keys(payload).length ? JSON.stringify(payload) : undefined,
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
   },

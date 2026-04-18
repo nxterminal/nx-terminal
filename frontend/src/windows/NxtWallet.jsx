@@ -330,7 +330,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     const idsToSync = selectedIds.map(id => Number(id));
     let syncResult;
     try {
-      syncResult = await api.forceClaimSync(idsToSync);
+      syncResult = await api.forceClaimSync(idsToSync, wallet);
     } catch (e) {
       setClaimStep('error');
       const msg = e.name === 'AbortError'
