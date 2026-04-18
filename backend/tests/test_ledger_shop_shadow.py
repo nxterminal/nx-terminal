@@ -463,3 +463,181 @@ def test_transfer_ledger_failure_does_not_break_endpoint(clean, monkeypatch):
         with conn.cursor() as cur:
             cur.execute("SELECT balance_nxt FROM devs WHERE token_id = 2")
             assert cur.fetchone()["balance_nxt"] == 300
+
+
+# ---------------------------------------------------------------------------
+# Follow-up to 3C — cost deductions
+# ---------------------------------------------------------------------------
+
+
+def test_enum_has_cost_sources():
+    from backend.services.ledger import LedgerSource as LS
+    sources = set(LS.all_sources())
+    assert "hack_mainframe_cost" in sources
+    assert "hack_raid_cost" in sources
+
+
+def test_hack_mainframe_cost_writes_ledger_row_as_debit(clean):
+    _seed_players_and_devs([(1, "alice", WALLET_A, "10X_DEV", 100)])
+    mainframe_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ok = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1,
+                delta_nxt=-25,
+                source=LedgerSource.HACK_MAINFRAME_COST,
+                ref_table="hack_mainframe", ref_id=mainframe_id,
+            )
+            conn.commit()
+    assert ok is True
+    row = _ledger_rows()[0]
+    assert row["source"] == "hack_mainframe_cost"
+    assert row["delta_nxt"] == -25
+    assert row["balance_after"] == 75
+
+
+def test_hack_mainframe_cost_and_win_share_ref_id(clean):
+    _seed_players_and_devs([(1, "alice", WALLET_A, "10X_DEV", 100)])
+    mainframe_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=-25,
+                source=LedgerSource.HACK_MAINFRAME_COST,
+                ref_table="hack_mainframe", ref_id=mainframe_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=60,
+                source=LedgerSource.HACK_MAINFRAME_WIN,
+                ref_table="hack_mainframe", ref_id=mainframe_id,
+            )
+            conn.commit()
+    rows = _ledger_rows()
+    assert len(rows) == 2
+    assert {r["ref_id"] for r in rows} == {mainframe_id}
+    # Two rows, same event, net PnL for attacker = -25 + 60 = +35.
+    assert sum(r["delta_nxt"] for r in rows) == 35
+
+
+def test_hack_raid_cost_writes_ledger_row_as_debit(clean):
+    _seed_players_and_devs([(1, "alice", WALLET_A, "10X_DEV", 100)])
+    raid_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ok = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1,
+                delta_nxt=-25,
+                source=LedgerSource.HACK_RAID_COST,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            conn.commit()
+    assert ok is True
+    row = _ledger_rows()[0]
+    assert row["source"] == "hack_raid_cost"
+    assert row["delta_nxt"] == -25
+    assert row["balance_after"] == 75
+
+
+def test_hack_raid_success_cost_plus_outcome_share_ref_id(clean):
+    """On success: cost + attacker_win + target_loss all share one
+    raid_event_id. Three rows, one event."""
+    _seed_players_and_devs([
+        (1, "alice", WALLET_A, "10X_DEV", 200),
+        (2, "bob",   WALLET_B, "LURKER",  500),
+    ])
+    raid_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=-25,
+                source=LedgerSource.HACK_RAID_COST,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=80,
+                source=LedgerSource.HACK_RAID_ATTACKER_WIN,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=2, delta_nxt=-80,
+                source=LedgerSource.HACK_RAID_TARGET_LOSS,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            conn.commit()
+
+    rows = _ledger_rows()
+    assert len(rows) == 3
+    assert {r["ref_id"] for r in rows} == {raid_id}
+    # Attacker PnL on success = cost + win = -25 + 80 = +55
+    attacker_rows = [r for r in rows if r["dev_token_id"] == 1]
+    assert sum(r["delta_nxt"] for r in attacker_rows) == 55
+
+
+def test_hack_raid_fail_cost_plus_target_win_share_ref_id(clean):
+    """On fail: cost (attacker) + target_win share one raid_event_id.
+    Two rows, one event. Attacker net PnL = -cost; target = +cost."""
+    _seed_players_and_devs([
+        (1, "alice", WALLET_A, "10X_DEV", 200),
+        (2, "bob",   WALLET_B, "LURKER",  500),
+    ])
+    raid_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=-25,
+                source=LedgerSource.HACK_RAID_COST,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=2, delta_nxt=25,
+                source=LedgerSource.HACK_RAID_TARGET_WIN,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            conn.commit()
+
+    rows = _ledger_rows()
+    assert len(rows) == 2
+    assert {r["ref_id"] for r in rows} == {raid_id}
+    assert sum(r["delta_nxt"] for r in rows) == 0  # zero-sum
+
+
+def test_hack_raid_full_event_sums_to_attacker_pnl(clean):
+    """The whole point of tracking cost separately: summing all rows
+    by attacker_wallet for a given raid_event_id gives the exact PnL
+    the attacker saw. Success path: -cost + steal."""
+    _seed_players_and_devs([
+        (1, "alice", WALLET_A, "10X_DEV", 200),
+        (2, "bob",   WALLET_B, "LURKER",  500),
+    ])
+    raid_id = int(time.time() * 1000)
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=-25,
+                source=LedgerSource.HACK_RAID_COST,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=80,
+                source=LedgerSource.HACK_RAID_ATTACKER_WIN,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            ledger_insert(
+                cur, wallet_address=WALLET_B, dev_token_id=2, delta_nxt=-80,
+                source=LedgerSource.HACK_RAID_TARGET_LOSS,
+                ref_table="hack_raids", ref_id=raid_id,
+            )
+            conn.commit()
+
+    # Query: sum deltas per wallet for this raid.
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT wallet_address, SUM(delta_nxt) AS pnl "
+                "FROM nxt_ledger WHERE ref_id = %s GROUP BY wallet_address",
+                (raid_id,),
+            )
+            pnl_by_wallet = {r["wallet_address"]: int(r["pnl"]) for r in cur.fetchall()}
+
+    assert pnl_by_wallet[WALLET_A.lower()] == 55   # -25 + 80
+    assert pnl_by_wallet[WALLET_B.lower()] == -80  # target loss

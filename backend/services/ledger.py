@@ -67,10 +67,12 @@ class LedgerSource:
     ACHIEVEMENT_CLAIM = "achievement_claim"
     STREAK_CLAIM = "streak_claim"
     HACK_MAINFRAME_WIN = "hack_mainframe_win"
+    HACK_MAINFRAME_COST = "hack_mainframe_cost"
     HACK_RAID_ATTACKER_WIN = "hack_raid_attacker_win"
     HACK_RAID_TARGET_LOSS = "hack_raid_target_loss"
     HACK_RAID_ATTACKER_LOSS = "hack_raid_attacker_loss"
     HACK_RAID_TARGET_WIN = "hack_raid_target_win"
+    HACK_RAID_COST = "hack_raid_cost"
     TRANSFER_OUT = "transfer_out"
     TRANSFER_IN = "transfer_in"
     SHOP_PURCHASE = "shop_purchase"
@@ -78,6 +80,12 @@ class LedgerSource:
     SELL_INVESTMENT = "sell_investment"
     CLAIM_ONCHAIN = "claim_onchain"
     BACKFILL_MANUAL = "backfill_manual"
+    # Unconditional cost deductions that fire before the hack
+    # success/fail roll. Both are debits from the attacker and are
+    # independent of outcome — so they live in the ledger alongside
+    # the outcome row(s) sharing the same ref_id.
+    #   HACK_MAINFRAME_COST — attempts against the corporate mainframe
+    #   HACK_RAID_COST      — attempts against another player's dev
 
     @classmethod
     def all_sources(cls) -> Iterable[str]:
