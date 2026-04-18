@@ -1045,24 +1045,18 @@ async def fund_dev(req: FundRequest):
             if dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
 
-            # Verify TX on-chain — poll up to 60s to cover RPC indexing lag.
-            # MegaETH confirms fast but receipt propagation between nodes can
-            # take several seconds under load. If the receipt still doesn't
-            # show up by the deadline, the tx may still be confirmed on-chain,
-            # so we fall through to the pending-fund queue instead of 400'ing
-            # and orphaning the user's funds.
-            _FUND_MAX_WAIT_SEC = 60
-            _FUND_POLL_INTERVAL_SEC = 2
-            receipt = None
-            deadline = time.time() + _FUND_MAX_WAIT_SEC
-            while time.time() < deadline:
-                try:
-                    receipt = _rpc("eth_getTransactionReceipt", [req.tx_hash])
-                except HTTPException:
-                    receipt = None
-                if receipt is not None:
-                    break
-                time.sleep(_FUND_POLL_INTERVAL_SEC)
+            # Single-shot RPC probe. If the receipt isn't indexed yet we
+            # fast-fail to the pending queue (~500ms response); the 30s
+            # worker picks it up. Before this change we polled for 60s
+            # inline, which forced every RPC-lagged user to wait a full
+            # minute in the UI even though the tx had already confirmed
+            # on-chain in milliseconds.
+            try:
+                receipt = _rpc("eth_getTransactionReceipt", [req.tx_hash])
+            except HTTPException:
+                receipt = None
+            except Exception:  # noqa: BLE001
+                receipt = None
 
             if not receipt:
                 # RPC hasn't indexed the receipt yet. The tx is most likely

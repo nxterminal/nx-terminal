@@ -90,8 +90,11 @@ def _build_alerts(
     dry_run: bool,
     signer: Dict[str, Any],
     salary_hours: List[Dict[str, Any]],
-) -> List[Dict[str, str]]:
-    alerts: List[Dict[str, str]] = []
+    stuck_pending_count: int = 0,
+    stuck_pending_oldest=None,
+    stuck_pending_total_nxt: int = 0,
+) -> List[Dict[str, Any]]:
+    alerts: List[Dict[str, Any]] = []
 
     if dry_run:
         alerts.append({
@@ -130,6 +133,29 @@ def _build_alerts(
         alerts.append({
             "severity": "critical",
             "message": f"Signer unreachable: {signer['error']}",
+        })
+
+    if stuck_pending_count > 0:
+        oldest_age_minutes = None
+        if stuck_pending_oldest is not None:
+            try:
+                from datetime import datetime, timezone
+                oldest_age_minutes = (
+                    datetime.now(timezone.utc) - stuck_pending_oldest
+                ).total_seconds() / 60
+            except Exception:  # noqa: BLE001
+                oldest_age_minutes = None
+        alerts.append({
+            "severity": "warning",
+            "type": "pending_fund_txs_slow",
+            "message": (
+                f"{stuck_pending_count} pending_fund_txs unresolved >30min "
+                f"(total {stuck_pending_total_nxt} NXT). "
+                "Check pending_fund_txs; consider backfill_funds.py."
+            ),
+            "count": stuck_pending_count,
+            "oldest_age_minutes": oldest_age_minutes,
+            "total_amount_nxt": stuck_pending_total_nxt,
         })
 
     return alerts
@@ -210,6 +236,27 @@ async def economy_summary(request: Request) -> Dict[str, Any]:
             pending_count = int(pending["n"])
             pending_total = int(pending["total"])
 
+            # pending_fund_txs older than 30 min and still unresolved.
+            # Under normal load the 30s worker drains these in < 2 min,
+            # so >30min is always worth investigating.
+            try:
+                cur.execute(
+                    """
+                    SELECT COUNT(*) AS n,
+                           MIN(created_at) AS oldest,
+                           COALESCE(SUM(amount_nxt), 0) AS total_nxt
+                      FROM pending_fund_txs
+                     WHERE resolved = false
+                       AND created_at < NOW() - INTERVAL '30 minutes'
+                    """
+                )
+                stuck = cur.fetchone()
+                stuck_count = int(stuck["n"])
+                stuck_oldest = stuck["oldest"]
+                stuck_total = int(stuck["total_nxt"])
+            except Exception:  # noqa: BLE001 — table may not exist in tests
+                stuck_count, stuck_oldest, stuck_total = 0, None, 0
+
     signer = _fetch_signer_state()
 
     dry_run = os.getenv("DRY_RUN", "true").lower() != "false"
@@ -218,6 +265,9 @@ async def economy_summary(request: Request) -> Dict[str, Any]:
         dry_run=dry_run,
         signer=signer,
         salary_hours=salary_hours,
+        stuck_pending_count=stuck_count,
+        stuck_pending_oldest=stuck_oldest,
+        stuck_pending_total_nxt=stuck_total,
     )
 
     eth_wei = signer.get("eth_balance_wei")
