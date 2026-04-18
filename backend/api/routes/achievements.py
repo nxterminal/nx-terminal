@@ -1,11 +1,23 @@
 """Routes: Achievements — track, check, and claim achievement rewards"""
 
+import hashlib
 import logging
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
+from backend.services.ledger import (
+    LedgerSource,
+    is_shadow_write_enabled,
+    ledger_insert,
+)
 
 log = logging.getLogger("nx_api")
+
+
+def _achievement_id_to_bigint(achievement_id: str) -> int:
+    """Hash a string achievement_id to a stable BIGINT for ref_id."""
+    digest = hashlib.sha1(achievement_id.encode("utf-8")).hexdigest()
+    return int(digest[:15], 16)
 
 router = APIRouter()
 
@@ -241,5 +253,30 @@ async def claim_achievement(req: AchievementClaimRequest):
                 cur.execute(
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (pa["reward_nxt"], pa["reward_nxt"], dev["token_id"]))
+
+                # Shadow-write to nxt_ledger (Fase 3D). achievements
+                # have string ids — we hash to a stable BIGINT for
+                # ref_id. The pre-flight UPDATE on player_achievements
+                # (claimed=TRUE) already prevents replay at the source,
+                # so a second claim attempt fails before ever reaching
+                # this branch; the idempotency_key here is belt-and-
+                # suspenders.
+                if is_shadow_write_enabled():
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=addr,
+                            dev_token_id=dev["token_id"],
+                            delta_nxt=pa["reward_nxt"],
+                            source=LedgerSource.ACHIEVEMENT_CLAIM,
+                            ref_table="player_achievements",
+                            ref_id=_achievement_id_to_bigint(req.achievement_id),
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=achievement_claim "
+                            "achievement_id=%s error=%s",
+                            req.achievement_id, _e,
+                        )
     return {"success": True, "reward": pa["reward_nxt"], "title": pa["title"],
             "dev_name": dev["name"] if dev else None}
