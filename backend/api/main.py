@@ -227,6 +227,17 @@ def _run_auto_migrations():
                     CREATE INDEX IF NOT EXISTS idx_admin_logs_event_time
                         ON admin_logs(event_type, created_at DESC)
                 """)
+                # claim_history — on-chain verification columns + unique
+                # tx_hash guard. Source of truth:
+                # backend/db/migration_claim_history_status.sql
+                cur.execute("ALTER TABLE claim_history ADD COLUMN IF NOT EXISTS tx_block BIGINT")
+                cur.execute("ALTER TABLE claim_history ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'confirmed'")
+                cur.execute("UPDATE claim_history SET status = 'confirmed' WHERE status IS NULL")
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_claim_history_tx_hash_unique
+                        ON claim_history(tx_hash)
+                        WHERE tx_hash IS NOT NULL AND tx_hash <> ''
+                """)
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""
