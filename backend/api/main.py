@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -465,6 +465,7 @@ app.include_router(sentinel.router, prefix="/api/sentinel", tags=["Sentinel"])
 app.include_router(missions.router, prefix="/api/missions", tags=["Missions"])
 app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(ws_router, tags=["WebSocket"])
 
 # ── NFT Metadata (tokenURI) — baseURI + tokenId ──
