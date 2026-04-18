@@ -79,10 +79,32 @@ def start_engine():
             time.sleep(10)
 
 
+def start_reconciler():
+    """Finalise 'syncing' devs stuck after a receipt timeout."""
+    print("[MAIN] Starting sync reconciler thread...")
+    try:
+        from backend.engine.sync_reconciler import run_reconciler_loop
+    except Exception as e:
+        print(f"[MAIN] Reconciler import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_reconciler_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] Reconciler crashed: {e}. Restarting in 10s...")
+            time.sleep(10)
+
+
 if __name__ == "__main__":
     # Start listener in background thread
     listener_thread = threading.Thread(target=start_listener, daemon=True)
     listener_thread.start()
+
+    # Start sync reconciler in background thread
+    reconciler_thread = threading.Thread(
+        target=start_reconciler, daemon=True, name="sync_reconciler",
+    )
+    reconciler_thread.start()
 
     # Give listener a moment to initialize
     time.sleep(2)
