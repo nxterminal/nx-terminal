@@ -27,6 +27,7 @@ from prompt_system import process_prompt
 
 try:
     from backend.services.logging_helpers import log_info
+    from backend.services.admin_log import log_event as admin_log_event
     from backend.api.middleware.correlation import (
         new_correlation_id,
         set_correlation_id,
@@ -34,6 +35,7 @@ try:
     )
 except ImportError:  # engine may run with only engine_dir on sys.path
     log_info = None  # type: ignore
+    admin_log_event = None  # type: ignore
     new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -1048,6 +1050,18 @@ def pay_salaries(conn):
     cur.execute("""
         UPDATE devs SET bugs_shipped = bugs_shipped + 1 WHERE status = 'active' AND knowledge >= 15 AND knowledge < 30
     """)
+
+    if admin_log_event:
+        admin_log_event(
+            cur,
+            event_type="salary_batch_paid",
+            payload={
+                "count": count,
+                "effective_salary": effective_salary,
+                "total_emitted": count * effective_salary,
+                "event_multiplier": event_effects.get("salary_multiplier", 1.0),
+            },
+        )
 
     conn.commit()
     log.info(f"💰 Paid salary ({effective_salary} $NXT) to {count} devs + energy regen + PC wear")

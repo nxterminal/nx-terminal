@@ -6,6 +6,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from backend.api.deps import fetch_one, fetch_all, get_db
 from backend.services.logging_helpers import log_info
+from backend.services.admin_log import log_event as admin_log_event
 
 log = logging.getLogger("nx_api")
 
@@ -145,7 +146,21 @@ async def force_claim_sync(request: Request):
             log.info("[CLAIM_SYNC] Admin full sync triggered via API")
             log_info(log, "claim_sync.force_requested", mode="full", wallet=wallet)
 
+        client_ip = request.client.host if request.client else None
+        wallet_for_audit = (body.get("wallet_address") or body.get("wallet") or "").strip().lower() or None
+
         with get_db() as conn:
+            with conn.cursor() as cur:
+                admin_log_event(
+                    cur,
+                    event_type="claim_sync_requested",
+                    wallet_address=wallet_for_audit,
+                    payload={
+                        "token_ids": filter_ids,
+                        "ip": client_ip,
+                    },
+                )
+
             # wait_for_receipt=False: return immediately after TX is sent
             # MegaETH confirms in <1s, and Render has a 30s HTTP timeout
             result = sync_claimable_balances(
@@ -153,6 +168,19 @@ async def force_claim_sync(request: Request):
                 filter_token_ids=filter_ids,
                 wait_for_receipt=False,
             )
+
+            if isinstance(result, dict) and result.get("tx_hash"):
+                with conn.cursor() as cur:
+                    admin_log_event(
+                        cur,
+                        event_type="claim_sync_tx_sent",
+                        wallet_address=wallet_for_audit,
+                        payload={
+                            "tx_hash": result.get("tx_hash"),
+                            "count": result.get("synced", 0),
+                            "total": result.get("total", 0),
+                        },
+                    )
 
         # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
         if isinstance(result, dict):

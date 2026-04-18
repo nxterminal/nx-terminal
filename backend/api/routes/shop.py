@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_active_event_effects
 from backend.api.rate_limit import shop_limiter
 from backend.services.logging_helpers import log_info
+from backend.services.admin_log import log_event as admin_log_event
 import requests as http_requests
 
 log = logging.getLogger("nx_api")
@@ -626,6 +627,18 @@ async def hack_mainframe(req: HackRequest):
                 (addr, req.attacker_dev_id, json.dumps(result), effective_cost)
             )
 
+            if success:
+                admin_log_event(
+                    cur,
+                    event_type="hack_mainframe_success",
+                    wallet_address=addr,
+                    dev_token_id=req.attacker_dev_id,
+                    payload={
+                        "steal_amount": steal_amount,
+                        "effective_cost": effective_cost,
+                    },
+                )
+
     log_info(
         log,
         "shop.hack_mainframe.executed",
@@ -804,6 +817,31 @@ async def hack_player(req: HackRequest):
                    VALUES (%s, %s, 'hack_raid', %s::jsonb, %s)""",
                 (addr, req.attacker_dev_id, json.dumps(result), effective_cost)
             )
+
+            if success:
+                admin_log_event(
+                    cur,
+                    event_type="hack_raid_success",
+                    wallet_address=addr,
+                    dev_token_id=req.attacker_dev_id,
+                    payload={
+                        "target_dev_id": target["token_id"],
+                        "target_wallet": (target.get("owner_address") or "").lower() or None,
+                        "effective_cost": effective_cost,
+                        "steal_amount": steal_amount,
+                    },
+                )
+            else:
+                admin_log_event(
+                    cur,
+                    event_type="hack_raid_fail",
+                    wallet_address=addr,
+                    dev_token_id=req.attacker_dev_id,
+                    payload={
+                        "target_dev_id": target["token_id"],
+                        "effective_cost": effective_cost,
+                    },
+                )
 
     log_info(
         log,
@@ -984,6 +1022,18 @@ async def fund_dev(req: FundRequest):
             cur.execute("SELECT * FROM devs WHERE token_id = %s", (req.dev_token_id,))
             updated_dev = cur.fetchone()
 
+            admin_log_event(
+                cur,
+                event_type="fund_dev_received",
+                wallet_address=addr,
+                dev_token_id=req.dev_token_id,
+                payload={
+                    "tx_hash": req.tx_hash.lower(),
+                    "amount_wei": verified_amount_wei,
+                    "amount_nxt": credit_amount,
+                },
+            )
+
     log_info(
         log,
         "shop.fund_dev.received",
@@ -1086,6 +1136,18 @@ async def transfer_nxt(req: TransferRequest):
             cur.execute("SELECT * FROM devs WHERE token_id IN (%s, %s)", (req.from_dev_token_id, req.to_dev_token_id))
             updated = cur.fetchall()
             updated_map = {r["token_id"]: dict(r) for r in updated}
+
+            admin_log_event(
+                cur,
+                event_type="transfer_dev_to_dev",
+                wallet_address=(from_dev.get("owner_address") or "").lower() or None,
+                dev_token_id=req.from_dev_token_id,
+                payload={
+                    "to_dev_id": req.to_dev_token_id,
+                    "to_wallet": (to_dev.get("owner_address") or "").lower() or None,
+                    "amount_nxt": req.amount,
+                },
+            )
 
     log_info(
         log,
