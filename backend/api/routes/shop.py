@@ -566,6 +566,30 @@ async def hack_mainframe(req: HackRequest):
                 (effective_cost, effective_cost, now, req.attacker_dev_id)
             )
 
+            # Shadow-write: unconditional cost debit (follow-up to 3C).
+            # The outcome (win/nothing) that may fire below shares this
+            # same mainframe_event_id so an operator can join the two
+            # rows and reconstruct the full event. The 24h cooldown per
+            # attacker dev rules out same-ms collisions.
+            mainframe_event_id = int(time.time() * 1000)
+            if is_shadow_write_enabled():
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=attacker["owner_address"],
+                        dev_token_id=req.attacker_dev_id,
+                        delta_nxt=-effective_cost,
+                        source=LedgerSource.HACK_MAINFRAME_COST,
+                        ref_table="hack_mainframe",
+                        ref_id=mainframe_event_id,
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=hack_mainframe_cost "
+                        "dev=%s error=%s",
+                        req.attacker_dev_id, _e,
+                    )
+
             # Calculate success probability: 40% base + hacking_stat/200 (max ~85%)
             success_prob = HACK_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
             success_prob += event_fx.get("hack_success_bonus", 0.0)
@@ -578,13 +602,9 @@ async def hack_mainframe(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (steal_amount, steal_amount, req.attacker_dev_id)
                 )
-                # Shadow-write to nxt_ledger (Fase 3C). No natural id
-                # for the raid event in this codepath — using
-                # int(time.time() * 1000) gives ms-precision uniqueness;
-                # cooldown of 24h between raids per dev makes a same-ms
-                # collision practically impossible.
+                # Shadow-write: win row uses the same mainframe_event_id
+                # captured above so cost + win share one ref_id.
                 if is_shadow_write_enabled():
-                    raid_event_id = int(time.time() * 1000)
                     try:
                         ledger_insert(
                             cur,
@@ -593,7 +613,7 @@ async def hack_mainframe(req: HackRequest):
                             delta_nxt=steal_amount,
                             source=LedgerSource.HACK_MAINFRAME_WIN,
                             ref_table="hack_mainframe",
-                            ref_id=raid_event_id,
+                            ref_id=mainframe_event_id,
                         )
                     except Exception as _e:  # noqa: BLE001
                         log.warning(
@@ -751,6 +771,30 @@ async def hack_player(req: HackRequest):
                 (effective_cost, effective_cost, now, req.attacker_dev_id)
             )
 
+            # Shadow-write: unconditional cost debit (follow-up to 3C).
+            # Whichever outcome branch fires below reuses this same
+            # raid_event_id so cost + outcome(s) share one ref_id. The
+            # 24h raid cooldown per attacker rules out same-ms
+            # collisions across concurrent raids.
+            raid_event_id = int(time.time() * 1000)
+            if is_shadow_write_enabled():
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=attacker["owner_address"],
+                        dev_token_id=req.attacker_dev_id,
+                        delta_nxt=-effective_cost,
+                        source=LedgerSource.HACK_RAID_COST,
+                        ref_table="hack_raids",
+                        ref_id=raid_event_id,
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=hack_raid_cost "
+                        "dev=%s error=%s",
+                        req.attacker_dev_id, _e,
+                    )
+
             # Calculate success probability: 25% base + hacking_stat/200 (max ~75%)
             success_prob = HACK_PLAYER_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
             success_prob += event_fx.get("hack_success_bonus", 0.0)
@@ -767,13 +811,9 @@ async def hack_player(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (steal_amount, steal_amount, req.attacker_dev_id)
                 )
-                # Shadow-write to nxt_ledger (Fase 3C). Both sides
-                # of the raid share raid_event_id so the two ledger
-                # entries can be joined back into one logical event.
-                # Cooldown of 24h between raids per attacker makes a
-                # same-ms collision practically impossible.
+                # Shadow-write: reuse the raid_event_id captured above
+                # so cost + attacker_win + target_loss share one ref_id.
                 if is_shadow_write_enabled():
-                    raid_event_id = int(time.time() * 1000)
                     try:
                         ledger_insert(
                             cur,
@@ -867,14 +907,11 @@ async def hack_player(req: HackRequest):
                     "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                     (effective_cost, effective_cost, target["token_id"])
                 )
-                # Shadow-write to nxt_ledger (Fase 3C). The fail path's
-                # only balance_nxt UPDATE is the target gaining the cost
-                # — the attacker's loss is the unconditional cost
-                # deduction at line ~720 which fires for both success
-                # and fail outcomes (un-ledgered for now; tracked in the
-                # PR description for follow-up).
+                # Shadow-write: reuse the raid_event_id captured
+                # above so cost + target_win share one ref_id for
+                # the fail path. The attacker's loss is captured by
+                # HACK_RAID_COST (separate row, same raid_event_id).
                 if is_shadow_write_enabled():
-                    raid_event_id = int(time.time() * 1000)
                     try:
                         ledger_insert(
                             cur,
