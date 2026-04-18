@@ -5,6 +5,11 @@ from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, get_db, validate_wallet
+from backend.services.ledger import (
+    LedgerSource,
+    is_shadow_write_enabled,
+    ledger_insert,
+)
 
 log = logging.getLogger("nx_api")
 
@@ -123,6 +128,29 @@ async def claim_streak(req: StreakClaimRequest):
                 "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
                 (reward, reward, dev["token_id"])
             )
+
+            # Shadow-write to nxt_ledger (Fase 3D). Date ordinal is a
+            # natural per-day key for streak claims. The pre-flight
+            # check on last_claim_date already prevents double-claim
+            # on the same day; the idempotency_key here matches that
+            # contract.
+            if is_shadow_write_enabled():
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=addr,
+                        dev_token_id=dev["token_id"],
+                        delta_nxt=reward,
+                        source=LedgerSource.STREAK_CLAIM,
+                        ref_table="login_streaks",
+                        ref_id=today.toordinal(),
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=streak_claim "
+                        "wallet=%s day=%s error=%s",
+                        addr, today, _e,
+                    )
 
             # Send corporate notification
             longest = max(new_streak, row["longest_streak"] if row else 0)

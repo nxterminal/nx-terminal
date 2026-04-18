@@ -10,6 +10,11 @@ from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 from backend.services.logging_helpers import log_info
 from backend.services.admin_log import log_event as admin_log_event
+from backend.services.ledger import (
+    LedgerSource,
+    is_shadow_write_enabled,
+    ledger_insert,
+)
 
 log = logging.getLogger("nx_api")
 
@@ -335,6 +340,28 @@ async def claim_mission(req: MissionClaimRequest):
                 )
                 dev = cur.fetchone()
                 claimed_devs.append({"token_id": row["dev_token_id"], "name": dev["name"] if dev else "?", "reward": dev_reward})
+
+                # Shadow-write to nxt_ledger (Fase 3D). One row per
+                # claimed dev. player_missions.id is the natural unique
+                # key — each row in this loop represents exactly one
+                # mission slot being settled.
+                if is_shadow_write_enabled():
+                    try:
+                        ledger_insert(
+                            cur,
+                            wallet_address=pm["wallet_address"],
+                            dev_token_id=row["dev_token_id"],
+                            delta_nxt=dev_reward,
+                            source=LedgerSource.MISSION_CLAIM,
+                            ref_table="player_missions",
+                            ref_id=row["id"],
+                        )
+                    except Exception as _e:  # noqa: BLE001
+                        log.warning(
+                            "ledger_shadow_write_failed source=mission_claim "
+                            "player_mission_id=%s error=%s",
+                            row["id"], _e,
+                        )
 
                 # Update mission status
                 cur.execute(
