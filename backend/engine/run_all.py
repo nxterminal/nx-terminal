@@ -95,6 +95,22 @@ def start_reconciler():
             time.sleep(10)
 
 
+def start_ledger_reconciler():
+    """Hourly compare nxt_ledger vs live balances; log divergences."""
+    print("[MAIN] Starting ledger reconciler thread...")
+    try:
+        from backend.engine.ledger_reconciler import run_reconciler_loop as run_ledger_loop
+    except Exception as e:
+        print(f"[MAIN] Ledger reconciler import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_ledger_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] Ledger reconciler crashed: {e}. Restarting in 60s...")
+            time.sleep(60)
+
+
 if __name__ == "__main__":
     # Start listener in background thread
     listener_thread = threading.Thread(target=start_listener, daemon=True)
@@ -105,6 +121,12 @@ if __name__ == "__main__":
         target=start_reconciler, daemon=True, name="sync_reconciler",
     )
     reconciler_thread.start()
+
+    # Start ledger reconciler in background thread
+    ledger_reconciler_thread = threading.Thread(
+        target=start_ledger_reconciler, daemon=True, name="ledger_reconciler",
+    )
+    ledger_reconciler_thread.start()
 
     # Give listener a moment to initialize
     time.sleep(2)

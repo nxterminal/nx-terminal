@@ -248,6 +248,43 @@ def _run_auto_migrations():
                         ON devs(sync_status, sync_started_at)
                         WHERE sync_status IS NOT NULL
                 """)
+                # nxt_ledger — append-only economic ledger (Fase 3A).
+                # Source of truth: backend/db/migration_nxt_ledger.sql
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxt_ledger (
+                        id              BIGSERIAL PRIMARY KEY,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        dev_token_id    BIGINT,
+                        delta_nxt       BIGINT NOT NULL,
+                        balance_after   BIGINT NOT NULL,
+                        source          TEXT NOT NULL,
+                        ref_table       TEXT,
+                        ref_id          BIGINT,
+                        idempotency_key TEXT NOT NULL UNIQUE,
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        correlation_id  UUID,
+                        CHECK (delta_nxt != 0),
+                        CHECK (balance_after >= 0)
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_wallet_time
+                        ON nxt_ledger(wallet_address, created_at DESC)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_source_time
+                        ON nxt_ledger(source, created_at DESC)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_dev_time
+                        ON nxt_ledger(dev_token_id, created_at DESC)
+                        WHERE dev_token_id IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_correlation
+                        ON nxt_ledger(correlation_id)
+                        WHERE correlation_id IS NOT NULL
+                """)
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""
