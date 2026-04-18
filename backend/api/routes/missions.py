@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
 from backend.services.logging_helpers import log_info
+from backend.services.admin_log import log_event as admin_log_event
 
 log = logging.getLogger("nx_api")
 
@@ -352,6 +353,18 @@ async def claim_mission(req: MissionClaimRequest):
                                      "group_id": group_id}),
                          -dev_reward)
                     )
+
+            admin_log_event(
+                cur,
+                event_type="mission_claimed",
+                wallet_address=pm["wallet_address"],
+                payload={
+                    "mission_id": pm["mission_id"],
+                    "reward_nxt": reward,
+                    "num_devs": num_devs,
+                    "player_mission_id": req.player_mission_id,
+                },
+            )
 
     log_info(
         log,

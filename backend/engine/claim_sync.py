@@ -23,6 +23,7 @@ except ImportError:
 
 try:
     from backend.services.logging_helpers import log_info, log_warning, log_error
+    from backend.services.admin_log import log_event as admin_log_event
     from backend.api.middleware.correlation import (
         new_correlation_id,
         set_correlation_id,
@@ -32,6 +33,7 @@ try:
     )
 except ImportError:  # engine may run standalone without the api package on path
     log_info = log_warning = log_error = None  # type: ignore
+    admin_log_event = None  # type: ignore
     new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
     get_correlation_id = None  # type: ignore
     NO_CORRELATION = "no-correlation"  # type: ignore
@@ -121,6 +123,15 @@ def _mark_synced(db_conn, synced_token_ids):
         f"UPDATE nx.devs SET balance_nxt = 0 WHERE token_id IN ({placeholders})",
         synced_token_ids,
     )
+    if admin_log_event:
+        admin_log_event(
+            cursor,
+            event_type="claim_sync_marked",
+            payload={
+                "synced_token_ids": list(synced_token_ids),
+                "count": len(synced_token_ids),
+            },
+        )
     db_conn.commit()
     logger.info("[CLAIM_SYNC] Marked %d devs as synced (balance_nxt = 0)", len(synced_token_ids))
     if log_info:

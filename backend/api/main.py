@@ -200,6 +200,33 @@ def _run_auto_migrations():
                 """)
                 cur.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_deleted ON notifications(deleted_at) WHERE deleted_at IS NULL")
+                # admin_logs — append-only audit trail of economic events.
+                # Source of truth: backend/db/migration_admin_logs.sql
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS admin_logs (
+                        id             BIGSERIAL PRIMARY KEY,
+                        correlation_id UUID,
+                        event_type     TEXT NOT NULL,
+                        wallet_address VARCHAR(42),
+                        dev_token_id   BIGINT,
+                        payload        JSONB,
+                        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_wallet_time
+                        ON admin_logs(wallet_address, created_at DESC)
+                        WHERE wallet_address IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_correlation
+                        ON admin_logs(correlation_id)
+                        WHERE correlation_id IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_event_time
+                        ON admin_logs(event_type, created_at DESC)
+                """)
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""

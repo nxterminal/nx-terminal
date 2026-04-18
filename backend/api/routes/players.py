@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, execute, get_db, validate_wallet
 from backend.services.logging_helpers import log_info, log_warning
+from backend.services.admin_log import log_event as admin_log_event
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -216,26 +217,40 @@ async def record_claim(wallet: str, request: Request):
     if gross <= 0:
         raise HTTPException(400, "amount_gross must be positive")
 
-    # Idempotency guard: ignore duplicate tx_hash submissions.
-    if tx_hash:
-        existing = fetch_one(
-            "SELECT 1 FROM claim_history WHERE tx_hash = %s",
-            (tx_hash,),
-        )
-        if existing:
-            log_warning(
-                log,
-                "record_claim.duplicate_ignored",
-                wallet=addr,
-                tx_hash=tx_hash,
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            admin_log_event(
+                cur,
+                event_type="record_claim_received",
+                wallet_address=addr,
+                payload={
+                    "tx_hash": tx_hash,
+                    "amount_gross": gross,
+                    "amount_net": net,
+                    "fee_amount": fee,
+                },
             )
-            return {"ok": True, "duplicate": True}
 
-    execute(
-        """INSERT INTO claim_history (player_address, amount_gross, fee_amount, amount_net, tx_hash)
-           VALUES (%s, %s, %s, %s, %s)""",
-        (addr, gross, fee, net, tx_hash)
-    )
+            # Idempotency guard: ignore duplicate tx_hash submissions.
+            if tx_hash:
+                cur.execute(
+                    "SELECT 1 FROM claim_history WHERE tx_hash = %s",
+                    (tx_hash,),
+                )
+                if cur.fetchone():
+                    log_warning(
+                        log,
+                        "record_claim.duplicate_ignored",
+                        wallet=addr,
+                        tx_hash=tx_hash,
+                    )
+                    return {"ok": True, "duplicate": True}
+
+            cur.execute(
+                """INSERT INTO claim_history (player_address, amount_gross, fee_amount, amount_net, tx_hash)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (addr, gross, fee, net, tx_hash)
+            )
     log.info("[CLAIM] Recorded claim for %s: gross=%d net=%d tx=%s", addr, gross, net, tx_hash)
     log_info(
         log,
