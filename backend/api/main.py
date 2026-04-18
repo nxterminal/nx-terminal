@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -403,7 +403,7 @@ from backend.api.rate_limit import global_ip_limiter  # noqa: E402
 async def rate_limit_middleware(request: Request, call_next):
     # Skip health check and WebSocket
     path = request.url.path
-    if path in ("/health", "/ws/feed") or path.startswith("/metadata/"):
+    if path in ("/health", "/health/shallow", "/ws/feed") or path.startswith("/metadata/"):
         return await call_next(request)
     client_ip = request.client.host if request.client else "unknown"
     if not global_ip_limiter.check(client_ip):
@@ -466,6 +466,7 @@ app.include_router(missions.router, prefix="/api/missions", tags=["Missions"])
 app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])
 
 # ── NFT Metadata (tokenURI) — baseURI + tokenId ──
@@ -520,11 +521,6 @@ async def admin_send_devcamp():
             cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
             cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch') ON CONFLICT DO NOTHING")
     return {"sent": sent, "message": f"Dev Camp broadcast sent to {sent} players"}
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "nx-terminal-api"}
 
 
 @app.get("/")
