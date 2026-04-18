@@ -367,7 +367,7 @@ def test_sell_investment_shadow_write_contract(clean, monkeypatch):
                 delta_nxt=250,
                 source=LedgerSource.SELL_INVESTMENT,
                 ref_table="protocol_investments",
-                ref_id=42,  # protocol_id
+                ref_id=42,  # protocol_investments.id (SERIAL PK)
             )
             conn.commit()
     assert ok is True
@@ -376,6 +376,73 @@ def test_sell_investment_shadow_write_contract(clean, monkeypatch):
     assert row["ref_table"] == "protocol_investments"
     assert row["ref_id"] == 42
     assert row["balance_after"] == 750
+
+
+def test_sell_investment_reinvest_creates_distinct_rows(clean):
+    """Follow-up fix: a dev that sells, reinvests, and sells again at
+    the same price must produce two distinct ledger rows, because each
+    investment has its own protocol_investments.id. Before the fix,
+    ref_id was the protocol_id so same-price reinvest silently
+    collided on idempotency_key."""
+    _seed_devs([(1, "alice", WALLET_A, "10X_DEV", 500)])
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            # First sale: investment_id=10 for protocol 5, sell_value=250.
+            first = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=250,
+                source=LedgerSource.SELL_INVESTMENT,
+                ref_table="protocol_investments", ref_id=10,
+            )
+            # Second sale after reinvest: new investment_id=20, SAME
+            # protocol 5, SAME sell_value=250. Distinct id → distinct key.
+            second = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=250,
+                source=LedgerSource.SELL_INVESTMENT,
+                ref_table="protocol_investments", ref_id=20,
+            )
+            conn.commit()
+    assert first is True
+    assert second is True
+    rows = _ledger_rows()
+    assert len(rows) == 2
+    assert sorted(r["ref_id"] for r in rows) == [10, 20]
+
+
+def test_sell_investment_same_investment_id_is_idempotent(clean):
+    """Retry of the exact same sell (same investment row, same price)
+    collides on idempotency_key and writes only one row — the correct
+    behaviour for crash-recovery scenarios."""
+    _seed_devs([(1, "alice", WALLET_A, "10X_DEV", 500)])
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            first = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=250,
+                source=LedgerSource.SELL_INVESTMENT,
+                ref_table="protocol_investments", ref_id=10,
+            )
+            second = ledger_insert(
+                cur, wallet_address=WALLET_A, dev_token_id=1, delta_nxt=250,
+                source=LedgerSource.SELL_INVESTMENT,
+                ref_table="protocol_investments", ref_id=10,
+            )
+            conn.commit()
+    assert first is True
+    assert second is False
+    assert len(_ledger_rows()) == 1
+
+
+def test_sell_investment_select_fetches_pi_id():
+    """Wiring check: the production SELECT must include ``pi.id`` in
+    the columns, otherwise ``inv["id"]`` would KeyError in the
+    ledger_insert call at engine.py SELL branch."""
+    src = (Path(__file__).resolve().parent.parent / "engine" / "engine.py").read_text()
+    # The SELECT used by the SELL branch — single line, easy to grep.
+    assert "SELECT pi.id, pi.protocol_id" in src, (
+        "sell_investment SELECT must fetch pi.id for the ledger_insert "
+        "ref_id. See fix follow-up to PR 295."
+    )
+    # And the ledger_insert must consume it.
+    assert 'ref_id=inv["id"]' in src
 
 
 def test_pending_funds_shadow_write_contract(clean):
