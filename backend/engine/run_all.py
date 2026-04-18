@@ -109,6 +109,20 @@ def start_ledger_reconciler():
         except Exception as e:
             print(f"[MAIN] Ledger reconciler crashed: {e}. Restarting in 60s...")
             time.sleep(60)
+def start_nxt_claimed_listener():
+    """Backfill claim_history from on-chain NXTClaimed events."""
+    print("[MAIN] Starting NXTClaimed listener thread...")
+    try:
+        from backend.engine.nxt_claimed_listener import run_listener_loop
+    except Exception as e:
+        print(f"[MAIN] NXTClaimed listener import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_listener_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] NXTClaimed listener crashed: {e}. Restarting in 10s...")
+            time.sleep(10)
 
 
 if __name__ == "__main__":
@@ -127,6 +141,13 @@ if __name__ == "__main__":
         target=start_ledger_reconciler, daemon=True, name="ledger_reconciler",
     )
     ledger_reconciler_thread.start()
+    # Start NXTClaimed listener in background thread
+    nxt_claimed_thread = threading.Thread(
+        target=start_nxt_claimed_listener,
+        daemon=True,
+        name="nxt_claimed_listener",
+    )
+    nxt_claimed_thread.start()
 
     # Give listener a moment to initialize
     time.sleep(2)
