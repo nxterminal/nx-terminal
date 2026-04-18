@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, execute, get_db, validate_wallet
+from backend.services.logging_helpers import log_info, log_warning
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -203,8 +204,32 @@ async def record_claim(wallet: str, request: Request):
     fee = int(body.get("fee_amount", 0))
     tx_hash = body.get("tx_hash", "")
 
+    log_info(
+        log,
+        "record_claim.received",
+        wallet=addr,
+        amount_gross=gross,
+        amount_net=net,
+        tx_hash=tx_hash,
+    )
+
     if gross <= 0:
         raise HTTPException(400, "amount_gross must be positive")
+
+    # Idempotency guard: ignore duplicate tx_hash submissions.
+    if tx_hash:
+        existing = fetch_one(
+            "SELECT 1 FROM claim_history WHERE tx_hash = %s",
+            (tx_hash,),
+        )
+        if existing:
+            log_warning(
+                log,
+                "record_claim.duplicate_ignored",
+                wallet=addr,
+                tx_hash=tx_hash,
+            )
+            return {"ok": True, "duplicate": True}
 
     execute(
         """INSERT INTO claim_history (player_address, amount_gross, fee_amount, amount_net, tx_hash)
@@ -212,6 +237,14 @@ async def record_claim(wallet: str, request: Request):
         (addr, gross, fee, net, tx_hash)
     )
     log.info("[CLAIM] Recorded claim for %s: gross=%d net=%d tx=%s", addr, gross, net, tx_hash)
+    log_info(
+        log,
+        "record_claim.inserted",
+        wallet=addr,
+        amount_gross=gross,
+        amount_net=net,
+        tx_hash=tx_hash,
+    )
     return {"ok": True}
 
 

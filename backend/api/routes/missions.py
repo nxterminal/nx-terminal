@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
+from backend.services.logging_helpers import log_info
 
 log = logging.getLogger("nx_api")
 
@@ -352,6 +353,15 @@ async def claim_mission(req: MissionClaimRequest):
                          -dev_reward)
                     )
 
+    log_info(
+        log,
+        "mission.claimed",
+        wallet=addr,
+        mission_id=pm["mission_id"],
+        player_mission_id=req.player_mission_id,
+        reward_nxt=reward,
+        count=num_devs,
+    )
     return {
         "success": True,
         "reward_nxt": reward,
