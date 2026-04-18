@@ -22,6 +22,7 @@ Conventions:
 from __future__ import annotations
 
 import logging
+import os
 from typing import Iterable, Optional
 
 from backend.api.middleware.correlation import (
@@ -31,6 +32,31 @@ from backend.api.middleware.correlation import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def is_shadow_write_enabled() -> bool:
+    """Feature flag for shadow writes from economic callsites.
+
+    Default: enabled. Set ``LEDGER_SHADOW_WRITE=false`` in env for
+    instant rollback without a code change.
+    """
+    return os.getenv("LEDGER_SHADOW_WRITE", "true").lower() != "false"
+
+
+def tx_hash_to_bigint(tx_hash: str) -> int:
+    """Derive a stable BIGINT from a 0x-prefixed 32-byte tx hash.
+
+    Used when a callsite doesn't have a natural DB id to put in
+    ``ref_id`` but does have a transaction hash. Takes the first
+    15 hex characters after ``0x`` (60 bits) — fits in BIGINT,
+    collision probability is astronomical for the volumes we process.
+    """
+    if not tx_hash:
+        raise ValueError("tx_hash must be non-empty")
+    clean = tx_hash.lower().lstrip("0x")
+    if len(clean) < 15:
+        raise ValueError(f"tx_hash too short: {tx_hash!r}")
+    return int(clean[:15], 16)
 
 
 class LedgerSource:
