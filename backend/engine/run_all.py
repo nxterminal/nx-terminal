@@ -79,10 +79,75 @@ def start_engine():
             time.sleep(10)
 
 
+def start_reconciler():
+    """Finalise 'syncing' devs stuck after a receipt timeout."""
+    print("[MAIN] Starting sync reconciler thread...")
+    try:
+        from backend.engine.sync_reconciler import run_reconciler_loop
+    except Exception as e:
+        print(f"[MAIN] Reconciler import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_reconciler_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] Reconciler crashed: {e}. Restarting in 10s...")
+            time.sleep(10)
+
+
+def start_ledger_reconciler():
+    """Hourly compare nxt_ledger vs live balances; log divergences."""
+    print("[MAIN] Starting ledger reconciler thread...")
+    try:
+        from backend.engine.ledger_reconciler import run_reconciler_loop as run_ledger_loop
+    except Exception as e:
+        print(f"[MAIN] Ledger reconciler import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_ledger_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] Ledger reconciler crashed: {e}. Restarting in 60s...")
+            time.sleep(60)
+def start_nxt_claimed_listener():
+    """Backfill claim_history from on-chain NXTClaimed events."""
+    print("[MAIN] Starting NXTClaimed listener thread...")
+    try:
+        from backend.engine.nxt_claimed_listener import run_listener_loop
+    except Exception as e:
+        print(f"[MAIN] NXTClaimed listener import failed: {e}. Skipping.")
+        return
+    while True:
+        try:
+            run_listener_loop(get_db_with_ssl)
+        except Exception as e:
+            print(f"[MAIN] NXTClaimed listener crashed: {e}. Restarting in 10s...")
+            time.sleep(10)
+
+
 if __name__ == "__main__":
     # Start listener in background thread
     listener_thread = threading.Thread(target=start_listener, daemon=True)
     listener_thread.start()
+
+    # Start sync reconciler in background thread
+    reconciler_thread = threading.Thread(
+        target=start_reconciler, daemon=True, name="sync_reconciler",
+    )
+    reconciler_thread.start()
+
+    # Start ledger reconciler in background thread
+    ledger_reconciler_thread = threading.Thread(
+        target=start_ledger_reconciler, daemon=True, name="ledger_reconciler",
+    )
+    ledger_reconciler_thread.start()
+    # Start NXTClaimed listener in background thread
+    nxt_claimed_thread = threading.Thread(
+        target=start_nxt_claimed_listener,
+        daemon=True,
+        name="nxt_claimed_listener",
+    )
+    nxt_claimed_thread.start()
 
     # Give listener a moment to initialize
     time.sleep(2)

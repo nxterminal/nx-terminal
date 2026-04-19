@@ -6,6 +6,10 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, execute, get_db, validate_wallet
+from backend.services.logging_helpers import log_info, log_warning
+from backend.services.admin_log import log_event as admin_log_event
+from backend.services.event_parser import parse_nxt_claimed_event
+from backend.engine.claim_sync import _rpc_call_sync, NXDEVNFT_ADDRESS
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -187,10 +191,14 @@ async def get_claim_history(wallet: str):
 
 @router.post("/{wallet}/record-claim")
 async def record_claim(wallet: str, request: Request):
-    """Record a successful $NXT claim in claim_history.
+    """Record a $NXT claim in claim_history, verified on-chain.
 
-    Called by the frontend after a successful claimNXT transaction.
-    Body: { amount_gross, amount_net, fee_amount, tx_hash }
+    The request body is allowed to carry ``amount_gross`` / ``amount_net``
+    / ``fee_amount`` for backward compatibility but those values are
+    **ignored** — the source of truth is the on-chain ``NXTClaimed``
+    event emitted by the NXDevNFT contract. The body's ``tx_hash`` is
+    the only field we trust as input; everything else comes from the
+    receipt.
     """
     addr = wallet.lower()
     try:
@@ -198,21 +206,162 @@ async def record_claim(wallet: str, request: Request):
     except Exception:
         raise HTTPException(400, "Invalid JSON body")
 
-    gross = int(body.get("amount_gross", 0))
-    net = int(body.get("amount_net", 0))
-    fee = int(body.get("fee_amount", 0))
-    tx_hash = body.get("tx_hash", "")
+    tx_hash = (body.get("tx_hash") or "").lower().strip()
+    if not tx_hash or not tx_hash.startswith("0x") or len(tx_hash) != 66:
+        raise HTTPException(400, "Invalid tx_hash format")
 
-    if gross <= 0:
-        raise HTTPException(400, "amount_gross must be positive")
+    log_info(log, "record_claim.received", wallet=addr, tx_hash=tx_hash)
 
-    execute(
-        """INSERT INTO claim_history (player_address, amount_gross, fee_amount, amount_net, tx_hash)
-           VALUES (%s, %s, %s, %s, %s)""",
-        (addr, gross, fee, net, tx_hash)
+    # 1. Fast-path idempotency: if this tx_hash is already recorded,
+    # return the existing row without re-hitting the RPC.
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, amount_gross, amount_net, fee_amount "
+                "FROM claim_history WHERE tx_hash = %s",
+                (tx_hash,),
+            )
+            existing = cur.fetchone()
+            if existing:
+                log_warning(log, "record_claim.duplicate_ignored",
+                            wallet=addr, tx_hash=tx_hash)
+                return {
+                    "ok": True,
+                    "status": "already_recorded",
+                    "claim_id": existing["id"],
+                    "verified_amounts": {
+                        "gross": existing["amount_gross"],
+                        "net": existing["amount_net"],
+                        "fee": existing["fee_amount"],
+                    },
+                }
+
+    # 2. Fetch receipt on-chain.
+    try:
+        receipt = _rpc_call_sync("eth_getTransactionReceipt", [tx_hash])
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, f"Failed to fetch receipt: {str(exc)[:100]}")
+
+    if not receipt:
+        raise HTTPException(400, "Transaction not found or not yet confirmed")
+    if receipt.get("status") != "0x1":
+        raise HTTPException(400, "Transaction reverted on-chain")
+
+    # 3. Parse NXTClaimed event from the receipt logs.
+    event = parse_nxt_claimed_event(
+        receipt.get("logs") or [],
+        NXDEVNFT_ADDRESS,
     )
-    log.info("[CLAIM] Recorded claim for %s: gross=%d net=%d tx=%s", addr, gross, net, tx_hash)
-    return {"ok": True}
+    if not event:
+        raise HTTPException(
+            400,
+            "Transaction does not contain NXTClaimed event from NXDevNFT",
+        )
+
+    # 4. The event.user must match the wallet in the URL path. Any
+    # mismatch is a suspicious attempt to credit claim history under
+    # someone else's wallet — audit and deny.
+    if event["user"] != addr:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                admin_log_event(
+                    cur,
+                    event_type="record_claim_wallet_mismatch",
+                    wallet_address=addr,
+                    payload={
+                        "reported_wallet": addr,
+                        "actual_user": event["user"],
+                        "tx_hash": tx_hash,
+                    },
+                )
+        raise HTTPException(
+            403,
+            "Transaction user does not match wallet in path",
+        )
+
+    # 5. The event emits amounts in wei (NXT has 18 decimals).
+    # claim_history stores integer NXT units — convert before writing.
+    WEI = 10 ** 18
+    gross_nxt = event["gross"] // WEI
+    fee_nxt = event["fee"] // WEI
+    net_nxt = event["net"] // WEI
+    tx_block = event["block_number"]
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            admin_log_event(
+                cur,
+                event_type="record_claim_received",
+                wallet_address=addr,
+                payload={
+                    "tx_hash": tx_hash,
+                    "amount_gross": gross_nxt,
+                    "amount_net": net_nxt,
+                    "fee_amount": fee_nxt,
+                },
+            )
+
+            cur.execute(
+                """
+                INSERT INTO claim_history
+                    (player_address, amount_gross, amount_net, fee_amount,
+                     tx_hash, tx_block, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'confirmed')
+                ON CONFLICT (tx_hash)
+                    WHERE tx_hash IS NOT NULL AND tx_hash <> ''
+                    DO NOTHING
+                RETURNING id
+                """,
+                (addr, gross_nxt, net_nxt, fee_nxt, tx_hash, tx_block),
+            )
+            inserted = cur.fetchone()
+            if inserted:
+                claim_id = inserted["id"]
+            else:
+                # Race: another worker beat us to the INSERT between our
+                # idempotency SELECT and here. Read back the winner's id.
+                cur.execute(
+                    "SELECT id FROM claim_history WHERE tx_hash = %s",
+                    (tx_hash,),
+                )
+                claim_id = cur.fetchone()["id"]
+
+            admin_log_event(
+                cur,
+                event_type="record_claim_verified",
+                wallet_address=addr,
+                payload={
+                    "tx_hash": tx_hash,
+                    "tx_block": tx_block,
+                    "amount_gross": gross_nxt,
+                    "amount_net": net_nxt,
+                    "fee_amount": fee_nxt,
+                    "token_ids_count": len(event["token_ids"]),
+                },
+            )
+
+    log.info(
+        "[CLAIM] Recorded claim for %s: gross=%d net=%d fee=%d tx=%s block=%d",
+        addr, gross_nxt, net_nxt, fee_nxt, tx_hash, tx_block,
+    )
+    log_info(
+        log,
+        "record_claim.inserted",
+        wallet=addr,
+        amount_gross=gross_nxt,
+        amount_net=net_nxt,
+        tx_hash=tx_hash,
+    )
+    return {
+        "ok": True,
+        "status": "recorded",
+        "claim_id": claim_id,
+        "verified_amounts": {
+            "gross": gross_nxt,
+            "net": net_nxt,
+            "fee": fee_nxt,
+        },
+    }
 
 
 @router.get("/{wallet}/wallet-summary")

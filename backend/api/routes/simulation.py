@@ -4,7 +4,9 @@ import os
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
-from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet
+from backend.services.logging_helpers import log_info
+from backend.services.admin_log import log_event as admin_log_event
 
 log = logging.getLogger("nx_api")
 
@@ -113,36 +115,108 @@ ADMIN_WALLETS = {
 async def force_claim_sync(request: Request):
     """Force an immediate claim sync run (bypasses scheduler timer).
 
-    Accepts optional { token_ids: [29572, 13535, ...] } to sync only
-    specific devs (for partial claims).  Returns structured result with
-    tx_hash when available.
+    Requires wallet_address in the body. For partial syncs every
+    token_id must be owned by that wallet. Full sync (no token_ids)
+    is restricted to ADMIN_WALLETS. Attempts to sync token_ids the
+    caller does not own return 403 and are audited in admin_logs
+    under event_type=claim_sync_auth_denied.
     """
+    # Parse body. Request-validation failures (400/403) need to escape
+    # the catch-all below, which otherwise converts them into 500s.
+    body = {}
+    try:
+        body = await request.json() or {}
+    except Exception:
+        pass
+
+    wallet = (body.get("wallet_address") or body.get("wallet") or "").strip().lower()
+    if not wallet:
+        raise HTTPException(400, "wallet_address required")
+    # Format check: 0x + 40 hex chars. Raises 400 on bad input.
+    wallet = validate_wallet(wallet)
+
+    raw_token_ids = body.get("token_ids")
+    filter_ids = None
+    if isinstance(raw_token_ids, list):
+        if not raw_token_ids:
+            raise HTTPException(400, "token_ids list is empty")
+        if len(raw_token_ids) > 200:
+            raise HTTPException(400, "Too many token_ids (max 200)")
+        try:
+            filter_ids = [int(t) for t in raw_token_ids]
+        except (TypeError, ValueError):
+            raise HTTPException(400, "token_ids must be integers")
+
+    client_ip = request.client.host if request.client else None
+    is_admin = wallet in ADMIN_WALLETS
+
+    # Ownership gate: partial sync must sync only wallet-owned devs.
+    # Admins bypass so they can still force-sync on behalf of any wallet
+    # when investigating support tickets.
+    if filter_ids is not None and not is_admin:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM devs "
+                    "WHERE token_id = ANY(%s) AND LOWER(owner_address) = %s",
+                    (filter_ids, wallet),
+                )
+                owned = int(cur.fetchone()["n"])
+                if owned != len(filter_ids):
+                    admin_log_event(
+                        cur,
+                        event_type="claim_sync_auth_denied",
+                        wallet_address=wallet,
+                        payload={
+                            "requested_token_ids": filter_ids,
+                            "owned_count": owned,
+                            "ip": client_ip,
+                        },
+                    )
+                    # commit the audit row even though the request fails
+                    conn.commit()
+                    log.warning(
+                        "[CLAIM_SYNC] auth denied wallet=%s requested=%d owned=%d ip=%s",
+                        wallet, len(filter_ids), owned, client_ip,
+                    )
+                    raise HTTPException(
+                        403,
+                        "Not all token_ids belong to this wallet",
+                    )
+
+    # Full sync (no token_ids) requires admin.
+    if filter_ids is None and not is_admin:
+        raise HTTPException(403, "Full sync requires admin wallet")
+
+    log.info(
+        "[CLAIM_SYNC] Force sync mode=%s count=%s wallet=%s",
+        "partial" if filter_ids else "full",
+        len(filter_ids) if filter_ids else "all",
+        wallet,
+    )
+    log_info(
+        log,
+        "claim_sync.force_requested",
+        mode="partial" if filter_ids else "full",
+        count=len(filter_ids) if filter_ids else None,
+        wallet=wallet,
+    )
+
     try:
         from backend.engine.claim_sync import sync_claimable_balances
 
-        # Parse body
-        body = {}
-        try:
-            body = await request.json() or {}
-        except Exception:
-            pass
-
-        filter_ids = None
-        if isinstance(body.get("token_ids"), list):
-            filter_ids = [int(t) for t in body["token_ids"]]
-            if not filter_ids:
-                raise HTTPException(400, "token_ids list is empty")
-            if len(filter_ids) > 200:
-                raise HTTPException(400, "Too many token_ids (max 200)")
-            log.info("[CLAIM_SYNC] Force sync for %d specific devs", len(filter_ids))
-        else:
-            # Full sync without token_ids requires admin wallet
-            wallet = (body.get("wallet_address") or body.get("wallet") or "").strip().lower()
-            if wallet not in ADMIN_WALLETS:
-                raise HTTPException(400, "Full sync requires token_ids. Pass {token_ids: [...]}")
-            log.info("[CLAIM_SYNC] Admin full sync triggered via API")
-
         with get_db() as conn:
+            with conn.cursor() as cur:
+                admin_log_event(
+                    cur,
+                    event_type="claim_sync_requested",
+                    wallet_address=wallet,
+                    payload={
+                        "token_ids": filter_ids,
+                        "ip": client_ip,
+                    },
+                )
+
             # wait_for_receipt=False: return immediately after TX is sent
             # MegaETH confirms in <1s, and Render has a 30s HTTP timeout
             result = sync_claimable_balances(
@@ -150,6 +224,19 @@ async def force_claim_sync(request: Request):
                 filter_token_ids=filter_ids,
                 wait_for_receipt=False,
             )
+
+            if isinstance(result, dict) and result.get("tx_hash"):
+                with conn.cursor() as cur:
+                    admin_log_event(
+                        cur,
+                        event_type="claim_sync_tx_sent",
+                        wallet_address=wallet,
+                        payload={
+                            "tx_hash": result.get("tx_hash"),
+                            "count": result.get("synced", 0),
+                            "total": result.get("total", 0),
+                        },
+                    )
 
         # Result is a dict when TX was sent, or a string for dry_run/no_pending/errors
         if isinstance(result, dict):
@@ -169,6 +256,8 @@ async def force_claim_sync(request: Request):
             "result": result or "ok",
             "tx_hash": None,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.error("[CLAIM_SYNC] Force sync failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

@@ -64,6 +64,22 @@ try:
 except ImportError:
     sys.exit("psycopg2 is required. Install with `pip install psycopg2-binary`.")
 
+# Ledger shadow write (Fase 3D). Optional — script can run even if
+# the backend.services package isn't on the path, since this file is
+# meant to be invoked standalone for ops backfills.
+try:
+    from backend.services.ledger import (
+        LedgerSource,
+        is_shadow_write_enabled,
+        ledger_insert,
+        tx_hash_to_bigint,
+    )
+except ImportError:
+    LedgerSource = None  # type: ignore
+    is_shadow_write_enabled = lambda: False  # type: ignore
+    ledger_insert = None  # type: ignore
+    tx_hash_to_bigint = None  # type: ignore
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s: %(message)s",
@@ -248,6 +264,30 @@ def credit_fund(cur, wallet, dev_token_id, amount_nxt, tx_hash, dev_name, archet
         "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
         (amount_nxt, amount_nxt, dev_token_id),
     )
+
+    # Shadow-write to nxt_ledger (Fase 3D). Use ref_table="funding_txs"
+    # so a tx that the live shop.fund_dev path also processed produces
+    # a colliding idempotency_key — second writer is a silent no-op.
+    # Source is BACKFILL_MANUAL so the row is still distinguishable
+    # in audit reports as "credited by ops backfill".
+    if is_shadow_write_enabled() and ledger_insert is not None and tx_hash_to_bigint is not None:
+        try:
+            ledger_insert(
+                cur,
+                wallet_address=wallet,
+                dev_token_id=dev_token_id,
+                delta_nxt=amount_nxt,
+                source=LedgerSource.BACKFILL_MANUAL,
+                ref_table="funding_txs",
+                ref_id=tx_hash_to_bigint(tx_hash),
+            )
+        except Exception as _e:  # noqa: BLE001
+            log.warning(
+                "ledger_shadow_write_failed source=backfill_manual "
+                "tx_hash=%s error=%s",
+                tx_hash, _e,
+            )
+
     cur.execute(
         """INSERT INTO actions (dev_id, dev_name, archetype, action_type, details, energy_cost, nxt_cost)
            VALUES (%s, %s, %s, 'FUND_DEV', %s::jsonb, 0, 0)""",

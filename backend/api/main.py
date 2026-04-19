@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements
+from backend.api.middleware.correlation import CorrelationIdMiddleware
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -101,6 +102,17 @@ def _run_auto_migrations():
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_pending_fund_unresolved
                         ON pending_fund_txs(resolved, created_at)
+                        WHERE resolved = false
+                """)
+                # Backoff column: NULL = eligible immediately,
+                # > NOW() = still in backoff, <= NOW() = retry.
+                cur.execute(
+                    "ALTER TABLE pending_fund_txs "
+                    "ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ"
+                )
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pending_funds_next_retry
+                        ON pending_fund_txs(next_retry_at)
                         WHERE resolved = false
                 """)
                 # chat_messages enrichment for the Live Feed redesign —
@@ -199,6 +211,91 @@ def _run_auto_migrations():
                 """)
                 cur.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_deleted ON notifications(deleted_at) WHERE deleted_at IS NULL")
+                # admin_logs — append-only audit trail of economic events.
+                # Source of truth: backend/db/migration_admin_logs.sql
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS admin_logs (
+                        id             BIGSERIAL PRIMARY KEY,
+                        correlation_id UUID,
+                        event_type     TEXT NOT NULL,
+                        wallet_address VARCHAR(42),
+                        dev_token_id   BIGINT,
+                        payload        JSONB,
+                        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_wallet_time
+                        ON admin_logs(wallet_address, created_at DESC)
+                        WHERE wallet_address IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_correlation
+                        ON admin_logs(correlation_id)
+                        WHERE correlation_id IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_admin_logs_event_time
+                        ON admin_logs(event_type, created_at DESC)
+                """)
+                # claim_history — on-chain verification columns + unique
+                # tx_hash guard. Source of truth:
+                # backend/db/migration_claim_history_status.sql
+                cur.execute("ALTER TABLE claim_history ADD COLUMN IF NOT EXISTS tx_block BIGINT")
+                cur.execute("ALTER TABLE claim_history ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'confirmed'")
+                cur.execute("UPDATE claim_history SET status = 'confirmed' WHERE status IS NULL")
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_claim_history_tx_hash_unique
+                        ON claim_history(tx_hash)
+                        WHERE tx_hash IS NOT NULL AND tx_hash <> ''
+                """)
+                # devs — 2-phase commit sync status. Source of truth:
+                # backend/db/migration_devs_sync_status.sql
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_status TEXT")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_tx_hash VARCHAR(66)")
+                cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS sync_started_at TIMESTAMPTZ")
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_devs_sync_status
+                        ON devs(sync_status, sync_started_at)
+                        WHERE sync_status IS NOT NULL
+                """)
+                # nxt_ledger — append-only economic ledger (Fase 3A).
+                # Source of truth: backend/db/migration_nxt_ledger.sql
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxt_ledger (
+                        id              BIGSERIAL PRIMARY KEY,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        dev_token_id    BIGINT,
+                        delta_nxt       BIGINT NOT NULL,
+                        balance_after   BIGINT NOT NULL,
+                        source          TEXT NOT NULL,
+                        ref_table       TEXT,
+                        ref_id          BIGINT,
+                        idempotency_key TEXT NOT NULL UNIQUE,
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        correlation_id  UUID,
+                        CHECK (delta_nxt != 0),
+                        CHECK (balance_after >= 0)
+                    )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_wallet_time
+                        ON nxt_ledger(wallet_address, created_at DESC)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_source_time
+                        ON nxt_ledger(source, created_at DESC)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_dev_time
+                        ON nxt_ledger(dev_token_id, created_at DESC)
+                        WHERE dev_token_id IS NOT NULL
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_correlation
+                        ON nxt_ledger(correlation_id)
+                        WHERE correlation_id IS NOT NULL
+                """)
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""
@@ -375,7 +472,7 @@ from backend.api.rate_limit import global_ip_limiter  # noqa: E402
 async def rate_limit_middleware(request: Request, call_next):
     # Skip health check and WebSocket
     path = request.url.path
-    if path in ("/health", "/ws/feed") or path.startswith("/metadata/"):
+    if path in ("/health", "/health/shallow", "/ws/feed") or path.startswith("/metadata/"):
         return await call_next(request)
     client_ip = request.client.host if request.client else "unknown"
     if not global_ip_limiter.check(client_ip):
@@ -399,6 +496,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Correlation ID — added last so it sits outermost and every inner
+# middleware / handler log picks up the id via ContextVar.
+app.add_middleware(CorrelationIdMiddleware)
 
 
 # ============================================================
@@ -433,6 +534,8 @@ app.include_router(sentinel.router, prefix="/api/sentinel", tags=["Sentinel"])
 app.include_router(missions.router, prefix="/api/missions", tags=["Missions"])
 app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])
 
 # ── NFT Metadata (tokenURI) — baseURI + tokenId ──
@@ -487,11 +590,6 @@ async def admin_send_devcamp():
             cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
             cur.execute("INSERT INTO system_broadcasts (id) VALUES ('dev_camp_launch') ON CONFLICT DO NOTHING")
     return {"sent": sent, "message": f"Dev Camp broadcast sent to {sent} players"}
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "nx-terminal-api"}
 
 
 @app.get("/")

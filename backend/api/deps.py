@@ -12,6 +12,7 @@ from typing import Optional
 import psycopg2
 import psycopg2.pool
 import psycopg2.extras
+import redis as sync_redis
 import redis.asyncio as aioredis
 
 log = logging.getLogger("nx_api")
@@ -54,6 +55,7 @@ log.info(f"DB config: host={DB_HOST} port={DB_PORT} db={DB_NAME} ssl={DB_SSLMODE
 
 _pool = None
 _redis = None
+_sync_redis = None
 
 
 def init_db_pool(minconn=2, maxconn=10):
@@ -104,6 +106,30 @@ async def close_redis():
 
 def get_redis():
     return _redis
+
+
+def get_sync_redis():
+    """Sync redis client for use from non-async code (rate limiter).
+
+    Lazily initialised on first call so the API can boot even if Redis
+    is down — callers must handle ``None`` as "fail open".
+    """
+    global _sync_redis
+    if _sync_redis is None:
+        try:
+            _sync_redis = sync_redis.from_url(REDIS_URL, decode_responses=True)
+            _sync_redis.ping()
+            log.info("Sync Redis connected")
+        except Exception as e:
+            log.warning(f"Sync Redis not available ({e}), rate limiter will fail open")
+            _sync_redis = None
+    return _sync_redis
+
+
+def reset_sync_redis():
+    """Test-only: drop the cached sync client."""
+    global _sync_redis
+    _sync_redis = None
 
 
 # ============================================================

@@ -107,6 +107,13 @@ nx-terminal/
 └── .env.example
 ```
 
+## Environment variables
+
+See [`backend/docs/ENVIRONMENT.md`](backend/docs/ENVIRONMENT.md) for the
+catalog of env vars the backend consumes. Critical: `DRY_RUN` must be
+`"false"` in production so on-chain claim syncs actually execute — it is
+declared explicitly in `render.yaml` for both `nx-api` and `nx-engine`.
+
 ## Cost
 
 ~$21/month on Render (API $7 + Engine $7 + DB $7 + Redis free)
