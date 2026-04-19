@@ -3,6 +3,21 @@ NX TERMINAL: PROTOCOL WARS — Simulation Engine v2
 100% sin LLM. Weighted random + templates. PostgreSQL.
 """
 
+import sys
+from pathlib import Path
+
+# Defense-in-depth against a broken PYTHONPATH (Fix-D). If this module
+# is loaded with only backend/engine on sys.path (e.g. a dashboard-level
+# `cd backend/engine && PYTHONPATH=. python engine.py`), every
+# `from backend.services...` below raises ImportError — and the
+# try/except further down used to silently disable all shadow writes.
+# Injecting the project root here makes the guarded imports succeed
+# under any reasonable invocation path, so the except is now a true
+# last-resort diagnostic rather than a silent feature-flag.
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 import os
 import random
 import random as _random
@@ -39,7 +54,25 @@ try:
         set_correlation_id,
         reset_correlation_id,
     )
-except ImportError:  # engine may run with only engine_dir on sys.path
+except ImportError as _e:
+    # DO NOT silence this. If we hit this branch, shadow writes are
+    # disabled and the ledger will be incomplete. The exact scenario
+    # that triggered it in prod: Render startCommand `cd backend/engine
+    # && PYTHONPATH=. python run_all.py` — only backend/engine ended up
+    # on sys.path, so `from backend.services.ledger import ...` failed
+    # and every engine shadow write was silently dropped for hours.
+    # Emit the failure at ERROR level under a dedicated logger so any
+    # future regression surfaces in log searches / alerting instead of
+    # hiding in /dev/null like last time.
+    _critical_log = logging.getLogger("nx_engine_import_failure")
+    _critical_log.error(
+        "CRITICAL: Failed to import backend.services helpers: %s. "
+        "Shadow writes are DISABLED — the ledger will be incomplete "
+        "for every economic event the engine emits (salary, "
+        "sell_investment, fund_deposit, hack_*, orphan_scanner). "
+        "Fix: ensure PYTHONPATH or sys.path includes the project root.",
+        _e,
+    )
     log_info = None  # type: ignore
     admin_log_event = None  # type: ignore
     ledger_insert = None  # type: ignore

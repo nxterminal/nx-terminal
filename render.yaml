@@ -21,8 +21,13 @@ services:
     startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT --workers 8
     healthCheckPath: /health
     envVars:
+      # Absolute path (not ".") so a dashboard edit that cd's into a
+      # subdir doesn't silently break `from backend.services... import`.
+      # The API's ledger imports are unconditional, so any break would
+      # crash uvicorn loudly — unlike the engine's guarded imports —
+      # but we prefer the same defensive posture in both services.
       - key: PYTHONPATH
-        value: .
+        value: /opt/render/project/src
       - key: NX_DB_HOST
         fromDatabase:
           name: nx-db
@@ -64,10 +69,17 @@ services:
     plan: starter
     region: ohio
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: python -m backend.engine.run_all
+    # IMPORTANT: PYTHONPATH is set INLINE (absolute) to survive a subshell
+    # or dashboard-level startCommand that cd's into backend/engine and
+    # sets PYTHONPATH=. (relative). A relative PYTHONPATH from the wrong
+    # cwd silently breaks `from backend.services.ledger import ...`,
+    # which in turn silently disables every engine shadow write. The
+    # engine fallback in engine.py also injects project root into
+    # sys.path as defense-in-depth. Keep both.
+    startCommand: PYTHONPATH=/opt/render/project/src python backend/engine/run_all.py
     envVars:
       - key: PYTHONPATH
-        value: .
+        value: /opt/render/project/src
       - key: NX_DB_HOST
         fromDatabase:
           name: nx-db
