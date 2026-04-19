@@ -39,13 +39,13 @@ export default function WorldEventBanner() {
         fontFamily: "'Patrick Hand', cursive",
       }}>
         <div style={{
-          background: '#e57373', padding: '3px 8px', fontSize: 11, color: '#4a1010',
+          background: '#e57373', padding: '3px 8px', fontSize: 'var(--text-sm)', color: '#4a1010',
         }}>📢 Active Event</div>
         <div style={{ padding: '8px 10px', color: '#4a1010' }}>
-          <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>
+          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', marginBottom: 4 }}>
             {event.title}
           </div>
-          <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 'var(--text-base)', opacity: 0.85, lineHeight: 1.4 }}>
             {event.description}
           </div>
         </div>
