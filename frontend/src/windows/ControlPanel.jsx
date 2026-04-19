@@ -248,7 +248,7 @@ export default function ControlPanel() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
-  const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale') || 'xlarge');
+  const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale-v2') || 'xlarge');
   const [tooltipsEnabled, setTooltipsEnabled] = useState(
     () => localStorage.getItem('nx-tooltips') !== 'off',
   );
@@ -685,7 +685,7 @@ export default function ControlPanel() {
                 <button key={s} className="win-btn"
                   onClick={() => {
                     setTextScale(s);
-                    localStorage.setItem('nx-text-scale', s);
+                    localStorage.setItem('nx-text-scale-v2', s);
                     document.documentElement.setAttribute('data-text-scale', s);
                     window.dispatchEvent(new CustomEvent('nx-text-scale', { detail: s }));
                   }}

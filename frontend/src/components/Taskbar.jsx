@@ -270,7 +270,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         className={`win-btn start-btn${startOpen ? ' active' : ''}`}
         onClick={() => setStartOpen(s => !s)}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" style={{ display: 'block', flexShrink: 0 }}>
+        <svg viewBox="0 0 16 16" style={{ display: 'block', flexShrink: 0, width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
           <rect x="1" y="1" width="6" height="6" rx="0.5" fill="#ff0000" stroke="#cc0000" strokeWidth="0.3"/>
           <rect x="9" y="1" width="6" height="6" rx="0.5" fill="#00aa00" stroke="#008800" strokeWidth="0.3"/>
           <rect x="1" y="9" width="6" height="6" rx="0.5" fill="#0055dd" stroke="#0044bb" strokeWidth="0.3"/>
@@ -325,7 +325,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           onClick={toggleAssistant}
           title={assistantOn ? 'Hide Assistant' : 'Show Assistant'}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: assistantOn ? 1 : 0.4, display: 'block' }}>
+          <svg viewBox="0 0 16 16" style={{ opacity: assistantOn ? 1 : 0.4, display: 'block', width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
             <path d="M8 1 C8 1 6 3 6 6 L6 8 C6 9 5 10 4 10 L3 10 C2 10 2 11 3 11 L6 11 C6 11 6 12 7 13 L9 13 C10 12 10 11 10 11 L13 11 C14 11 14 10 13 10 L12 10 C11 10 10 9 10 8 L10 6 C10 3 8 1 8 1Z" fill="#808080" stroke="#333" strokeWidth="0.6"/>
             <circle cx="8" cy="5" r="1" fill="#333"/>
           </svg>
@@ -339,7 +339,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         >
           {/* Win98-style speaker. When muted, a darker grey icon with a
               diagonal red slash across it. */}
-          <svg width="14" height="14" viewBox="0 0 16 16" style={{ opacity: soundOn ? 1 : 0.55, display: 'block' }}>
+          <svg viewBox="0 0 16 16" style={{ opacity: soundOn ? 1 : 0.55, display: 'block', width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
             <path d="M2 6 L5 6 L9 3 L9 13 L5 10 L2 10 Z" fill="#808080" stroke="#333" strokeWidth="0.6" strokeLinejoin="round"/>
             {soundOn && (
               <>
@@ -359,7 +359,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           title={unreadCount > 0 ? `${unreadCount} unread` : 'Inbox'}
           style={{ position: 'relative' }}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" style={{ display: 'block' }}>
+          <svg viewBox="0 0 16 16" style={{ display: 'block', width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
             <rect x="1" y="4" width="14" height="9" rx="1" fill="#e8e8d8" stroke="#666" strokeWidth="0.7"/>
             <path d="M1 4 L8 9.5 L15 4" fill="none" stroke="#666" strokeWidth="0.7"/>
             <path d="M1.5 4.5 L8 9 L14.5 4.5" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="2"/>

@@ -294,8 +294,8 @@ function MiniBtn({ label, text, onClick, disabled, color, tooltip, hoveredBtn, o
         <div style={{
           position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
           marginBottom: 6, background: '#ffffe1', border: '1px solid #000',
-          padding: '4px 8px', fontFamily: '"Tahoma", "MS Sans Serif", sans-serif',
-          fontSize: 11, color: '#000', whiteSpace: 'normal', zIndex: 30,
+          padding: '0.35em 0.7em', fontFamily: '"Tahoma", "MS Sans Serif", sans-serif',
+          fontSize: 'var(--text-sm)', color: '#000', whiteSpace: 'normal', zIndex: 30,
           pointerEvents: 'none', boxShadow: '1px 1px 0 #808080',
           maxWidth: 200, lineHeight: 1.3, minWidth: 120,
         }}>

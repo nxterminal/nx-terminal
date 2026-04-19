@@ -252,7 +252,13 @@ export default function Desktop() {
     // Apply text scale on mount. Default 'xlarge' matches native
     // Windows Explorer on modern displays; users who picked another
     // tier via Control Panel keep it (localStorage persists).
-    const textScale = localStorage.getItem('nx-text-scale') || 'xlarge';
+    //
+    // Key bumped to 'nx-text-scale-v2' post-PR-308 so existing users
+    // stuck on the legacy 'medium' (the previous default) auto-pick
+    // up xlarge on next load. The old 'nx-text-scale' key is left
+    // untouched in the user's storage for orphan cleanup; we never
+    // read it again.
+    const textScale = localStorage.getItem('nx-text-scale-v2') || 'xlarge';
     document.documentElement.setAttribute('data-text-scale', textScale);
   }, []);
 
@@ -356,16 +362,16 @@ export default function Desktop() {
             fontFamily: "'Patrick Hand', cursive",
           }}>
             <div style={{
-              background: '#ecc94b', padding: '3px 8px', fontSize: 11,
+              background: '#ecc94b', padding: '3px 8px', fontSize: 'var(--text-sm)',
               color: '#744210',
             }}>📌 My Rank</div>
             <div style={{ padding: '8px 10px', color: '#744210' }}>
-              <div style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 2 }}>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold', marginBottom: 2 }}>
                 {tier.label.toUpperCase()}
               </div>
-              <div style={{ fontSize: 15, opacity: 0.8 }}>{devCount} devs</div>
+              <div style={{ fontSize: 'var(--text-lg)', opacity: 0.8 }}>{devCount} devs</div>
               {nextTier && (
-                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--text-base)', opacity: 0.7, marginTop: 2 }}>
                   → {nextTier.label} at {nextTier.minDevs}
                 </div>
               )}

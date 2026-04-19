@@ -55,6 +55,11 @@
   --text-base: 15px;
   --text-lg: 17px;
   --text-xl: 20px;
+  /* Chrome-icon size (taskbar tray, start button, status SVGs) —
+     follows the same tier so the icons don't stay tiny while the
+     surrounding text grows. Desktop icons have their own scale
+     knob (.desktop-icons.scale-*) and are intentionally unaffected. */
+  --icon-size: 22px;
 }
 [data-text-scale="small"] {
   --text-xs: 8px;
@@ -62,6 +67,7 @@
   --text-base: 10px;
   --text-lg: 11px;
   --text-xl: 13px;
+  --icon-size: 14px;
 }
 [data-text-scale="medium"] {
   --text-xs: 9px;
@@ -69,6 +75,7 @@
   --text-base: 11px;
   --text-lg: 13px;
   --text-xl: 15px;
+  --icon-size: 16px;
 }
 [data-text-scale="large"] {
   --text-xs: 10px;
@@ -76,6 +83,7 @@
   --text-base: 13px;
   --text-lg: 15px;
   --text-xl: 18px;
+  --icon-size: 18px;
 }
 [data-text-scale="xlarge"] {
   --text-xs: 12px;
@@ -83,6 +91,7 @@
   --text-base: 15px;
   --text-lg: 17px;
   --text-xl: 20px;
+  --icon-size: 22px;
 }
 
 [data-theme="dark"] {
