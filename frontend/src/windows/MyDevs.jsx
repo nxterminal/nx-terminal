@@ -64,7 +64,7 @@ function LoadingLore() {
     <div style={{
       padding: '16px 20px',
       fontFamily: "'VT323', monospace",
-      fontSize: '13px',
+      fontSize: 'var(--text-base)',
       lineHeight: 1.6,
     }}>
       {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
@@ -86,7 +86,7 @@ function StatBar({ label, value, max = 100 }) {
   const pct = Math.max(0, Math.min(100, ((value || 0) / max) * 100));
   const color = pct > 66 ? 'var(--green-on-grey, #005500)' : pct > 33 ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-xs)' }}>
       <span style={{ width: '24px', color: 'var(--text-muted, #999)', textTransform: 'uppercase', fontWeight: 'bold' }}>{label}</span>
       <div style={{
         flex: 1, height: '6px', background: 'var(--terminal-bg, #111)',
@@ -97,7 +97,7 @@ function StatBar({ label, value, max = 100 }) {
           transition: 'width 0.3s',
         }} />
       </div>
-      <span style={{ width: '18px', textAlign: 'right', color, fontWeight: 'bold', fontSize: '9px' }}>{value || 0}</span>
+      <span style={{ width: '18px', textAlign: 'right', color, fontWeight: 'bold', fontSize: 'var(--text-xs)' }}>{value || 0}</span>
     </div>
   );
 }
@@ -139,12 +139,12 @@ function GifImage({ src, alt, arcColor, tokenId }) {
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--text-muted, #555)', fontSize: '10px',
+          color: 'var(--text-muted, #555)', fontSize: 'var(--text-xs)',
           fontFamily: "'VT323', monospace",
           background: status === 'loading' ? undefined : 'var(--terminal-bg, #111)',
         }}>
           {status === 'loading' ? (
-            <div style={{ fontSize: '12px', color: 'var(--text-muted, #666)', animation: 'pulse 1.5s infinite' }}>...</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted, #666)', animation: 'pulse 1.5s infinite' }}>...</div>
           ) : (
             <>
               <div style={{ fontSize: '24px', color: arcColor }}>@</div>
@@ -348,7 +348,7 @@ function DevImageModal({ dev, onClose }) {
             userSelect: 'none',
           }}
         >
-          <span style={{ fontSize: '15px', letterSpacing: '0.5px' }}>
+          <span style={{ fontSize: 'var(--text-lg)', letterSpacing: '0.5px' }}>
             {dev.name} <span style={{ color: '#30d868' }}>#{dev.token_id}</span>
           </span>
           <button
@@ -357,7 +357,7 @@ function DevImageModal({ dev, onClose }) {
             style={{
               background: 'transparent', border: '1px solid #30d86855',
               color: '#c8ccd8', cursor: 'pointer', width: '22px', height: '22px',
-              fontFamily: 'inherit', fontSize: '14px', lineHeight: 1,
+              fontFamily: 'inherit', fontSize: 'var(--text-base)', lineHeight: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >x</button>
@@ -381,7 +381,7 @@ function DevImageModal({ dev, onClose }) {
                   background: active ? '#30d868' : 'transparent',
                   color: active ? '#080810' : '#c8ccd8',
                   border: '1px solid #30d86855',
-                  fontFamily: 'inherit', fontSize: '13px',
+                  fontFamily: 'inherit', fontSize: 'var(--text-base)',
                   fontWeight: active ? 'bold' : 'normal',
                   letterSpacing: '0.5px', cursor: 'pointer',
                 }}
@@ -428,7 +428,7 @@ function DevImageModal({ dev, onClose }) {
               color: mode === 'pfp' ? '#a0a6b8' : '#080810',
               border: 'none',
               cursor: mode === 'pfp' ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', fontSize: '14px', fontWeight: 'bold',
+              fontFamily: 'inherit', fontSize: 'var(--text-base)', fontWeight: 'bold',
               letterSpacing: '0.5px',
               opacity: mode === 'pfp' ? 0.65 : 1,
             }}
@@ -439,7 +439,7 @@ function DevImageModal({ dev, onClose }) {
               flex: 1, padding: '6px 10px',
               background: '#30d868', color: '#080810',
               border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: '14px', fontWeight: 'bold',
+              fontFamily: 'inherit', fontSize: 'var(--text-base)', fontWeight: 'bold',
               letterSpacing: '0.5px',
             }}
           >{'\u2193'} PNG</button>
@@ -447,7 +447,7 @@ function DevImageModal({ dev, onClose }) {
 
         {/* Status line + hint */}
         <div style={{
-          padding: '0 12px 10px', fontSize: '11px',
+          padding: '0 12px 10px', fontSize: 'var(--text-sm)',
           color: dlStatus ? '#30d868' : '#5a6278', minHeight: '14px',
           textAlign: 'center',
         }}>
@@ -494,14 +494,14 @@ function QuickPrompt({ devId, devName, address }) {
     >
       {status === 'sent' ? (
         <span style={{
-          fontSize: '10px', color: 'var(--terminal-green, #33ff33)',
+          fontSize: 'var(--text-xs)', color: 'var(--terminal-green, #33ff33)',
           fontFamily: "'VT323', monospace",
         }}>
           Order sent to {devName}!
         </span>
       ) : status === 'busy' ? (
         <span style={{
-          fontSize: '10px', color: 'var(--terminal-amber, #ffaa00)',
+          fontSize: 'var(--text-xs)', color: 'var(--terminal-amber, #ffaa00)',
           fontFamily: "'VT323', monospace",
         }}>
           {devName} is still processing the last order. Wait...
@@ -519,7 +519,7 @@ function QuickPrompt({ devId, devName, address }) {
             style={{
               flex: 1, background: 'var(--terminal-bg, #111)', color: 'var(--terminal-green, #33ff33)',
               border: '1px solid var(--border-dark, #444)', padding: '2px 5px',
-              fontFamily: "'VT323', monospace", fontSize: '11px', outline: 'none',
+              fontFamily: "'VT323', monospace", fontSize: 'var(--text-sm)', outline: 'none',
               minWidth: 0,
             }}
           />
@@ -527,12 +527,12 @@ function QuickPrompt({ devId, devName, address }) {
             className="win-btn"
             onClick={handleSend}
             disabled={!text.trim() || status === 'sending'}
-            style={{ fontSize: '10px', padding: '1px 6px', flexShrink: 0, fontWeight: 'bold' }}
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', flexShrink: 0, fontWeight: 'bold' }}
           >
             {status === 'sending' ? '..' : '>'}
           </button>
           {status === 'error' && (
-            <span style={{ fontSize: '9px', color: 'var(--terminal-red, #ff4444)' }}>err</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--terminal-red, #ff4444)' }}>err</span>
           )}
         </>
       )}
@@ -614,20 +614,20 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
       {/* Headline */}
       <div style={{ textAlign: 'center', marginBottom: '10px' }}>
         <div style={{
-          fontSize: '14px', fontWeight: 'bold',
+          fontSize: 'var(--text-base)', fontWeight: 'bold',
           color: 'var(--win-title-l, #000080)',
           letterSpacing: '0.5px',
         }}>
           {'\u23F3'} Transaction Pending
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
           Credit in Progress
         </div>
       </div>
 
       {/* Transaction details — sunken panel */}
       <div className="win-panel" style={{
-        padding: '8px 10px', marginBottom: '10px', fontSize: '11px',
+        padding: '8px 10px', marginBottom: '10px', fontSize: 'var(--text-sm)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
           <span style={{ color: 'var(--text-secondary)' }}>Amount</span>
@@ -635,7 +635,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
             fontWeight: 'bold',
             color: 'var(--gold-on-grey, #7a5c00)',
             fontFamily: "'VT323', monospace",
-            fontSize: '14px',
+            fontSize: 'var(--text-base)',
           }}>
             {amount ?? '?'} $NXT
           </span>
@@ -651,7 +651,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
           <span style={{ color: 'var(--text-secondary)' }}>Tx hash</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <code style={{
-              fontFamily: "'VT323', monospace", fontSize: '13px',
+              fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
               background: 'var(--terminal-bg, #0c0c0c)',
               color: 'var(--terminal-green, #33ff33)',
               padding: '1px 6px',
@@ -663,7 +663,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
               onClick={onCopy}
               disabled={!txHash}
               title="Copy full tx hash to clipboard"
-              style={{ fontSize: '10px', padding: '1px 6px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }}
             >
               {copied ? 'Copied' : 'Copy'}
             </button>
@@ -675,7 +675,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
             target="_blank"
             rel="noreferrer noopener"
             style={{
-              fontSize: '10px',
+              fontSize: 'var(--text-xs)',
               color: 'var(--blue-on-grey, #0d47a1)',
               textDecoration: 'underline',
             }}
@@ -691,7 +691,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
         background: 'rgba(255, 170, 0, 0.08)',
       }}>
         <div style={{
-          fontSize: '11px',
+          fontSize: 'var(--text-sm)',
           color: isLate
             ? 'var(--red-on-grey, #aa0000)'
             : 'var(--amber-on-grey, #7a5500)',
@@ -726,13 +726,13 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
         onClick={onClose}
         title="Your tx is safe. The backend will credit your dev automatically in the next few seconds/minutes."
         style={{
-          width: '100%', padding: '6px', fontSize: '13px', fontWeight: 'bold',
+          width: '100%', padding: '6px', fontSize: 'var(--text-base)', fontWeight: 'bold',
         }}
       >
         Close and continue
       </button>
       <div style={{
-        fontSize: '10px', color: 'var(--text-secondary)',
+        fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
         marginTop: '6px', textAlign: 'center', lineHeight: 1.3,
       }}>
         Your $NXT is on-chain. It's safe to close this window — the
@@ -932,18 +932,18 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
         {/* Title bar */}
         <div style={{
           background: 'linear-gradient(90deg, #000080, #1084d0)',
-          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
           <span>Fund Dev</span>
           <button onClick={handleClose} style={{
             background: '#c0c0c0', border: '1px outset #fff',
-            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: 'var(--text-sm)',
             padding: '0 4px', lineHeight: 1,
           }}>X</button>
         </div>
 
-        <div style={{ padding: '12px', fontSize: '13px' }}>
+        <div style={{ padding: '12px', fontSize: 'var(--text-base)' }}>
           <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
             "Every startup needs a seed round."
           </div>
@@ -975,7 +975,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
             <>
               {/* Amount input */}
               <div style={{ marginBottom: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Amount:</label>
+                <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Amount:</label>
                 <input
                   type="number"
                   min="1"
@@ -984,7 +984,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
                   onChange={e => setAmount(e.target.value)}
                   disabled={stage !== 'idle' || hasPending}
                   style={{
-                    width: '100%', padding: '4px 6px', fontSize: '14px',
+                    width: '100%', padding: '4px 6px', fontSize: 'var(--text-base)',
                     fontFamily: "'VT323', monospace",
                     background: '#fff', border: '2px inset #888',
                   }}
@@ -997,16 +997,16 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
                 {presets.map(v => (
                   <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
                     disabled={stage !== 'idle' || hasPending}
-                    style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
+                    style={{ flex: 1, fontSize: 'var(--text-sm)', padding: '2px' }}>{v}</button>
                 ))}
                 <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
                   disabled={stage !== 'idle' || !walletBal || hasPending}
-                  style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
+                  style={{ flex: 1, fontSize: 'var(--text-sm)', padding: '2px' }}>ALL</button>
               </div>
 
               {hasPending && stage !== 'success' && (
                 <div style={{
-                  fontSize: '11px', color: 'var(--amber-on-grey, #7a5500)',
+                  fontSize: 'var(--text-sm)', color: 'var(--amber-on-grey, #7a5500)',
                   background: 'rgba(255, 204, 0, 0.12)', border: '1px solid rgba(255, 204, 0, 0.4)',
                   padding: '6px 8px', marginBottom: '8px', lineHeight: 1.4,
                 }}>
@@ -1018,7 +1018,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               <button className="win-btn" onClick={doFund}
                 disabled={!canFund}
                 style={{
-                  width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+                  width: '100%', padding: '6px', fontSize: 'var(--text-base)', fontWeight: 'bold',
                   color: canFund ? '#005500' : '#888',
                   border: canFund ? '2px outset #aaa' : undefined,
                 }}>
@@ -1031,16 +1031,16 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               </button>
 
               {stage === 'error' && errorMsg && (
-                <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
               )}
               {stage === 'error' && (
                 <button className="win-btn" onClick={() => setStage('idle')}
-                  style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                  style={{ marginTop: '4px', fontSize: 'var(--text-sm)', padding: '2px 8px' }}>
                   {hasPending ? 'Retry credit' : 'Try Again'}
                 </button>
               )}
 
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
                 Transfers $NXT from your MetaMask to your dev's in-game balance.
               </div>
             </>
@@ -1093,18 +1093,18 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
         {/* Title bar */}
         <div style={{
           background: 'linear-gradient(90deg, #000080, #1084d0)',
-          color: '#fff', padding: '3px 6px', fontSize: '13px',
+          color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
           <span>Transfer Funds</span>
           <button onClick={onClose} style={{
             background: '#c0c0c0', border: '1px outset #fff',
-            fontWeight: 'bold', cursor: 'pointer', fontSize: '11px',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: 'var(--text-sm)',
             padding: '0 4px', lineHeight: 1,
           }}>X</button>
         </div>
 
-        <div style={{ padding: '12px', fontSize: '13px' }}>
+        <div style={{ padding: '12px', fontSize: 'var(--text-base)' }}>
           <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
             "Reallocating the budget. Standard corporate procedure."
           </div>
@@ -1118,13 +1118,13 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
 
           {/* Dev selector */}
           <div style={{ marginBottom: '8px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>To:</label>
+            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>To:</label>
             <select
               value={toDevId}
               onChange={e => setToDevId(e.target.value)}
               disabled={stage !== 'idle'}
               style={{
-                width: '100%', padding: '4px', fontSize: '13px',
+                width: '100%', padding: '4px', fontSize: 'var(--text-base)',
                 fontFamily: "'VT323', monospace",
                 background: '#fff', border: '2px inset #888',
               }}
@@ -1143,7 +1143,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
 
           {/* Amount input */}
           <div style={{ marginBottom: '10px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Amount:</label>
+            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Amount:</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
                 type="number"
@@ -1153,7 +1153,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
                 onChange={e => setAmount(String(Math.min(Number(e.target.value) || 0, dev.balance_nxt)))}
                 disabled={stage !== 'idle'}
                 style={{
-                  width: '100px', padding: '6px 10px', fontSize: '18px',
+                  width: '100px', padding: '6px 10px', fontSize: 'var(--text-xl)',
                   fontFamily: "'VT323', monospace",
                   background: '#1a1a2e', color: '#66ff66',
                   border: '2px solid #3a5a3a', textAlign: 'center',
@@ -1161,7 +1161,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
                 }}
                 placeholder="0"
               />
-              <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: 'var(--text-secondary)' }}>
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
                 / {formatNumber(dev.balance_nxt)} $NXT
               </span>
             </div>
@@ -1171,7 +1171,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
           <button className="win-btn" onClick={doTransfer}
             disabled={!canTransfer}
             style={{
-              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+              width: '100%', padding: '6px', fontSize: 'var(--text-base)', fontWeight: 'bold',
               color: canTransfer ? '#005500' : '#888',
               border: canTransfer ? '2px outset #aaa' : undefined,
             }}>
@@ -1182,16 +1182,16 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
           </button>
 
           {stage === 'error' && errorMsg && (
-            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
           )}
           {stage === 'error' && (
             <button className="win-btn" onClick={() => setStage('idle')}
-              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+              style={{ marginTop: '4px', fontSize: 'var(--text-sm)', padding: '2px 8px' }}>
               Try Again
             </button>
           )}
 
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
             Moves $NXT between your devs. No blockchain transaction needed.
           </div>
         </div>
@@ -1241,7 +1241,7 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
           display: 'flex', alignItems: 'center', gap: '4px',
-          fontSize: '14px', color: '#111',
+          fontSize: 'var(--text-base)', color: '#111',
           fontFamily: "'VT323', monospace",
         }}>
           <span style={{
@@ -1255,7 +1255,7 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
           {label}
         </span>
         <span style={{
-          fontSize: '14px', color,
+          fontSize: 'var(--text-base)', color,
           fontFamily: "'VT323', monospace",
           transition: 'color 0.5s',
         }}>{v}</span>
@@ -1286,7 +1286,7 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
         width: '100%',
         padding: '7px 2px',
         fontFamily: "'VT323', monospace",
-        fontSize: '14px',
+        fontSize: 'var(--text-base)',
         textTransform: 'uppercase',
         color: disabled ? '#555' : '#1a2030',
         background: disabled ? '#4a4a4a' : '#6b7b8a',
@@ -1301,7 +1301,7 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
         transition: 'transform 0.05s',
       }}
     >
-      {emoji && <span style={{ fontSize: '13px' }}>{emoji}</span>}
+      {emoji && <span style={{ fontSize: 'var(--text-base)' }}>{emoji}</span>}
       {label}
     </button>
   );
@@ -1334,7 +1334,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
           <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
             display: 'block', width: '100%', padding: '6px 8px', border: 'none',
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: '14px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
             textAlign: 'left',
           }}>{'\uD83D\uDCB0'} FUND</button>
           {allDevs && allDevs.length > 1 && (
@@ -1346,7 +1346,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
                 background: 'transparent',
                 color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
                 cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
-                fontFamily: "'VT323', monospace", fontSize: '14px',
+                fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
                 textAlign: 'left',
               }}>{'\uD83D\uDD04'} TRANSFER</button>
           )}
@@ -1407,7 +1407,7 @@ function FeedDropdown({ dev, busy, onBuy }) {
                   background: 'transparent',
                   color: cannotAfford ? '#555' : '#1a2030',
                   cursor: cannotAfford ? 'default' : 'pointer',
-                  fontFamily: "'VT323', monospace", fontSize: '14px',
+                  fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
                   textAlign: 'left',
                 }}
               >
@@ -1448,14 +1448,14 @@ function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
           <button onClick={(e) => { onHackMainframe(e); setOpen(false); }} style={{
             display: 'block', width: '100%', padding: '6px 8px', border: 'none',
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: '14px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
             textAlign: 'left',
           }}>{'\uD83D\uDDA5\uFE0F'} MAINFRAME — 15 $NXT</button>
           <button onClick={(e) => { onHackPlayer(e); setOpen(false); }} style={{
             display: 'block', width: '100%', padding: '6px 8px', border: 'none',
             borderTop: '2px solid #3a4654',
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: '14px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
             textAlign: 'left',
           }}>{'\uD83D\uDC64'} PLAYER — 25 $NXT</button>
         </div>
@@ -1486,24 +1486,24 @@ function HackResultModal({ result, onClose }) {
           padding: '10px 14px', background: '#0a0a1e',
           borderBottom: `2px solid ${ok ? '#44ffaa' : '#ff4444'}`,
         }}>
-          <span style={{ fontSize: 18, letterSpacing: 2, color: ok ? '#44ffaa' : '#ff4444' }}>
+          <span style={{ fontSize: 'var(--text-xl)', letterSpacing: 2, color: ok ? '#44ffaa' : '#ff4444' }}>
             {ok ? '> ACCESS GRANTED' : '> ACCESS DENIED'}
           </span>
           <button onClick={onClose} style={{
             background: 'none', border: '1px solid #555', color: '#cfcfcf',
-            fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', cursor: 'pointer', padding: '2px 8px',
           }}>X</button>
         </div>
         {/* Body */}
         <div style={{ padding: 16, textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 8 }}>
             {isPlayer ? '\uD83D\uDC64 PLAYER HACK' : '\uD83D\uDDA5\uFE0F MAINFRAME HACK'}
           </div>
-          <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--text-base)', color: '#cfcfcf', marginBottom: 16 }}>
             TARGET: {result.target_name}
             {result.target_corp && ` [${result.target_corp}]`}
             {result.target_owner && (
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+              <span style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 2 }}>
                 {result.target_owner}
               </span>
             )}
@@ -1514,7 +1514,7 @@ function HackResultModal({ result, onClose }) {
           }}>
             {ok ? `+${result.stolen} $NXT` : `-${result.cost} $NXT`}
           </div>
-          <div style={{ fontSize: 14, color: '#ccc', lineHeight: 1.8, marginBottom: 12 }}>
+          <div style={{ fontSize: 'var(--text-base)', color: '#ccc', lineHeight: 1.8, marginBottom: 12 }}>
             <div style={{ color: '#ff6666' }}>Cost: -{result.cost} $NXT</div>
             {ok && (
               <>
@@ -1524,19 +1524,19 @@ function HackResultModal({ result, onClose }) {
             )}
             <div style={{
               color: result.net_gain >= 0 ? '#ffdd44' : '#ff4444',
-              fontWeight: 'bold', marginTop: 8, fontSize: 16,
+              fontWeight: 'bold', marginTop: 8, fontSize: 'var(--text-lg)',
             }}>
               NET: {result.net_gain >= 0 ? '+' : ''}{result.net_gain} $NXT
             </div>
           </div>
           <div style={{
-            fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic',
+            fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontStyle: 'italic',
             borderTop: '1px solid #333', paddingTop: 10,
           }}>
             {result.message}
           </div>
           {!ok && isPlayer && (
-            <div style={{ color: '#ff9800', fontSize: 12, marginTop: 8 }}>
+            <div style={{ color: '#ff9800', fontSize: 'var(--text-sm)', marginTop: 8 }}>
               {'\u26A0'} Your {result.cost} $NXT was seized by {result.target_name}
             </div>
           )}
@@ -1574,17 +1574,17 @@ function HackErrorModal({ error, onClose }) {
           padding: '10px 14px', background: '#0a0a1e',
           borderBottom: `2px solid ${c.color}`,
         }}>
-          <span style={{ fontSize: 18, letterSpacing: 2, color: c.color }}>
+          <span style={{ fontSize: 'var(--text-xl)', letterSpacing: 2, color: c.color }}>
             {c.title}
           </span>
           <button onClick={onClose} style={{
             background: 'none', border: '1px solid #555', color: '#cfcfcf',
-            fontFamily: "'VT323', monospace", fontSize: 16, cursor: 'pointer', padding: '2px 8px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', cursor: 'pointer', padding: '2px 8px',
           }}>X</button>
         </div>
         <div style={{ padding: 16, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>{c.icon}</div>
-          <div style={{ color: c.color, fontSize: 15, marginBottom: 16 }}>
+          <div style={{ color: c.color, fontSize: 'var(--text-lg)', marginBottom: 16 }}>
             {error.message}
           </div>
           {error.error === 'cooldown' && (
@@ -1593,12 +1593,12 @@ function HackErrorModal({ error, onClose }) {
             </div>
           )}
           {error.error === 'insufficient_funds' && (
-            <div style={{ color: '#cfcfcf', fontSize: 13 }}>
+            <div style={{ color: '#cfcfcf', fontSize: 'var(--text-base)' }}>
               Required: {error.required} $NXT | Available: {error.current} $NXT
             </div>
           )}
           {error.error === 'low_social' && (
-            <div style={{ color: '#cfcfcf', fontSize: 13 }}>
+            <div style={{ color: '#cfcfcf', fontSize: 'var(--text-base)' }}>
               Required: {error.required} Social | Current: {error.current}
             </div>
           )}
@@ -1638,7 +1638,7 @@ function SpendOverlay({ spends }) {
     }}>
       {spends.map(s => (
         <div key={s.id} style={{
-          fontFamily: "'VT323', monospace", fontSize: '16px', fontWeight: 'bold',
+          fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', fontWeight: 'bold',
           color: getAnimColor(s.stat || (s.type === 'energy' ? 'energy' : '$NXT'), s.animType || 'spend'),
           whiteSpace: 'nowrap',
           textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
@@ -1850,21 +1850,21 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '2px 6px', marginBottom: '2px',
               background: 'var(--terminal-bg, #111)', border: '1px solid var(--terminal-amber, #ffaa00)',
-              fontSize: '12px', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
+              fontSize: 'var(--text-sm)', fontFamily: "'VT323', monospace", color: 'var(--terminal-amber, #ffaa00)',
             }}>
               [!] Profile loading from chain...
               <button className="win-btn"
                 onClick={(e) => { e.stopPropagation(); onRetry?.(dev.token_id); }}
-                style={{ fontSize: '11px', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
+                style={{ fontSize: 'var(--text-sm)', padding: '0 4px', marginLeft: 'auto' }}>Retry</button>
             </div>
           )}
           {/* Name + Archetype + Rarity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontFamily: "'VT323', monospace" }}>{dev.name}</span>
-            <span style={{ color: arcColor, fontSize: '13px', fontFamily: "'VT323', monospace" }}>[{dev.archetype}]</span>
+            <span style={{ fontSize: 'var(--text-lg)', color: 'var(--text-primary)', fontFamily: "'VT323', monospace" }}>{dev.name}</span>
+            <span style={{ color: arcColor, fontSize: 'var(--text-base)', fontFamily: "'VT323', monospace" }}>[{dev.archetype}]</span>
             {dev.rarity_tier && dev.rarity_tier !== 'common' && (
               <span style={{
-                fontSize: '10px', padding: '0 3px', textTransform: 'uppercase',
+                fontSize: 'var(--text-xs)', padding: '0 3px', textTransform: 'uppercase',
                 color: 'var(--gold-on-grey, #7a5c00)',
                 border: '1px solid var(--gold-on-grey, #7a5c00)', borderRadius: '2px',
                 fontFamily: "'VT323', monospace",
@@ -1872,14 +1872,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             )}
           </div>
           {/* Corp | Species | Location | #Token */}
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap', fontFamily: "'VT323', monospace", lineHeight: 1.3 }}>
+          <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary, #666)', display: 'flex', gap: '6px', flexWrap: 'wrap', fontFamily: "'VT323', monospace", lineHeight: 1.3 }}>
             {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
             {dev.species && <span>| {dev.species}</span>}
             {loc && <span>| {loc}</span>}
             <span>| #{dev.token_id}</span>
           </div>
           {/* Status line */}
-          <div style={{ display: 'flex', gap: '6px', fontSize: '13px', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'VT323', monospace" }}>
+          <div style={{ display: 'flex', gap: '6px', fontSize: 'var(--text-base)', alignItems: 'center', flexWrap: 'wrap', fontFamily: "'VT323', monospace" }}>
             <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
@@ -1898,7 +1898,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               <button
                 className="win-btn"
                 onClick={(e) => { e.stopPropagation(); setShowImageModal(true); }}
-                style={{ fontSize: '9px', padding: '1px 6px' }}
+                style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }}
                 title="View & download full image"
               >
                 {'\uD83D\uDDBC\uFE0F'} VIEW
@@ -1924,7 +1924,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       {/* Row 3: Training status */}
       {dev.training_course && (
         <div style={{
-          fontSize: '13px', color: '#b8860b', marginBottom: '4px',
+          fontSize: 'var(--text-base)', color: '#b8860b', marginBottom: '4px',
           display: 'flex', alignItems: 'center', gap: '4px',
           fontFamily: "'VT323', monospace",
         }}>
@@ -1964,7 +1964,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Action feedback */}
       {actionMsg && (
-        <div style={{ fontSize: '10px', color: actionMsg.color, fontWeight: 'bold', marginBottom: '2px',
+        <div style={{ fontSize: 'var(--text-xs)', color: actionMsg.color, fontWeight: 'bold', marginBottom: '2px',
           fontFamily: "'VT323', monospace" }}>
           {actionMsg.text}
         </div>
@@ -1972,7 +1972,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
 
       {/* Row 5: Footer counters + prompt */}
       <div style={{
-        display: 'flex', gap: '8px', fontSize: '12px',
+        display: 'flex', gap: '8px', fontSize: 'var(--text-sm)',
         color: 'var(--text-muted, #888)', marginBottom: address ? '2px' : 0,
         fontFamily: "'VT323', monospace", padding: '2px 0',
       }}>
@@ -2012,18 +2012,18 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           gap: '6px', zIndex: 2,
         }} onClick={e => e.stopPropagation()}>
           <span style={{
-            fontSize: '16px', fontWeight: 'bold', color: '#2d8a2d',
+            fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#2d8a2d',
             textTransform: 'uppercase', letterSpacing: '2px',
             textShadow: '0 0 6px rgba(45, 138, 45, 0.5)',
             animation: 'mission-pulse 2s ease-in-out infinite',
           }}>⏳ ON MISSION</span>
           {mission && (
             <>
-              <span style={{ fontSize: '11px', color: '#ccc', maxWidth: '80%', textAlign: 'center' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: '#ccc', maxWidth: '80%', textAlign: 'center' }}>
                 {mission.title}
               </span>
               <span style={{
-                fontSize: '11px', fontWeight: 'bold',
+                fontSize: 'var(--text-sm)', fontWeight: 'bold',
                 color: missionCompleted ? '#44ff44' : '#ffcc00',
               }}>
                 {missionCompleted ? 'MISSION COMPLETE!' : `Returns in ${(() => {
@@ -2039,7 +2039,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           {missionCompleted && (
             <button className="win-btn" onClick={doClaimMission} disabled={busy}
               style={{
-                fontSize: '14px', padding: '6px 16px', fontWeight: 'bold',
+                fontSize: 'var(--text-base)', padding: '6px 16px', fontWeight: 'bold',
                 color: '#005500', border: '2px solid #005500',
                 background: '#e8ffe8', cursor: 'pointer',
               }}>
@@ -2188,14 +2188,14 @@ function ActivityTab({ walletAddress, devs }) {
         padding: '4px 8px',
         borderBottom: '1px solid var(--border-dark)',
         display: 'flex', alignItems: 'center', gap: '8px',
-        fontSize: '11px',
+        fontSize: 'var(--text-sm)',
       }}>
         <span style={{ fontWeight: 'bold', color: 'var(--text-muted, #888)' }}>Filter:</span>
         <select
           value={filterDev}
           onChange={(e) => setFilterDev(e.target.value)}
           style={{
-            fontSize: '11px', padding: '2px 4px',
+            fontSize: 'var(--text-sm)', padding: '2px 4px',
             background: 'var(--bg-primary, #fff)',
             border: '1px solid var(--border-dark, #808080)',
           }}
@@ -2220,7 +2220,7 @@ function ActivityTab({ walletAddress, devs }) {
         {filtered.length === 0 ? (
           <div style={{
             padding: '24px', textAlign: 'center',
-            fontFamily: "'VT323', monospace", fontSize: '14px',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
             color: 'var(--terminal-amber)',
           }}>
             {'>'} No dev actions recorded yet.
@@ -2239,18 +2239,18 @@ function ActivityTab({ walletAddress, devs }) {
                   lineHeight: 1.5,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: '15px', flexShrink: 0 }}>
+                    <span style={{ color, fontWeight: 'bold', fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', flexShrink: 0 }}>
                       {icon}
                     </span>
-                    <span style={{ fontWeight: 'bold', color, fontSize: '13px', fontFamily: "'VT323', monospace" }}>
+                    <span style={{ fontWeight: 'bold', color, fontSize: 'var(--text-base)', fontFamily: "'VT323', monospace" }}>
                       {a.action_type}
                     </span>
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
                       {formatActivityTime(a.created_at)}
                     </span>
                   </div>
                   <div style={{
-                    fontSize: '12px', color: '#cfcfcf',
+                    fontSize: 'var(--text-sm)', color: '#cfcfcf',
                     marginTop: '2px', paddingLeft: '30px',
                     whiteSpace: 'pre-wrap',
                     fontFamily: "'VT323', monospace",
@@ -2328,7 +2328,7 @@ export default function MyDevs({ openDevProfile }) {
     padding: '6px 8px',
     background: 'var(--terminal-bg)',
     fontFamily: "'VT323', monospace",
-    fontSize: '14px',
+    fontSize: 'var(--text-base)',
     borderBottom: '1px solid var(--border-dark)',
     display: 'flex', justifyContent: 'space-between',
   };
@@ -2345,10 +2345,10 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[@]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
             Connect wallet to see your devs
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
             Your developers will appear here once your wallet is connected.
           </div>
           <button className="win-btn" onClick={connect} style={{ padding: '4px 20px', fontWeight: 'bold' }}>
@@ -2372,10 +2372,10 @@ export default function MyDevs({ openDevProfile }) {
           padding: '24px',
         }}>
           <div style={{ fontSize: '24px', fontFamily: "'VT323', monospace", color: 'var(--text-muted, #555)' }}>[+]</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 'bold', textAlign: 'center', color: 'var(--text-primary)' }}>
             No devs yet
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
             Open Mint/Hire Devs to get started!
           </div>
         </div>
@@ -2392,7 +2392,7 @@ export default function MyDevs({ openDevProfile }) {
           <button
             className="win-btn"
             onClick={() => { refreshDevs(); }}
-            style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px', cursor: 'pointer' }}
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', marginLeft: '6px', cursor: 'pointer' }}
           >
             {loading && devs.length > 0 ? '...' : '\u21bb'} Refresh
           </button>
@@ -2417,7 +2417,7 @@ export default function MyDevs({ openDevProfile }) {
           borderBottom: '1px solid var(--terminal-red)',
           color: 'var(--terminal-red)',
           fontFamily: "'VT323', monospace",
-          fontSize: '14px',
+          fontSize: 'var(--text-base)',
         }}>
           [X] {fetchError}
         </div>
@@ -2462,7 +2462,7 @@ export default function MyDevs({ openDevProfile }) {
               <div style={{
                 position: 'absolute', top: '4px', right: '8px',
                 background: 'var(--terminal-bg, #111)', border: '1px solid var(--border-dark, #444)',
-                padding: '2px 8px', fontSize: '11px', fontFamily: "'VT323', monospace",
+                padding: '2px 8px', fontSize: 'var(--text-sm)', fontFamily: "'VT323', monospace",
                 color: 'var(--terminal-amber, #ffaa00)', opacity: 0.9,
               }}>
                 Refreshing...

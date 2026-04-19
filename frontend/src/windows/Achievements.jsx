@@ -49,17 +49,17 @@ export default function Achievements() {
   return (
     <div className="mc-scroll" style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      padding: '8px 10px', fontFamily: "'VT323', monospace", fontSize: 13,
+      padding: '8px 10px', fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
       overflowY: 'scroll', background: T.bg, color: T.text,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ fontWeight: 'bold', fontSize: 18, color: T.cyan }}>{'>'} ACHIEVEMENTS</div>
-        <div style={{ fontSize: 13, color: T.textMuted }}>{unlocked}/{achievements.length} unlocked</div>
+        <div style={{ fontWeight: 'bold', fontSize: 'var(--text-xl)', color: T.cyan }}>{'>'} ACHIEVEMENTS</div>
+        <div style={{ fontSize: 'var(--text-base)', color: T.textMuted }}>{unlocked}/{achievements.length} unlocked</div>
       </div>
 
       {feedback && (
         <div style={{
-          fontSize: 13, fontWeight: 'bold', marginBottom: 8, padding: '6px 10px',
+          fontSize: 'var(--text-base)', fontWeight: 'bold', marginBottom: 8, padding: '6px 10px',
           border: `1px solid ${feedback.color}`, background: `${feedback.color}15`, color: feedback.color,
         }}>{feedback.text}</div>
       )}
@@ -69,7 +69,7 @@ export default function Achievements() {
       {categories.map(cat => (
         <div key={cat} style={{ marginBottom: 10 }}>
           <div style={{
-            fontSize: 12, color: T.textDim, textTransform: 'uppercase', marginBottom: 4,
+            fontSize: 'var(--text-sm)', color: T.textDim, textTransform: 'uppercase', marginBottom: 4,
             borderBottom: `1px solid ${T.cardBorder}`, paddingBottom: 2,
           }}>{cat}</div>
           {achievements.filter(a => a.category === cat).map(a => {
@@ -87,13 +87,13 @@ export default function Achievements() {
                   {a.icon}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, color: a.unlocked ? '#fff' : '#666', fontWeight: 'bold' }}>
+                  <div style={{ fontSize: 'var(--text-base)', color: a.unlocked ? '#fff' : '#666', fontWeight: 'bold' }}>
                     {a.title}{' '}
-                    <span style={{ fontSize: 10, color: rc, fontWeight: 'normal', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: rc, fontWeight: 'normal', textTransform: 'uppercase' }}>
                       {a.rarity}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12, color: T.textMuted }}>{a.description}</div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: T.textMuted }}>{a.description}</div>
                   {!a.unlocked && (
                     <div style={{ marginTop: 3 }}>
                       <div style={{
@@ -102,7 +102,7 @@ export default function Achievements() {
                       }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: rc, transition: 'width 0.3s' }} />
                       </div>
-                      <div style={{ fontSize: 10, color: T.textDim, marginTop: 1 }}>
+                      <div style={{ fontSize: 'var(--text-xs)', color: T.textDim, marginTop: 1 }}>
                         {a.progress || 0}/{a.requirement_value}
                       </div>
                     </div>
@@ -111,13 +111,13 @@ export default function Achievements() {
                 <div style={{ flexShrink: 0, textAlign: 'right' }}>
                   {a.unlocked && !a.claimed && (
                     <button className="win-btn" onClick={() => handleClaim(a.id)} style={{
-                      fontSize: 12, padding: '4px 10px', fontWeight: 'bold',
+                      fontSize: 'var(--text-sm)', padding: '4px 10px', fontWeight: 'bold',
                       background: '#00332a', color: T.green, border: `1px solid ${T.green}`,
                       cursor: 'pointer', fontFamily: "'VT323', monospace",
                     }}>+{a.reward_nxt}</button>
                   )}
-                  {a.claimed && <span style={{ color: '#2d8a2d', fontSize: 12 }}>CLAIMED</span>}
-                  {!a.unlocked && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>LOCKED</span>}
+                  {a.claimed && <span style={{ color: '#2d8a2d', fontSize: 'var(--text-sm)' }}>CLAIMED</span>}
+                  {!a.unlocked && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>LOCKED</span>}
                 </div>
               </div>
             );

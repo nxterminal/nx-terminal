@@ -174,7 +174,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
     background: '#c0c0c0',
     border: '2px outset #dfdfdf',
     fontFamily: "'Tahoma', 'MS Sans Serif', Arial, sans-serif",
-    fontSize: '11px',
+    fontSize: 'var(--text-sm)',
     color: '#000',
   };
 
@@ -182,7 +182,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
     background: 'linear-gradient(90deg, #000080, #1084d0)',
     color: '#fff',
     padding: '3px 6px',
-    fontSize: '11px',
+    fontSize: 'var(--text-sm)',
     fontWeight: 'bold',
     fontFamily: "'Tahoma', 'MS Sans Serif', Arial, sans-serif",
     display: 'flex',
@@ -196,14 +196,14 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
       <div style={dialogBg}>
         <style>{RETRO_KEYFRAMES}</style>
         <div style={titleBar}>
-          <span style={{ fontSize: '10px' }}>[=]</span>
+          <span style={{ fontSize: 'var(--text-xs)' }}>[=]</span>
           Connecting to NX Terminal Corp.
         </div>
         <div style={{
           padding: '12px', background: '#0a0a0a', margin: '8px',
           border: '2px inset #808080',
           fontFamily: "'VT323', 'Courier New', monospace",
-          fontSize: '13px', color: '#33ff33', lineHeight: 1.6,
+          fontSize: 'var(--text-base)', color: '#33ff33', lineHeight: 1.6,
           minHeight: '100px',
         }}>
           <div style={{ marginBottom: '6px', color: '#ffaa00', textAlign: 'center' }}>
@@ -224,7 +224,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
       <div style={dialogBg}>
         <style>{RETRO_KEYFRAMES}</style>
         <div style={titleBar}>
-          <span style={{ fontSize: '10px' }}>[=]</span>
+          <span style={{ fontSize: 'var(--text-xs)' }}>[=]</span>
           Saving: developer_genome_v{quantity}.dat
         </div>
         <div style={{ padding: '12px 16px' }}>
@@ -233,15 +233,15 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             gap: '8px', marginBottom: '16px', height: '36px',
           }}>
-            <span style={{ fontSize: '20px', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128196;</span>
+            <span style={{ fontSize: 'var(--text-xl)', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128196;</span>
             <div style={{ position: 'relative', width: '70px', height: '24px', overflow: 'hidden' }}>
               <span style={{
                 position: 'absolute', left: 0, top: '2px',
-                fontSize: '14px',
+                fontSize: 'var(--text-base)',
                 animation: 'nxFlyFile 0.8s ease-in-out infinite',
               }}>&#128196;</span>
             </div>
-            <span style={{ fontSize: '20px', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128194;</span>
+            <span style={{ fontSize: 'var(--text-xl)', filter: 'drop-shadow(1px 1px 0 #888)' }}>&#128194;</span>
           </div>
 
           {/* Saving from */}
@@ -290,7 +290,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
               padding: '3px 24px',
               background: '#c0c0c0',
               border: '2px outset #dfdfdf',
-              fontSize: '11px',
+              fontSize: 'var(--text-sm)',
               fontFamily: "'Tahoma', sans-serif",
               color: 'var(--text-secondary)',
               cursor: 'default',
@@ -309,14 +309,14 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
       <div style={dialogBg}>
         <style>{RETRO_KEYFRAMES}</style>
         <div style={titleBar}>
-          <span style={{ fontSize: '10px' }}>[=]</span>
+          <span style={{ fontSize: 'var(--text-xs)' }}>[=]</span>
           Deploying Developer{quantity > 1 ? 's' : ''}...
         </div>
         <div style={{
           padding: '12px', background: '#0a0a0a', margin: '8px',
           border: '2px inset #808080',
           fontFamily: "'VT323', 'Courier New', monospace",
-          fontSize: '13px', color: '#33ff33', lineHeight: 1.6,
+          fontSize: 'var(--text-base)', color: '#33ff33', lineHeight: 1.6,
           minHeight: '100px',
         }}>
           {DEPLOY_STEPS.slice(0, deployStep + 1).map((step, i) => (
@@ -342,12 +342,12 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
         ...titleBar,
         background: 'linear-gradient(90deg, #006400, #00aa00)',
       }}>
-        <span style={{ fontSize: '10px' }}>[=]</span>
+        <span style={{ fontSize: 'var(--text-xs)' }}>[=]</span>
         Deployment Complete
       </div>
       <div style={{ padding: '12px 16px' }}>
         <div style={{
-          fontWeight: 'bold', fontSize: '13px',
+          fontWeight: 'bold', fontSize: 'var(--text-base)',
           color: '#006400', marginBottom: '8px',
           textAlign: 'center',
         }}>
@@ -374,14 +374,14 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
               <div style={{ flex: 1 }}>
                 {dev ? (
                   <>
-                    <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{dev.name}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{dev.name}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       {dev.corporation} | {dev.archetype} | {dev.species}
                     </div>
                   </>
                 ) : (
                   <div style={{
-                    fontSize: '12px', color: 'var(--terminal-amber)',
+                    fontSize: 'var(--text-sm)', color: 'var(--terminal-amber)',
                     fontFamily: "'VT323', monospace",
                   }}>
                     Deploying #{id} to corporation...
@@ -390,7 +390,7 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
                 <button
                   className="win-btn"
                   onClick={() => openDevProfile?.(id)}
-                  style={{ fontSize: '10px', padding: '2px 10px', marginTop: '4px' }}
+                  style={{ fontSize: 'var(--text-xs)', padding: '2px 10px', marginTop: '4px' }}
                 >
                   View Profile
                 </button>
@@ -398,13 +398,13 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
             </div>
           );
         }) : (
-          <div style={{ fontSize: '11px', textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ fontSize: 'var(--text-sm)', textAlign: 'center', marginBottom: '8px' }}>
             {quantity} developer{quantity > 1 ? 's' : ''} deployed to the Protocol Wars
           </div>
         )}
 
         {txHash && (
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
             TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
@@ -412,10 +412,10 @@ function MintAnimation({ quantity, txHash, address, openDevProfile, openWindow, 
         {/* What's Next guide */}
         <div style={{
           background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)',
-          padding: '8px 12px', marginTop: '8px', fontSize: '11px',
+          padding: '8px 12px', marginTop: '8px', fontSize: 'var(--text-sm)',
           fontFamily: "'VT323', monospace",
         }}>
-          <div style={{ color: '#006600', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+          <div style={{ color: '#006600', marginBottom: '4px', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
             WHAT'S NEXT?
           </div>
           <div style={{ color: '#333', lineHeight: 1.7 }}>
@@ -753,12 +753,12 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         background: 'var(--terminal-bg)',
         color: 'var(--terminal-amber)',
         fontFamily: "'VT323', monospace",
-        fontSize: '14px',
+        fontSize: 'var(--text-base)',
         borderBottom: '1px solid var(--border-dark)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span>{'>'} DEVELOPER MINTING TERMINAL — Configure & Deploy</span>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: 'var(--text-sm)' }}>
           {isConnected && (
             <span style={{
               color: isWrongChain ? 'var(--terminal-red)' : 'var(--terminal-green)',
@@ -791,7 +791,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 background: step > i ? 'var(--terminal-green)' : step === i ? 'var(--terminal-amber)' : 'var(--border-dark)',
                 color: step >= i ? '#000' : '#666',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '10px', fontWeight: 'bold',
+                fontSize: 'var(--text-xs)', fontWeight: 'bold',
                 border: '1px solid var(--border-darker)',
               }}>
                 {step > i ? 'OK' : i + 1}
@@ -808,13 +808,13 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               background: step >= QUESTIONS.length ? 'var(--gold)' : 'var(--border-dark)',
               color: step >= QUESTIONS.length ? '#000' : '#666',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: 'bold',
+              fontSize: 'var(--text-xs)', fontWeight: 'bold',
               border: '1px solid var(--border-darker)',
             }}>
               {'+'}
             </div>
           </div>
-          <span style={{ fontSize: '10px', color: 'var(--text-secondary)', marginLeft: '8px' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginLeft: '8px' }}>
             {step < QUESTIONS.length ? `Step ${step + 1} of ${QUESTIONS.length}` : 'Ready to Mint'}
           </span>
         </div>
@@ -823,7 +823,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         {step < QUESTIONS.length && (
           <div>
             <div style={{
-              fontWeight: 'bold', fontSize: '13px', marginBottom: '12px',
+              fontWeight: 'bold', fontSize: 'var(--text-base)', marginBottom: '12px',
               color: 'var(--win-title-l)', padding: '4px 0',
             }}>
               {currentQuestion.question}
@@ -839,8 +839,8 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                   }}
                   onClick={() => handleAnswer(currentQuestion.id, opt.id)}
                 >
-                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px' }}>{opt.label}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{opt.desc}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)', marginBottom: '4px' }}>{opt.label}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{opt.desc}</div>
                 </div>
               ))}
             </div>
@@ -866,16 +866,16 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 border: '2px solid var(--terminal-amber)',
                 textAlign: 'center',
               }}>
-                <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', color: 'var(--terminal-amber)', marginBottom: '6px' }}>
                   WRONG NETWORK DETECTED
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                   You are connected to {chain?.name || `Chain ${chain?.id}`}. Switch to MegaETH to mint.
                 </div>
                 <button
                   className="win-btn"
                   onClick={switchToMegaETH}
-                  style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '11px' }}
+                  style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}
                 >
                   Switch to MegaETH
                 </button>
@@ -889,43 +889,43 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 border: '2px solid var(--terminal-red)',
                 textAlign: 'center',
               }}>
-                <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--terminal-red)', marginBottom: '4px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', color: 'var(--terminal-red)', marginBottom: '4px' }}>
                   MINTING IS CURRENTLY CLOSED
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                   Check back soon. Follow our announcements for the next mint phase.
                 </div>
               </div>
             )}
 
             <div className="win-panel" style={{ padding: '12px', marginBottom: '12px' }}>
-              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '8px', color: 'var(--win-title-l)' }}>
+              <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)', marginBottom: '8px', color: 'var(--win-title-l)' }}>
                 Developer Configuration Summary
               </div>
               {QUESTIONS.map(q => {
                 const selected = q.options.find(o => o.id === answers[q.id]);
                 return (
-                  <div key={q.id} style={{ fontSize: '11px', marginBottom: '4px' }}>
+                  <div key={q.id} style={{ fontSize: 'var(--text-sm)', marginBottom: '4px' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>{q.question}</span>{' '}
                     <span style={{ fontWeight: 'bold' }}>{selected?.label || '—'}</span>
                   </div>
                 );
               })}
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
                 Corporation will be assigned from NFT metadata upon minting.
               </div>
             </div>
 
             <div className="win-panel" style={{ padding: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Quantity:</span>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>Quantity:</span>
                 <button className="win-btn" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={txBusy} style={{ padding: '2px 8px' }}>-</button>
-                <span style={{ fontFamily: "'VT323', monospace", fontSize: '18px', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
+                <span style={{ fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)', minWidth: '30px', textAlign: 'center' }}>{quantity}</span>
                 <button className="win-btn" onClick={() => setQuantity(q => Math.min(20, q + 1))} disabled={txBusy} style={{ padding: '2px 8px' }}>+</button>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ fontSize: '11px' }}>
+                <div style={{ fontSize: 'var(--text-sm)' }}>
                   {isFree ? (
                     <span style={{ fontWeight: 'bold', color: 'var(--terminal-green)' }}>FREE MINT</span>
                   ) : (
@@ -947,7 +947,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
               </div>
 
               {isConnected && (
-                <div style={{ fontSize: '10px', marginTop: '6px', color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', marginTop: '6px', color: 'var(--text-secondary)' }}>
                   {hasFreeMint && (
                     <span style={{ color: 'var(--green-on-grey, #005500)' }}>
                       Free mints available: {Number(freeAllowance)}{' | '}
@@ -967,7 +967,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
             {txHash && !mintSuccess && (
               <div className="win-panel" style={{
                 marginTop: '12px', padding: '10px 12px',
-                fontFamily: "'VT323', monospace", fontSize: '13px',
+                fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
                 background: 'var(--terminal-bg)', color: 'var(--terminal-amber)',
               }}>
                 {'>'} Transaction sent: {txHash.slice(0, 10)}...{txHash.slice(-8)}
@@ -997,13 +997,13 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
                 display: 'flex', alignItems: 'flex-start', gap: '10px',
                 border: '2px solid var(--terminal-red)',
               }}>
-                <span style={{ fontSize: '14px', flexShrink: 0, fontWeight: 'bold' }}>[!]</span>
+                <span style={{ fontSize: 'var(--text-base)', flexShrink: 0, fontWeight: 'bold' }}>[!]</span>
                 <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', color: 'var(--terminal-red)' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)', marginBottom: '4px', color: 'var(--terminal-red)' }}>
                     Mint Error
                   </div>
-                  <div style={{ fontSize: '10px', marginBottom: '8px' }}>{mintError}</div>
-                  <button className="win-btn" onClick={() => setMintError(null)} style={{ fontSize: '10px', padding: '2px 12px' }}>OK</button>
+                  <div style={{ fontSize: 'var(--text-xs)', marginBottom: '8px' }}>{mintError}</div>
+                  <button className="win-btn" onClick={() => setMintError(null)} style={{ fontSize: 'var(--text-xs)', padding: '2px 12px' }}>OK</button>
                 </div>
               </div>
             )}
@@ -1017,7 +1017,7 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
 
       <div style={{
         padding: '4px 8px', borderTop: '1px solid var(--border-dark)',
-        fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center',
+        fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'center',
       }}>
         Each developer is a unique AI agent with randomized traits and abilities. Corporation assigned via metadata. No refunds.
       </div>

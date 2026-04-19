@@ -73,11 +73,11 @@ export default function ProtocolMarket() {
         justifyContent: 'center', height: '100%', gap: '12px', padding: '24px',
       }}>
         <div style={{ fontFamily: "'VT323', monospace", fontSize: '24px', color: 'var(--text-muted, #555)' }}>[~]</div>
-        <div style={{ fontWeight: 'bold', fontSize: '13px', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
+        <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
           No protocols deployed yet
         </div>
         <div style={{
-          fontSize: '11px', color: 'var(--text-muted, #888)', textAlign: 'center',
+          fontSize: 'var(--text-sm)', color: 'var(--text-muted, #888)', textAlign: 'center',
           fontFamily: "'VT323', monospace", lineHeight: 1.6, maxWidth: '300px',
         }}>
           {'>'} The simulation hasn&apos;t started yet.{'\n'}
@@ -216,20 +216,20 @@ function ProtocolChartPanel({ protocol }) {
     <div style={{ borderTop: '2px solid var(--border-dark, #888)', background: '#0c0c0c', display: 'flex', flexDirection: 'column', flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
       {/* Chart header */}
       <div className="chart-header">
-        <span style={{ color: '#33ff33', fontSize: '16px', fontWeight: 'bold' }}>
+        <span style={{ color: '#33ff33', fontSize: 'var(--text-lg)', fontWeight: 'bold' }}>
           {data.name}
         </span>
-        <span style={{ color: 'var(--gold)', fontSize: '14px' }}>
+        <span style={{ color: 'var(--gold)', fontSize: 'var(--text-base)' }}>
           {formatNumber(data.value)} $NXT
         </span>
         <span style={{
           color: changePercent >= 0 ? '#33ff33' : '#ff4444',
-          fontSize: '13px',
+          fontSize: 'var(--text-base)',
         }}>
           {changePercent >= 0 ? '\u25B2' : '\u25BC'}{changePercent >= 0 ? '+' : ''}{changePercent}%
         </span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
           Creator: {data.creator_name || '-'} | Investors: {data.investor_count ?? 0} | Quality: {data.code_quality ?? '?'}/100
         </span>
       </div>

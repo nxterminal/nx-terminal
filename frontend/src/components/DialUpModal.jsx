@@ -59,7 +59,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
           color: 'white',
           padding: '2px 6px',
           fontWeight: 'bold',
-          fontSize: '11px',
+          fontSize: 'var(--text-sm)',
           display: 'flex',
           alignItems: 'center',
           height: '22px',
@@ -69,10 +69,10 @@ export default function DialUpModal({ onComplete, onCancel }) {
 
         <div style={{ padding: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '16px', fontFamily: "'VT323', monospace", fontWeight: 'bold' }}>[MODEM]</span>
+            <span style={{ fontSize: 'var(--text-lg)', fontFamily: "'VT323', monospace", fontWeight: 'bold' }}>[MODEM]</span>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 'bold' }}>NX Terminal Dial-Up Connection</div>
-              <div style={{ fontSize: '10px', color: '#cfcfcf' }}>Connecting via 56K modem...</div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>NX Terminal Dial-Up Connection</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: '#cfcfcf' }}>Connecting via 56K modem...</div>
             </div>
           </div>
 
@@ -82,7 +82,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
             padding: '6px',
             marginBottom: '8px',
             fontFamily: "'VT323', monospace",
-            fontSize: '13px',
+            fontSize: 'var(--text-base)',
             background: '#0c0c0c',
             color: 'var(--terminal-green)',
           }}>
@@ -93,7 +93,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
           </div>
 
           <div style={{ marginBottom: '8px' }}>
-            <div style={{ fontSize: '10px', marginBottom: '2px' }}>Connection Progress:</div>
+            <div style={{ fontSize: 'var(--text-xs)', marginBottom: '2px' }}>Connection Progress:</div>
             <div className="win-panel" style={{ height: '16px', padding: '2px' }}>
               <div style={{
                 height: '100%',
@@ -106,7 +106,7 @@ export default function DialUpModal({ onComplete, onCancel }) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             {done ? (
-              <div style={{ fontSize: '11px', color: 'var(--green-on-grey)', fontWeight: 'bold' }}>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--green-on-grey)', fontWeight: 'bold' }}>
                 Connection established! Developer deployed.
               </div>
             ) : (

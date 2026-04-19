@@ -198,7 +198,7 @@ function AgentPreview({ name, selected, onClick }) {
       style={{
         padding: '6px 4px', textAlign: 'center', cursor: 'pointer',
         border: selected ? '2px solid var(--terminal-green, #33ff33)' : '2px solid transparent',
-        fontSize: '10px', fontWeight: selected ? 'bold' : 'normal',
+        fontSize: 'var(--text-xs)', fontWeight: selected ? 'bold' : 'normal',
       }}
       onClick={onClick}
     >
@@ -402,7 +402,7 @@ export default function ControlPanel() {
       <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
         {tab === 'wallpaper' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Wallpaper:</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>Select Wallpaper:</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {WALLPAPERS.map(wp => (
                 <div
@@ -423,7 +423,7 @@ export default function ControlPanel() {
                       }} />
                     )}
                   </div>
-                  <div style={{ fontSize: '10px', textAlign: 'center', marginTop: '4px' }}>{wp.name}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', textAlign: 'center', marginTop: '4px' }}>{wp.name}</div>
                 </div>
               ))}
 
@@ -435,9 +435,9 @@ export default function ControlPanel() {
                   background: customWallpaper ? `url(${customWallpaper}) center/cover` : '#666',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {!customWallpaper && <span style={{ color: '#fff', fontSize: '18px' }}>+</span>}
+                  {!customWallpaper && <span style={{ color: '#fff', fontSize: 'var(--text-xl)' }}>+</span>}
                 </div>
-                <div style={{ fontSize: '10px', textAlign: 'center', marginTop: '4px' }}>Custom</div>
+                <div style={{ fontSize: 'var(--text-xs)', textAlign: 'center', marginTop: '4px' }}>Custom</div>
               </div>
             </div>
             <input
@@ -445,12 +445,12 @@ export default function ControlPanel() {
               style={{ display: 'none' }} onChange={handleCustomWallpaper}
             />
             {customWallpaper && (
-              <button className="win-btn" onClick={removeCustomWallpaper} style={{ marginTop: '8px', fontSize: '10px' }}>
+              <button className="win-btn" onClick={removeCustomWallpaper} style={{ marginTop: '8px', fontSize: 'var(--text-xs)' }}>
                 Remove custom wallpaper
               </button>
             )}
             <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
-              <button className="win-btn" onClick={applyWallpaper} disabled={!pendingWallpaper} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+              <button className="win-btn" onClick={applyWallpaper} disabled={!pendingWallpaper} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
                 Apply
               </button>
             </div>
@@ -459,7 +459,7 @@ export default function ControlPanel() {
 
         {tab === 'theme' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Theme:</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>Select Theme:</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {THEMES.map(t => (
                 <div
@@ -487,16 +487,16 @@ export default function ControlPanel() {
                     }} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)', marginBottom: '2px' }}>
                       {t.name}
-                      {theme === t.id && <span style={{ color: 'var(--terminal-green)', marginLeft: '8px', fontSize: '10px' }}>[ACTIVE]</span>}
+                      {theme === t.id && <span style={{ color: 'var(--terminal-green)', marginLeft: '8px', fontSize: 'var(--text-xs)' }}>[ACTIVE]</span>}
                     </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary, #444)' }}>{t.desc}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary, #444)' }}>{t.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: '9px', color: 'var(--text-muted, #666)', marginTop: '8px', fontStyle: 'italic' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted, #666)', marginTop: '8px', fontStyle: 'italic' }}>
               Theme changes are applied immediately and persist across sessions.
             </div>
           </div>
@@ -504,7 +504,7 @@ export default function ControlPanel() {
 
         {tab === 'screensaver' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>Select Screensaver:</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>Select Screensaver:</div>
 
             {/* Preview monitor */}
             <div className="win-panel" style={{
@@ -532,19 +532,19 @@ export default function ControlPanel() {
                   }}
                   onClick={() => setPendingScreensaver(ss.id)}
                 >
-                  <div style={{ fontSize: '11px', fontWeight: activeScreensaver === ss.id ? 'bold' : 'normal' }}>{ss.name}</div>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: activeScreensaver === ss.id ? 'bold' : 'normal' }}>{ss.name}</div>
                 </div>
               ))}
             </div>
 
             {/* Timeout setting */}
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Wait:</span>
+              <span style={{ fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>Wait:</span>
               <select
                 value={activeTimeout}
                 onChange={(e) => setPendingTimeout(Number(e.target.value))}
                 style={{
-                  fontSize: '11px', padding: '2px 4px',
+                  fontSize: 'var(--text-sm)', padding: '2px 4px',
                   background: 'var(--bg-primary, #fff)',
                   border: '1px solid var(--border-dark, #808080)',
                 }}
@@ -553,15 +553,15 @@ export default function ControlPanel() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
-              <span style={{ fontSize: '10px', color: 'var(--text-secondary, #444)' }}>before activating</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary, #444)' }}>before activating</span>
             </div>
 
             {/* Preview + Apply */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
-              <button className="win-btn" onClick={handlePreviewScreensaver} style={{ padding: '4px 16px', fontSize: '11px' }}>
+              <button className="win-btn" onClick={handlePreviewScreensaver} style={{ padding: '4px 16px', fontSize: 'var(--text-sm)' }}>
                 Preview
               </button>
-              <button className="win-btn" onClick={applyScreensaver} disabled={!hasScreensaverChanges} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+              <button className="win-btn" onClick={applyScreensaver} disabled={!hasScreensaverChanges} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
                 Apply
               </button>
             </div>
@@ -570,7 +570,7 @@ export default function ControlPanel() {
 
         {tab === 'assistant' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>NX Assistant</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>NX Assistant</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
               <div
                 className={`cp-toggle${assistantEnabled ? ' on' : ''}`}
@@ -578,14 +578,14 @@ export default function ControlPanel() {
               >
                 <div className="cp-toggle-knob" />
               </div>
-              <span style={{ fontSize: '11px' }}>
+              <span style={{ fontSize: 'var(--text-sm)' }}>
                 {assistantEnabled ? 'Enabled — Your helpful corporate assistant is active' : 'Disabled — The robot sleeps'}
               </span>
             </div>
 
             {assistantEnabled && (
               <div style={{ padding: '8px', marginTop: '4px' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '8px' }}>Choose Your Assistant:</div>
+                <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)', marginBottom: '8px' }}>Choose Your Assistant:</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                   {AGENT_LIST.map(name => (
                     <AgentPreview
@@ -597,14 +597,14 @@ export default function ControlPanel() {
                   ))}
                 </div>
                 <div style={{ textAlign: 'right', marginTop: '12px', borderTop: '1px solid var(--border-dark)', paddingTop: '8px' }}>
-                  <button className="win-btn" onClick={applyAssistant} disabled={!pendingAgent} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: '11px' }}>
+                  <button className="win-btn" onClick={applyAssistant} disabled={!pendingAgent} style={{ padding: '4px 24px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
                     Apply
                   </button>
                 </div>
               </div>
             )}
 
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '8px', marginTop: '4px' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '8px', marginTop: '4px' }}>
               The NX Assistant appears periodically with helpful (useless) tips and observations.
               Disabling it will not affect your performance review. Probably.
             </div>
@@ -613,10 +613,10 @@ export default function ControlPanel() {
 
         {tab === 'corporate' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>Corporate Settings</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: 'var(--text-sm)' }}>Corporate Settings</div>
 
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', marginBottom: '4px' }}>
                 CORPORATE MORALE INDEX: {morale}%
               </div>
               <input
@@ -624,13 +624,13 @@ export default function ControlPanel() {
                 onChange={(e) => setMorale(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
-              <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 (This slider does absolutely nothing)
               </div>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', marginBottom: '4px' }}>
                 SYNERGY LEVEL: {synergy}%
               </div>
               <input
@@ -638,14 +638,14 @@ export default function ControlPanel() {
                 onChange={(e) => setSynergy(Number(e.target.value))}
                 style={{ width: '200px' }}
               />
-              <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 (Adjusting synergy has no measurable impact on anything)
               </div>
             </div>
 
             <div className="win-panel" style={{ padding: '8px', marginTop: '8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>CORPORATE DISCLAIMER</div>
-              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', marginBottom: '4px' }}>CORPORATE DISCLAIMER</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 NX Terminal Corp. is not responsible for any loss of motivation, productivity, or will to live
                 that may result from adjusting these settings. All complaints will be forwarded to /dev/null.
               </div>
@@ -655,7 +655,7 @@ export default function ControlPanel() {
 
         {tab === 'desktop' && (
           <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>Desktop Icon Size</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: 'var(--text-sm)' }}>Desktop Icon Size</div>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
               {['small', 'medium', 'large'].map(s => (
                 <button key={s} className="win-btn"
@@ -665,7 +665,7 @@ export default function ControlPanel() {
                     window.dispatchEvent(new CustomEvent('nx-icon-scale', { detail: s }));
                   }}
                   style={{
-                    flex: 1, padding: '6px', fontSize: '11px', fontWeight: iconScale === s ? 'bold' : 'normal',
+                    flex: 1, padding: '6px', fontSize: 'var(--text-sm)', fontWeight: iconScale === s ? 'bold' : 'normal',
                     background: iconScale === s ? '#000080' : undefined,
                     color: iconScale === s ? '#fff' : undefined,
                   }}>
@@ -674,12 +674,12 @@ export default function ControlPanel() {
               ))}
             </div>
             <div className="win-panel" style={{ padding: '8px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 Changes the size of desktop icons. Takes effect immediately.
               </div>
             </div>
 
-            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>UI Text Size</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: 'var(--text-sm)' }}>UI Text Size</div>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
               {['small', 'medium', 'large', 'xlarge'].map(s => (
                 <button key={s} className="win-btn"
@@ -690,7 +690,7 @@ export default function ControlPanel() {
                     window.dispatchEvent(new CustomEvent('nx-text-scale', { detail: s }));
                   }}
                   style={{
-                    flex: 1, padding: '6px', fontSize: '11px', fontWeight: textScale === s ? 'bold' : 'normal',
+                    flex: 1, padding: '6px', fontSize: 'var(--text-sm)', fontWeight: textScale === s ? 'bold' : 'normal',
                     background: textScale === s ? '#000080' : undefined,
                     color: textScale === s ? '#fff' : undefined,
                   }}>
@@ -699,17 +699,17 @@ export default function ControlPanel() {
               ))}
             </div>
             <div className="win-panel" style={{ padding: '8px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 Scales the Windows chrome (buttons, taskbar, tabs, tables).
                 Programs with their own UI (Dev Academy, Mega Sentinel, etc.)
                 are not affected.
               </div>
             </div>
 
-            <div style={{ fontWeight: 'bold', marginTop: '16px', marginBottom: '8px', fontSize: '11px' }}>
+            <div style={{ fontWeight: 'bold', marginTop: '16px', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>
               Icon Tooltips
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-sm)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={tooltipsEnabled}
@@ -723,17 +723,17 @@ export default function ControlPanel() {
               Show tooltips when hovering desktop icons
             </label>
             <div className="win-panel" style={{ padding: '8px', marginTop: '6px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 A small yellow tooltip with a short description appears
                 after half a second of hover. Disable if you already
                 know every program by heart.
               </div>
             </div>
 
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '11px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: 'var(--text-sm)' }}>
               Desktop Click Mode
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: 'var(--text-sm)' }}>
               {[
                 { id: 'double', label: 'Classic (Double-click)', hint: 'Windows 98 default — double-click to open' },
                 { id: 'single', label: 'Single-click',           hint: 'Web-style — one click opens, labels underlined' },
@@ -753,13 +753,13 @@ export default function ControlPanel() {
                   />
                   <div>
                     <div>{opt.label}</div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>{opt.hint}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{opt.hint}</div>
                   </div>
                 </label>
               ))}
             </div>
             <div className="win-panel" style={{ padding: '8px', marginTop: '8px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 Only affects desktop icons. Items inside windows (lists,
                 buttons, menus) keep their standard behavior.
               </div>
@@ -783,7 +783,7 @@ export default function ControlPanel() {
           )}
           <div style={{
             position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-            color: 'var(--text-secondary)', fontSize: '12px', fontFamily: 'monospace',
+            color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontFamily: 'monospace',
           }}>
             Move mouse or press any key to exit preview
           </div>

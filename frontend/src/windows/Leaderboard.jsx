@@ -19,10 +19,10 @@ function EmptyState({ message }) {
       justifyContent: 'center', height: '100%', gap: '12px', padding: '24px',
     }}>
       <div style={{ fontFamily: "'VT323', monospace", fontSize: '24px', color: 'var(--text-secondary, #555)' }}>[#]</div>
-      <div style={{ fontWeight: 'bold', fontSize: '13px', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
+      <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', textAlign: 'center', color: 'var(--text-primary, #000)' }}>
         Leaderboard is empty
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-secondary, #888)', textAlign: 'center', maxWidth: '280px' }}>
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary, #888)', textAlign: 'center', maxWidth: '280px' }}>
         {message}
       </div>
     </div>

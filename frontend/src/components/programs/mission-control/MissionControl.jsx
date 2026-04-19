@@ -95,7 +95,7 @@ function DiffBadge({ difficulty }) {
     <span style={{
       display: 'inline-block', padding: '2px 10px', borderRadius: '10px',
       background: badge.bg, color: badge.text,
-      fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase',
+      fontSize: 'var(--text-sm)', fontWeight: 'bold', textTransform: 'uppercase',
     }}>
       {difficulty}
     </span>
@@ -184,19 +184,19 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
         background: T.bg, border: `1px solid ${T.cardBorder}`, color: T.text,
         fontFamily: "'VT323', monospace",
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '16px', color: T.cyan }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: 'var(--text-lg)', color: T.cyan }}>
           Select {required > 1 ? `${required} devs` : 'a Dev'} for: {mission.title}
         </div>
         {required > 1 && (
           <div style={{
-            fontSize: '14px', marginBottom: '8px', fontWeight: 'bold',
+            fontSize: 'var(--text-base)', marginBottom: '8px', fontWeight: 'bold',
             color: selected.length === required ? '#44ff44' : '#ffaa00',
           }}>
             {selected.length}/{required} SELECTED
           </div>
         )}
         {reqStat && (
-          <div style={{ fontSize: '12px', color: T.textMuted, marginBottom: '10px' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: T.textMuted, marginBottom: '10px' }}>
             Requires: {STAT_NAMES[reqStat] || reqStat} &ge; {reqVal}
           </div>
         )}
@@ -205,17 +205,17 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
             <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
             {reqStat && eligibleCount < required && devs.length >= required ? (
               <>
-                <div style={{ fontSize: 16, color: '#ff9800', marginBottom: 8 }}>NOT ENOUGH QUALIFIED DEVS</div>
-                <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 'var(--text-lg)', color: '#ff9800', marginBottom: 8 }}>NOT ENOUGH QUALIFIED DEVS</div>
+                <div style={{ fontSize: 'var(--text-base)', color: T.textMuted, lineHeight: 1.6 }}>
                   Requires {required} dev{required > 1 ? 's' : ''} with {(STAT_NAMES[reqStat] || reqStat).toUpperCase()} &ge; {reqVal}.
                   <br/>{eligibleCount} of {devs.length} available dev{devs.length !== 1 ? 's' : ''} qualify.
-                  <br/><span style={{ color: T.textDim, fontSize: 12 }}>Train your devs to increase their {(STAT_NAMES[reqStat] || reqStat).toUpperCase()} stat.</span>
+                  <br/><span style={{ color: T.textDim, fontSize: 'var(--text-sm)' }}>Train your devs to increase their {(STAT_NAMES[reqStat] || reqStat).toUpperCase()} stat.</span>
                 </div>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 16, color: T.red, marginBottom: 8 }}>NOT ENOUGH AVAILABLE DEVS</div>
-                <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 'var(--text-lg)', color: T.red, marginBottom: 8 }}>NOT ENOUGH AVAILABLE DEVS</div>
+                <div style={{ fontSize: 'var(--text-base)', color: T.textMuted, lineHeight: 1.6 }}>
                   This mission requires {required} dev{required > 1 ? 's' : ''}.
                   <br/>You have {eligibleCount} eligible dev{eligibleCount !== 1 ? 's' : ''} available.
                 </div>
@@ -224,7 +224,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
           </div>
         )}
         {devs.length === 0 && (
-          <div style={{ fontSize: '13px', color: T.red, padding: '12px 0' }}>
+          <div style={{ fontSize: 'var(--text-base)', color: T.red, padding: '12px 0' }}>
             No available devs. All devs may be on missions.
           </div>
         )}
@@ -266,14 +266,14 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
               <DevAvatar dev={dev} size={48} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '14px', color: T.text }}>{dev.name}</span>
+                  <span style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', color: T.text }}>{dev.name}</span>
                   <span style={{
-                    fontSize: '11px', fontWeight: 'bold',
+                    fontSize: 'var(--text-sm)', fontWeight: 'bold',
                     color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted,
                   }}>[{dev.archetype}]</span>
-                  {isSelected && <span style={{ color: '#44ff44', fontWeight: 'bold', fontSize: '14px' }}>✓</span>}
+                  {isSelected && <span style={{ color: '#44ff44', fontWeight: 'bold', fontSize: 'var(--text-base)' }}>✓</span>}
                 </div>
-                <div style={{ fontSize: '11px', color: T.textDim, marginTop: '2px' }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: T.textDim, marginTop: '2px' }}>
                   {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ').toUpperCase()}</span>}
                   {dev.rarity_tier && dev.rarity_tier !== 'common' && (
                     <span style={{ color: T.gold, fontWeight: 'bold', marginLeft: '6px', textTransform: 'uppercase' }}>
@@ -281,7 +281,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: '11px', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 'var(--text-sm)', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {['coding', 'hacking', 'trading', 'social', 'endurance'].map(s => {
                     const val = dev[STAT_KEYS[s]] || 0;
                     const isRequired = s === reqStat;
@@ -296,7 +296,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                     );
                   })}
                 </div>
-                <div style={{ fontSize: '11px', color: T.textDim, marginTop: '2px' }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: T.textDim, marginTop: '2px' }}>
                   ENERGY: {dev.energy}/{dev.max_energy} | PC: {dev.pc_health ?? 100}%
                 </div>
               </div>
@@ -305,17 +305,17 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
                 justifyContent: 'center', gap: '4px',
               }}>
                 {onCooldown ? (
-                  <span style={{ fontSize: '12px', color: '#ffaa00', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: 'var(--text-sm)', color: '#ffaa00', fontWeight: 'bold' }}>
                     &#9203; Cooldown: ~{cooldownHoursLeft}h
                   </span>
                 ) : !meetsReq ? (
-                  <span style={{ fontSize: '11px', color: T.red }}>
+                  <span style={{ fontSize: 'var(--text-sm)', color: T.red }}>
                     {reqStat && `${STAT_NAMES[reqStat] || reqStat} too low`}
                   </span>
                 ) : required === 1 ? (
                   <button className="win-btn" disabled={busy}
                     style={{
-                      fontSize: '13px', padding: '6px 14px', fontWeight: 'bold',
+                      fontSize: 'var(--text-base)', padding: '6px 14px', fontWeight: 'bold',
                       background: '#00332a', color: T.cyan, border: `1px solid ${T.cyan}`,
                       cursor: 'pointer',
                     }}>
@@ -328,7 +328,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
         })}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
           <button className="win-btn" onClick={onClose}
-            style={{ fontSize: '13px', padding: '6px 16px', color: T.textMuted }}>
+            style={{ fontSize: 'var(--text-base)', padding: '6px 16px', color: T.textMuted }}>
             Cancel
           </button>
           {required > 1 && (
@@ -336,7 +336,7 @@ function DevSelectModal({ mission, devs, onSelect, onClose, busy, cooldowns }) {
               disabled={selected.length !== required || busy}
               onClick={() => onSelect(selected)}
               style={{
-                fontSize: '14px', padding: '8px 20px', fontWeight: 'bold',
+                fontSize: 'var(--text-base)', padding: '8px 20px', fontWeight: 'bold',
                 background: selected.length === required ? '#00332a' : '#222',
                 color: selected.length === required ? T.green : '#555',
                 border: `1px solid ${selected.length === required ? T.greenMid : '#333'}`,
@@ -366,7 +366,7 @@ function ConfirmModal({ mission, devs, onConfirm, onClose, busy }) {
         background: T.bg, border: `1px solid ${T.cardBorder}`, color: T.text,
         fontFamily: "'VT323', monospace",
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '16px', color: T.cyan }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: 'var(--text-lg)', color: T.cyan }}>
           Confirm Mission
         </div>
         <div style={{ marginBottom: '14px' }}>
@@ -374,15 +374,15 @@ function ConfirmModal({ mission, devs, onConfirm, onClose, busy }) {
             <div key={dev.token_id} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '6px' }}>
               <DevAvatar dev={dev} size={36} />
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{dev.name}</div>
-                <div style={{ fontSize: '11px', color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted }}>
+                <div style={{ fontSize: 'var(--text-base)', fontWeight: 'bold' }}>{dev.name}</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: ARCHETYPE_COLORS[dev.archetype] || T.textMuted }}>
                   [{dev.archetype}]
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: '13px', marginBottom: '14px', lineHeight: '1.5', color: '#ccc' }}>
+        <div style={{ fontSize: 'var(--text-base)', marginBottom: '14px', lineHeight: '1.5', color: '#ccc' }}>
           Send {devs.length > 1 ? `${devs.length} devs` : devs[0]?.name} on "<b style={{ color: T.cyan }}>{mission.title}</b>"
           <br />
           Unavailable for <b>{mission.duration_hours}h</b>
@@ -391,12 +391,12 @@ function ConfirmModal({ mission, devs, onConfirm, onClose, busy }) {
         </div>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button className="win-btn" onClick={onClose}
-            style={{ fontSize: '13px', padding: '6px 16px', color: T.textMuted }}>
+            style={{ fontSize: 'var(--text-base)', padding: '6px 16px', color: T.textMuted }}>
             Cancel
           </button>
           <button className="win-btn" onClick={onConfirm} disabled={busy}
             style={{
-              fontSize: '14px', padding: '8px 20px', fontWeight: 'bold',
+              fontSize: 'var(--text-base)', padding: '8px 20px', fontWeight: 'bold',
               background: T.greenDark, color: T.green, border: `1px solid ${T.greenMid}`,
               cursor: 'pointer',
             }}>
@@ -427,15 +427,15 @@ function MissionCard({ mission, onSelectDev, devCount }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1, paddingRight: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '14px', color: T.cyan }}>
+            <span style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', color: T.cyan }}>
               {mission.title}
             </span>
             <DiffBadge difficulty={mission.difficulty} />
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.3', fontStyle: 'italic' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.3', fontStyle: 'italic' }}>
             "{mission.description}"
           </div>
-          <div style={{ fontSize: '11px', color: T.textMuted, marginTop: '4px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: T.textMuted, marginTop: '4px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <span>{mission.duration_hours}h</span>
             {mission.min_stat && (
               <span>{STAT_NAMES[mission.min_stat] || mission.min_stat} &ge; {mission.min_stat_value}</span>
@@ -450,12 +450,12 @@ function MissionCard({ mission, onSelectDev, devCount }) {
           </div>
         </div>
         <div style={{ textAlign: 'right', minWidth: 110, flexShrink: 0 }}>
-          <div style={{ fontWeight: 'bold', color: T.gold, fontSize: '14px' }}>
+          <div style={{ fontWeight: 'bold', color: T.gold, fontSize: 'var(--text-base)' }}>
             +{mission.reward_nxt} $NXT
           </div>
           <button className="win-btn" onClick={() => onSelectDev(mission)}
             style={{
-              fontSize: '13px', padding: '6px 14px', marginTop: '6px', fontWeight: 'bold',
+              fontSize: 'var(--text-base)', padding: '6px 14px', marginTop: '6px', fontWeight: 'bold',
               background: '#00332a', color: T.cyan, border: `1px solid ${T.cyan}`,
               cursor: 'pointer', borderRadius: '2px',
             }}>
@@ -487,12 +487,12 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '14px' }}>{completed ? '\u2705' : '\u23F3'}</span>
-            <span style={{ fontWeight: 'bold', fontSize: '16px', color: T.cyan }}>{mission.title}</span>
+            <span style={{ fontSize: 'var(--text-base)' }}>{completed ? '\u2705' : '\u23F3'}</span>
+            <span style={{ fontWeight: 'bold', fontSize: 'var(--text-lg)', color: T.cyan }}>{mission.title}</span>
             <DiffBadge difficulty={mission.difficulty} />
-            {completed && <span style={{ fontSize: '12px', color: T.greenMid, fontWeight: 'bold' }}>COMPLETED</span>}
+            {completed && <span style={{ fontSize: 'var(--text-sm)', color: T.greenMid, fontWeight: 'bold' }}>COMPLETED</span>}
           </div>
-          <div style={{ fontSize: '13px', color: T.textMuted, marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--text-base)', color: T.textMuted, marginTop: '4px' }}>
             Dev: <b style={{ color: T.text }}>{mission.dev_name || `#${mission.dev_token_id}`}</b>
             {mission.dev_archetype && <span style={{ color: T.textDim }}> [{mission.dev_archetype}]</span>}
             <span style={{ marginLeft: '10px', color: T.textDim }}>
@@ -501,7 +501,7 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
           </div>
           {!completed && (
             <>
-              <div style={{ fontSize: '12px', color: T.amber, marginTop: '4px', fontWeight: 'bold' }}>
+              <div style={{ fontSize: 'var(--text-sm)', color: T.amber, marginTop: '4px', fontWeight: 'bold' }}>
                 Time remaining: {timeLeft}
               </div>
               <div style={{
@@ -513,19 +513,19 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
                   background: diffColor, transition: 'width 0.5s',
                 }} />
               </div>
-              <div style={{ fontSize: '11px', color: T.textDim, marginTop: '2px' }}>{pct}%</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: T.textDim, marginTop: '2px' }}>{pct}%</div>
             </>
           )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', flexShrink: 0 }}>
-          <span style={{ fontWeight: 'bold', color: T.gold, fontSize: '14px' }}>
+          <span style={{ fontWeight: 'bold', color: T.gold, fontSize: 'var(--text-base)' }}>
             +{mission.reward_nxt} $NXT
           </span>
           {completed ? (
             <button className="win-btn" onClick={() => onClaim(mission)} disabled={busy}
               style={{
-                fontSize: '14px', padding: '8px 18px', fontWeight: 'bold',
+                fontSize: 'var(--text-base)', padding: '8px 18px', fontWeight: 'bold',
                 background: T.greenDark, color: T.green, border: `1px solid ${T.greenMid}`,
                 cursor: 'pointer',
               }}>
@@ -533,7 +533,7 @@ function ActiveMissionCard({ mission, onClaim, onAbandon, busy }) {
             </button>
           ) : (
             <button className="win-btn" onClick={() => onAbandon(mission)} disabled={busy}
-              style={{ fontSize: '11px', padding: '3px 10px', color: T.red, border: `1px solid ${T.red}40` }}>
+              style={{ fontSize: 'var(--text-sm)', padding: '3px 10px', color: T.red, border: `1px solid ${T.red}40` }}>
               Abandon
             </button>
           )}
@@ -681,7 +681,7 @@ export default function MissionControl() {
 
   if (!isConnected || !address) {
     return (
-      <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: '14px', background: T.bg, color: T.text, height: '100%' }}>
+      <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)', background: T.bg, color: T.text, height: '100%' }}>
         Connect your wallet to access Mission Control.
       </div>
     );
@@ -689,7 +689,7 @@ export default function MissionControl() {
 
   return (
     <div style={{
-      fontFamily: "'VT323', monospace", fontSize: '13px',
+      fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
       background: T.bg, color: T.text,
@@ -697,16 +697,16 @@ export default function MissionControl() {
       {/* Header — fixed */}
       <div style={{ flexShrink: 0, padding: '8px 10px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '18px', color: T.cyan }}>
+        <div style={{ fontWeight: 'bold', fontSize: 'var(--text-xl)', color: T.cyan }}>
           &gt; MISSION CONTROL
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {tier && (
-            <span style={{ fontSize: '12px', color: T.textMuted }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: T.textMuted }}>
               Rank: {tier.label.toUpperCase()}
             </span>
           )}
-          <span style={{ fontSize: '12px', color: T.textDim }}>
+          <span style={{ fontSize: 'var(--text-sm)', color: T.textDim }}>
             {availableDevs.length} devs available
           </span>
         </div>
@@ -722,7 +722,7 @@ export default function MissionControl() {
           <button key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              fontSize: '13px', padding: '5px 14px',
+              fontSize: 'var(--text-base)', padding: '5px 14px',
               fontWeight: tab === t.key ? 'bold' : 'normal',
               color: tab === t.key ? T.cyan : T.textMuted,
               background: 'transparent', border: 'none',
@@ -735,7 +735,7 @@ export default function MissionControl() {
             {t.key === 'active' && claimableCount > 0 && (
               <span style={{
                 background: T.green, color: '#000', padding: '0 5px',
-                borderRadius: '8px', fontSize: '11px', fontWeight: 'bold',
+                borderRadius: '8px', fontSize: 'var(--text-sm)', fontWeight: 'bold',
               }}>{claimableCount}</span>
             )}
           </button>
@@ -745,7 +745,7 @@ export default function MissionControl() {
           else if (tab === 'active') fetchActive();
           else fetchHistory();
         }} style={{
-          fontSize: '13px', padding: '6px 12px', marginLeft: 'auto',
+          fontSize: 'var(--text-base)', padding: '6px 12px', marginLeft: 'auto',
           background: 'transparent', border: `1px solid ${T.cardBorder}`,
           color: T.textMuted, cursor: 'pointer',
           fontFamily: "'VT323', monospace",
@@ -761,14 +761,14 @@ export default function MissionControl() {
       {/* Feedback */}
       {feedback && (
         <div style={{
-          fontSize: '13px', fontWeight: 'bold', marginBottom: '10px',
+          fontSize: 'var(--text-base)', fontWeight: 'bold', marginBottom: '10px',
           padding: '8px 12px', border: `1px solid ${feedback.color}`,
           background: `${feedback.color}15`,
           color: feedback.color,
         }}>
           {feedback.text}
           {feedback.subtext && (
-            <div style={{ fontSize: '11px', fontWeight: 'normal', color: T.textMuted, marginTop: '3px' }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'normal', color: T.textMuted, marginTop: '3px' }}>
               {feedback.subtext}
             </div>
           )}
@@ -776,16 +776,16 @@ export default function MissionControl() {
       )}
 
       {error && (
-        <div style={{ fontSize: '12px', color: T.red, marginBottom: '8px' }}>{error}</div>
+        <div style={{ fontSize: 'var(--text-sm)', color: T.red, marginBottom: '8px' }}>{error}</div>
       )}
 
-      {loading && <div style={{ color: T.textMuted, fontSize: '13px' }}>Loading...</div>}
+      {loading && <div style={{ color: T.textMuted, fontSize: 'var(--text-base)' }}>Loading...</div>}
 
       {/* ═══ AVAILABLE TAB ═══ */}
       {tab === 'available' && !loading && (
         <>
           {missions.length === 0 && (
-            <div style={{ color: T.textMuted, fontSize: '13px', padding: '12px 0' }}>
+            <div style={{ color: T.textMuted, fontSize: 'var(--text-base)', padding: '12px 0' }}>
               No missions available right now. Check back later!
             </div>
           )}
@@ -796,12 +796,12 @@ export default function MissionControl() {
             return (
               <div key={diff} style={{ marginBottom: '8px' }}>
                 <div style={{
-                  fontSize: '13px', fontWeight: 'bold', padding: '4px 8px', marginBottom: '4px',
+                  fontSize: 'var(--text-base)', fontWeight: 'bold', padding: '4px 8px', marginBottom: '4px',
                   color: diffColor, borderBottom: `1px solid ${diffColor}40`,
                   display: 'flex', alignItems: 'center', gap: '8px',
                 }}>
                   <DiffBadge difficulty={diff} />
-                  <span style={{ color: T.textDim, fontWeight: 'normal', fontSize: '12px' }}>
+                  <span style={{ color: T.textDim, fontWeight: 'normal', fontSize: 'var(--text-sm)' }}>
                     {DIFF_LABELS[diff]}
                   </span>
                 </div>
@@ -818,7 +818,7 @@ export default function MissionControl() {
       {tab === 'active' && !loading && (
         <>
           {activeMissions.length === 0 && (
-            <div style={{ color: T.textMuted, fontSize: '13px', padding: '12px 0' }}>
+            <div style={{ color: T.textMuted, fontSize: 'var(--text-base)', padding: '12px 0' }}>
               No active missions. Send a dev on a mission from the Available tab!
             </div>
           )}
@@ -833,13 +833,13 @@ export default function MissionControl() {
       {tab === 'history' && !loading && (
         <>
           {historyMissions.length === 0 && (
-            <div style={{ color: T.textMuted, fontSize: '13px', padding: '12px 0' }}>
+            <div style={{ color: T.textMuted, fontSize: 'var(--text-base)', padding: '12px 0' }}>
               No mission history yet.
             </div>
           )}
           {historyMissions.map((m, i) => (
             <div key={i} style={{
-              padding: '10px 12px', marginBottom: '6px', fontSize: '13px',
+              padding: '10px 12px', marginBottom: '6px', fontSize: 'var(--text-base)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               background: T.card, border: `1px solid ${T.cardBorder}`,
               opacity: m.status === 'abandoned' ? 0.5 : 1,
@@ -855,7 +855,7 @@ export default function MissionControl() {
                 ) : (
                   <span style={{ color: T.red }}>Abandoned</span>
                 )}
-                <span style={{ color: T.textDim, fontSize: '11px' }}>{formatDate(m.claimed_at || m.ends_at)}</span>
+                <span style={{ color: T.textDim, fontSize: 'var(--text-sm)' }}>{formatDate(m.claimed_at || m.ends_at)}</span>
               </div>
             </div>
           ))}

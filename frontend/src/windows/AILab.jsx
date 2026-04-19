@@ -23,7 +23,7 @@ export default function AILab() {
       <div style={{
         padding: '8px',
         fontFamily: "'VT323', monospace",
-        fontSize: '16px',
+        fontSize: 'var(--text-lg)',
         color: 'var(--terminal-magenta)',
         background: 'var(--terminal-bg)',
         textAlign: 'center',
@@ -50,7 +50,7 @@ export default function AILab() {
               <td style={{
                 whiteSpace: 'normal',
                 maxWidth: '300px',
-                fontSize: '10px',
+                fontSize: 'var(--text-xs)',
               }}>
                 {ai.description}
               </td>

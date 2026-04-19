@@ -60,7 +60,7 @@ export default function ErrorPopup() {
         color: 'white',
         padding: '2px 6px',
         fontWeight: 'bold',
-        fontSize: '11px',
+        fontSize: 'var(--text-sm)',
         height: '22px',
         display: 'flex',
         alignItems: 'center',
@@ -69,7 +69,7 @@ export default function ErrorPopup() {
       </div>
       <div style={{ padding: '12px', display: 'flex', gap: '12px' }}>
         <span style={{ fontSize: '28px', flexShrink: 0 }}>{popup.icon}</span>
-        <div style={{ fontSize: '11px', lineHeight: 1.4 }}>{popup.text}</div>
+        <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.4 }}>{popup.text}</div>
       </div>
       <div style={{ padding: '0 12px 12px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
         <button className="win-btn" onClick={() => setPopup(null)} style={{ padding: '3px 24px' }}>OK</button>

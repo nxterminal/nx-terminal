@@ -151,7 +151,7 @@ export default function CorpWars() {
       {/* DEV COUNTER */}
       <div style={{
         padding: '6px 12px', textAlign: 'center',
-        fontFamily: "'VT323', monospace", fontSize: '15px',
+        fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
         color: '#33ff33', borderBottom: '1px solid #222',
         background: 'rgba(51,255,51,0.05)',
       }}>
@@ -164,7 +164,7 @@ export default function CorpWars() {
       </div>
 
       {dominanceData.length === 0 ? (
-        <div style={{ padding: '8px 12px', color: '#aaaaaa', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+        <div style={{ padding: '8px 12px', color: '#aaaaaa', fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)' }}>
           {'>'} No corporations active yet. Awaiting dev deployment...
         </div>
       ) : (

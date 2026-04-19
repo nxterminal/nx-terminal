@@ -123,7 +123,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           background: 'linear-gradient(90deg, var(--terminal-red), #cc0000)',
           color: 'white',
           padding: '2px 6px',
-          fontSize: '11px',
+          fontSize: 'var(--text-sm)',
           fontWeight: 'bold',
           display: 'flex',
           alignItems: 'center',
@@ -137,7 +137,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
               border: 'none',
               width: '16px',
               height: '14px',
-              fontSize: '10px',
+              fontSize: 'var(--text-xs)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -150,10 +150,10 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
           </button>
         </div>
         <div style={{ padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <span style={{ fontSize: '16px', fontWeight: 'bold', flexShrink: 0 }}>[X]</span>
+          <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', flexShrink: 0 }}>[X]</span>
           <div>
-            <div style={{ fontSize: '11px', marginBottom: '10px', lineHeight: 1.4 }}>{walletError}</div>
-            <button className="win-btn" onClick={() => setWalletError(null)} style={{ padding: '3px 20px', fontSize: '11px' }}>
+            <div style={{ fontSize: 'var(--text-sm)', marginBottom: '10px', lineHeight: 1.4 }}>{walletError}</div>
+            <button className="win-btn" onClick={() => setWalletError(null)} style={{ padding: '3px 20px', fontSize: 'var(--text-sm)' }}>
               OK
             </button>
           </div>
@@ -192,7 +192,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
               background: 'linear-gradient(90deg, var(--win-title-l), var(--win-title-r))',
               color: '#fff',
               padding: '3px 6px',
-              fontSize: '12px',
+              fontSize: 'var(--text-sm)',
               fontWeight: 'bold',
               display: 'flex',
               alignItems: 'center',
@@ -210,7 +210,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
                 background: 'var(--win-bg)',
                 border: 'none',
                 outline: 'none',
-                fontSize: '10px',
+                fontSize: 'var(--text-xs)',
                 cursor: 'pointer',
                 padding: 0,
                 display: 'flex',
@@ -223,14 +223,14 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
                 color: 'var(--text-primary)',
               }}
             >
-              <span style={{ fontSize: '10px', fontWeight: 'bold', lineHeight: 1 }}>x</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', lineHeight: 1 }}>x</span>
             </button>
           </div>
           {/* Body */}
           <div style={{ padding: '18px 16px 14px', textAlign: 'center' }}>
             <div
               style={{
-                fontSize: '12px',
+                fontSize: 'var(--text-sm)',
                 color: 'var(--text-primary)',
                 marginBottom: '18px',
                 lineHeight: 1.4,
@@ -242,7 +242,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
               <button
                 className="win-btn"
                 onClick={confirmDisconnect}
-                style={{ padding: '4px 24px', fontSize: '11px', fontWeight: 'bold', minWidth: '72px' }}
+                style={{ padding: '4px 24px', fontSize: 'var(--text-sm)', fontWeight: 'bold', minWidth: '72px' }}
                 autoFocus
               >
                 Yes
@@ -250,7 +250,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
               <button
                 className="win-btn"
                 onClick={() => setShowDisconnectConfirm(false)}
-                style={{ padding: '4px 24px', fontSize: '11px', minWidth: '72px' }}
+                style={{ padding: '4px 24px', fontSize: 'var(--text-sm)', minWidth: '72px' }}
               >
                 No
               </button>
@@ -368,9 +368,9 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         </button>
 
         <div className="taskbar-clock">
-          <div style={{ fontSize: '10px', lineHeight: 1.1, textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--text-xs)', lineHeight: 1.1, textAlign: 'center' }}>
             <div>{timeStr}</div>
-            {cycle != null && <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>Cycle: {cycle}</div>}
+            {cycle != null && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Cycle: {cycle}</div>}
           </div>
         </div>
       </div>
