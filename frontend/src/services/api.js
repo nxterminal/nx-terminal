@@ -229,6 +229,25 @@ export const api = {
       body: JSON.stringify({ wallet, achievement_id }),
     }),
 
+  // Admin: support tickets. Caller passes the connected wallet; it
+  // goes in the X-Admin-Wallet header which the backend matches
+  // against ADMIN_WALLETS. Non-admin wallets get 403, so these are
+  // safe to call from a wallet-agnostic component (server gates).
+  getAdminTickets: (wallet, status = 'open', limit = 50) =>
+    fetchJSON(
+      `${API_BASE}/api/admin/tickets?status=${encodeURIComponent(status)}&limit=${limit}`,
+      { headers: { 'X-Admin-Wallet': wallet || '' } },
+    ),
+  replyToTicket: (wallet, ticket_id, text) =>
+    fetchJSON(`${API_BASE}/api/admin/tickets/${ticket_id}/reply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Wallet': wallet || '',
+      },
+      body: JSON.stringify({ text }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };

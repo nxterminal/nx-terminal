@@ -209,6 +209,23 @@ def _run_auto_migrations():
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     )
                 """)
+                # Admin-reply fields (PR #310): source of truth is
+                # backend/db/migration_tickets_reply.sql.
+                cur.execute(
+                    "ALTER TABLE support_tickets "
+                    "ADD COLUMN IF NOT EXISTS status     TEXT DEFAULT 'open', "
+                    "ADD COLUMN IF NOT EXISTS reply_text TEXT, "
+                    "ADD COLUMN IF NOT EXISTS replied_by VARCHAR(42), "
+                    "ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ"
+                )
+                cur.execute(
+                    "UPDATE support_tickets SET status = 'open' WHERE status IS NULL"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_tickets_status_created "
+                    "ON support_tickets(status, created_at DESC) "
+                    "WHERE status = 'open'"
+                )
                 cur.execute("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_notif_deleted ON notifications(deleted_at) WHERE deleted_at IS NULL")
                 # admin_logs — append-only audit trail of economic events.
