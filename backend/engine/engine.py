@@ -1671,9 +1671,10 @@ def scan_orphaned_funds(conn):
       - scan_orphaned_funds (this): catches txs the backend NEVER saw,
         e.g. the frontend crashed after signing but before POSTing the hash
 
-    Ambiguous sender (wallet owns >1 dev) auto-credits the lowest token_id
-    — losing funds is worse than crediting the "wrong" dev of the same
-    owner, who can rebalance via /shop/transfer.
+    Ambiguous sender (wallet owns >1 dev) auto-credits the most recently
+    active dev (last_action_at DESC, tie-broken by token_id ASC) — the
+    wallet can always rebalance via /shop/transfer, but picking the active
+    dev minimises the chance of stranding funds on a dormant token.
 
     Dedup is layered:
       1. Check funding_txs.tx_hash before inserting
@@ -1763,7 +1764,9 @@ def scan_orphaned_funds(conn):
                 continue
 
             cur.execute(
-                "SELECT token_id, name, archetype FROM devs WHERE owner_address = %s",
+                "SELECT token_id, name, archetype, last_action_at "
+                "FROM devs WHERE owner_address = %s "
+                "ORDER BY last_action_at DESC NULLS LAST, token_id ASC",
                 (sender,),
             )
             devs = cur.fetchall() or []
@@ -1775,15 +1778,23 @@ def scan_orphaned_funds(conn):
                 )
                 continue
 
-            if len(devs) > 1:
-                dev = min(devs, key=lambda d: d["token_id"])
-                log.warning(
-                    f"  orphan {tx_hash[:10]}… from {sender[:8]}… owns "
-                    f"{len(devs)} devs — auto-crediting lowest token_id "
-                    f"#{dev['token_id']} ({dev['name']})"
+            dev = devs[0]
+            total_devs_count = len(devs)
+
+            if total_devs_count > 1 and admin_log_event is not None:
+                admin_log_event(
+                    cur,
+                    event_type="orphan_scanner_disambiguated_dev",
+                    wallet_address=sender,
+                    dev_token_id=dev["token_id"],
+                    payload={
+                        "tx_hash": tx_hash,
+                        "chosen_dev_token_id": dev["token_id"],
+                        "total_devs_in_wallet": total_devs_count,
+                        "heuristic": "most_recent_action",
+                        "amount_nxt": str(amount_nxt),
+                    },
                 )
-            else:
-                dev = devs[0]
 
             try:
                 cur.execute(
