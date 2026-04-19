@@ -240,43 +240,53 @@ async def claim_achievement(req: AchievementClaimRequest):
                 raise HTTPException(404, "Achievement not unlocked")
             if pa["claimed"]:
                 raise HTTPException(400, "Already claimed")
-            cur.execute(
-                "UPDATE player_achievements SET claimed = TRUE WHERE wallet_address = %s AND achievement_id = %s",
-                (addr, req.achievement_id))
+
+            # Verify active dev BEFORE any mutation. If we flipped
+            # claimed=TRUE first and only then found out the wallet has
+            # no active dev, the reward would be lost forever — the
+            # credit branch would silently skip and `claimed=TRUE` would
+            # commit on the way out. Mirrors the safe order in
+            # streaks.py::claim_streak.
             cur.execute("""
                 SELECT token_id, name FROM devs
                 WHERE LOWER(owner_address) = %s AND status IN ('active', 'on_mission')
                 ORDER BY token_id ASC LIMIT 1
             """, (addr,))
             dev = cur.fetchone()
-            if dev:
-                cur.execute(
-                    "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
-                    (pa["reward_nxt"], pa["reward_nxt"], dev["token_id"]))
-
-                # Shadow-write to nxt_ledger (Fase 3D). achievements
-                # have string ids — we hash to a stable BIGINT for
-                # ref_id. The pre-flight UPDATE on player_achievements
-                # (claimed=TRUE) already prevents replay at the source,
-                # so a second claim attempt fails before ever reaching
-                # this branch; the idempotency_key here is belt-and-
-                # suspenders.
-                if is_shadow_write_enabled():
-                    try:
-                        ledger_insert(
-                            cur,
-                            wallet_address=addr,
-                            dev_token_id=dev["token_id"],
-                            delta_nxt=pa["reward_nxt"],
-                            source=LedgerSource.ACHIEVEMENT_CLAIM,
-                            ref_table="player_achievements",
-                            ref_id=_achievement_id_to_bigint(req.achievement_id),
-                        )
-                    except Exception as _e:  # noqa: BLE001
-                        log.warning(
-                            "ledger_shadow_write_failed source=achievement_claim "
-                            "achievement_id=%s error=%s",
-                            req.achievement_id, _e,
-                        )
+            if not dev:
+                raise HTTPException(
+                    400,
+                    "You need at least one active dev to claim achievement rewards",
+                )
+            cur.execute(
+                "UPDATE player_achievements SET claimed = TRUE WHERE wallet_address = %s AND achievement_id = %s",
+                (addr, req.achievement_id))
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
+                (pa["reward_nxt"], pa["reward_nxt"], dev["token_id"]))
+            # Shadow-write to nxt_ledger (Fase 3D). achievements
+            # have string ids — we hash to a stable BIGINT for
+            # ref_id. The pre-flight UPDATE on player_achievements
+            # (claimed=TRUE) already prevents replay at the source,
+            # so a second claim attempt fails before ever reaching
+            # this branch; the idempotency_key here is belt-and-
+            # suspenders.
+            if is_shadow_write_enabled():
+                try:
+                    ledger_insert(
+                        cur,
+                        wallet_address=addr,
+                        dev_token_id=dev["token_id"],
+                        delta_nxt=pa["reward_nxt"],
+                        source=LedgerSource.ACHIEVEMENT_CLAIM,
+                        ref_table="player_achievements",
+                        ref_id=_achievement_id_to_bigint(req.achievement_id),
+                    )
+                except Exception as _e:  # noqa: BLE001
+                    log.warning(
+                        "ledger_shadow_write_failed source=achievement_claim "
+                        "achievement_id=%s error=%s",
+                        req.achievement_id, _e,
+                    )
     return {"success": True, "reward": pa["reward_nxt"], "title": pa["title"],
-            "dev_name": dev["name"] if dev else None}
+            "dev_name": dev["name"]}
