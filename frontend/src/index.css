@@ -33,29 +33,56 @@
 }
 
 /* ── UI Text Scale ─────────────────────────────────────────
-   Scales Windows-chrome text (buttons, taskbar, tabs, tables)
-   via CSS vars driven by <html data-text-scale="...">. Individual
-   programs (Dev Academy, Mega Sentinel, etc.) keep their own
-   sizing because they don't consume these vars or the .win-* classes.
-   Default (medium) matches the pre-existing hardcoded 11px base so
-   nothing shifts for users who never open the setting. */
+   Scales Windows-chrome text (buttons, taskbar, tabs, tables) AND
+   all program content that consumes the --text-* vars (most
+   components post-Fix-Font-XLarge) via CSS vars driven by
+   <html data-text-scale="...">. Default tier is xlarge (15px
+   base) to match native Windows Explorer fonts on modern displays;
+   users who picked another tier before the default flip keep
+   their choice (localStorage persists).
+
+   Variable palette (all four tiers define all five sizes):
+     --text-xs   — captions, counters, dense badges
+     --text-sm   — secondary text: hints, metadata, timestamps
+     --text-base — body text, buttons, inputs, labels
+     --text-lg   — prominent labels, section titles
+     --text-xl   — modal/window titles, major headings
+*/
 :root {
-  --text-base: 11px;    /* default body / button text */
-  --text-sm: 10px;      /* taskbar clock, small labels */
-  --text-xs: 9px;       /* captions */
-  --text-lg: 13px;      /* prominent labels */
+  /* Default values = xlarge (see note above). */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
 }
 [data-text-scale="small"] {
-  --text-base: 10px;
-  --text-sm: 9px;
   --text-xs: 8px;
+  --text-sm: 9px;
+  --text-base: 10px;
   --text-lg: 11px;
+  --text-xl: 13px;
+}
+[data-text-scale="medium"] {
+  --text-xs: 9px;
+  --text-sm: 10px;
+  --text-base: 11px;
+  --text-lg: 13px;
+  --text-xl: 15px;
 }
 [data-text-scale="large"] {
-  --text-base: 13px;
-  --text-sm: 11px;
   --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 13px;
   --text-lg: 15px;
+  --text-xl: 18px;
+}
+[data-text-scale="xlarge"] {
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
 }
 
 [data-theme="dark"] {

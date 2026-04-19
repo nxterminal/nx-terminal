@@ -248,7 +248,7 @@ export default function ControlPanel() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nx-theme') || 'classic');
   const [assistantAgent, setAssistantAgent] = useState(() => localStorage.getItem('nx-assistant-agent') || 'Clippy');
   const [iconScale, setIconScale] = useState(() => localStorage.getItem('nx-icon-scale') || 'medium');
-  const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale') || 'medium');
+  const [textScale, setTextScale] = useState(() => localStorage.getItem('nx-text-scale') || 'xlarge');
   const [tooltipsEnabled, setTooltipsEnabled] = useState(
     () => localStorage.getItem('nx-tooltips') !== 'off',
   );
@@ -681,7 +681,7 @@ export default function ControlPanel() {
 
             <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '11px' }}>UI Text Size</div>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-              {['small', 'medium', 'large'].map(s => (
+              {['small', 'medium', 'large', 'xlarge'].map(s => (
                 <button key={s} className="win-btn"
                   onClick={() => {
                     setTextScale(s);
