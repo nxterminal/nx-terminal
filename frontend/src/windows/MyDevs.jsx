@@ -562,6 +562,179 @@ async function waitForReceipt(txHash, maxWait = 60) {
   throw new Error('Transaction not confirmed in time');
 }
 
+// Block explorer for MegaETH — same source of truth used elsewhere
+// in the app (components/programs/monad-build/constants/monad.js).
+const MEGAETH_EXPLORER_TX = (hash) => `https://mega.etherscan.io/tx/${hash}`;
+
+// Copy of how truncated hashes render elsewhere in the project
+// (0xabcdef...1234). Used in the pending modal.
+const truncateHash = (h) => (h && h.length > 12 ? `${h.slice(0, 6)}…${h.slice(-4)}` : h || '');
+
+// Dynamic status copy keyed on the retry attempt count reported by
+// /api/shop/pending-funds/status/{tx_hash}. Keeps the user informed
+// as the backend worker churns through its exponential-backoff cycle.
+function pendingStatusMessage(attempts) {
+  if (!attempts || attempts <= 0) {
+    return 'Verifying transaction on-chain...';
+  }
+  if (attempts <= 5) {
+    return `Credit in progress (attempt ${attempts})...`;
+  }
+  if (attempts <= 15) {
+    return `Credit in progress (attempt ${attempts}). This usually completes in under 2 min.`;
+  }
+  if (attempts <= 19) {
+    return `Credit taking longer than usual (attempt ${attempts}). Waiting for next retry...`;
+  }
+  return 'Credit taking significantly longer. An admin has been notified. Your funds are safe — they will be credited automatically.';
+}
+
+// Pending-credit view rendered inside FundModal when stage === 'pending'.
+// Matches the Win98 retro chrome of the surrounding modal: .win-panel
+// sunken blocks, --win-title-l/r gradient accents, VT323 monospace
+// for the tx hash, --amber-on-grey / --terminal-amber for warning
+// accents. Kept in-file (not /components) to mirror the locality
+// pattern used by the other inline Modal components in MyDevs.jsx.
+function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onClose }) {
+  const hashDisplay = truncateHash(txHash);
+  const progressUnits = 20;
+  const filled = Math.max(0, Math.min(attempts ?? 0, progressUnits));
+  const statusMsg = pendingStatusMessage(attempts);
+  const isLate = (attempts ?? 0) >= 16;
+
+  return (
+    <div style={{ fontFamily: "'Tahoma', 'MS Sans Serif', sans-serif" }}>
+      {/* Headline */}
+      <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+        <div style={{
+          fontSize: '14px', fontWeight: 'bold',
+          color: 'var(--win-title-l, #000080)',
+          letterSpacing: '0.5px',
+        }}>
+          {'\u23F3'} Transaction Pending
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+          Credit in Progress
+        </div>
+      </div>
+
+      {/* Transaction details — sunken panel */}
+      <div className="win-panel" style={{
+        padding: '8px 10px', marginBottom: '10px', fontSize: '11px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Amount</span>
+          <span style={{
+            fontWeight: 'bold',
+            color: 'var(--gold-on-grey, #7a5c00)',
+            fontFamily: "'VT323', monospace",
+            fontSize: '14px',
+          }}>
+            {amount ?? '?'} $NXT
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>To dev</span>
+          <span style={{ fontWeight: 'bold' }}>{dev.name}</span>
+        </div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', marginBottom: '4px', gap: '6px',
+        }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Tx hash</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <code style={{
+              fontFamily: "'VT323', monospace", fontSize: '13px',
+              background: 'var(--terminal-bg, #0c0c0c)',
+              color: 'var(--terminal-green, #33ff33)',
+              padding: '1px 6px',
+            }}>
+              {hashDisplay}
+            </code>
+            <button
+              className="win-btn"
+              onClick={onCopy}
+              disabled={!txHash}
+              title="Copy full tx hash to clipboard"
+              style={{ fontSize: '10px', padding: '1px 6px' }}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <a
+            href={txHash ? MEGAETH_EXPLORER_TX(txHash) : undefined}
+            target="_blank"
+            rel="noreferrer noopener"
+            style={{
+              fontSize: '10px',
+              color: 'var(--blue-on-grey, #0d47a1)',
+              textDecoration: 'underline',
+            }}
+          >
+            View on MegaETH Explorer ↗
+          </a>
+        </div>
+      </div>
+
+      {/* Status + Win98-style progress bar */}
+      <div className="win-panel" style={{
+        padding: '8px 10px', marginBottom: '10px',
+        background: 'rgba(255, 170, 0, 0.08)',
+      }}>
+        <div style={{
+          fontSize: '11px',
+          color: isLate
+            ? 'var(--red-on-grey, #aa0000)'
+            : 'var(--amber-on-grey, #7a5500)',
+          marginBottom: '6px', lineHeight: 1.4,
+        }}>
+          {statusMsg}
+        </div>
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={progressUnits}
+          aria-valuenow={filled}
+          style={{
+            display: 'flex', gap: '2px', padding: '3px',
+            background: '#fff', border: '2px inset #888',
+          }}
+        >
+          {Array.from({ length: progressUnits }).map((_, i) => (
+            <span key={i} style={{
+              flex: 1, height: '8px',
+              background: i < filled
+                ? 'var(--win-title-l, #000080)'
+                : 'transparent',
+            }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Close and continue */}
+      <button
+        className="win-btn"
+        onClick={onClose}
+        title="Your tx is safe. The backend will credit your dev automatically in the next few seconds/minutes."
+        style={{
+          width: '100%', padding: '6px', fontSize: '13px', fontWeight: 'bold',
+        }}
+      >
+        Close and continue
+      </button>
+      <div style={{
+        fontSize: '10px', color: 'var(--text-secondary)',
+        marginTop: '6px', textAlign: 'center', lineHeight: 1.3,
+      }}>
+        Your $NXT is on-chain. It's safe to close this window — the
+        credit will apply automatically in the background.
+      </div>
+    </div>
+  );
+}
+
 // ── Fund Modal ────────────────────────────────────────────
 function FundModal({ dev, address, onClose, onDevUpdate }) {
   const [amount, setAmount] = useState('');
@@ -576,7 +749,13 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   // below. Separate from `pendingTx` because pendingTx is cleared on entering
   // the pending stage (so the close-guard stops warning).
   const [pendingStatusHash, setPendingStatusHash] = useState(null);
-  const [pendingPollState, setPendingPollState] = useState(null); // 'slow' | null
+  // Amount committed to the pending tx, kept for display after pendingTx
+  // is cleared on entering the pending stage.
+  const [pendingAmount, setPendingAmount] = useState(null);
+  // Latest `attempts` value reported by the status poll — drives the
+  // dynamic status copy in the pending stage UI.
+  const [pollAttempts, setPollAttempts] = useState(0);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   useEffect(() => {
     if (!address) return;
@@ -591,7 +770,6 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   useEffect(() => {
     if (stage !== 'pending' || !pendingStatusHash) return;
     let cancelled = false;
-    let polls = 0;
     const tick = async () => {
       try {
         const res = await api.getPendingFundStatus(pendingStatusHash);
@@ -599,19 +777,20 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
         if (res?.status === 'credited') {
           setStage('success');
           setPendingStatusHash(null);
-          setPendingPollState(null);
-          setTimeout(() => onClose(), 1500);
           return;
         }
-        polls += 1;
-        if (polls >= 2) setPendingPollState('slow');
+        if (typeof res?.attempts === 'number') setPollAttempts(res.attempts);
       } catch {
         // Transient failures are fine — next tick retries.
       }
     };
+    // Fire once right away so the user doesn't wait 15s for the first
+    // status reading (the worker may already have credited by the time
+    // the modal reaches this stage).
+    tick();
     const id = setInterval(tick, 15000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [stage, pendingStatusHash, onClose]);
+  }, [stage, pendingStatusHash]);
 
   const amountNum = parseInt(amount, 10) || 0;
   const hasPending = pendingTx !== null;
@@ -670,7 +849,8 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
         setStage('pending');
         setPendingTx(null);
         setPendingStatusHash(txHash);
-        setPendingPollState(null);
+        setPendingAmount(committedAmount);
+        setPollAttempts(0);
         return;
       }
       setStage('success');
@@ -692,6 +872,29 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   };
 
   const presets = [25, 50, 100];
+
+  const copyPendingHash = async () => {
+    if (!pendingStatusHash) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(pendingStatusHash);
+      } else {
+        // Fallback: select-and-copy in older browsers.
+        const ta = document.createElement('textarea');
+        ta.value = pendingStatusHash;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedHash(true);
+      setTimeout(() => setCopiedHash(false), 1500);
+    } catch {
+      // swallow — clipboard may be blocked; user can still click the explorer link
+    }
+  };
 
   const handleClose = () => {
     // Guard against closing with an unresolved on-chain tx — the hash would
@@ -751,102 +954,90 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
             </span>
           </div>
 
-          {/* Amount input */}
-          <div style={{ marginBottom: '6px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Amount:</label>
-            <input
-              type="number"
-              min="1"
-              max={walletBal ? Math.floor(walletBal) : 999999}
-              value={hasPending ? String(pendingTx.amount) : amount}
-              onChange={e => setAmount(e.target.value)}
-              disabled={stage !== 'idle' || hasPending}
-              style={{
-                width: '100%', padding: '4px 6px', fontSize: '14px',
-                fontFamily: "'VT323', monospace",
-                background: '#fff', border: '2px inset #888',
-              }}
-              placeholder="0"
+          {stage === 'pending' ? (
+            <PendingCreditView
+              dev={dev}
+              amount={pendingAmount}
+              txHash={pendingStatusHash}
+              attempts={pollAttempts}
+              copied={copiedHash}
+              onCopy={copyPendingHash}
+              onClose={handleClose}
             />
-          </div>
-
-          {/* Preset buttons */}
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
-            {presets.map(v => (
-              <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
-                disabled={stage !== 'idle' || hasPending}
-                style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
-            ))}
-            <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
-              disabled={stage !== 'idle' || !walletBal || hasPending}
-              style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
-          </div>
-
-          {hasPending && stage !== 'success' && stage !== 'pending' && (
-            <div style={{
-              fontSize: '11px', color: 'var(--amber-on-grey, #7a5500)',
-              background: 'rgba(255, 204, 0, 0.12)', border: '1px solid rgba(255, 204, 0, 0.4)',
-              padding: '6px 8px', marginBottom: '8px', lineHeight: 1.4,
-            }}>
-              On-chain tx confirmed. Retrying credit — do NOT sign a new one.
-            </div>
-          )}
-
-          {stage === 'pending' && (
-            <div style={{
-              fontSize: '12px', color: 'var(--amber-on-grey, #7a5500)',
-              background: 'rgba(255, 170, 0, 0.12)',
-              border: '1px solid rgba(255, 170, 0, 0.4)',
-              padding: '8px 10px', marginBottom: '8px', lineHeight: 1.45,
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
-                {'\u23F3'} Transfer confirmed
+          ) : (
+            <>
+              {/* Amount input */}
+              <div style={{ marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Amount:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={walletBal ? Math.floor(walletBal) : 999999}
+                  value={hasPending ? String(pendingTx.amount) : amount}
+                  onChange={e => setAmount(e.target.value)}
+                  disabled={stage !== 'idle' || hasPending}
+                  style={{
+                    width: '100%', padding: '4px 6px', fontSize: '14px',
+                    fontFamily: "'VT323', monospace",
+                    background: '#fff', border: '2px inset #888',
+                  }}
+                  placeholder="0"
+                />
               </div>
-              <div>
-                Your $NXT is on-chain. Credit is being processed and will
-                appear in {dev.name}'s balance shortly. This window will close
-                automatically when the credit lands.
+
+              {/* Preset buttons */}
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+                {presets.map(v => (
+                  <button key={v} className="win-btn" onClick={() => setAmount(String(v))}
+                    disabled={stage !== 'idle' || hasPending}
+                    style={{ flex: 1, fontSize: '12px', padding: '2px' }}>{v}</button>
+                ))}
+                <button className="win-btn" onClick={() => setAmount(String(Math.floor(walletBal || 0)))}
+                  disabled={stage !== 'idle' || !walletBal || hasPending}
+                  style={{ flex: 1, fontSize: '12px', padding: '2px' }}>ALL</button>
               </div>
-              {pendingPollState === 'slow' && (
-                <div style={{ marginTop: '6px', fontSize: '11px', opacity: 0.85 }}>
-                  Taking longer than expected — the engine worker runs every
-                  ~5 min. Safe to close this window; your funds are not lost.
+
+              {hasPending && stage !== 'success' && (
+                <div style={{
+                  fontSize: '11px', color: 'var(--amber-on-grey, #7a5500)',
+                  background: 'rgba(255, 204, 0, 0.12)', border: '1px solid rgba(255, 204, 0, 0.4)',
+                  padding: '6px 8px', marginBottom: '8px', lineHeight: 1.4,
+                }}>
+                  On-chain tx confirmed. Retrying credit — do NOT sign a new one.
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Action button */}
-          <button className="win-btn" onClick={doFund}
-            disabled={!canFund}
-            style={{
-              width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
-              color: canFund ? '#005500' : '#888',
-              border: canFund ? '2px outset #aaa' : undefined,
-            }}>
-            {stage === 'idle' && !hasPending && `\uD83D\uDCB0 FUND ${dev.name}`}
-            {stage === 'idle' && hasPending && `\uD83D\uDD04 Retry credit (${pendingTx.amount} $NXT)`}
-            {stage === 'signing' && 'Confirm in MetaMask...'}
-            {stage === 'mining' && (hasPending ? 'Retrying credit...' : 'Processing...')}
-            {stage === 'pending' && '\u23F3 Processing credit...'}
-            {stage === 'success' && '\u2705 Funded!'}
-            {stage === 'error' && '\u274C Failed — Try Again'}
-          </button>
+              {/* Action button */}
+              <button className="win-btn" onClick={doFund}
+                disabled={!canFund}
+                style={{
+                  width: '100%', padding: '6px', fontSize: '14px', fontWeight: 'bold',
+                  color: canFund ? '#005500' : '#888',
+                  border: canFund ? '2px outset #aaa' : undefined,
+                }}>
+                {stage === 'idle' && !hasPending && `\uD83D\uDCB0 FUND ${dev.name}`}
+                {stage === 'idle' && hasPending && `\uD83D\uDD04 Retry credit (${pendingTx.amount} $NXT)`}
+                {stage === 'signing' && 'Confirm in MetaMask...'}
+                {stage === 'mining' && (hasPending ? 'Retrying credit...' : 'Processing...')}
+                {stage === 'success' && '\u2705 Funded!'}
+                {stage === 'error' && '\u274C Failed — Try Again'}
+              </button>
 
-          {stage === 'error' && errorMsg && (
-            <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
-          )}
-          {stage === 'error' && (
-            <button className="win-btn" onClick={() => setStage('idle')}
-              style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
-              {hasPending ? 'Retry credit' : 'Try Again'}
-            </button>
-          )}
+              {stage === 'error' && errorMsg && (
+                <div style={{ fontSize: '11px', color: '#aa0000', marginTop: '4px' }}>{errorMsg}</div>
+              )}
+              {stage === 'error' && (
+                <button className="win-btn" onClick={() => setStage('idle')}
+                  style={{ marginTop: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                  {hasPending ? 'Retry credit' : 'Try Again'}
+                </button>
+              )}
 
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
-            Transfers $NXT from your MetaMask to your dev's in-game balance.
-          </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
+                Transfers $NXT from your MetaMask to your dev's in-game balance.
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
