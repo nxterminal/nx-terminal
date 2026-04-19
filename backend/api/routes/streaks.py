@@ -15,16 +15,34 @@ log = logging.getLogger("nx_api")
 
 router = APIRouter()
 
-# Reward tiers by streak day (closest lower tier lookup)
-STREAK_REWARDS = {1: 50, 2: 75, 3: 100, 5: 200, 7: 500, 14: 750, 30: 1500}
-_SORTED_TIERS = sorted(STREAK_REWARDS.keys(), reverse=True)
+# Rewards form a 7-day cycle that repeats indefinitely while the user
+# keeps their streak alive: day 1 → small, day 7 → milestone, day 8
+# wraps back to day 1 with the same small reward. longest_streak is
+# still monotonic (bragging rights).
+CYCLE_LENGTH = 7
+CYCLE_REWARDS = {1: 50, 2: 75, 3: 100, 4: 150, 5: 200, 6: 350, 7: 500}
 
 
+def compute_cycle_day(current_streak: int) -> int:
+    """Return the 1-indexed day within the 7-day cycle for ``current_streak``.
+
+    Day 1 → 1, day 7 → 7, day 8 → 1, day 14 → 7. For streak <= 0 we
+    clamp to 1 so the next-reward preview always resolves cleanly.
+    """
+    if current_streak < 1:
+        return 1
+    return ((current_streak - 1) % CYCLE_LENGTH) + 1
+
+
+def compute_reward(current_streak: int) -> int:
+    return CYCLE_REWARDS[compute_cycle_day(current_streak)]
+
+
+# Back-compat shim: callers used to pass a "day" and expect a reward.
+# Semantics now route through the cycle table. Kept so any stray
+# imports stay compiling while we transition.
 def calculate_reward(day: int) -> int:
-    for d in _SORTED_TIERS:
-        if day >= d:
-            return STREAK_REWARDS[d]
-    return 50
+    return compute_reward(day)
 
 
 class StreakClaimRequest(BaseModel):
@@ -42,7 +60,8 @@ async def get_streak(wallet: str = Query(...)):
     if not row:
         return {
             "current_streak": 0, "longest_streak": 0, "can_claim": True,
-            "next_reward": calculate_reward(1), "next_day": 1,
+            "next_reward": compute_reward(1), "next_day": 1,
+            "day_in_cycle": 1, "cycle_length": CYCLE_LENGTH,
             "last_claim_date": None, "total_claimed_nxt": 0,
         }
 
@@ -52,10 +71,13 @@ async def get_streak(wallet: str = Query(...)):
     if last == today:
         return {
             "current_streak": streak, "longest_streak": row["longest_streak"],
-            "can_claim": False, "next_reward": calculate_reward(streak + 1),
-            "next_day": streak + 1, "last_claim_date": str(last),
+            "can_claim": False, "next_reward": compute_reward(streak + 1),
+            "next_day": streak + 1,
+            "day_in_cycle": compute_cycle_day(streak),
+            "cycle_length": CYCLE_LENGTH,
+            "last_claim_date": str(last),
             "total_claimed_nxt": row["total_claimed_nxt"],
-            "claimed_today": calculate_reward(streak),
+            "claimed_today": compute_reward(streak),
         }
 
     if last == today - timedelta(days=1):
@@ -67,8 +89,10 @@ async def get_streak(wallet: str = Query(...)):
         "current_streak": streak if next_day > 1 else 0,
         "longest_streak": row["longest_streak"],
         "can_claim": True,
-        "next_reward": calculate_reward(next_day),
+        "next_reward": compute_reward(next_day),
         "next_day": next_day,
+        "day_in_cycle": compute_cycle_day(next_day),
+        "cycle_length": CYCLE_LENGTH,
         "last_claim_date": str(last) if last else None,
         "total_claimed_nxt": row["total_claimed_nxt"],
     }
@@ -99,7 +123,7 @@ async def claim_streak(req: StreakClaimRequest):
             else:
                 new_streak = 1
 
-            reward = calculate_reward(new_streak)
+            reward = compute_reward(new_streak)
 
             # Upsert streak
             cur.execute("""
@@ -176,9 +200,16 @@ async def claim_streak(req: StreakClaimRequest):
                   f"— NX Terminal Human Resources Department\n"
                   f"   (HR does not read replies. HR does not care.)"))
 
+    day_in_cycle = compute_cycle_day(new_streak)
     return {
         "success": True, "streak": new_streak, "reward": reward,
         "dev_name": dev["name"], "dev_id": dev["token_id"],
         "longest_streak": max(new_streak, row["longest_streak"] if row else 0),
-        "message": f"Day {new_streak}! +{reward} $NXT to {dev['name']}",
+        "day_in_cycle": day_in_cycle,
+        "cycle_length": CYCLE_LENGTH,
+        "next_reward": compute_reward(new_streak + 1),
+        "message": (
+            f"Day {day_in_cycle} of {CYCLE_LENGTH} — streak {new_streak}! "
+            f"+{reward} $NXT to {dev['name']}"
+        ),
     }

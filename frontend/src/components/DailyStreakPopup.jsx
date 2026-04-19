@@ -41,7 +41,18 @@ export default function DailyStreakPopup() {
 
   if (!data || dismissed) return null;
 
-  const day = result ? result.streak : data.next_day;
+  // Cycle day = ((streak - 1) mod 7) + 1, clamped at [1..7]. Prefer the
+  // value the backend returns; fall back to a local compute in the
+  // (brief) window where a stale backend hasn't shipped day_in_cycle
+  // yet. The raw streak still drives longest-streak messaging.
+  const cycleLength = (result?.cycle_length ?? data.cycle_length ?? 7);
+  const absoluteDay = result ? result.streak : data.next_day;
+  const dayInCycle = (
+    result?.day_in_cycle ??
+    data.day_in_cycle ??
+    Math.max(1, ((absoluteDay - 1) % cycleLength) + 1)
+  );
+  const day = dayInCycle;
   const reward = result ? result.reward : data.next_reward;
 
   return (
@@ -82,7 +93,7 @@ export default function DailyStreakPopup() {
           {!result ? (
             <>
               <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 12 }}>
-                DAILY ATTENDANCE — DAY {data.next_day}
+                DAILY ATTENDANCE — DAY {dayInCycle} OF {cycleLength}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
                 {Array.from({ length: Math.min(day, 7) }, (_, i) => (
@@ -129,7 +140,7 @@ export default function DailyStreakPopup() {
                 +{result.reward} $NXT
               </div>
               <div style={{ color: '#cfcfcf', fontSize: 13, marginBottom: 4 }}>
-                Day {result.streak} streak — {result.dev_name}
+                Day {dayInCycle} of {cycleLength} · streak {result.streak} — {result.dev_name}
               </div>
               <div style={{ color: '#cfcfcf', fontSize: 12, marginBottom: 16 }}>
                 Check your inbox for confirmation.

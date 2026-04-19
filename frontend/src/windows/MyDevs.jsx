@@ -417,13 +417,20 @@ function DevImageModal({ dev, onClose }) {
           display: 'flex', gap: '8px', padding: '0 12px 12px',
         }}>
           <button
-            onClick={downloadGif}
+            onClick={mode === 'pfp' ? undefined : downloadGif}
+            disabled={mode === 'pfp'}
+            title={mode === 'pfp'
+              ? 'Cropped GIF not available yet — use PNG for the PFP view.'
+              : 'Download the full animated GIF'}
             style={{
               flex: 1, padding: '6px 10px',
-              background: '#30d868', color: '#080810',
-              border: 'none', cursor: 'pointer',
+              background: mode === 'pfp' ? '#5a6278' : '#30d868',
+              color: mode === 'pfp' ? '#a0a6b8' : '#080810',
+              border: 'none',
+              cursor: mode === 'pfp' ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit', fontSize: '14px', fontWeight: 'bold',
               letterSpacing: '0.5px',
+              opacity: mode === 'pfp' ? 0.65 : 1,
             }}
           >{'\u2193'} GIF</button>
           <button
@@ -445,7 +452,7 @@ function DevImageModal({ dev, onClose }) {
           textAlign: 'center',
         }}>
           {dlStatus || (mode === 'pfp'
-            ? 'PFP: head/neck crop. PNG renders the same zoom at 1000×1000.'
+            ? 'PFP: head/neck crop. GIF disabled in this view — use PNG for the cropped download.'
             : 'FULL BODY: complete frame. PNG renders 1000×1000.')}
         </div>
       </div>
@@ -2045,30 +2052,92 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   );
 }
 
-// Dev action notification types shown in Activity tab
-const DEV_ACTION_NOTIF_TYPES = ['protocol_created', 'ai_created', 'invest', 'sell', 'code_review'];
-
+// Icon/colour mapping keyed on the nx.actions action_type enum. The
+// Activity tab reads /api/players/{wallet}/activity (see api.js) which
+// exposes the full log, not the previous 5-type notifications slice.
+// Unlisted types fall back to [?] + terminal-green.
 const ACTION_ICONS = {
-  protocol_created: '[P]',
-  ai_created: '[AI]',
-  invest: '[$$]',
-  sell: '[$$]',
-  code_review: '[CR]',
-  prompt_response: '[>]',
+  CREATE_PROTOCOL: '[P]',
+  CREATE_AI:       '[AI]',
+  INVEST:          '[$$]',
+  SELL:            '[$$]',
+  CODE_REVIEW:     '[CR]',
+  MOVE:            '[>>]',
+  CHAT:            '[..]',
+  REST:            '[ZZ]',
+  RECEIVE_SALARY:  '[$]',
+  USE_ITEM:        '[U]',
+  GET_SABOTAGED:   '[X]',
+  DEPLOY:          '[D]',
+  FUND_DEV:        '[+$]',
+  TRANSFER:        '[->]',
+  HACK_MAINFRAME:  '[!]',
 };
 
-// Kept deliberately high-contrast on both the dark terminal background and
-// the classic Win98 gray. Amber (#ffaa00) read as dim orange on black and was
-// reported as hard to read, so code_review now uses green and the gold
-// variants are brightened to match the rest of the terminal palette.
+// Kept deliberately high-contrast on both the dark terminal background
+// and the classic Win98 gray. Amber (#ffaa00) read as dim orange on
+// black and was reported as hard to read, so code_review uses green.
 const ACTION_COLORS = {
-  protocol_created: 'var(--terminal-green, #33ff33)',
-  ai_created: 'var(--terminal-cyan, #00ffff)',
-  invest: 'var(--terminal-green, #33ff33)',
-  sell: 'var(--terminal-green, #33ff33)',
-  code_review: 'var(--terminal-green, #33ff33)',
-  prompt_response: 'var(--terminal-green, #33ff33)',
+  CREATE_PROTOCOL: 'var(--terminal-green, #33ff33)',
+  CREATE_AI:       'var(--terminal-cyan, #00ffff)',
+  INVEST:          'var(--terminal-green, #33ff33)',
+  SELL:            'var(--terminal-green, #33ff33)',
+  CODE_REVIEW:     'var(--terminal-green, #33ff33)',
+  MOVE:            'var(--terminal-cyan, #00ffff)',
+  CHAT:            'var(--terminal-amber, #ffaa00)',
+  REST:            'var(--text-muted, #888)',
+  RECEIVE_SALARY:  'var(--gold, #ffd700)',
+  USE_ITEM:        'var(--terminal-cyan, #00ffff)',
+  GET_SABOTAGED:   'var(--terminal-red, #ff4444)',
+  DEPLOY:          'var(--terminal-green, #33ff33)',
+  FUND_DEV:        'var(--gold, #ffd700)',
+  TRANSFER:        'var(--terminal-cyan, #00ffff)',
+  HACK_MAINFRAME:  'var(--terminal-red, #ff4444)',
 };
+
+// Build a short human-readable summary from an action row. Details is
+// a JSONB blob whose shape varies by action_type; we pull the most
+// useful fields when we recognise the type and fall back to a compact
+// key/value list otherwise. Values are clamped so nothing overflows.
+function summarizeActionDetails(actionType, details) {
+  const d = details || {};
+  switch (actionType) {
+    case 'CREATE_PROTOCOL':
+      return d.protocol_name || d.name || 'new protocol';
+    case 'CREATE_AI':
+      return d.ai_name || d.name || 'new AI';
+    case 'INVEST':
+      return d.target
+        ? `invested ${d.amount ?? '?'} in ${d.target}`
+        : `invested ${d.amount ?? '?'}`;
+    case 'SELL':
+      return `sold${d.target ? ' ' + d.target : ''}${d.amount != null ? ` for ${d.amount}` : ''}`;
+    case 'MOVE':
+      return d.to ? `moved to ${d.to}` : (d.location || 'moved');
+    case 'CHAT':
+      return typeof d.message === 'string' ? d.message.slice(0, 140) : 'chat';
+    case 'CODE_REVIEW':
+      return d.target ? `reviewed ${d.target}` : 'code review';
+    case 'REST':
+      return d.energy_restored ? `rested (+${d.energy_restored} energy)` : 'resting';
+    case 'RECEIVE_SALARY':
+      return d.amount ? `salary +${d.amount} $NXT` : 'salary';
+    case 'FUND_DEV':
+      return d.amount ? `funded +${d.amount} $NXT` : 'funded';
+    case 'TRANSFER':
+      return d.amount != null
+        ? `transfer ${d.amount} $NXT${d.to_dev_name ? ' → ' + d.to_dev_name : ''}`
+        : 'transfer';
+    default: {
+      // Generic fallback: first string / number value, capped.
+      for (const [k, v] of Object.entries(d)) {
+        if (typeof v === 'string' && v.length < 160) return `${k}: ${v}`;
+        if (typeof v === 'number') return `${k}: ${v}`;
+      }
+      return '';
+    }
+  }
+}
 
 function formatActivityTime(ts) {
   if (!ts) return '-';
@@ -2089,11 +2158,9 @@ function ActivityTab({ walletAddress, devs }) {
     if (!walletAddress) { setLoading(false); return; }
 
     const fetchActivities = () => {
-      api.getNotifications(walletAddress)
-        .then(notifs => {
-          if (!Array.isArray(notifs)) { setActivities([]); return; }
-          const devActions = notifs.filter(n => DEV_ACTION_NOTIF_TYPES.includes(n.type));
-          setActivities(devActions);
+      api.getWalletActivity(walletAddress, { limit: 200 })
+        .then(res => {
+          setActivities(Array.isArray(res?.activity) ? res.activity : []);
         })
         .catch(() => setActivities([]))
         .finally(() => setLoading(false));
@@ -2110,7 +2177,7 @@ function ActivityTab({ walletAddress, devs }) {
     ? activities
     : activities.filter(a => a.dev_id === Number(filterDev));
 
-  // Build dev name map
+  // Build dev name map (for the rare case `a.dev_name` is missing).
   const devNameMap = {};
   (devs || []).forEach(d => { devNameMap[d.token_id] = d.name; });
 
@@ -2161,9 +2228,10 @@ function ActivityTab({ walletAddress, devs }) {
         ) : (
           <div className="terminal" style={{ padding: '4px 8px' }}>
             {filtered.map((a, i) => {
-              const icon = ACTION_ICONS[a.type] || '[?]';
-              const color = ACTION_COLORS[a.type] || '#888';
-              const devName = devNameMap[a.dev_id] || (a.dev_id ? `Dev #${a.dev_id}` : '');
+              const icon = ACTION_ICONS[a.action_type] || '[?]';
+              const color = ACTION_COLORS[a.action_type] || 'var(--terminal-green, #33ff33)';
+              const devName = a.dev_name || devNameMap[a.dev_id] || (a.dev_id ? `Dev #${a.dev_id}` : '');
+              const summary = summarizeActionDetails(a.action_type, a.details);
               return (
                 <div key={a.id || i} style={{
                   padding: '5px 0',
@@ -2175,7 +2243,7 @@ function ActivityTab({ walletAddress, devs }) {
                       {icon}
                     </span>
                     <span style={{ fontWeight: 'bold', color, fontSize: '13px', fontFamily: "'VT323', monospace" }}>
-                      {a.title}
+                      {a.action_type}
                     </span>
                     <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '12px', flexShrink: 0, fontFamily: "'VT323', monospace" }}>
                       {formatActivityTime(a.created_at)}
@@ -2192,7 +2260,7 @@ function ActivityTab({ walletAddress, devs }) {
                         {devName}:{' '}
                       </span>
                     )}
-                    {a.body ? a.body.slice(0, 200) : ''}
+                    {summary}
                   </div>
                 </div>
               );
@@ -2241,14 +2309,15 @@ export default function MyDevs({ openDevProfile }) {
     return () => clearInterval(interval);
   }, [address, hasMissions]);
 
-  // Fetch activity count for badge
+  // Fetch activity count for the tab badge. nx.actions has no read/unread
+  // concept, so we just surface the recent-activity size (capped by the
+  // endpoint's LIMIT) — clamped at 99 so the label stays tight.
   useEffect(() => {
     if (!address) return;
-    api.getNotifications(address)
-      .then(notifs => {
-        if (!Array.isArray(notifs)) return;
-        const unread = notifs.filter(n => DEV_ACTION_NOTIF_TYPES.includes(n.type) && !n.read).length;
-        setActivityCount(unread);
+    api.getWalletActivity(address, { limit: 100 })
+      .then(res => {
+        const n = Array.isArray(res?.activity) ? res.activity.length : 0;
+        setActivityCount(Math.min(n, 99));
       })
       .catch(() => {});
   }, [address]);
