@@ -107,6 +107,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, from_dev_token_id, to_dev_token_id, amount }),
     }),
+  getPendingFundStatus: (tx_hash) =>
+    fetchJSON(`${API_BASE}/api/shop/pending-funds/status/${tx_hash}`),
 
   // Players
   getPlayer: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}`),

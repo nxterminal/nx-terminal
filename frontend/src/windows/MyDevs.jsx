@@ -572,6 +572,11 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
   // hash + amount here so "Try Again" retries the backend call with the same
   // tx instead of signing (and paying for) a fresh one.
   const [pendingTx, setPendingTx] = useState(null); // { hash, amount } | null
+  // Hash of the tx that landed in `pending` stage — drives the status poller
+  // below. Separate from `pendingTx` because pendingTx is cleared on entering
+  // the pending stage (so the close-guard stops warning).
+  const [pendingStatusHash, setPendingStatusHash] = useState(null);
+  const [pendingPollState, setPendingPollState] = useState(null); // 'slow' | null
 
   useEffect(() => {
     if (!address) return;
@@ -579,6 +584,34 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
       .then(wei => setWalletBal(Number(formatUnits(wei, 18))))
       .catch(() => setWalletBal(null));
   }, [address]);
+
+  // While the tx is sitting in pending_fund_txs, poll the backend every 15s.
+  // Flip to 'success' the moment the engine worker credits it so the user
+  // sees the updated balance instead of waiting out the 4.5s close timeout.
+  useEffect(() => {
+    if (stage !== 'pending' || !pendingStatusHash) return;
+    let cancelled = false;
+    let polls = 0;
+    const tick = async () => {
+      try {
+        const res = await api.getPendingFundStatus(pendingStatusHash);
+        if (cancelled) return;
+        if (res?.status === 'credited') {
+          setStage('success');
+          setPendingStatusHash(null);
+          setPendingPollState(null);
+          setTimeout(() => onClose(), 1500);
+          return;
+        }
+        polls += 1;
+        if (polls >= 2) setPendingPollState('slow');
+      } catch {
+        // Transient failures are fine — next tick retries.
+      }
+    };
+    const id = setInterval(tick, 15000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [stage, pendingStatusHash, onClose]);
 
   const amountNum = parseInt(amount, 10) || 0;
   const hasPending = pendingTx !== null;
@@ -632,10 +665,12 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
         // Backend couldn't fetch the receipt in time but persisted the tx
         // in pending_fund_txs — the engine worker will credit the dev once
         // the RPC node indexes it. Clear the client-side pendingTx so the
-        // user can close without the warning dialog.
+        // user can close without the warning dialog, and remember the hash
+        // so the status poller can upgrade stage → success on credit.
         setStage('pending');
         setPendingTx(null);
-        setTimeout(() => onClose(), 4500);
+        setPendingStatusHash(txHash);
+        setPendingPollState(null);
         return;
       }
       setStage('success');
@@ -770,8 +805,15 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               </div>
               <div>
                 Your $NXT is on-chain. Credit is being processed and will
-                appear in {dev.name}'s balance shortly. You can close this window.
+                appear in {dev.name}'s balance shortly. This window will close
+                automatically when the credit lands.
               </div>
+              {pendingPollState === 'slow' && (
+                <div style={{ marginTop: '6px', fontSize: '11px', opacity: 0.85 }}>
+                  Taking longer than expected — the engine worker runs every
+                  ~5 min. Safe to close this window; your funds are not lost.
+                </div>
+              )}
             </div>
           )}
 
