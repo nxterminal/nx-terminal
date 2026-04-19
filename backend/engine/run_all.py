@@ -7,10 +7,23 @@ import sys
 import os
 import threading
 import time
+from pathlib import Path
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-# Add engine directory to path
+# Defense-in-depth against a broken PYTHONPATH in the deploy target.
+# A previous incident: the Render start command was
+#   `cd backend/engine && PYTHONPATH=. python run_all.py`
+# which put only backend/engine on sys.path. `from backend.services...`
+# then raised ImportError and the engine-level try/except silently
+# disabled every shadow write for hours. Make sure the project root is
+# on sys.path no matter how this script is invoked, so backend.* imports
+# below (and inside engine.py) can never regress into silent failure.
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+# Add engine directory to path (for flat imports like `import engine`).
 engine_dir = os.path.dirname(os.path.abspath(__file__))
 if engine_dir not in sys.path:
     sys.path.insert(0, engine_dir)
