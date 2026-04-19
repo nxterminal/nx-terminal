@@ -1687,7 +1687,7 @@ def scan_orphaned_funds(conn):
         head_hex = _fund_rpc("eth_blockNumber", [])
         if not head_hex:
             log.warning("scan_orphaned_funds: could not get chain head")
-            return
+            return 0
 
         head = int(head_hex, 16)
         from_block = max(0, head - _ORPHAN_SCAN_WINDOW)
@@ -1717,7 +1717,7 @@ def scan_orphaned_funds(conn):
 
         if not all_events:
             log.info("  scan_orphaned_funds: no Transfer events found")
-            return
+            return 0
 
         log.info(
             f"  scan_orphaned_funds: found {len(all_events)} Transfer "
@@ -1865,9 +1865,11 @@ def scan_orphaned_funds(conn):
             f"  scan_orphaned_funds complete: credited={credited}, "
             f"already_recorded={skipped}"
         )
+        return credited
 
     except Exception as e:
         log.error(f"scan_orphaned_funds error: {e}")
+        return 0
 
 
 def run_engine():
@@ -1945,6 +1947,27 @@ def run_engine():
             log.info("💰 Initial salary paid on engine startup")
     except Exception as e:
         log.error(f"Initial salary payment failed: {e}")
+
+    # Run the orphan scanner immediately at startup — catches any
+    # Transfer(*, TREASURY) events accumulated while the engine was
+    # down (deploy, crash, maintenance). Non-blocking: a failure here
+    # is logged but can never prevent the engine from entering its
+    # main loop, where the periodic scan will eventually retry.
+    try:
+        with get_db() as conn:
+            credited = scan_orphaned_funds(conn) or 0
+            log.info(
+                f"🧹 Startup orphan scan complete: credited={credited}"
+            )
+            if admin_log_event is not None:
+                with conn.cursor() as cur:
+                    admin_log_event(
+                        cur,
+                        event_type="engine_startup_orphan_scan",
+                        payload={"orphans_credited": credited},
+                    )
+    except Exception as e:
+        log.error(f"Startup orphan scan failed (non-fatal): {e}")
 
     last_salary = datetime.now(timezone.utc)
     last_snapshot = datetime.now(timezone.utc)

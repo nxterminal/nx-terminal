@@ -137,26 +137,31 @@ def _build_alerts(
         })
 
     if stuck_pending_count > 0:
-        oldest_age_minutes = None
+        oldest_age_minutes: Optional[int] = None
         if stuck_pending_oldest is not None:
             try:
                 from datetime import datetime, timezone
-                oldest_age_minutes = (
-                    datetime.now(timezone.utc) - stuck_pending_oldest
-                ).total_seconds() / 60
+                oldest_age_minutes = int(
+                    (datetime.now(timezone.utc) - stuck_pending_oldest)
+                    .total_seconds() / 60
+                )
             except Exception:  # noqa: BLE001
                 oldest_age_minutes = None
         alerts.append({
             "severity": "warning",
             "type": "pending_fund_txs_slow",
             "message": (
-                f"{stuck_pending_count} pending_fund_txs unresolved >30min "
-                f"(total {stuck_pending_total_nxt} NXT). "
-                "Check pending_fund_txs; consider backfill_funds.py."
+                f"{stuck_pending_count} pending_fund_txs unresolved >10min "
+                f"(total {stuck_pending_total_nxt} NXT)."
             ),
             "count": stuck_pending_count,
             "oldest_age_minutes": oldest_age_minutes,
-            "total_amount_nxt": stuck_pending_total_nxt,
+            "total_amount_nxt": str(stuck_pending_total_nxt),
+            "hint": (
+                "Check pending_fund_txs. If stuck, use "
+                "POST /api/admin/pending-funds/{id}/reset or run "
+                "backfill_funds.py manually."
+            ),
         })
 
     return alerts
@@ -237,9 +242,10 @@ async def economy_summary(request: Request) -> Dict[str, Any]:
             pending_count = int(pending["n"])
             pending_total = int(pending["total"])
 
-            # pending_fund_txs older than 30 min and still unresolved.
+            # pending_fund_txs older than 10 min and still unresolved.
             # Under normal load the 30s worker drains these in < 2 min,
-            # so >30min is always worth investigating.
+            # so >10min is already an early warning that ops should
+            # investigate (likely reset + backfill) before users notice.
             try:
                 cur.execute(
                     """
@@ -248,7 +254,7 @@ async def economy_summary(request: Request) -> Dict[str, Any]:
                            COALESCE(SUM(amount_nxt), 0) AS total_nxt
                       FROM pending_fund_txs
                      WHERE resolved = false
-                       AND created_at < NOW() - INTERVAL '30 minutes'
+                       AND created_at < NOW() - INTERVAL '10 minutes'
                     """
                 )
                 stuck = cur.fetchone()
