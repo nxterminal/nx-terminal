@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.api.deps import get_db
+from backend.services.admin_log import log_event
 
 
 router = APIRouter()
@@ -308,3 +309,61 @@ async def economy_summary(request: Request) -> Dict[str, Any]:
         },
         "alerts": alerts,
     }
+
+
+# ── Admin: reset the retry counter on a stuck pending fund ────────
+@router.post("/pending-funds/{pending_id}/reset")
+async def admin_reset_pending_fund(pending_id: int, request: Request) -> Dict[str, Any]:
+    """Reset ``attempts``, ``last_attempt_at`` and ``last_error`` on a
+    single unresolved ``pending_fund_txs`` row so ``process_pending_funds``
+    picks it up again on its next tick. Never flips ``resolved`` —
+    crediting still goes through the normal dedup-protected path. The
+    reset itself is persisted in ``admin_logs`` for audit.
+    """
+    admin_wallet = _require_admin(request)
+    if pending_id <= 0:
+        raise HTTPException(status_code=400, detail="pending_id must be > 0")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, tx_hash, wallet_address, dev_token_id, resolved, "
+                "attempts FROM pending_fund_txs WHERE id = %s FOR UPDATE",
+                (pending_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Pending fund not found")
+            if row["resolved"]:
+                raise HTTPException(
+                    status_code=400, detail="Pending fund already resolved"
+                )
+
+            cur.execute(
+                "UPDATE pending_fund_txs "
+                "SET attempts = 0, last_attempt_at = NULL, last_error = NULL "
+                "WHERE id = %s",
+                (pending_id,),
+            )
+
+            log_event(
+                cur,
+                event_type="admin_pending_fund_reset",
+                wallet_address=admin_wallet,
+                dev_token_id=row["dev_token_id"],
+                payload={
+                    "pending_fund_id": pending_id,
+                    "tx_hash": row["tx_hash"],
+                    "target_wallet": row["wallet_address"],
+                    "prev_attempts": row["attempts"],
+                },
+            )
+
+    return {
+        "ok": True,
+        "id": pending_id,
+        "tx_hash": row["tx_hash"],
+        "prev_attempts": row["attempts"],
+    }
+
+

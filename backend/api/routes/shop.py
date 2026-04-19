@@ -1349,3 +1349,46 @@ async def transfer_nxt(req: TransferRequest):
         "updated_from": updated_map.get(req.from_dev_token_id),
         "updated_to": updated_map.get(req.to_dev_token_id),
     }
+
+
+@router.get("/pending-funds/status/{tx_hash}")
+async def pending_fund_status(tx_hash: str):
+    """Return the credit state of a single on-chain fund transfer.
+
+    Statuses:
+      - ``credited`` — ``funding_txs`` row exists (or pending is resolved)
+      - ``pending``  — ``pending_fund_txs`` row exists and is unresolved
+      - ``unknown``  — backend has never seen this tx_hash
+    """
+    tx = (tx_hash or "").strip().lower()
+    if not tx.startswith("0x") or len(tx) != 66:
+        raise HTTPException(status_code=400, detail="Invalid tx_hash")
+    try:
+        int(tx, 16)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid tx_hash")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM funding_txs WHERE tx_hash = %s LIMIT 1", (tx,))
+            credited = cur.fetchone() is not None
+
+            cur.execute(
+                "SELECT id, resolved, attempts, last_error "
+                "FROM pending_fund_txs WHERE tx_hash = %s",
+                (tx,),
+            )
+            pending = cur.fetchone()
+
+    if credited:
+        return {"status": "credited", "tx_hash": tx}
+    if not pending:
+        return {"status": "unknown", "tx_hash": tx}
+    if pending["resolved"]:
+        return {"status": "credited", "tx_hash": tx}
+    return {
+        "status": "pending",
+        "tx_hash": tx,
+        "attempts": pending["attempts"],
+        "last_error": pending["last_error"],
+    }
