@@ -123,6 +123,13 @@ export const api = {
   getWalletSummary: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/wallet-summary`),
   getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),
   getMovements: (wallet, limit = 50) => fetchJSON(`${API_BASE}/api/players/${wallet}/movements?limit=${limit}`),
+  getWalletActivity: (wallet, { limit, dev_token_id } = {}) => {
+    const params = new URLSearchParams();
+    if (limit != null) params.set('limit', String(limit));
+    if (dev_token_id != null) params.set('dev_token_id', String(dev_token_id));
+    const q = params.toString();
+    return fetchJSON(`${API_BASE}/api/players/${wallet}/activity${q ? `?${q}` : ''}`);
+  },
 
   // Notifications
   getNotifications: (wallet, unread = false) =>

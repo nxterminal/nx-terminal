@@ -548,6 +548,60 @@ def _reconstruct_balance_history(addr: str, days: int):
     return result
 
 
+@router.get("/{wallet}/activity")
+async def get_wallet_activity(
+    wallet: str,
+    limit: int = Query(default=100, le=500),
+    dev_token_id: Optional[int] = Query(default=None),
+):
+    """Full per-wallet action log, sourced from nx.actions.
+
+    Unlike /movements (which filters to a handful of economic types for
+    the balance view), this returns every action_type so the MyDevs
+    Activity tab can show CHAT, MOVE, REST, CODE_REVIEW, etc. — the
+    actual work the devs do cycle after cycle.
+    """
+    addr = validate_wallet(wallet)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            if dev_token_id is not None:
+                cur.execute(
+                    """
+                    SELECT a.id, a.dev_id, a.dev_name, a.archetype,
+                           a.action_type, a.details, a.nxt_cost, a.energy_cost,
+                           a.created_at
+                      FROM actions a
+                      JOIN devs d ON d.token_id = a.dev_id
+                     WHERE LOWER(d.owner_address) = %s
+                       AND a.dev_id = %s
+                     ORDER BY a.created_at DESC
+                     LIMIT %s
+                    """,
+                    (addr, dev_token_id, limit),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT a.id, a.dev_id, a.dev_name, a.archetype,
+                           a.action_type, a.details, a.nxt_cost, a.energy_cost,
+                           a.created_at
+                      FROM actions a
+                      JOIN devs d ON d.token_id = a.dev_id
+                     WHERE LOWER(d.owner_address) = %s
+                     ORDER BY a.created_at DESC
+                     LIMIT %s
+                    """,
+                    (addr, limit),
+                )
+            rows = cur.fetchall()
+
+    return {
+        "activity": [dict(r) for r in rows],
+        "total": len(rows),
+    }
+
+
 @router.get("/{wallet}/movements")
 async def get_movements(wallet: str, limit: int = Query(default=50, le=200), offset: int = 0):
     """Get unified movement log: salaries, actions, claims, shop purchases.
