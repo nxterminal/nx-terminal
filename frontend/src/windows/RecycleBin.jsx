@@ -96,7 +96,7 @@ export default function RecycleBin() {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontSize: '11px',
+        fontSize: 'var(--text-sm)',
       }}>
         <span style={{ fontWeight: 'bold' }}>Recycle Bin</span>
         <span style={{ color: 'var(--text-secondary)' }}>|</span>
@@ -107,7 +107,7 @@ export default function RecycleBin() {
             <button
               className="win-btn"
               onClick={() => setSelectedIdx(null)}
-              style={{ fontSize: '10px', padding: '1px 8px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
             >
               Back to list
             </button>
@@ -156,15 +156,15 @@ export default function RecycleBin() {
           }}>
             <span style={{ fontSize: '28px' }}>{selected.icon}</span>
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{selected.name}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)' }}>{selected.name}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 {selected.type} — {selected.size} — Deleted {selected.deleted}
               </div>
             </div>
           </div>
           <pre style={{
             fontFamily: "'Tahoma', sans-serif",
-            fontSize: '11px',
+            fontSize: 'var(--text-sm)',
             whiteSpace: 'pre-wrap',
             lineHeight: 1.6,
             padding: '8px',
@@ -174,10 +174,10 @@ export default function RecycleBin() {
             {selected.detail}
           </pre>
           <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
+            <button className="win-btn" style={{ fontSize: 'var(--text-xs)', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
               Restore (not available)
             </button>
-            <button className="win-btn" style={{ fontSize: '10px', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
+            <button className="win-btn" style={{ fontSize: 'var(--text-xs)', padding: '3px 12px', color: 'var(--text-muted)', cursor: 'not-allowed' }} disabled>
               Delete permanently (why bother)
             </button>
           </div>

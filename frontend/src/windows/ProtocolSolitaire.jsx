@@ -90,13 +90,13 @@ function CardFace({ card }) {
       boxSizing: 'border-box', position: 'relative',
       fontFamily: "'Georgia', serif", userSelect: 'none',
     }}>
-      <div style={{ position: 'absolute', top: '2px', left: '4px', color, fontSize: '12px', fontWeight: 'bold', lineHeight: 1 }}>
+      <div style={{ position: 'absolute', top: '2px', left: '4px', color, fontSize: 'var(--text-sm)', fontWeight: 'bold', lineHeight: 1 }}>
         <div>{card.rank}</div>
-        <div style={{ fontSize: '11px' }}>{card.suit}</div>
+        <div style={{ fontSize: 'var(--text-sm)' }}>{card.suit}</div>
       </div>
-      <div style={{ position: 'absolute', bottom: '2px', right: '4px', color, fontSize: '12px', fontWeight: 'bold', lineHeight: 1, transform: 'rotate(180deg)' }}>
+      <div style={{ position: 'absolute', bottom: '2px', right: '4px', color, fontSize: 'var(--text-sm)', fontWeight: 'bold', lineHeight: 1, transform: 'rotate(180deg)' }}>
         <div>{card.rank}</div>
-        <div style={{ fontSize: '11px' }}>{card.suit}</div>
+        <div style={{ fontSize: 'var(--text-sm)' }}>{card.suit}</div>
       </div>
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '26px', color }}>
         {card.suit}
@@ -331,19 +331,19 @@ export default function ProtocolSolitaire() {
         display: 'flex', gap: '12px', alignItems: 'center', padding: '4px 8px',
         background: 'var(--win-bg, #c0c0c0)', borderBottom: '1px solid var(--border-dark, #808080)', justifyContent: 'center',
       }}>
-        <div style={{ fontSize: '11px' }}>Moves: <b>{moves}</b></div>
-        <button className="win-btn" onClick={newGame} style={{ fontSize: '10px' }}>New Game</button>
-        <button className="win-btn" onClick={toggleDrawCount} style={{ fontSize: '10px' }}>
+        <div style={{ fontSize: 'var(--text-sm)' }}>Moves: <b>{moves}</b></div>
+        <button className="win-btn" onClick={newGame} style={{ fontSize: 'var(--text-xs)' }}>New Game</button>
+        <button className="win-btn" onClick={toggleDrawCount} style={{ fontSize: 'var(--text-xs)' }}>
           Draw {drawCount === 1 ? '3' : '1'}
         </button>
-        <div style={{ fontSize: '11px' }}>Time: <b>{time}s</b></div>
-        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Mode: Draw {drawCount}</div>
+        <div style={{ fontSize: 'var(--text-sm)' }}>Time: <b>{time}s</b></div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Mode: Draw {drawCount}</div>
       </div>
 
       {won && (
         <div style={{
           textAlign: 'center', padding: '8px', background: '#004400', color: '#33ff33',
-          fontFamily: "'VT323', monospace", fontSize: '16px', fontWeight: 'bold',
+          fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', fontWeight: 'bold',
         }}>
           YOU WIN! Completed in {moves} moves ({time}s)
         </div>

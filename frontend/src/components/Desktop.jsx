@@ -249,8 +249,10 @@ export default function Desktop() {
     // Apply theme on mount
     const theme = localStorage.getItem('nx-theme') || 'classic';
     document.documentElement.setAttribute('data-theme', theme);
-    // Apply text scale on mount (Win98 chrome only; programs keep their own sizing)
-    const textScale = localStorage.getItem('nx-text-scale') || 'medium';
+    // Apply text scale on mount. Default 'xlarge' matches native
+    // Windows Explorer on modern displays; users who picked another
+    // tier via Control Panel keep it (localStorage persists).
+    const textScale = localStorage.getItem('nx-text-scale') || 'xlarge';
     document.documentElement.setAttribute('data-text-scale', textScale);
   }, []);
 

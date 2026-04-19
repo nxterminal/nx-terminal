@@ -53,7 +53,7 @@ export default function BSOD({ onDismiss }) {
       background: '#000080',
       color: '#ffffff',
       fontFamily: "'Courier New', monospace",
-      fontSize: '14px',
+      fontSize: 'var(--text-base)',
       padding: '40px 60px',
       zIndex: 99999,
       lineHeight: 1.6,

@@ -106,7 +106,7 @@ export default function WorldChat() {
         background: 'var(--terminal-bg)',
         color: 'var(--terminal-amber)',
         fontFamily: "'VT323', monospace",
-        fontSize: '14px',
+        fontSize: 'var(--text-base)',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
@@ -123,7 +123,7 @@ export default function WorldChat() {
               className="win-btn"
               onClick={connect}
               disabled={isConnecting}
-              style={{ fontSize: '10px', padding: '2px 8px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '2px 8px' }}
             >
               {isConnecting ? 'Connecting...' : 'Connect Wallet'}
             </button>
@@ -140,8 +140,8 @@ export default function WorldChat() {
           alignItems: 'center',
           gap: '8px',
         }}>
-          <span style={{ fontSize: '14px', fontFamily: "'VT323', monospace" }}>[X]</span>
-          <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+          <span style={{ fontSize: 'var(--text-base)', fontFamily: "'VT323', monospace" }}>[X]</span>
+          <span style={{ color: 'var(--terminal-red)', fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)' }}>
             ERROR: {error}
           </span>
         </div>
@@ -198,7 +198,7 @@ export default function WorldChat() {
             flex: 1,
             padding: '2px 6px',
             fontFamily: "'Tahoma', sans-serif",
-            fontSize: '11px',
+            fontSize: 'var(--text-sm)',
             border: 'none',
             boxShadow: 'inset -1px -1px 0 var(--border-light), inset 1px 1px 0 var(--border-dark)',
             cursor: isConnected ? 'text' : 'not-allowed',
@@ -208,7 +208,7 @@ export default function WorldChat() {
           className="win-btn"
           onClick={sendMessage}
           disabled={!isConnected || !inputValue.trim() || sending}
-          style={{ fontSize: '10px' }}
+          style={{ fontSize: 'var(--text-xs)' }}
         >
           {sending ? 'Sending...' : 'Send'}
         </button>

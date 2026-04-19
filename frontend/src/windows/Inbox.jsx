@@ -207,7 +207,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontSize: '11px',
+        fontSize: 'var(--text-sm)',
       }}>
         <span style={{ fontWeight: 'bold' }}>NX Mail</span>
         <span style={{ color: 'var(--text-secondary)' }}>|</span>
@@ -219,7 +219,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
               className="win-btn"
               onClick={() => { setComposing(true); setSelectedId(null); setComposeStatus(null); }}
               disabled={!wallet}
-              style={{ fontSize: '10px', padding: '1px 8px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
             >
               {'\u2709'} New
             </button>
@@ -231,7 +231,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             <button
               className="win-btn"
               onClick={() => { setComposing(false); setComposeStatus(null); }}
-              style={{ fontSize: '10px', padding: '1px 8px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
             >
               Back to Inbox
             </button>
@@ -242,7 +242,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             <button
               className="win-btn"
               onClick={() => setSelectedId(null)}
-              style={{ fontSize: '10px', padding: '1px 8px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
             >
               Back to Inbox
             </button>
@@ -257,21 +257,21 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                   className="win-btn"
                   onClick={handleMarkSelectedRead}
                   disabled={selectedUnreadCount === 0}
-                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                  style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
                 >
                   Mark as Read ({selectedUnreadCount})
                 </button>
                 <button
                   className="win-btn"
                   onClick={() => setShowDeleteConfirm(true)}
-                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                  style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
                 >
                   Delete ({selectedIds.size})
                 </button>
                 <button
                   className="win-btn"
                   onClick={() => setSelectedIds(new Set())}
-                  style={{ fontSize: '10px', padding: '1px 8px' }}
+                  style={{ fontSize: 'var(--text-xs)', padding: '1px 8px' }}
                 >
                   Clear
                 </button>
@@ -294,7 +294,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
               onClick={() => setActiveGroup(g)}
               style={{
                 padding: '2px 8px',
-                fontSize: '10px',
+                fontSize: 'var(--text-xs)',
                 fontFamily: "'Tahoma', sans-serif",
                 cursor: 'pointer',
                 border: 'none',
@@ -316,11 +316,11 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
 
       {composing && !selectedEmail ? (
         <div style={{ flex: 1, overflow: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '11px' }}>
+          <div style={{ fontSize: 'var(--text-sm)' }}>
             <span style={{ fontWeight: 'bold' }}>To:</span>{' '}
             <span style={{ color: 'var(--text-secondary)' }}>NX Terminal Support</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)' }}>
             <span style={{ fontWeight: 'bold' }}>Subject:</span>
             <input
               type="text"
@@ -329,7 +329,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
               maxLength={200}
               placeholder="Brief description..."
               style={{
-                flex: 1, padding: '2px 4px', fontSize: '11px',
+                flex: 1, padding: '2px 4px', fontSize: 'var(--text-sm)',
                 boxShadow: 'inset 1px 1px 0 var(--border-dark), inset -1px -1px 0 var(--border-light)',
                 border: 'none',
               }}
@@ -342,14 +342,14 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             placeholder="Your message..."
             rows={10}
             style={{
-              flex: 1, padding: '4px', fontSize: '11px',
+              flex: 1, padding: '4px', fontSize: 'var(--text-sm)',
               fontFamily: "'Tahoma', sans-serif",
               boxShadow: 'inset 1px 1px 0 var(--border-dark), inset -1px -1px 0 var(--border-light)',
               border: 'none', resize: 'vertical',
             }}
           />
           {composeStatus && (
-            <div style={{ fontSize: '10px', color: composeStatus.includes('sent') || composeStatus.includes('Ticket') ? 'var(--green-on-grey)' : 'var(--red-on-grey)' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: composeStatus.includes('sent') || composeStatus.includes('Ticket') ? 'var(--green-on-grey)' : 'var(--red-on-grey)' }}>
               {composeStatus}
             </div>
           )}
@@ -379,14 +379,14 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
                 }
                 setComposeSending(false);
               }}
-              style={{ fontSize: '10px', padding: '2px 12px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '2px 12px' }}
             >
               Send
             </button>
             <button
               className="win-btn"
               onClick={() => { setComposing(false); setComposeStatus(null); }}
-              style={{ fontSize: '10px', padding: '2px 12px' }}
+              style={{ fontSize: 'var(--text-xs)', padding: '2px 12px' }}
             >
               Cancel
             </button>
@@ -459,13 +459,13 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
       ) : (
         <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
           <div style={{ marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-dark)' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>{selectedEmail.subject}</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>From: {selectedEmail.from}</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Date: {selectedEmail.date}</div>
+            <div style={{ fontWeight: 'bold', fontSize: 'var(--text-base)', marginBottom: '4px' }}>{selectedEmail.subject}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>From: {selectedEmail.from}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Date: {selectedEmail.date}</div>
           </div>
           <pre style={{
             fontFamily: "'Tahoma', sans-serif",
-            fontSize: '11px',
+            fontSize: 'var(--text-sm)',
             whiteSpace: 'pre-wrap',
             lineHeight: 1.5,
           }}>
@@ -500,27 +500,27 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
           >
             <div style={{
               background: 'linear-gradient(90deg, var(--win-title-l), var(--win-title-r))',
-              color: '#fff', padding: '3px 6px', fontSize: '12px', fontWeight: 'bold',
+              color: '#fff', padding: '3px 6px', fontSize: 'var(--text-sm)', fontWeight: 'bold',
             }}>
               NX Terminal — Confirm Delete
             </div>
             <div style={{ padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', marginBottom: '14px', lineHeight: 1.4 }}>
+              <div style={{ fontSize: 'var(--text-sm)', marginBottom: '14px', lineHeight: 1.4 }}>
                 {'\u26A0\uFE0F'} Are you sure you want to delete {selectedIds.size} email{selectedIds.size > 1 ? 's' : ''}?
                 <br /><br />
-                <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
                   HR advises against destroying corporate correspondence.
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                 <button className="win-btn"
                   onClick={() => { handleDeleteSelected(); setShowDeleteConfirm(false); }}
-                  style={{ padding: '4px 24px', fontSize: '11px', fontWeight: 'bold', minWidth: 72 }}
+                  style={{ padding: '4px 24px', fontSize: 'var(--text-sm)', fontWeight: 'bold', minWidth: 72 }}
                   autoFocus
                 >Delete</button>
                 <button className="win-btn"
                   onClick={() => setShowDeleteConfirm(false)}
-                  style={{ padding: '4px 24px', fontSize: '11px', minWidth: 72 }}
+                  style={{ padding: '4px 24px', fontSize: 'var(--text-sm)', minWidth: 72 }}
                 >Cancel</button>
               </div>
             </div>

@@ -32,7 +32,7 @@ export default function LockedProgram({ programId, programName, devCount, openWi
       <div style={{ fontSize: '36px' }}>&#x1F512;</div>
 
       <div style={{
-        fontSize: '18px', fontWeight: 'bold',
+        fontSize: 'var(--text-xl)', fontWeight: 'bold',
         color: 'var(--terminal-amber, #ffaa00)',
       }}>
         ACCESS RESTRICTED
@@ -45,14 +45,14 @@ export default function LockedProgram({ programId, programName, devCount, openWi
         background: 'rgba(0,0,0,0.3)',
       }}>
         <div style={{
-          fontSize: '16px', fontWeight: 'bold',
+          fontSize: 'var(--text-lg)', fontWeight: 'bold',
           color: 'var(--terminal-cyan, #00ffff)',
           textTransform: 'uppercase', marginBottom: '6px',
         }}>
           {programName || programId}
         </div>
         {description && (
-          <div style={{ fontSize: '13px', color: 'var(--text-muted, #999)', lineHeight: 1.4 }}>
+          <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted, #999)', lineHeight: 1.4 }}>
             {description}
           </div>
         )}
@@ -60,7 +60,7 @@ export default function LockedProgram({ programId, programName, devCount, openWi
 
       {/* Requirements */}
       <div style={{
-        fontSize: '14px', color: 'var(--text-primary, #ccc)',
+        fontSize: 'var(--text-base)', color: 'var(--text-primary, #ccc)',
         display: 'flex', flexDirection: 'column', gap: '4px',
       }}>
         <div>
@@ -76,7 +76,7 @@ export default function LockedProgram({ programId, programName, devCount, openWi
       </div>
 
       <div style={{
-        fontSize: '15px', color: 'var(--terminal-amber, #ffaa00)',
+        fontSize: 'var(--text-lg)', color: 'var(--terminal-amber, #ffaa00)',
         fontWeight: 'bold', marginTop: '4px',
       }}>
         Mint {devsNeeded} more dev{devsNeeded !== 1 ? 's' : ''} to unlock!
@@ -86,14 +86,14 @@ export default function LockedProgram({ programId, programName, devCount, openWi
         <button
           className="win-btn"
           onClick={() => openWindow?.('hire-devs')}
-          style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: '12px' }}
+          style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}
         >
           Mint Devs
         </button>
         <button
           className="win-btn"
           onClick={onClose}
-          style={{ padding: '4px 16px', fontSize: '12px' }}
+          style={{ padding: '4px 16px', fontSize: 'var(--text-sm)' }}
         >
           Close
         </button>

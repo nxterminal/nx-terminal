@@ -52,13 +52,13 @@ export default function WelcomeScreen({ onComplete }) {
         <div style={{ fontSize: '48px', marginBottom: '8px', letterSpacing: '2px' }}>
           Welcome
         </div>
-        <div style={{ fontSize: '18px', color: '#d0d0d0', marginBottom: '32px' }}>
+        <div style={{ fontSize: 'var(--text-xl)', color: '#d0d0d0', marginBottom: '32px' }}>
           NX Terminal Corp. — Protocol Wars Division
         </div>
 
         {phase === 'loading' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '14px', color: '#b0b0b0' }}>
+            <div style={{ fontSize: 'var(--text-base)', color: '#b0b0b0' }}>
               Loading your personal settings...
             </div>
             <div style={{

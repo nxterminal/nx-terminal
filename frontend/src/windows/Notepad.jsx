@@ -166,7 +166,7 @@ export default function Notepad() {
             key={note.id}
             onClick={() => setActiveId(note.id)}
             style={{
-              fontSize: '10px',
+              fontSize: 'var(--text-xs)',
               padding: '3px 10px 2px',
               border: '1px solid var(--border-darker)',
               borderBottom: note.id === activeId ? '1px solid #fffff8' : '1px solid var(--border-darker)',
@@ -200,7 +200,7 @@ export default function Notepad() {
             borderTop: '1px solid var(--border-darker)',
             outline: 'none',
             fontFamily: "'Courier New', monospace",
-            fontSize: '12px',
+            fontSize: 'var(--text-sm)',
             lineHeight: 1.5,
             padding: '8px',
             background: '#fffff8',
@@ -216,7 +216,7 @@ export default function Notepad() {
         display: 'flex',
         justifyContent: 'space-between',
         padding: '2px 8px',
-        fontSize: '10px',
+        fontSize: 'var(--text-xs)',
         color: 'var(--text-secondary)',
         borderTop: '1px solid var(--border-dark)',
         background: 'var(--win-bg)',

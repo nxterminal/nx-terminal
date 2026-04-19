@@ -104,11 +104,11 @@ export default function BugSweeper() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', background: 'var(--win-bg)', height: '100%' }}>
       <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '8px', width: '100%', justifyContent: 'center' }}>
-        <div className="win-panel" style={{ padding: '2px 6px', fontFamily: "'VT323', monospace", fontSize: '20px', color: 'var(--terminal-red)', minWidth: '50px', textAlign: 'center' }}>
+        <div className="win-panel" style={{ padding: '2px 6px', fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)', color: 'var(--terminal-red)', minWidth: '50px', textAlign: 'center' }}>
           {String(MINE_COUNT - flagCount).padStart(3, '0')}
         </div>
-        <button className="win-btn" onClick={reset} style={{ fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>{smiley}</button>
-        <div className="win-panel" style={{ padding: '2px 6px', fontFamily: "'VT323', monospace", fontSize: '20px', color: 'var(--terminal-red)', minWidth: '50px', textAlign: 'center' }}>
+        <button className="win-btn" onClick={reset} style={{ fontSize: 'var(--text-xl)', padding: '2px 6px', lineHeight: 1 }}>{smiley}</button>
+        <div className="win-panel" style={{ padding: '2px 6px', fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)', color: 'var(--terminal-red)', minWidth: '50px', textAlign: 'center' }}>
           {String(Math.min(time, 999)).padStart(3, '0')}
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function BugSweeper() {
               let color = '#000';
               let style = {
                 width: '24px', height: '24px', border: 'none', cursor: 'pointer', padding: 0,
-                fontWeight: 'bold', fontSize: '14px', fontFamily: "'Tahoma', sans-serif",
+                fontWeight: 'bold', fontSize: 'var(--text-base)', fontFamily: "'Tahoma', sans-serif",
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               };
               if (cell.revealed) {

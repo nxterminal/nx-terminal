@@ -315,13 +315,13 @@ function FeedMessage({ item, isNew, isOwnDev }) {
               justifyContent: isOwnDev ? 'flex-end' : 'flex-start',
             }}
           >
-            <span style={{ color: nameColor, fontWeight: 'bold', fontSize: '13px' }}>
+            <span style={{ color: nameColor, fontWeight: 'bold', fontSize: 'var(--text-base)' }}>
               {item.dev_name || 'Unknown'}
             </span>
             {archetype && (
               <span
                 style={{
-                  fontSize: '10px',
+                  fontSize: 'var(--text-xs)',
                   color: '#888',
                   background: 'rgba(255,255,255,0.05)',
                   padding: '1px 5px',
@@ -332,11 +332,11 @@ function FeedMessage({ item, isNew, isOwnDev }) {
               </span>
             )}
             {corpDisplay && (
-              <span style={{ color: '#555', fontSize: '10px' }}>
+              <span style={{ color: '#555', fontSize: 'var(--text-xs)' }}>
                 {corpDisplay}
               </span>
             )}
-            <span style={{ color: '#333', fontSize: '10px' }}>
+            <span style={{ color: '#333', fontSize: 'var(--text-xs)' }}>
               {formatTime(item.created_at)}
             </span>
           </div>
@@ -353,7 +353,7 @@ function FeedMessage({ item, isNew, isOwnDev }) {
               {meta && (
                 <span
                   style={{
-                    fontSize: '9px',
+                    fontSize: 'var(--text-xs)',
                     color: meta.color,
                     border: `1px solid ${meta.color}55`,
                     padding: '1px 4px',
@@ -381,7 +381,7 @@ function FeedMessage({ item, isNew, isOwnDev }) {
               <span
                 style={{
                   color: '#66ff66',
-                  fontSize: '12px',
+                  fontSize: 'var(--text-sm)',
                   opacity: 0.7,
                   fontWeight: 'bold',
                   whiteSpace: 'nowrap',
@@ -517,7 +517,7 @@ export default function LiveFeed() {
             : mintedDevs === 0 ? 'var(--border-dark)' : 'var(--terminal-amber)',
           display: 'inline-block',
         }} />
-        <span style={{ fontSize: '11px' }}>
+        <span style={{ fontSize: 'var(--text-sm)' }}>
           {hasBackendData
             ? 'LIVE'
             : mintedDevs > 0
@@ -528,7 +528,7 @@ export default function LiveFeed() {
         <button
           className="win-btn"
           onClick={() => setScrollLock(s => !s)}
-          style={{ fontSize: '10px', padding: '1px 6px' }}
+          style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }}
         >
           {scrollLock ? 'Scroll: LOCKED' : 'Scroll: AUTO'}
         </button>
@@ -546,8 +546,8 @@ export default function LiveFeed() {
       >
         {mintedDevs === 0 && visibleFeed.length === 0 && !hasBackendData ? (
           <div style={{ padding: '20px', color: 'var(--terminal-amber)', fontFamily: "'VT323', monospace" }}>
-            <div style={{ marginBottom: '12px', fontSize: '16px' }}>{'>'} LIVE FEED -- INACTIVE</div>
-            <div style={{ color: '#cfcfcf', fontSize: '14px', lineHeight: 1.6 }}>
+            <div style={{ marginBottom: '12px', fontSize: 'var(--text-lg)' }}>{'>'} LIVE FEED -- INACTIVE</div>
+            <div style={{ color: '#cfcfcf', fontSize: 'var(--text-base)', lineHeight: 1.6 }}>
               No developers deployed yet.
               <br />
               <br />

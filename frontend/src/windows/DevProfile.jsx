@@ -31,7 +31,7 @@ function StatBar({ label, value, max = 100 }) {
   const barColor = pct > 66 ? '#33ff33' : pct > 33 ? '#ffaa00' : '#ff4444';
   const textColor = pct > 66 ? 'var(--green-on-grey)' : pct > 33 ? 'var(--amber-on-grey)' : 'var(--red-on-grey)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-sm)' }}>
       <span style={{ width: '60px', color: 'var(--text-muted, #aaa)', textTransform: 'capitalize' }}>{label}</span>
       <div style={{
         flex: 1, height: '8px', background: 'var(--terminal-bg, #1a1a1a)',
@@ -50,7 +50,7 @@ function StatBar({ label, value, max = 100 }) {
 function TraitRow({ label, value }) {
   if (!value) return null;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '2px 0' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', padding: '2px 0' }}>
       <span style={{ color: 'var(--text-muted, #888)' }}>{label}</span>
       <span style={{ fontWeight: 'bold', textTransform: 'capitalize', color: 'var(--text-primary, #fff)' }}>{value.replace(/_/g, ' ')}</span>
     </div>
@@ -89,7 +89,7 @@ function PromptInput({ devId, devName }) {
       padding: '6px 8px', borderTop: '1px solid var(--border-dark)',
       display: 'flex', gap: '4px', alignItems: 'center',
     }}>
-      <span style={{ fontSize: '11px', color: 'var(--terminal-green)', fontFamily: "'VT323', monospace", flexShrink: 0 }}>{'>'}</span>
+      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--terminal-green)', fontFamily: "'VT323', monospace", flexShrink: 0 }}>{'>'}</span>
       <input
         type="text"
         value={text}
@@ -101,19 +101,19 @@ function PromptInput({ devId, devName }) {
         style={{
           flex: 1, background: 'var(--terminal-bg, #111)', color: 'var(--terminal-green, #33ff33)',
           border: '1px solid var(--border-dark, #444)', padding: '3px 6px',
-          fontFamily: "'VT323', monospace", fontSize: '13px', outline: 'none',
+          fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)', outline: 'none',
         }}
       />
       <button
         className="win-btn"
         onClick={handleSend}
         disabled={!text.trim() || status === 'sending' || !address}
-        style={{ fontSize: '10px', padding: '2px 10px', flexShrink: 0 }}
+        style={{ fontSize: 'var(--text-xs)', padding: '2px 10px', flexShrink: 0 }}
       >
         {status === 'sending' ? '...' : 'Send'}
       </button>
-      {status === 'sent' && <span style={{ fontSize: '10px', color: 'var(--terminal-green)' }}>Queued!</span>}
-      {status === 'error' && <span style={{ fontSize: '10px', color: 'var(--terminal-red)' }}>{errorMsg}</span>}
+      {status === 'sent' && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--terminal-green)' }}>Queued!</span>}
+      {status === 'error' && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--terminal-red)' }}>{errorMsg}</span>}
     </div>
   );
 }
@@ -222,11 +222,11 @@ export default function DevProfile({ devId }) {
               justifyContent: 'center', color: 'var(--text-muted, #555)', fontFamily: "'VT323', monospace",
             }}>
               {imgStatus === 'loading' && gifUrl ? (
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>...</div>
+                <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>...</div>
               ) : (
                 <>
                   <div style={{ fontSize: '36px', color: arcColor }}>@</div>
-                  <div style={{ fontSize: '11px' }}>#{dev.token_id || devId}</div>
+                  <div style={{ fontSize: 'var(--text-sm)' }}>#{dev.token_id || devId}</div>
                 </>
               )}
             </div>
@@ -236,22 +236,22 @@ export default function DevProfile({ devId }) {
         {/* Name + meta */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'var(--text-primary)' }}>{dev.name}</span>
-            <span style={{ color: arcColor, fontWeight: 'bold', fontSize: '11px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: 'var(--text-lg)', color: 'var(--text-primary)' }}>{dev.name}</span>
+            <span style={{ color: arcColor, fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>
               [{dev.archetype}]
             </span>
             {dev.rarity_tier && (
-              <span style={{ fontSize: '10px', color: rarityColor, fontWeight: 'bold', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: rarityColor, fontWeight: 'bold', textTransform: 'uppercase' }}>
                 {dev.rarity_tier}
               </span>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary, #888)' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary, #888)' }}>
             {dev.corporation && <span>{dev.corporation.replace(/_/g, ' ')}</span>}
             {dev.species && <span> | {dev.species}</span>}
             <span> | Token #{dev.token_id || devId}</span>
           </div>
-          <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '2px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--text-sm)', marginTop: '2px', flexWrap: 'wrap' }}>
             <span style={{ color: energyColor }}>
               Energy: {dev.energy ?? 0}/{dev.max_energy ?? 10}
             </span>
@@ -266,7 +266,7 @@ export default function DevProfile({ devId }) {
       {/* ── Dynamic Status Bar ── */}
       <div style={{
         display: 'flex', gap: '12px', padding: '6px 10px',
-        background: 'var(--terminal-bg)', fontSize: '11px',
+        background: 'var(--terminal-bg)', fontSize: 'var(--text-sm)',
         fontFamily: "'VT323', monospace",
         borderBottom: '1px solid var(--border-dark)',
         flexWrap: 'wrap',
@@ -290,7 +290,7 @@ export default function DevProfile({ devId }) {
         <div style={{ display: 'flex', gap: '4px', padding: '6px 6px 0' }}>
           {hasStats && (
             <div className="win-panel" style={{ flex: 1, padding: '6px 8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
                 STATS
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -306,7 +306,7 @@ export default function DevProfile({ devId }) {
 
           {hasTraits && (
             <div className="win-panel" style={{ flex: 1, padding: '6px 8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', marginBottom: '4px', color: 'var(--cyan-on-grey)' }}>
                 PERSONALITY
               </div>
               <TraitRow label="Alignment" value={dev.alignment} />
@@ -323,37 +323,37 @@ export default function DevProfile({ devId }) {
       <div className="stats-grid" style={{ padding: '4px 6px' }}>
         <div className="stat-box win-panel">
           <div className="stat-label">Earned</div>
-          <div className="stat-value" style={{ color: 'var(--gold-on-grey)', fontSize: '12px' }}>
+          <div className="stat-value" style={{ color: 'var(--gold-on-grey)', fontSize: 'var(--text-sm)' }}>
             {formatNumber(dev.total_earned)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Spent</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+          <div className="stat-value" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
             {formatNumber(dev.total_spent)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Coffee</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+          <div className="stat-value" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
             {dev.coffee_count || 0}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Lines</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+          <div className="stat-value" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
             {formatNumber(dev.lines_of_code)}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">Bugs</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--red-on-grey)' }}>
+          <div className="stat-value" style={{ fontSize: 'var(--text-sm)', color: 'var(--red-on-grey)' }}>
             {dev.bugs_shipped || 0}
           </div>
         </div>
         <div className="stat-box win-panel">
           <div className="stat-label">No Sleep</div>
-          <div className="stat-value" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+          <div className="stat-value" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
             {dev.hours_since_sleep || 0}h
           </div>
         </div>
@@ -362,34 +362,34 @@ export default function DevProfile({ devId }) {
       {/* ── Actions (Shop) ── */}
       {address && (
         <div style={{ padding: '4px 6px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted, #888)', fontWeight: 'bold' }}>SHOP:</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted, #888)', fontWeight: 'bold' }}>SHOP:</span>
           <button className="win-btn" onClick={() => doShopAction('coffee', '☕ Coffee')}
             title={energyFull ? "Energy is full" : "☕ Coffee: 3 $NXT → +25 caffeine"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }} disabled={shopBusy}>
             ☕ Coffee 3
           </button>
           <button className="win-btn" onClick={() => doShopAction('carrot', '🥕 Carrot')}
             title="🥕 Carrot: 8 $NXT → +5 energy"
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }} disabled={shopBusy}>
             🥕 Carrot 8
           </button>
           <button className="win-btn" onClick={() => doShopAction('pizza', '🍕 Pizza')}
             title="🍕 Pizza: 20 $NXT → +10 energy"
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }} disabled={shopBusy}>
             🍕 Pizza 20
           </button>
           <button className="win-btn" onClick={() => doShopAction('burger', '🍔 Burger')}
             title="🍔 Burger: 40 $NXT → +18 energy"
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }} disabled={shopBusy}>
             🍔 Burger 40
           </button>
           <button className="win-btn" onClick={() => doShopAction('pc_repair', '🔧 PC Repair')}
             title={"🔧 PC Repair: 8 $NXT → restore PC health to 100%"}
-            style={{ fontSize: '10px', padding: '1px 6px' }} disabled={shopBusy}>
+            style={{ fontSize: 'var(--text-xs)', padding: '1px 6px' }} disabled={shopBusy}>
             🔧 Repair 8
           </button>
           {shopMsg && (
-            <span style={{ fontSize: '10px', color: shopMsg.color, fontWeight: 'bold' }}>{shopMsg.text}</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: shopMsg.color, fontWeight: 'bold' }}>{shopMsg.text}</span>
           )}
         </div>
       )}
