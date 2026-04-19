@@ -1052,33 +1052,70 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
 }
 
 // ── Transfer Modal ────────────────────────────────────────
-function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
-  const [toDevId, setToDevId] = useState('');
+function TransferModal({ dev, allDevs, address, onClose, onDevUpdate, mode = 'transfer' }) {
+  // Shared component for both outbound ('transfer') and inbound
+  // ('request') same-wallet NXT moves. The backend endpoint is the
+  // same in both cases — a 'request' is just a transfer with the
+  // from/to IDs swapped. The only runtime differences are the
+  // labels, which dev the dropdown lists, and which side's balance
+  // gates the amount. Kept in one component so any future tweak
+  // (ledger wiring, validation, chrome) lands on both flows at once.
+  const isRequest = mode === 'request';
+
+  const [otherDevId, setOtherDevId] = useState('');
   const [amount, setAmount] = useState('');
   const [stage, setStage] = useState('idle'); // idle | sending | success | error
   const [errorMsg, setErrorMsg] = useState('');
 
   const otherDevs = (allDevs || []).filter(d => d.token_id !== dev.token_id && !d._fetchFailed);
-  const selectedDev = otherDevs.find(d => d.token_id === Number(toDevId));
+  const selectedDev = otherDevs.find(d => d.token_id === Number(otherDevId));
   const amountNum = parseInt(amount, 10) || 0;
-  const canTransfer = amountNum > 0 && amountNum <= dev.balance_nxt && toDevId && stage === 'idle'
-    && selectedDev && selectedDev.status !== 'on_mission' && dev.status !== 'on_mission';
 
-  const doTransfer = async () => {
-    if (!canTransfer) return;
+  // Which side's balance gates the amount?
+  //   transfer: this dev gives → must have >= amount
+  //   request:  other dev gives → must have >= amount
+  const sourceDev = isRequest ? selectedDev : dev;
+  const sourceBalance = sourceDev ? sourceDev.balance_nxt : 0;
+
+  const canSubmit = (
+    amountNum > 0
+    && selectedDev
+    && amountNum <= sourceBalance
+    && stage === 'idle'
+    && selectedDev.status !== 'on_mission'
+    && dev.status !== 'on_mission'
+  );
+
+  const doSubmit = async () => {
+    if (!canSubmit) return;
     setStage('sending');
     setErrorMsg('');
     try {
-      const res = await api.transferNxt(address, dev.token_id, Number(toDevId), amountNum);
+      // Swap from/to when in request mode. Same endpoint, same
+      // ledger entries (transfer_out + transfer_in), same audit.
+      const fromId = isRequest ? Number(otherDevId) : dev.token_id;
+      const toId   = isRequest ? dev.token_id : Number(otherDevId);
+      const res = await api.transferNxt(address, fromId, toId, amountNum);
       setStage('success');
       if (res.updated_from && onDevUpdate) onDevUpdate(res.updated_from);
       if (res.updated_to && onDevUpdate) onDevUpdate(res.updated_to);
       setTimeout(() => onClose(), 2500);
     } catch (err) {
       setStage('error');
-      setErrorMsg(err?.message || 'Transfer failed');
+      setErrorMsg(err?.message || (isRequest ? 'Request failed' : 'Transfer failed'));
     }
   };
+
+  const titleText = isRequest ? 'Request Funds' : 'Transfer Funds';
+  const subtitleText = isRequest
+    ? '"Pulling budget from another team. They love that."'
+    : '"Reallocating the budget. Standard corporate procedure."';
+  const fixedLabel = isRequest ? 'To:' : 'From:';
+  const dropdownLabel = isRequest ? 'From:' : 'To:';
+  const maxAmount = isRequest ? sourceBalance : dev.balance_nxt;
+  const footerText = isRequest
+    ? 'Pulls $NXT from another dev to this one. No blockchain transaction needed.'
+    : 'Moves $NXT between your devs. No blockchain transaction needed.';
 
   return (
     <div onClick={e => e.stopPropagation()} style={{
@@ -1096,7 +1133,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
           color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
-          <span>Transfer Funds</span>
+          <span>{titleText}</span>
           <button onClick={onClose} style={{
             background: '#c0c0c0', border: '1px outset #fff',
             fontWeight: 'bold', cursor: 'pointer', fontSize: 'var(--text-sm)',
@@ -1106,22 +1143,23 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
 
         <div style={{ padding: '12px', fontSize: 'var(--text-base)' }}>
           <div style={{ color: '#333', marginBottom: '8px', fontStyle: 'italic' }}>
-            "Reallocating the budget. Standard corporate procedure."
+            {subtitleText}
           </div>
 
           <div style={{ marginBottom: '6px' }}>
-            <span style={{ fontWeight: 'bold' }}>From:</span>{' '}
+            <span style={{ fontWeight: 'bold' }}>{fixedLabel}</span>{' '}
             <span style={{ color: 'var(--gold-on-grey, #7a5c00)' }}>
               {dev.name} ({formatNumber(dev.balance_nxt)} $NXT)
             </span>
           </div>
 
-          {/* Dev selector */}
+          {/* Dev selector (the counterparty — destination in transfer,
+              source in request). */}
           <div style={{ marginBottom: '8px' }}>
-            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>To:</label>
+            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>{dropdownLabel}</label>
             <select
-              value={toDevId}
-              onChange={e => setToDevId(e.target.value)}
+              value={otherDevId}
+              onChange={e => setOtherDevId(e.target.value)}
               disabled={stage !== 'idle'}
               style={{
                 width: '100%', padding: '4px', fontSize: 'var(--text-base)',
@@ -1132,25 +1170,30 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
               <option value="">Select dev...</option>
               {otherDevs.map(d => {
                 const onMission = d.status === 'on_mission';
+                // In request mode the counterparty supplies the funds,
+                // so a zero-balance dev is effectively unusable — we
+                // keep it selectable (so the user can see WHY it's
+                // greyed in the message) but mark the reason.
+                const noFunds = isRequest && d.balance_nxt <= 0;
                 return (
-                  <option key={d.token_id} value={d.token_id} disabled={onMission}>
-                    {d.name} ({formatNumber(d.balance_nxt)} $NXT){d.balance_nxt === 0 ? ' \u2190 needs funds!' : ''}{onMission ? ' [ON MISSION]' : ''}
+                  <option key={d.token_id} value={d.token_id} disabled={onMission || noFunds}>
+                    {d.name} ({formatNumber(d.balance_nxt)} $NXT){d.balance_nxt === 0 && !isRequest ? ' \u2190 needs funds!' : ''}{noFunds ? ' [NO FUNDS]' : ''}{onMission ? ' [ON MISSION]' : ''}
                   </option>
                 );
               })}
             </select>
           </div>
 
-          {/* Amount input */}
+          {/* Amount input — max adjusts with whichever dev is the source. */}
           <div style={{ marginBottom: '10px' }}>
             <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Amount:</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
                 type="number"
                 min="1"
-                max={dev.balance_nxt}
+                max={maxAmount}
                 value={amount}
-                onChange={e => setAmount(String(Math.min(Number(e.target.value) || 0, dev.balance_nxt)))}
+                onChange={e => setAmount(String(Math.min(Number(e.target.value) || 0, maxAmount || 0)))}
                 disabled={stage !== 'idle'}
                 style={{
                   width: '100px', padding: '6px 10px', fontSize: 'var(--text-xl)',
@@ -1162,23 +1205,39 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
                 placeholder="0"
               />
               <span style={{ fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
-                / {formatNumber(dev.balance_nxt)} $NXT
+                / {formatNumber(maxAmount)} $NXT
+                {isRequest && selectedDev && (
+                  <span style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--text-muted, #888)' }}>
+                    (available in {selectedDev.name})
+                  </span>
+                )}
               </span>
             </div>
           </div>
 
           {/* Action button */}
-          <button className="win-btn" onClick={doTransfer}
-            disabled={!canTransfer}
+          <button className="win-btn" onClick={doSubmit}
+            disabled={!canSubmit}
             style={{
               width: '100%', padding: '6px', fontSize: 'var(--text-base)', fontWeight: 'bold',
-              color: canTransfer ? '#005500' : '#888',
-              border: canTransfer ? '2px outset #aaa' : undefined,
+              color: canSubmit ? '#005500' : '#888',
+              border: canSubmit ? '2px outset #aaa' : undefined,
             }}>
-            {stage === 'idle' && '\uD83D\uDCBC TRANSFER'}
-            {stage === 'sending' && 'Processing...'}
-            {stage === 'success' && '\u2705 Transferred!'}
-            {stage === 'error' && '\u274C Failed'}
+            {isRequest ? (
+              <>
+                {stage === 'idle' && '\uD83D\uDCE5 REQUEST'}
+                {stage === 'sending' && 'Processing...'}
+                {stage === 'success' && '\u2705 Received!'}
+                {stage === 'error' && '\u274C Failed'}
+              </>
+            ) : (
+              <>
+                {stage === 'idle' && '\uD83D\uDCBC TRANSFER'}
+                {stage === 'sending' && 'Processing...'}
+                {stage === 'success' && '\u2705 Transferred!'}
+                {stage === 'error' && '\u274C Failed'}
+              </>
+            )}
           </button>
 
           {stage === 'error' && errorMsg && (
@@ -1192,7 +1251,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate }) {
           )}
 
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
-            Moves $NXT between your devs. No blockchain transaction needed.
+            {footerText}
           </div>
         </div>
       </div>
@@ -1307,8 +1366,8 @@ function StoneBtn({ emoji, label, onClick, disabled, title }) {
   );
 }
 
-// ── Econ Dropdown (FUND + SEND) ─────────────────────────
-function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
+// ── Econ Dropdown (FUND + TRANSFER + REQUEST) ───────────
+function EconDropdown({ dev, allDevs, busy, onFund, onTransfer, onRequest }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -1319,36 +1378,52 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer }) {
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
+  // REQUEST only works if at least one OTHER dev has funds to give.
+  // We don't need to check balance of `dev` itself — request is
+  // inbound, so a zero-balance dev is the most likely use case.
+  const requestAvailable = (allDevs || []).some(d =>
+    d.token_id !== dev.token_id && !d._fetchFailed && d.balance_nxt > 0
+  );
+
+  const itemStyle = (enabled) => ({
+    display: 'block', width: '100%', padding: '6px 8px', border: 'none',
+    background: 'transparent',
+    color: enabled ? '#1a2030' : '#555',
+    cursor: enabled ? 'pointer' : 'default',
+    fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
+    textAlign: 'left',
+  });
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <StoneBtn emoji={'\uD83D\uDCB0'} label="ECONOMY"
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
-        title="Fund or transfer $NXT" />
+        title="Fund, transfer, or request $NXT" />
       {open && (
         <div onClick={e => e.stopPropagation()} style={{
           position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
           zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
           boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
         }}>
-          <button onClick={(e) => { onFund(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
-            background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-            textAlign: 'left',
-          }}>{'\uD83D\uDCB0'} FUND</button>
+          <button onClick={(e) => { onFund(e); setOpen(false); }}
+            style={itemStyle(true)}
+          >{'\uD83D\uDCB0'} FUND</button>
+
           {allDevs && allDevs.length > 1 && (
             <button onClick={(e) => { onTransfer(e); setOpen(false); }}
               disabled={dev.balance_nxt <= 0}
-              style={{
-                display: 'block', width: '100%', padding: '6px 8px', border: 'none',
-                borderTop: '2px solid #3a4654',
-                background: 'transparent',
-                color: dev.balance_nxt <= 0 ? '#555' : '#1a2030',
-                cursor: dev.balance_nxt <= 0 ? 'default' : 'pointer',
-                fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-                textAlign: 'left',
-              }}>{'\uD83D\uDD04'} TRANSFER</button>
+              style={{ ...itemStyle(dev.balance_nxt > 0), borderTop: '2px solid #3a4654' }}
+              title={dev.balance_nxt <= 0 ? 'This dev has no funds to send' : undefined}
+            >{'\uD83D\uDD04'} TRANSFER</button>
+          )}
+
+          {allDevs && allDevs.length > 1 && onRequest && (
+            <button onClick={(e) => { onRequest(e); setOpen(false); }}
+              disabled={!requestAvailable}
+              style={{ ...itemStyle(requestAvailable), borderTop: '2px solid #3a4654' }}
+              title={!requestAvailable ? 'No other dev has funds to share' : 'Pull $NXT from another dev to this one'}
+            >{'\uD83D\uDCE5'} REQUEST</button>
           )}
         </div>
       )}
@@ -1666,6 +1741,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showFundModal, setShowFundModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
   const [spends, setSpends] = useState([]);
 
   const triggerChanges = useCallback((changes) => {
@@ -1958,7 +2034,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             title={pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
           <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
             onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }} />
+            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
+            onRequest={(e) => { e.stopPropagation(); setShowRequestModal(true); }} />
         </div>
       )}
 
@@ -1999,6 +2076,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       )}
       {showTransferModal && (
         <TransferModal dev={dev} allDevs={allDevs} address={address} onClose={() => setShowTransferModal(false)} onDevUpdate={onDevUpdate} />
+      )}
+      {showRequestModal && (
+        <TransferModal dev={dev} allDevs={allDevs} address={address} mode="request" onClose={() => setShowRequestModal(false)} onDevUpdate={onDevUpdate} />
       )}
       </div>{/* end grayscale wrapper */}
 
