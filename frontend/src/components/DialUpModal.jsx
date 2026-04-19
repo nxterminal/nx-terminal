@@ -62,7 +62,9 @@ export default function DialUpModal({ onComplete, onCancel }) {
           fontSize: 'var(--text-sm)',
           display: 'flex',
           alignItems: 'center',
-          height: '22px',
+          // 28px (was 22px) so a bold --text-sm (14px at xlarge) title
+          // sits comfortably; short default tiers still look fine.
+          minHeight: '28px',
         }}>
           Connecting to NX Terminal Corp.
         </div>

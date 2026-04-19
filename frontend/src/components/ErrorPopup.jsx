@@ -61,7 +61,9 @@ export default function ErrorPopup() {
         padding: '2px 6px',
         fontWeight: 'bold',
         fontSize: 'var(--text-sm)',
-        height: '22px',
+        // 28px (was 22px) so a bold --text-sm (14px at xlarge) title
+        // doesn't overflow the bar.
+        minHeight: '28px',
         display: 'flex',
         alignItems: 'center',
       }}>
