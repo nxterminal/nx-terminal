@@ -56,6 +56,282 @@ function notifToEmail(n) {
   };
 }
 
+// Wallets allowed to operate the Support Tickets admin panel. Kept in
+// sync with backend/api/routes/admin.py::ADMIN_WALLETS — the backend
+// remains the source of truth (any non-admin wallet gets 403 on these
+// endpoints), but mirroring the set client-side lets us hide the tab
+// from non-admin users so the UI doesn't advertise a feature they
+// can't reach.
+const TICKET_ADMIN_WALLETS = new Set([
+  '0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc',
+  '0xae882a8933b33429f53b7cee102ef3dbf9c9e88b',
+]);
+
+function isTicketAdmin(wallet) {
+  return !!wallet && TICKET_ADMIN_WALLETS.has(wallet.toLowerCase());
+}
+
+function formatTicketTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function shortWallet(w) {
+  if (!w || w.length < 10) return w || '';
+  return `${w.slice(0, 6)}…${w.slice(-4)}`;
+}
+
+function TicketReplyModal({ ticket, adminWallet, onClose, onReplied }) {
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  const MAX = 4000;
+  const canSend = text.trim().length > 0 && text.length <= MAX && !sending;
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    setSending(true);
+    setStatus(null);
+    try {
+      await api.replyToTicket(adminWallet, ticket.id, text.trim());
+      setStatus('sent');
+      if (onReplied) onReplied();
+    } catch (err) {
+      const msg = (typeof err.detail === 'string' ? err.detail : null)
+        || err.message || 'Failed to send reply';
+      setStatus(msg);
+      setSending(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+        zIndex: 10030, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="win-raised"
+        style={{ width: '520px', maxHeight: '80vh', background: 'var(--win-bg)', display: 'flex', flexDirection: 'column' }}
+      >
+        <div style={{
+          background: 'linear-gradient(90deg, #000080, #1084d0)',
+          color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
+          fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span>Reply to Ticket #{ticket.id}</span>
+          <button onClick={onClose} style={{
+            background: '#c0c0c0', border: '1px outset #fff',
+            fontWeight: 'bold', cursor: 'pointer', fontSize: 'var(--text-xs)',
+            padding: '0 4px', lineHeight: 1,
+          }}>X</button>
+        </div>
+
+        <div style={{ padding: '10px 12px', overflow: 'auto', fontSize: 'var(--text-sm)' }}>
+          <div className="win-panel" style={{ padding: '8px 10px', marginBottom: '10px' }}>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>From: </span>
+              <code style={{ fontFamily: "'VT323', monospace" }}>{ticket.player_address}</code>
+              {ticket.display_name && (
+                <span style={{ marginLeft: '6px', fontWeight: 'bold' }}>({ticket.display_name})</span>
+              )}
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Received: </span>
+              {new Date(ticket.created_at).toLocaleString()}
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Subject: </span>
+              <span style={{ fontWeight: 'bold' }}>{ticket.subject}</span>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+            Original message
+          </div>
+          <div className="win-panel" style={{
+            padding: '6px 8px', marginBottom: '10px',
+            maxHeight: '160px', overflowY: 'auto', whiteSpace: 'pre-wrap',
+            background: '#fff',
+          }}>
+            {ticket.message}
+          </div>
+
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+            Your reply (delivered as an in-game notification)
+          </div>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Type your reply..."
+            disabled={sending || status === 'sent'}
+            style={{
+              width: '100%', minHeight: '140px', padding: '6px 8px',
+              fontSize: 'var(--text-sm)', fontFamily: "'Tahoma', sans-serif",
+              boxShadow: 'inset 1px 1px 0 var(--border-dark), inset -1px -1px 0 var(--border-light)',
+              border: 'none', resize: 'vertical', boxSizing: 'border-box',
+            }}
+          />
+          <div style={{
+            display: 'flex', justifyContent: 'space-between',
+            fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
+            marginTop: '4px',
+          }}>
+            <span>{text.length}/{MAX}</span>
+            {status && status !== 'sent' && (
+              <span style={{ color: 'var(--red-on-grey)' }}>{status}</span>
+            )}
+            {status === 'sent' && (
+              <span style={{ color: 'var(--green-on-grey)' }}>Reply sent. Ticket closed.</span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ padding: '8px 12px', display: 'flex', gap: '6px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-dark)' }}>
+          <button
+            className="win-btn"
+            onClick={onClose}
+            style={{ fontSize: 'var(--text-xs)', padding: '3px 14px' }}
+          >
+            {status === 'sent' ? 'Close' : 'Cancel'}
+          </button>
+          <button
+            className="win-btn"
+            disabled={!canSend || status === 'sent'}
+            onClick={handleSend}
+            style={{ fontSize: 'var(--text-xs)', padding: '3px 14px', fontWeight: 'bold' }}
+          >
+            {sending ? 'Sending...' : 'Send Reply'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminTicketsPanel({ adminWallet }) {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchTickets = () => {
+    setLoadError(null);
+    api.getAdminTickets(adminWallet, 'open')
+      .then(res => {
+        setTickets(Array.isArray(res?.tickets) ? res.tickets : []);
+      })
+      .catch(err => {
+        const msg = (typeof err.detail === 'string' ? err.detail : null)
+          || err.message || 'Failed to load tickets';
+        setLoadError(msg);
+        setTickets([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!adminWallet) { setLoading(false); return; }
+    fetchTickets();
+    const iv = setInterval(fetchTickets, 60000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminWallet]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '16px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+        Loading tickets...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ padding: '16px', fontSize: 'var(--text-sm)', color: 'var(--red-on-grey)' }}>
+        {loadError}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto' }}>
+      {tickets.length === 0 ? (
+        <div style={{
+          padding: '24px', textAlign: 'center',
+          fontSize: 'var(--text-sm)', color: 'var(--text-muted)',
+        }}>
+          No open tickets.
+        </div>
+      ) : (
+        <table className="win-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>Subject</th>
+              <th style={{ width: '100px' }}>Received</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tickets.map(t => (
+              <tr
+                key={t.id}
+                className="clickable"
+                onClick={() => setSelected(t)}
+                style={{ cursor: 'pointer' }}
+              >
+                <td style={{ fontSize: 'var(--text-xs)', fontFamily: "'VT323', monospace" }}>
+                  {shortWallet(t.player_address)}
+                  {t.display_name && (
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+                      {t.display_name}
+                    </div>
+                  )}
+                </td>
+                <td style={{ fontSize: 'var(--text-sm)' }}>
+                  <div style={{ fontWeight: 'bold' }}>{t.subject}</div>
+                  <div style={{
+                    fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    maxWidth: '320px',
+                  }}>
+                    {(t.message || '').slice(0, 100)}
+                  </div>
+                </td>
+                <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  {formatTicketTime(t.created_at)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {selected && (
+        <TicketReplyModal
+          ticket={selected}
+          adminWallet={adminWallet}
+          onClose={() => setSelected(null)}
+          onReplied={() => { fetchTickets(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 function getSenderGroup(email) {
   if (email.sentByMe) return 'Sent';
   const name = (email.from || '').split('<')[0].trim();
@@ -123,6 +399,13 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
 
   const selectedEmail = emails.find(e => e.id === selectedId);
 
+  // Admin gate — drives both the "Support Tickets" tab visibility and
+  // the backend credential for list/reply requests. Backend also gates
+  // (403 on non-admin), so mirroring client-side is for UX only.
+  const isAdmin = isTicketAdmin(wallet);
+  const TICKETS_GROUP = 'Support Tickets';
+  const ticketsActive = isAdmin && activeGroup === TICKETS_GROUP;
+
   // Compute available groups from emails
   const groups = ['All'];
   const groupSet = new Set();
@@ -130,6 +413,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
     const g = getSenderGroup(e);
     if (!groupSet.has(g)) { groupSet.add(g); groups.push(g); }
   });
+  if (isAdmin) groups.push(TICKETS_GROUP);
 
   const filteredEmails = activeGroup === 'All'
     ? emails
@@ -392,6 +676,8 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
             </button>
           </div>
         </div>
+      ) : ticketsActive ? (
+        <AdminTicketsPanel adminWallet={wallet} />
       ) : !selectedEmail ? (
         <div style={{ flex: 1, overflow: 'auto' }}>
           <table className="win-table" style={{ width: '100%' }}>

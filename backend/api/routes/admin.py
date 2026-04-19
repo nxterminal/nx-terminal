@@ -11,7 +11,8 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel
 
 from backend.api.deps import get_db
 from backend.services.admin_log import log_event
@@ -25,6 +26,11 @@ router = APIRouter()
 # to make the admin gate self-contained for future admin endpoints.
 ADMIN_WALLETS = {
     "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc",  # treasury
+    # Ticket admin — same wallet that receives `ticket_received`
+    # notifications in backend/api/routes/notifications.py. Added so
+    # the operator reading support tickets in-game can also reply to
+    # them via the admin endpoints below.
+    "0xae882a8933b33429f53b7cee102ef3dbf9c9e88b",
 }
 
 
@@ -370,6 +376,145 @@ async def admin_reset_pending_fund(pending_id: int, request: Request) -> Dict[st
         "id": pending_id,
         "tx_hash": row["tx_hash"],
         "prev_attempts": row["attempts"],
+    }
+
+
+# ── Support tickets: admin inbox + in-game reply ─────────────────
+#
+# Users file tickets via POST /api/notifications/ticket, which inserts
+# a row into support_tickets and pings the ticket-admin with a
+# ticket_received notification. Before this module shipped, admins had
+# no in-game tool to reply — they had to hand-write notifications via
+# SQL. These two endpoints close the loop:
+#
+#   GET  /api/admin/tickets                → list open tickets + player name
+#   POST /api/admin/tickets/{id}/reply     → mark replied, notify user
+#
+# Reply delivery reuses the existing notifications table (type
+# `ticket_admin_reply`), so no SMTP / transactional-mail dep is added.
+
+
+class _TicketReplyBody(BaseModel):
+    text: str
+
+
+@router.get("/tickets")
+async def list_tickets(
+    request: Request,
+    status: str = Query(default="open"),
+    limit: int = Query(default=50, ge=1, le=200),
+) -> Dict[str, Any]:
+    """Admin-only list of support tickets, most recent first.
+
+    Default returns only `open` tickets — the admin workflow is to
+    triage, reply (flips status to `replied`), and move on. Other
+    valid values: `replied`, `archived`.
+    """
+    _require_admin(request)
+    if status not in {"open", "replied", "archived"}:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    t.id, t.player_address, t.subject, t.message,
+                    t.status, t.reply_text, t.replied_by, t.replied_at,
+                    t.created_at,
+                    p.display_name
+                  FROM support_tickets t
+                  LEFT JOIN players p
+                    ON LOWER(p.wallet_address) = LOWER(t.player_address)
+                 WHERE t.status = %s
+                 ORDER BY t.created_at DESC
+                 LIMIT %s
+                """,
+                (status, limit),
+            )
+            rows = cur.fetchall()
+
+    return {
+        "tickets": [dict(r) for r in rows],
+        "count": len(rows),
+    }
+
+
+@router.post("/tickets/{ticket_id}/reply")
+async def reply_to_ticket(
+    ticket_id: int,
+    body: _TicketReplyBody,
+    request: Request,
+) -> Dict[str, Any]:
+    """Admin reply to a support ticket. Marks the ticket replied,
+    delivers the reply as an in-game notification to the user, and
+    logs the action in admin_logs for audit."""
+    admin = _require_admin(request)
+
+    reply_text = (body.text or "").strip()
+    if not reply_text:
+        raise HTTPException(status_code=400, detail="Reply text cannot be empty")
+    if len(reply_text) > 4000:
+        raise HTTPException(status_code=400, detail="Reply text too long (max 4000 chars)")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, player_address, subject, status
+                  FROM support_tickets
+                 WHERE id = %s FOR UPDATE
+                """,
+                (ticket_id,),
+            )
+            ticket = cur.fetchone()
+            if not ticket:
+                raise HTTPException(status_code=404, detail="Ticket not found")
+            if ticket["status"] != "open":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ticket already {ticket['status']}",
+                )
+
+            cur.execute(
+                """
+                UPDATE support_tickets
+                   SET status = 'replied',
+                       reply_text = %s,
+                       replied_by = %s,
+                       replied_at = NOW()
+                 WHERE id = %s
+                """,
+                (reply_text, admin, ticket_id),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO notifications (player_address, type, title, body)
+                VALUES (%s, 'ticket_admin_reply', %s, %s)
+                """,
+                (
+                    ticket["player_address"],
+                    f"Reply from Admin: {ticket['subject']}",
+                    reply_text,
+                ),
+            )
+
+            log_event(
+                cur,
+                event_type="admin_ticket_reply",
+                wallet_address=admin,
+                payload={
+                    "ticket_id": ticket_id,
+                    "recipient": ticket["player_address"],
+                    "reply_length": len(reply_text),
+                },
+            )
+
+    return {
+        "status": "replied",
+        "ticket_id": ticket_id,
+        "recipient": ticket["player_address"],
     }
 
 
