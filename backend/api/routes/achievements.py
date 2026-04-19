@@ -228,18 +228,30 @@ async def claim_achievement(req: AchievementClaimRequest):
                 raise HTTPException(404, "Achievement not unlocked")
             if pa["claimed"]:
                 raise HTTPException(400, "Already claimed")
-            cur.execute(
-                "UPDATE player_achievements SET claimed = TRUE WHERE wallet_address = %s AND achievement_id = %s",
-                (addr, req.achievement_id))
+
+            # Verify active dev BEFORE any mutation. If we flipped
+            # claimed=TRUE first and only then found out the wallet has
+            # no active dev, the reward would be lost forever — the
+            # credit branch would silently skip and `claimed=TRUE` would
+            # commit on the way out. Mirrors the safe order in
+            # streaks.py::claim_streak.
             cur.execute("""
                 SELECT token_id, name FROM devs
                 WHERE LOWER(owner_address) = %s AND status IN ('active', 'on_mission')
                 ORDER BY token_id ASC LIMIT 1
             """, (addr,))
             dev = cur.fetchone()
-            if dev:
-                cur.execute(
-                    "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
-                    (pa["reward_nxt"], pa["reward_nxt"], dev["token_id"]))
+            if not dev:
+                raise HTTPException(
+                    400,
+                    "You need at least one active dev to claim achievement rewards",
+                )
+
+            cur.execute(
+                "UPDATE player_achievements SET claimed = TRUE WHERE wallet_address = %s AND achievement_id = %s",
+                (addr, req.achievement_id))
+            cur.execute(
+                "UPDATE devs SET balance_nxt = balance_nxt + %s, total_earned = total_earned + %s WHERE token_id = %s",
+                (pa["reward_nxt"], pa["reward_nxt"], dev["token_id"]))
     return {"success": True, "reward": pa["reward_nxt"], "title": pa["title"],
-            "dev_name": dev["name"] if dev else None}
+            "dev_name": dev["name"]}
