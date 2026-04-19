@@ -344,7 +344,7 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const wallet = walletProp || walletHookAddr;
   const [emails, setEmails] = useState(() => loadSavedEmails() || []);
   const [selectedId, setSelectedId] = useState(null);
-  const [activeGroup, setActiveGroup] = useState('All');
+  const [activeGroup, setActiveGroup] = useState('Inbox');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [sortAsc, setSortAsc] = useState(false);
   const [composing, setComposing] = useState(false);
@@ -354,7 +354,11 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const [composeStatus, setComposeStatus] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const unreadCount = emails.filter(e => !e.read).length;
+  // Badge count = unread messages the user RECEIVED. `ticket_sent`
+  // (the auto-reply to oneself when filing a support ticket) is the
+  // only thing classed as sent-by-me today; excluding it keeps the
+  // badge from counting your own outbound tickets as unread noise.
+  const unreadCount = emails.filter(e => !e.read && !e.sentByMe).length;
 
   useEffect(() => {
     if (onUnreadCount) onUnreadCount(unreadCount);
@@ -406,8 +410,11 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   const TICKETS_GROUP = 'Support Tickets';
   const ticketsActive = isAdmin && activeGroup === TICKETS_GROUP;
 
-  // Compute available groups from emails
-  const groups = ['All'];
+  // Compute available groups from emails. 'Inbox' replaces the old
+  // 'All' tab and lists only received messages; 'Sent' keeps its
+  // meaning as user-originated messages (today: just ticket_sent
+  // auto-replies). Other dynamic groups come from getSenderGroup.
+  const groups = ['Inbox'];
   const groupSet = new Set();
   emails.forEach(e => {
     const g = getSenderGroup(e);
@@ -415,8 +422,8 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
   });
   if (isAdmin) groups.push(TICKETS_GROUP);
 
-  const filteredEmails = activeGroup === 'All'
-    ? emails
+  const filteredEmails = activeGroup === 'Inbox'
+    ? emails.filter(e => !e.sentByMe)
     : emails.filter(e => getSenderGroup(e) === activeGroup);
 
   const sortedEmails = [...filteredEmails].sort((a, b) => {
@@ -589,8 +596,12 @@ export default function Inbox({ onUnreadCount, walletAddress: walletProp }) {
               }}
             >
               {g}
-              {g !== 'All' && (() => {
-                const count = emails.filter(e => getSenderGroup(e) === g && !e.read).length;
+              {g !== TICKETS_GROUP && (() => {
+                // Match the same predicate filteredEmails uses so the
+                // tab count lines up exactly with the visible list.
+                const count = g === 'Inbox'
+                  ? emails.filter(e => !e.sentByMe && !e.read).length
+                  : emails.filter(e => getSenderGroup(e) === g && !e.read).length;
                 return count > 0 ? ` (${count})` : '';
               })()}
             </button>
