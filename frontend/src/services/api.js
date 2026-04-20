@@ -298,6 +298,31 @@ export const api = {
       body: JSON.stringify({ resolution }),
     }),
 
+  // NXMARKET comments (PR C1) — flat per-market thread, like/dislike
+  // votes, soft delete, 1-per-minute rate limit on create.
+  listComments: (marketId, wallet, limit = 20, offset = 0) => {
+    const params = new URLSearchParams({ limit, offset });
+    if (wallet) params.append('wallet', wallet);
+    return fetchJSON(`${API_BASE}/api/nxmarket/markets/${marketId}/comments?${params}`);
+  },
+  createComment: (marketId, wallet, body) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/${marketId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, body }),
+    }),
+  deleteComment: (commentId, wallet) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: { 'X-Wallet': wallet || '' },
+    }),
+  voteComment: (commentId, wallet, vote) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/comments/${commentId}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, vote }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
