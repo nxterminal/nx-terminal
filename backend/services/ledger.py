@@ -95,6 +95,9 @@ class LedgerSource:
     NXMARKET_PAYOUT = "nxmarket_payout"
     NXMARKET_COMMISSION = "nxmarket_commission"
     NXMARKET_TREASURY_FEE = "nxmarket_treasury_fee"
+    # Refund on 'invalid' resolution — bettors get their cost basis
+    # back, no treasury fee, no creator commission. Seed stays locked.
+    NXMARKET_REFUND = "nxmarket_refund"
 
     @classmethod
     def all_sources(cls) -> Iterable[str]:

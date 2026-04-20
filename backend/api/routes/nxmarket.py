@@ -251,12 +251,109 @@ def create_official_market(body: CreateOfficialMarketBody, request: Request):
 # ---------------------------------------------------------------------------
 
 
+def _resolve_invalid(cur, market, admin_wallet: str) -> dict:
+    """Refund every bettor their net cost basis (summed across YES+NO
+    sides) and mark the market as resolved with outcome='invalid'.
+
+    No treasury fee, no creator commission — the market failed to
+    produce a meaningful outcome so nobody extracts value from it.
+    Seed stays locked (it always does).
+    """
+    market_id = int(market["id"])
+
+    # Lock the positions first (Postgres rejects FOR UPDATE alongside
+    # GROUP BY), then aggregate per-wallet cost basis in Python. A
+    # hedged user (positions on both YES and NO) receives the combined
+    # cost basis of whatever they still hold.
+    cur.execute(
+        """
+        SELECT LOWER(wallet_address) AS wallet,
+               cost_basis
+          FROM nxmarket_positions
+         WHERE market_id = %s AND shares > 0
+         ORDER BY id
+         FOR UPDATE
+        """,
+        (market_id,),
+    )
+    pos_rows = cur.fetchall()
+    grouped: dict[str, Decimal] = {}
+    for pr in pos_rows:
+        grouped[pr["wallet"]] = (
+            grouped.get(pr["wallet"], Decimal(0)) + Decimal(pr["cost_basis"])
+        )
+    rows = [
+        {"wallet": w, "total_cost": c}
+        for w, c in grouped.items() if c > 0
+    ]
+
+    refunds: list[dict] = []
+    paid_total = 0
+    for row in rows:
+        wallet = row["wallet"]
+        # Floor to int — rounding dust stays in the pool (seed-style).
+        amount = int(Decimal(row["total_cost"]))
+        if amount <= 0:
+            continue
+        try:
+            credit_wallet_balance(
+                cur,
+                wallet_address=wallet,
+                amount_nxt=amount,
+                ledger_source=LedgerSource.NXMARKET_REFUND,
+                ref_table="nxmarket_markets",
+                ref_id=market_id,
+            )
+        except NoDevsError as exc:
+            # Match YES/NO behaviour: abort the whole resolve so no
+            # partial refunds persist.
+            raise HTTPException(
+                500,
+                f"bettor {wallet} owns no devs — cannot refund; "
+                f"invalid resolve aborted ({exc})",
+            )
+        refunds.append({"wallet": wallet, "amount_nxt": amount})
+        paid_total += amount
+
+    cur.execute(
+        """
+        UPDATE nxmarket_markets
+           SET status = 'resolved',
+               outcome = 'invalid',
+               resolved_at = NOW(),
+               resolved_by = %s
+         WHERE id = %s
+        """,
+        (admin_wallet, market_id),
+    )
+
+    admin_log_event(
+        cur,
+        event_type="nxmarket_resolved_invalid",
+        wallet_address=admin_wallet,
+        payload={
+            "market_id": market_id,
+            "refunds_count": len(refunds),
+            "refunds_total_nxt": paid_total,
+        },
+    )
+
+    return {
+        "market_id": market_id,
+        "resolution": "invalid",
+        "refunds_count": len(refunds),
+        "refunds_total_nxt": paid_total,
+    }
+
+
 @admin_router.post("/markets/{market_id}/resolve")
 def resolve_market(market_id: int, body: ResolveBody, request: Request):
     admin_wallet = _require_admin(request)
 
-    if body.resolution not in ("YES", "NO"):
-        raise HTTPException(400, "resolution must be 'YES' or 'NO'")
+    if body.resolution not in ("YES", "NO", "invalid"):
+        raise HTTPException(
+            400, "resolution must be 'YES', 'NO', or 'invalid'"
+        )
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -276,6 +373,11 @@ def resolve_market(market_id: int, body: ResolveBody, request: Request):
                 raise HTTPException(
                     400, f"market is not resolvable (status={market['status']})"
                 )
+
+            # INVALID resolution: refund every bettor their cost basis.
+            # No treasury fee, no creator commission, seed stays locked.
+            if body.resolution == "invalid":
+                return _resolve_invalid(cur, market, admin_wallet)
 
             # 2. pool_total = net NXT users put in via trading.
             #    SUM(buys) - SUM(sells). Excludes seed_nxt by design
