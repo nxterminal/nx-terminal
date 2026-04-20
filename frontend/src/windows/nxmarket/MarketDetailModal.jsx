@@ -295,6 +295,17 @@ export default function MarketDetailModal({ marketId, wallet, onClose, onMarketR
                         Resolve NO
                       </button>
                     </div>
+                    <button
+                      onClick={() => setResolveSide('invalid')}
+                      className="win-btn"
+                      title="Mark the market as invalid and refund every bettor their cost basis"
+                      style={{
+                        marginTop: 4, padding: '4px 0', width: '100%',
+                        background: '#e0e0e0',
+                        fontSize: 'var(--text-sm, 12px)',
+                      }}>
+                      Mark Invalid (refund all)
+                    </button>
                   </>
                 )}
               </>

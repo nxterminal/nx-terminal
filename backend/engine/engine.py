@@ -1918,6 +1918,7 @@ def run_engine():
     claim_sync_interval = timedelta(minutes=5)  # kept for reference; auto-sync disabled
     pending_funds_interval = timedelta(seconds=_FUND_RETRY_INTERVAL_SEC)
     orphan_scan_interval = _ORPHAN_SCAN_INTERVAL
+    nxmarket_close_interval = timedelta(minutes=5)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2008,6 +2009,9 @@ def run_engine():
     last_pending_funds = datetime.now(timezone.utc) - pending_funds_interval
     # Run on-chain orphan scan on the first loop pass too.
     last_orphan_scan = datetime.now(timezone.utc) - orphan_scan_interval
+    # Run the NX Market auto-close sweep on the first pass too (catch
+    # any market that expired while the engine was down).
+    last_nxmarket_close = datetime.now(timezone.utc) - nxmarket_close_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2048,6 +2052,19 @@ def run_engine():
                     except Exception as e:
                         log.error(f"scan_orphaned_funds error: {e}")
                     last_orphan_scan = now
+
+                # Flip expired NX Market rows from 'active' → 'closed'.
+                # Runs on its own 5-min cadence. Independent of the
+                # `conn` above because it manages its own DB context.
+                if now - last_nxmarket_close >= nxmarket_close_interval:
+                    try:
+                        from backend.services.nxmarket_lifecycle import (
+                            auto_close_expired_markets,
+                        )
+                        auto_close_expired_markets()
+                    except Exception as e:
+                        log.error(f"auto_close_expired_markets error: {e}")
+                    last_nxmarket_close = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)

@@ -56,7 +56,13 @@ export default function ResolveMarketConfirm({
     };
   }, [detail, market, resolution]);
 
-  const canSubmit = confirmed && typed.trim().toUpperCase() === 'RESOLVE'
+  const isInvalid = resolution === 'invalid';
+  // Invalid resolutions use a separate keyword ("INVALID") since the
+  // economic consequences differ so much from a normal YES/NO resolve
+  // — the admin should have to think about which they're typing.
+  const requiredKeyword = isInvalid ? 'INVALID' : 'RESOLVE';
+  const canSubmit = confirmed
+    && typed.trim().toUpperCase() === requiredKeyword
     && stage === 'idle';
 
   const submit = async () => {
@@ -88,7 +94,9 @@ export default function ResolveMarketConfirm({
           fontSize: 'var(--text-base)',
           display: 'flex', justifyContent: 'space-between',
         }}>
-          <span>⚠ RESOLVE MARKET — IRREVERSIBLE</span>
+          <span>{isInvalid
+            ? '⚠ MARK MARKET INVALID — IRREVERSIBLE'
+            : '⚠ RESOLVE MARKET — IRREVERSIBLE'}</span>
           <button onClick={onClose} className="win-btn"
             style={{ padding: '0 4px', fontWeight: 'bold' }}>X</button>
         </div>
@@ -98,7 +106,9 @@ export default function ResolveMarketConfirm({
             fontSize: 'var(--text-lg, 16px)', fontWeight: 'bold',
             marginBottom: 8, textAlign: 'center',
           }}>
-            Resolve market #{market.id} as '{resolution}'?
+            {isInvalid
+              ? `Mark market #${market.id} as INVALID?`
+              : `Resolve market #${market.id} as '${resolution}'?`}
           </div>
           <div className="win-panel" style={{
             padding: 8, marginBottom: 10, background: 'var(--win-bg, #c0c0c0)',
@@ -108,7 +118,24 @@ export default function ResolveMarketConfirm({
             </div>
           </div>
 
-          {preview && (
+          {isInvalid && (
+            <div className="win-panel" style={{
+              padding: 8, marginBottom: 10, background: '#fff',
+              fontSize: 'var(--text-sm, 12px)',
+            }}>
+              <div style={{ marginBottom: 4, color: 'var(--text-secondary)' }}>
+                What happens when you mark INVALID:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
+                <li>Every bettor is refunded their <b>cost basis</b>.</li>
+                <li><b>No treasury fee</b>, <b>no creator commission</b>.</li>
+                <li>Seed liquidity stays locked (as always).</li>
+                <li>Market status becomes <b>resolved · invalid</b>.</li>
+              </ul>
+            </div>
+          )}
+
+          {!isInvalid && preview && (
             <div className="win-panel" style={{
               padding: 8, marginBottom: 10, background: '#fff',
               fontSize: 'var(--text-sm, 12px)',
@@ -142,7 +169,7 @@ export default function ResolveMarketConfirm({
 
           <label style={{ display: 'block', marginBottom: 10 }}>
             <div style={{ fontSize: 'var(--text-sm, 12px)', color: 'var(--text-secondary)' }}>
-              Type "RESOLVE" to confirm:
+              Type "{requiredKeyword}" to confirm:
             </div>
             <input type="text" value={typed}
               onChange={e => setTyped(e.target.value)}
@@ -174,7 +201,9 @@ export default function ResolveMarketConfirm({
                 color: canSubmit ? '#7f0000' : undefined,
               }}
               disabled={!canSubmit}>
-              {stage === 'submitting' ? 'Resolving…' : 'Confirm Resolution'}
+              {stage === 'submitting'
+                ? (isInvalid ? 'Marking invalid…' : 'Resolving…')
+                : (isInvalid ? 'Confirm Mark Invalid' : 'Confirm Resolution')}
             </button>
           </div>
         </div>
