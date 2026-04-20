@@ -1104,3 +1104,81 @@ def vote_comment(comment_id: int, body: VoteCommentBody):
         "dislike_count": int(agg["dislike_count"] or 0),
         "my_vote": agg["my_vote"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Leaderboard (PR C2) — top users ranked by net profit in NX Market.
+# Net profit = SUM(payouts) - SUM(|buys|). Losers show as negative entries
+# and are still ranked (no exclusion), so the list reflects reality.
+# ---------------------------------------------------------------------------
+
+
+LEADERBOARD_DEFAULT_LIMIT = 25
+LEADERBOARD_MAX_LIMIT = 100
+
+
+@router.get("/leaderboard")
+def get_leaderboard(
+    period: str = Query(default="all", pattern="^(all|30d)$"),
+    limit: int = Query(default=LEADERBOARD_DEFAULT_LIMIT, ge=1,
+                       le=LEADERBOARD_MAX_LIMIT),
+):
+    # period_filter is a Postgres INTERVAL string applied server-side so
+    # the conditional stays in SQL (no Python branching between queries).
+    period_filter_sql = "AND created_at >= NOW() - INTERVAL '30 days'" \
+        if period == "30d" else ""
+
+    query = f"""
+        WITH earnings AS (
+          SELECT
+            wallet_address,
+            SUM(CASE WHEN source = 'nxmarket_payout'
+                     THEN delta_nxt ELSE 0 END) AS total_payouts,
+            SUM(CASE WHEN source IN ('nxmarket_buy_yes', 'nxmarket_buy_no')
+                     THEN ABS(delta_nxt) ELSE 0 END) AS total_invested
+          FROM nxt_ledger
+          WHERE source IN ('nxmarket_payout', 'nxmarket_buy_yes', 'nxmarket_buy_no')
+            {period_filter_sql}
+          GROUP BY wallet_address
+        )
+        SELECT
+          wallet_address,
+          total_payouts,
+          total_invested,
+          (total_payouts - total_invested) AS net_profit
+        FROM earnings
+        WHERE total_payouts > 0 OR total_invested > 0
+        ORDER BY net_profit DESC, wallet_address ASC
+        LIMIT %s
+    """
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, (limit,))
+            rows = cur.fetchall()
+            # total_users = count of wallets with ANY activity in the period
+            # (not limited). Second query keeps the main query limit-aware.
+            cur.execute(
+                f"""
+                SELECT COUNT(DISTINCT wallet_address) AS c FROM nxt_ledger
+                 WHERE source IN ('nxmarket_payout', 'nxmarket_buy_yes', 'nxmarket_buy_no')
+                   {period_filter_sql}
+                """,
+            )
+            total_users = int(cur.fetchone()["c"])
+
+    leaderboard = []
+    for idx, r in enumerate(rows, start=1):
+        leaderboard.append({
+            "rank": idx,
+            "wallet_address": r["wallet_address"],
+            "net_profit": int(r["net_profit"] or 0),
+            "total_payouts": int(r["total_payouts"] or 0),
+            "total_invested": int(r["total_invested"] or 0),
+        })
+
+    return {
+        "period": period,
+        "leaderboard": leaderboard,
+        "total_users": total_users,
+    }
