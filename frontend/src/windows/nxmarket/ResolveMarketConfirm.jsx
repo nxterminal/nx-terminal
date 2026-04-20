@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../services/api';
 
-// Minimal admin resolve confirmation. The double-confirmation UI
-// (typed keyword + checkbox) lives here too so the same component
-// covers the whole flow; commit 4 expands the preview block but the
-// safety gate is in place from commit 3 onwards.
+// Admin resolve double-confirmation. Two gates required before the
+// "Confirm Resolution" button enables: (1) the policy checkbox, (2)
+// typing the keyword RESOLVE. Above them, a live preview of the
+// economic outcome of the resolve so the admin can sanity-check the
+// payout split.
 
 export default function ResolveMarketConfirm({
   market, resolution, wallet, onClose, onResolved,
@@ -13,6 +14,47 @@ export default function ResolveMarketConfirm({
   const [typed, setTyped] = useState('');
   const [stage, setStage] = useState('idle');
   const [error, setError] = useState(null);
+  const [detail, setDetail] = useState(null);
+
+  // Pull the latest detail so the preview reflects the trades-as-of-now.
+  useEffect(() => {
+    let cancelled = false;
+    api.getMarketDetail(market.id).then(d => {
+      if (!cancelled) setDetail(d);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [market.id]);
+
+  const preview = useMemo(() => {
+    if (!detail) return null;
+    const trades = detail.recent_trades || [];
+    const buys = trades
+      .filter(t => t.side === 'buy')
+      .reduce((s, t) => s + Number(t.nxt_amount), 0);
+    const sells = trades
+      .filter(t => t.side === 'sell')
+      .reduce((s, t) => s + Number(t.nxt_amount), 0);
+    const poolTotal = Math.max(0, Math.floor(buys - sells));
+    const treasuryFee = Math.floor(poolTotal * 3 / 100);
+    const isUser = market.market_type === 'user';
+    const creatorFeePct = Number(market.creator_fee_percent || 0);
+    const creatorCommission = isUser && poolTotal > 0
+      ? Math.floor(poolTotal * creatorFeePct / 100)
+      : 0;
+    const distributable = poolTotal - treasuryFee - creatorCommission;
+    // Approx winners by walking trades — the exact set depends on
+    // the live positions table; this preview is best-effort.
+    const winnerWallets = new Set(
+      trades
+        .filter(t => t.outcome === resolution && t.side === 'buy')
+        .map(t => t.wallet_address?.toLowerCase()),
+    );
+    return {
+      poolTotal, treasuryFee, creatorCommission, distributable,
+      winnersCount: winnerWallets.size,
+      isUser,
+    };
+  }, [detail, market, resolution]);
 
   const canSubmit = confirmed && typed.trim().toUpperCase() === 'RESOLVE'
     && stage === 'idle';
@@ -65,6 +107,30 @@ export default function ResolveMarketConfirm({
               {market.question}
             </div>
           </div>
+
+          {preview && (
+            <div className="win-panel" style={{
+              padding: 8, marginBottom: 10, background: '#fff',
+              fontSize: 'var(--text-sm, 12px)',
+            }}>
+              <div style={{ marginBottom: 4, color: 'var(--text-secondary)' }}>
+                Estimated payout split:
+              </div>
+              <div>Pool total: <b>{preview.poolTotal} $NXT</b></div>
+              <div>Treasury fee (3%): <b>-{preview.treasuryFee}</b></div>
+              {preview.isUser && (
+                <div>Creator commission (5%): <b>-{preview.creatorCommission}</b></div>
+              )}
+              <div style={{ marginTop: 2 }}>
+                Distributable to {resolution} winners:&nbsp;
+                <b>{preview.distributable} $NXT</b>
+              </div>
+              <div style={{ color: 'var(--text-secondary)' }}>
+                ~{preview.winnersCount} winning wallet(s) (best-effort estimate
+                from trade history)
+              </div>
+            </div>
+          )}
 
           <label style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             <input type="checkbox" checked={confirmed}
