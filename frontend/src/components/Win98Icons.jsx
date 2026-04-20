@@ -997,18 +997,36 @@ function IconCatPolitics({ size = 24 }) {
 }
 
 function IconCatEntertainment({ size = 24 }) {
+  // Popcorn bucket — the old clapperboard read as an ambiguous dark
+  // square at 24×24. Popcorn has two strongly-differentiated zones
+  // (red/white striped bucket + cream popcorn fluffs on top) that
+  // survive the small render size.
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      {/* Clapperboard body */}
-      <rect x="3" y="9" width="18" height="12" fill="#222" stroke="#000" strokeWidth="0.5" />
-      {/* Arm */}
-      <polygon points="3,9 21,9 20,5 4,5" fill="#111" stroke="#000" strokeWidth="0.4" />
-      {/* Diagonal stripes on the arm */}
-      <polygon points="5,5 9,5 7,9 3,9" fill="#fff" opacity="0.85" />
-      <polygon points="12,5 16,5 14,9 10,9" fill="#fff" opacity="0.85" />
-      <polygon points="19,5 21,5 21,9 17,9" fill="#fff" opacity="0.85" />
-      {/* Screen area */}
-      <rect x="5" y="12" width="14" height="7" fill="#3a3a3a" />
+      <defs>
+        <linearGradient id="popBucket" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f5f5f5" />
+          <stop offset="100%" stopColor="#c8c8c8" />
+        </linearGradient>
+        <linearGradient id="popKernel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fff4c2" />
+          <stop offset="100%" stopColor="#e8c670" />
+        </linearGradient>
+      </defs>
+      {/* Popcorn (kernels overlap the bucket rim) */}
+      <circle cx="8"  cy="7" r="2.6" fill="url(#popKernel)" stroke="#a07c28" strokeWidth="0.4" />
+      <circle cx="12" cy="5.5" r="2.8" fill="url(#popKernel)" stroke="#a07c28" strokeWidth="0.4" />
+      <circle cx="16" cy="7" r="2.6" fill="url(#popKernel)" stroke="#a07c28" strokeWidth="0.4" />
+      <circle cx="10" cy="8.5" r="2.2" fill="url(#popKernel)" stroke="#a07c28" strokeWidth="0.3" opacity="0.95" />
+      <circle cx="14" cy="8.5" r="2.2" fill="url(#popKernel)" stroke="#a07c28" strokeWidth="0.3" opacity="0.95" />
+      {/* Bucket trapezoid */}
+      <polygon points="4,10 20,10 18.5,21 5.5,21" fill="url(#popBucket)" stroke="#666" strokeWidth="0.6" />
+      {/* Red vertical stripes */}
+      <polygon points="7,10 8.5,10 7.9,21 6.4,21" fill="#d32f2f" />
+      <polygon points="11.25,10 12.75,10 12.75,21 11.25,21" fill="#d32f2f" />
+      <polygon points="15.5,10 17,10 17.6,21 16.1,21" fill="#d32f2f" />
+      {/* Rim highlight */}
+      <rect x="4" y="10" width="16" height="1" fill="#fff" opacity="0.55" />
     </svg>
   );
 }

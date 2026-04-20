@@ -569,6 +569,52 @@ def _insert_market(
             return int(r["id"] if isinstance(r, dict) else r[0])
 
 
+def _insert_market_with_close(*, close_hours: int, status: str = "active",
+                              resolved_hours_ago: int | None = None) -> int:
+    """Like _insert_market but lets the caller dial in close_at and
+    (for resolved rows) resolved_at — used by the ordering test."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO nxmarket_markets (
+                    question, category, market_type, created_by,
+                    creator_fee_percent, seed_nxt, shares_yes, shares_no,
+                    liquidity_b, status, close_at, resolved_at, outcome
+                ) VALUES (
+                    'Q?', 'crypto', 'official', %s,
+                    0, 500, 250, 250, 100, %s,
+                    NOW() + (%s || ' hours')::INTERVAL,
+                    CASE WHEN %s::int IS NULL THEN NULL
+                         ELSE NOW() - (%s || ' hours')::INTERVAL END,
+                    CASE WHEN %s = 'resolved' THEN 'YES' ELSE NULL END
+                )
+                RETURNING id
+                """,
+                (USER_WALLET, status, str(close_hours),
+                 resolved_hours_ago,
+                 str(resolved_hours_ago or 0), status),
+            )
+            r = cur.fetchone()
+            return int(r["id"] if isinstance(r, dict) else r[0])
+
+
+def test_list_markets_orders_active_by_close_at_asc(client, clean_db):
+    # Insert in a random order; the endpoint should return them sorted
+    # by urgency for active markets, then recency for resolved ones.
+    m_30d  = _insert_market_with_close(close_hours=24 * 30)  # active, latest
+    m_1d   = _insert_market_with_close(close_hours=24)       # active, soonest
+    m_5d   = _insert_market_with_close(close_hours=24 * 5)   # active, mid
+    m_res  = _insert_market_with_close(
+        close_hours=-48, status="resolved", resolved_hours_ago=2,
+    )
+
+    resp = client.get("/api/nxmarket/markets")
+    ids = [m["id"] for m in resp.json()["markets"]]
+    # Active in close_at ASC order, then resolved.
+    assert ids == [m_1d, m_5d, m_30d, m_res]
+
+
 def test_list_markets_filtered_by_status_and_type(client, clean_db):
     # Seed a mix: 2 official (1 active, 1 closed), 2 user (1 active, 1 resolved).
     m_off_active = _insert_market(market_type="official", status="active")

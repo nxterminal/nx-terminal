@@ -857,7 +857,15 @@ def list_markets(
                        total_volume_nxt, created_at
                   FROM nxmarket_markets
                   {where}
-                  ORDER BY created_at DESC
+                  ORDER BY
+                    -- Active markets first, sorted by urgency (soonest
+                    -- close_at on top). Resolved/closed below, sorted
+                    -- by recency (resolved_at DESC, falling back to
+                    -- close_at for closed-but-not-resolved rows).
+                    CASE WHEN status = 'active' THEN 0 ELSE 1 END ASC,
+                    CASE WHEN status = 'active' THEN close_at END ASC,
+                    CASE WHEN status <> 'active'
+                         THEN COALESCE(resolved_at, close_at) END DESC
                 """,
                 params,
             )
