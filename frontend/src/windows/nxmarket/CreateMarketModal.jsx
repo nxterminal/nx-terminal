@@ -10,12 +10,18 @@ function isoMin(hours) {
 }
 
 
+// Users don't need to configure LMSR b parameter — too technical.
+// Default 100 works well for most markets. Admins can still tune
+// it when creating official markets.
+const USER_DEFAULT_B = 100;
+
+
 export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) {
   const isOfficial = mode === 'official';
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('crypto');
   const [closeAt, setCloseAt] = useState(isoMin(48));
-  const [liquidityB, setLiquidityB] = useState(100);
+  const [liquidityB, setLiquidityB] = useState(USER_DEFAULT_B);
   const [seedNxt, setSeedNxt] = useState(500);
   const [stage, setStage] = useState('idle'); // 'idle' | 'submitting' | 'error'
   const [error, setError] = useState(null);
@@ -143,17 +149,21 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
             )}
           </label>
 
-          <label style={{ display: 'block', marginBottom: 8 }}>
-            <div style={{ fontSize: 'var(--text-sm, 12px)', color: 'var(--text-secondary)' }}>
-              Liquidity b: <b>{liquidityB}</b>
-              {' '}<span style={{ fontSize: 'var(--text-xs, 11px)' }}>
-                (higher = more stable, lower = more volatile)
-              </span>
-            </div>
-            <input type="range" min={10} max={10000} step={10}
-              value={liquidityB} onChange={e => setLiquidityB(Number(e.target.value))}
-              style={{ width: '100%' }} />
-          </label>
+          {/* Liquidity b exposed to admins only. User markets use the
+              constant USER_DEFAULT_B — see rationale above. */}
+          {isOfficial && (
+            <label style={{ display: 'block', marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--text-sm, 12px)', color: 'var(--text-secondary)' }}>
+                Liquidity b: <b>{liquidityB}</b>
+                {' '}<span style={{ fontSize: 'var(--text-xs, 11px)' }}>
+                  (higher = more stable, lower = more volatile)
+                </span>
+              </div>
+              <input type="range" min={10} max={10000} step={10}
+                value={liquidityB} onChange={e => setLiquidityB(Number(e.target.value))}
+                style={{ width: '100%' }} />
+            </label>
+          )}
 
           {isOfficial && (
             <label style={{ display: 'block', marginBottom: 8 }}>
@@ -174,8 +184,8 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
               <input type="checkbox" checked={confirmed}
                 onChange={e => setConfirmed(e.target.checked)} />
               <span>
-                I understand creating this market costs <b>500 $NXT</b>
-                deducted from my devs' balances.
+                I understand creating this market costs <b>500 $NXT</b>,
+                deducted from my in-game balance.
               </span>
             </label>
           )}
