@@ -1,16 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
+import { Win98Icon } from '../../components/Win98Icons';
 import { isNxMarketAdmin } from '../NXMarket';
 import CreateMarketModal from './CreateMarketModal';
 
 
-const CATEGORY_EMOJI = {
-  crypto: '\u{1FA99}',          // coin
-  sports: '\u26BD',             // soccer ball
-  politics: '\u{1F3DB}\uFE0F',  // classical building
-  entertainment: '\u{1F3AC}',   // clapper
-  other: '\u{1F4CC}',           // pushpin
-};
+const CATEGORY_ICON_IDS = new Set([
+  'crypto', 'sports', 'politics', 'entertainment', 'other',
+]);
+
+function categoryIconId(category) {
+  return `cat-${CATEGORY_ICON_IDS.has(category) ? category : 'other'}`;
+}
 
 
 function formatRelativeTime(iso) {
@@ -84,7 +85,6 @@ function ProbabilityRow({ side, price }) {
 function MarketCard({ market, onClick }) {
   const isResolved = market.status === 'resolved';
   const isClosed = market.status === 'closed';
-  const emoji = CATEGORY_EMOJI[market.category] || CATEGORY_EMOJI.other;
   const [hover, setHover] = useState(false);
 
   return (
@@ -107,9 +107,11 @@ function MarketCard({ market, onClick }) {
       }}>
         <div style={{
           width: 36, height: 36, display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 22,
+          justifyContent: 'center',
           background: '#f0f0e8', border: '1px solid #999',
-        }}>{emoji}</div>
+        }}>
+          <Win98Icon id={categoryIconId(market.category)} size={24} />
+        </div>
 
         <div style={{ minWidth: 0 }}>
           <div style={{

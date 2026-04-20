@@ -935,6 +935,106 @@ function IconNxMarket({ size = 32 }) {
   );
 }
 
+
+// ── Category badges — used by MarketsList cards. Kept small (viewBox 24)
+// and stylistically minimal so they read well at render size 24×24
+// inside the card header tile.
+
+function IconCatCrypto({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="catCoin" cx="40%" cy="35%">
+          <stop offset="0%" stopColor="#ffec8b" />
+          <stop offset="60%" stopColor="#e0b000" />
+          <stop offset="100%" stopColor="#a07800" />
+        </radialGradient>
+      </defs>
+      <circle cx="12" cy="12" r="9" fill="url(#catCoin)" stroke="#7a5a00" strokeWidth="0.8" />
+      <circle cx="12" cy="12" r="7" fill="none" stroke="#c09000" strokeWidth="0.4" />
+      <text x="12" y="16" textAnchor="middle"
+        fontFamily="Georgia, serif" fontSize="11" fontWeight="bold"
+        fill="#5a4000">$</text>
+    </svg>
+  );
+}
+
+function IconCatSports({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" fill="#ffffff" stroke="#333" strokeWidth="0.8" />
+      <polygon points="12,7 14.5,8.6 13.6,11.4 10.4,11.4 9.5,8.6" fill="#222" />
+      <polygon points="7,13 9,11.8 10.5,13.5 9.6,16 7.5,16" fill="#222" />
+      <polygon points="17,13 15,11.8 13.5,13.5 14.4,16 16.5,16" fill="#222" />
+      <line x1="10" y1="7" x2="7" y2="10" stroke="#222" strokeWidth="0.3" />
+      <line x1="14" y1="7" x2="17" y2="10" stroke="#222" strokeWidth="0.3" />
+    </svg>
+  );
+}
+
+function IconCatPolitics({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="catBuilding" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f5f5ea" />
+          <stop offset="100%" stopColor="#c8c8b0" />
+        </linearGradient>
+      </defs>
+      {/* Pediment (triangle roof) */}
+      <polygon points="12,3 3,8 21,8" fill="url(#catBuilding)" stroke="#666" strokeWidth="0.6" />
+      {/* Architrave */}
+      <rect x="3" y="8" width="18" height="1.5" fill="#dddcc0" stroke="#666" strokeWidth="0.3" />
+      {/* 4 columns */}
+      <rect x="5" y="10" width="1.8" height="9" fill="url(#catBuilding)" stroke="#888" strokeWidth="0.3" />
+      <rect x="8.5" y="10" width="1.8" height="9" fill="url(#catBuilding)" stroke="#888" strokeWidth="0.3" />
+      <rect x="12.2" y="10" width="1.8" height="9" fill="url(#catBuilding)" stroke="#888" strokeWidth="0.3" />
+      <rect x="16" y="10" width="1.8" height="9" fill="url(#catBuilding)" stroke="#888" strokeWidth="0.3" />
+      {/* Base */}
+      <rect x="3" y="19" width="18" height="2" fill="#b8b8a0" stroke="#666" strokeWidth="0.4" />
+    </svg>
+  );
+}
+
+function IconCatEntertainment({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      {/* Clapperboard body */}
+      <rect x="3" y="9" width="18" height="12" fill="#222" stroke="#000" strokeWidth="0.5" />
+      {/* Arm */}
+      <polygon points="3,9 21,9 20,5 4,5" fill="#111" stroke="#000" strokeWidth="0.4" />
+      {/* Diagonal stripes on the arm */}
+      <polygon points="5,5 9,5 7,9 3,9" fill="#fff" opacity="0.85" />
+      <polygon points="12,5 16,5 14,9 10,9" fill="#fff" opacity="0.85" />
+      <polygon points="19,5 21,5 21,9 17,9" fill="#fff" opacity="0.85" />
+      {/* Screen area */}
+      <rect x="5" y="12" width="14" height="7" fill="#3a3a3a" />
+    </svg>
+  );
+}
+
+function IconCatOther({ size = 24 }) {
+  // Pushpin — the "uncategorised" pin.
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="catPin" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ff6b6b" />
+          <stop offset="100%" stopColor="#a82525" />
+        </linearGradient>
+      </defs>
+      {/* Needle */}
+      <line x1="12" y1="14" x2="12" y2="21" stroke="#555" strokeWidth="1.2" />
+      {/* Pin head */}
+      <ellipse cx="12" cy="10" rx="6" ry="5" fill="url(#catPin)" stroke="#5a1414" strokeWidth="0.6" />
+      {/* Highlight */}
+      <ellipse cx="10" cy="8" rx="2" ry="1.2" fill="#ffdada" opacity="0.7" />
+      {/* Base ring */}
+      <ellipse cx="12" cy="14" rx="3.5" ry="1.2" fill="#6a1e1e" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -964,6 +1064,11 @@ export const ICON_MAP = {
   'achievements': IconMedal,
   'dev-camp': IconDevCamp,
   'nxmarket': IconNxMarket,
+  'cat-crypto': IconCatCrypto,
+  'cat-sports': IconCatSports,
+  'cat-politics': IconCatPolitics,
+  'cat-entertainment': IconCatEntertainment,
+  'cat-other': IconCatOther,
 };
 
 export function Win98Icon({ id, size = 32 }) {
