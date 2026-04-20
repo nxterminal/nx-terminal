@@ -6,6 +6,7 @@ const PROGRAMS = [
   { id: 'world-chat', label: 'World Chat' },
   { id: 'leaderboard', label: 'Leaderboard' },
   { id: 'protocol-market', label: 'Protocol Market' },
+  { id: 'nxmarket', label: 'NXMARKET' },
   { id: 'ai-lab', label: 'AI Lab' },
   { id: 'my-devs', label: 'My Devs' },
   { id: 'inbox', label: 'Inbox' },

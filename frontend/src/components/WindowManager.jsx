@@ -30,6 +30,7 @@ import MegaSentinel from './programs/mega-sentinel/MegaSentinel';
 import MissionControl from './programs/mission-control/MissionControl';
 import Achievements from '../windows/Achievements';
 import DevCamp from '../windows/DevCamp';
+import NXMarket from '../windows/NXMarket';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -59,6 +60,7 @@ const WINDOW_COMPONENTS = {
   'mission-control': MissionControl,
   'achievements': Achievements,
   'dev-camp': DevCamp,
+  'nxmarket': NXMarket,
 };
 
 export default function WindowManager({

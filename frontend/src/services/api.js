@@ -248,6 +248,56 @@ export const api = {
       body: JSON.stringify({ text }),
     }),
 
+  // NXMARKET — prediction markets. All endpoints live under /api/nxmarket
+  // (public) and /api/admin/nxmarket (admin-gated by X-Admin-Wallet).
+  // Backend is source of truth; non-admin callers of admin endpoints get
+  // 403 even though we mirror the wallet set client-side for UX.
+  listMarkets: (params = {}) => {
+    const filtered = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== 'all')
+    );
+    const qs = new URLSearchParams(filtered).toString();
+    return fetchJSON(`${API_BASE}/api/nxmarket/markets${qs ? `?${qs}` : ''}`);
+  },
+  getMarketDetail: (marketId) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/${marketId}`),
+  createUserMarket: (body) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  createOfficialMarket: (wallet, body) =>
+    fetchJSON(`${API_BASE}/api/admin/nxmarket/markets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Wallet': wallet || '',
+      },
+      body: JSON.stringify(body),
+    }),
+  buyShares: (marketId, body) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/${marketId}/buy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  exitPosition: (marketId, body) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/${marketId}/exit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  resolveMarket: (wallet, marketId, resolution) =>
+    fetchJSON(`${API_BASE}/api/admin/nxmarket/markets/${marketId}/resolve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Wallet': wallet || '',
+      },
+      body: JSON.stringify({ resolution }),
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
