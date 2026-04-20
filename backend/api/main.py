@@ -419,6 +419,46 @@ def _run_auto_migrations():
                     "CREATE INDEX IF NOT EXISTS idx_nxmarket_price_history_market_time "
                     "ON nxmarket_price_history(market_id, snapshot_at DESC)"
                 )
+                # PR C1 — comments system. Flat comments (no threads),
+                # soft delete (owner or admin), like/dislike voting.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_comments (
+                        id              BIGSERIAL PRIMARY KEY,
+                        market_id       BIGINT NOT NULL
+                                          REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        body            TEXT NOT NULL
+                                          CHECK (char_length(body) > 0 AND char_length(body) <= 500),
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        deleted_at      TIMESTAMPTZ,
+                        deleted_by      VARCHAR(42)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_comments_market_created "
+                    "ON nxmarket_comments(market_id, created_at DESC) "
+                    "WHERE deleted_at IS NULL"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_comments_wallet "
+                    "ON nxmarket_comments(wallet_address)"
+                )
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_comment_votes (
+                        id              BIGSERIAL PRIMARY KEY,
+                        comment_id      BIGINT NOT NULL
+                                          REFERENCES nxmarket_comments(id) ON DELETE CASCADE,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        vote_type       VARCHAR(10) NOT NULL
+                                          CHECK (vote_type IN ('like', 'dislike')),
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        UNIQUE (comment_id, wallet_address)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_comment_votes_comment "
+                    "ON nxmarket_comment_votes(comment_id)"
+                )
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""

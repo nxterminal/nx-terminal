@@ -24,7 +24,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.api.deps import get_db, validate_wallet
-from backend.api.routes.admin import _require_admin
+from backend.api.rate_limit import comment_limiter
+from backend.api.routes.admin import ADMIN_WALLETS, _require_admin
 from backend.services.admin_log import log_event as admin_log_event
 from backend.services import lmsr
 from backend.services.ledger import LedgerSource
@@ -865,4 +866,241 @@ def get_market_detail(market_id: int):
         "market": market,
         "recent_trades": [_trade(t) for t in trades],
         "price_history": [_hist(h) for h in history],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Comments (PR C1) — flat per-market comment thread with like/dislike votes,
+# soft delete (owner or admin), 500-char body cap, 1-per-minute rate limit.
+# ---------------------------------------------------------------------------
+
+
+COMMENT_MAX_LEN = 500
+COMMENT_LIST_DEFAULT_LIMIT = 20
+COMMENT_LIST_MAX_LIMIT = 50
+
+
+class CreateCommentBody(BaseModel):
+    wallet: str
+    body: str
+
+
+class VoteCommentBody(BaseModel):
+    wallet: str
+    vote: str  # 'like' | 'dislike' | 'none'
+
+
+def _serialise_comment(row: dict) -> dict:
+    """Shape a SELECT result (with aggregated counts) into the API contract."""
+    is_deleted = row["deleted_at"] is not None
+    return {
+        "id": int(row["id"]),
+        "wallet_address": row["wallet_address"],
+        "body": "[Comment deleted]" if is_deleted else row["body"],
+        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        "like_count": 0 if is_deleted else int(row.get("like_count") or 0),
+        "dislike_count": 0 if is_deleted else int(row.get("dislike_count") or 0),
+        "my_vote": None if is_deleted else row.get("my_vote"),
+        "is_deleted": is_deleted,
+        "deleted_by": row["deleted_by"],
+    }
+
+
+@router.get("/markets/{market_id}/comments")
+def list_comments(
+    market_id: int,
+    limit: int = Query(default=COMMENT_LIST_DEFAULT_LIMIT, ge=1,
+                       le=COMMENT_LIST_MAX_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    wallet: Optional[str] = Query(default=None),
+):
+    # If wallet is provided, resolve it to a normalised form for my_vote
+    # lookup; but don't 400 when an unrecognised wallet is passed — just
+    # skip the my_vote join so public reads never fail for missing/invalid
+    # wallet headers.
+    me = None
+    if wallet:
+        try:
+            me = validate_wallet(wallet)
+        except HTTPException:
+            me = None
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM nxmarket_markets WHERE id = %s",
+                (market_id,),
+            )
+            if cur.fetchone() is None:
+                raise HTTPException(404, "market not found")
+
+            cur.execute(
+                "SELECT COUNT(*) AS c FROM nxmarket_comments WHERE market_id = %s",
+                (market_id,),
+            )
+            r = cur.fetchone()
+            total_count = int(r["c"] if isinstance(r, dict) else r[0])
+
+            cur.execute(
+                """
+                SELECT
+                  c.id, c.wallet_address, c.body, c.created_at,
+                  c.deleted_at, c.deleted_by,
+                  COALESCE(SUM(CASE WHEN v.vote_type = 'like'    THEN 1 ELSE 0 END), 0) AS like_count,
+                  COALESCE(SUM(CASE WHEN v.vote_type = 'dislike' THEN 1 ELSE 0 END), 0) AS dislike_count,
+                  MAX(CASE WHEN v.wallet_address = %s THEN v.vote_type END) AS my_vote
+                FROM nxmarket_comments c
+                LEFT JOIN nxmarket_comment_votes v ON v.comment_id = c.id
+                WHERE c.market_id = %s
+                GROUP BY c.id
+                ORDER BY c.created_at DESC, c.id DESC
+                LIMIT %s OFFSET %s
+                """,
+                (me, market_id, limit, offset),
+            )
+            rows = cur.fetchall()
+
+    comments = [_serialise_comment(dict(r)) for r in rows]
+    return {
+        "comments": comments,
+        "total_count": total_count,
+        "has_more": (offset + len(comments)) < total_count,
+    }
+
+
+@router.post("/markets/{market_id}/comments")
+def create_comment(market_id: int, body: CreateCommentBody):
+    wallet = validate_wallet(body.wallet)
+    text = (body.body or "").strip()
+    if not text:
+        raise HTTPException(400, "body cannot be empty")
+    if len(text) > COMMENT_MAX_LEN:
+        raise HTTPException(
+            400, f"body too long (max {COMMENT_MAX_LEN} chars)"
+        )
+
+    # Redis-backed 60s cooldown per wallet. comment_limiter.check raises
+    # HTTPException(429) when the wallet hit the endpoint in the window.
+    comment_limiter.check(wallet)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM nxmarket_markets WHERE id = %s",
+                (market_id,),
+            )
+            if cur.fetchone() is None:
+                raise HTTPException(404, "market not found")
+
+            cur.execute(
+                """
+                INSERT INTO nxmarket_comments (market_id, wallet_address, body)
+                VALUES (%s, %s, %s)
+                RETURNING id, created_at
+                """,
+                (market_id, wallet, text),
+            )
+            r = cur.fetchone()
+            cid = int(r["id"] if isinstance(r, dict) else r[0])
+            created = r["created_at"] if isinstance(r, dict) else r[1]
+
+    return {
+        "comment_id": cid,
+        "created_at": created.isoformat() if created else None,
+    }
+
+
+@router.delete("/comments/{comment_id}")
+def delete_comment(comment_id: int, request: Request):
+    header = request.headers.get("X-Wallet") or request.headers.get("x-wallet")
+    if not header:
+        raise HTTPException(400, "X-Wallet header required")
+    wallet = validate_wallet(header)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, wallet_address, deleted_at "
+                "FROM nxmarket_comments WHERE id = %s FOR UPDATE",
+                (comment_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "comment not found")
+            if row["deleted_at"] is not None:
+                raise HTTPException(400, "comment already deleted")
+
+            is_owner = row["wallet_address"].lower() == wallet
+            is_admin = wallet in ADMIN_WALLETS
+            if not (is_owner or is_admin):
+                raise HTTPException(
+                    403, "you can only delete your own comments",
+                )
+
+            cur.execute(
+                """
+                UPDATE nxmarket_comments
+                   SET deleted_at = NOW(), deleted_by = %s
+                 WHERE id = %s
+                """,
+                (wallet, comment_id),
+            )
+
+    return {"deleted": True}
+
+
+@router.post("/comments/{comment_id}/vote")
+def vote_comment(comment_id: int, body: VoteCommentBody):
+    wallet = validate_wallet(body.wallet)
+    if body.vote not in ("like", "dislike", "none"):
+        raise HTTPException(400, "vote must be 'like', 'dislike', or 'none'")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, deleted_at FROM nxmarket_comments WHERE id = %s",
+                (comment_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "comment not found")
+            if row["deleted_at"] is not None:
+                raise HTTPException(400, "cannot vote on a deleted comment")
+
+            if body.vote == "none":
+                cur.execute(
+                    "DELETE FROM nxmarket_comment_votes "
+                    "WHERE comment_id = %s AND wallet_address = %s",
+                    (comment_id, wallet),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO nxmarket_comment_votes
+                      (comment_id, wallet_address, vote_type)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (comment_id, wallet_address)
+                    DO UPDATE SET vote_type = EXCLUDED.vote_type,
+                                  created_at = NOW()
+                    """,
+                    (comment_id, wallet, body.vote),
+                )
+
+            # Return fresh aggregates + my_vote.
+            cur.execute(
+                """
+                SELECT
+                  COALESCE(SUM(CASE WHEN vote_type='like'    THEN 1 ELSE 0 END), 0) AS like_count,
+                  COALESCE(SUM(CASE WHEN vote_type='dislike' THEN 1 ELSE 0 END), 0) AS dislike_count,
+                  MAX(CASE WHEN wallet_address=%s THEN vote_type END) AS my_vote
+                FROM nxmarket_comment_votes WHERE comment_id = %s
+                """,
+                (wallet, comment_id),
+            )
+            agg = cur.fetchone()
+
+    return {
+        "like_count": int(agg["like_count"] or 0),
+        "dislike_count": int(agg["dislike_count"] or 0),
+        "my_vote": agg["my_vote"],
     }

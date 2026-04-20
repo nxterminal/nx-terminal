@@ -132,6 +132,7 @@ class SlidingWindowLimiter:
 prompt_limiter = RateLimiter(cooldown_seconds=60, namespace="prompt")      # 1 prompt per dev per 60s
 chat_limiter = RateLimiter(cooldown_seconds=10, namespace="chat")          # 1 chat msg per wallet per 10s
 shop_limiter = RateLimiter(cooldown_seconds=1, namespace="shop")           # 1 purchase per wallet per 1s
+comment_limiter = RateLimiter(cooldown_seconds=60, namespace="nxmarket_comment")  # 1 comment per wallet per 60s
 
 # Global per-IP rate limiter: 120 requests per 60 seconds
 global_ip_limiter = SlidingWindowLimiter(

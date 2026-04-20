@@ -5,6 +5,7 @@ import MarketPriceChart from './MarketPriceChart';
 import BuyModal from './BuyModal';
 import ExitModal from './ExitModal';
 import ResolveMarketConfirm from './ResolveMarketConfirm';
+import CommentsList from './CommentsList';
 
 function shortAddr(addr) {
   if (!addr) return '?';
@@ -110,6 +111,7 @@ export default function MarketDetailModal({ marketId, wallet, onClose }) {
   const [buySide, setBuySide] = useState(null);   // 'YES' | 'NO' | null
   const [exitOpen, setExitOpen] = useState(false);
   const [resolveSide, setResolveSide] = useState(null); // 'YES' | 'NO'
+  const [commentCount, setCommentCount] = useState(0);
 
   const isAdmin = isNxMarketAdmin(wallet);
 
@@ -314,6 +316,21 @@ export default function MarketDetailModal({ marketId, wallet, onClose }) {
             marginBottom: 4,
           }}>Recent trades</div>
           <TradesTable trades={data.recent_trades} />
+        </div>
+
+        {/* Comments (PR C1) */}
+        <div style={{ marginTop: 18, borderTop: '1px solid #999', paddingTop: 10 }}>
+          <div style={{
+            fontSize: 13, fontWeight: 'bold', color: '#333',
+            fontFamily: 'Tahoma, sans-serif', marginBottom: 6,
+          }}>
+            Comments ({commentCount})
+          </div>
+          <CommentsList
+            marketId={market.id}
+            wallet={wallet}
+            onCountChange={setCommentCount}
+          />
         </div>
       </div>
 
