@@ -393,10 +393,10 @@ function MarketsListInner({ wallet, onOpenMarket }, ref) {
             !wallet ? 'Connect your wallet to create a market'
             : cap && !cap.can_create
               ? `Cap reached: ${cap.active_markets}/${cap.max_markets} active. Mint more devs or resolve existing markets.`
-              : 'Create a new market (costs 500 $NXT)'
+              : 'Create a new market (costs 1000 $NXT)'
           }
           style={{ padding: '3px 10px', fontSize: 11, fontWeight: 'bold' }}>
-          + Create Market (500 $NXT)
+          + Create Market (1000 $NXT)
         </button>
         {isAdmin && (
           <button onClick={() => setCreateMode('official')} className="win-btn"
@@ -497,7 +497,7 @@ function EmptyState({ wallet, onCreate }) {
       <button onClick={onCreate} className="win-btn"
         disabled={!wallet}
         style={{ padding: '4px 14px', fontSize: 12, fontWeight: 'bold' }}>
-        + Create Market (500 $NXT)
+        + Create Market (1000 $NXT)
       </button>
     </div>
   );

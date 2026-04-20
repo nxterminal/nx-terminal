@@ -99,7 +99,7 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
           color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
-          <span>{isOfficial ? 'Create Official Market (Admin)' : 'Create Market — 500 $NXT'}</span>
+          <span>{isOfficial ? 'Create Official Market (Admin)' : 'Create Market — 1000 $NXT'}</span>
           <button onClick={onClose} className="win-btn"
             style={{ padding: '0 4px', fontWeight: 'bold' }}>X</button>
         </div>
@@ -269,7 +269,7 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
               <input type="checkbox" checked={confirmed}
                 onChange={e => setConfirmed(e.target.checked)} />
               <span>
-                I understand creating this market costs <b>500 $NXT</b>,
+                I understand creating this market costs <b>1000 $NXT</b>,
                 deducted from my in-game balance.
               </span>
             </label>
@@ -303,7 +303,7 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
               }>
               {stage === 'submitting'
                 ? 'Creating…'
-                : isOfficial ? 'Create (free)' : 'Create (500 $NXT)'}
+                : isOfficial ? 'Create (free)' : 'Create (1000 $NXT)'}
             </button>
           </div>
         </div>

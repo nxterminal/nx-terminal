@@ -55,7 +55,7 @@ function HelpModal({ onClose }) {
             shares held. Losers get 0.
           </p>
           <p style={{ marginTop: 10 }}>
-            <b>Creating a market.</b> Costs 500 $NXT. The creator earns a
+            <b>Creating a market.</b> Costs 1000 $NXT. The creator earns a
             5% commission of the pool when the market resolves.
           </p>
           <div style={{ textAlign: 'right', marginTop: 14 }}>
