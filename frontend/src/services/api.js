@@ -330,6 +330,12 @@ export const api = {
       `${API_BASE}/api/nxmarket/leaderboard?period=${encodeURIComponent(period)}&limit=${limit}`,
     ),
 
+  // NXMARKET dev→market escalera. Returns dev_count, max_markets,
+  // active_markets, remaining, can_create so the Create Market modal
+  // can warn (or block) before hitting the 400 at submit.
+  getUserCap: (wallet) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/cap/${wallet}`),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };

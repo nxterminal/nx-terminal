@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { api } from '../../services/api';
 import { Win98Icon } from '../../components/Win98Icons';
 import { isNxMarketAdmin } from '../NXMarket';
@@ -276,7 +276,7 @@ function ResolvedBanner({ outcome }) {
 }
 
 
-export default function MarketsList({ wallet, onOpenMarket }) {
+function MarketsListInner({ wallet, onOpenMarket }, ref) {
   const [markets, setMarkets] = useState(null);
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('active');
@@ -284,6 +284,7 @@ export default function MarketsList({ wallet, onOpenMarket }) {
   const [filterType, setFilterType] = useState('all');
   const [createMode, setCreateMode] = useState(null); // 'user' | 'official' | null
   const [buyState, setBuyState] = useState(null);    // { market, side } | null
+  const [cap, setCap] = useState(null);              // escalera info for Create tooltip
 
   const isAdmin = isNxMarketAdmin(wallet);
   const walletConnected = !!wallet;
@@ -309,9 +310,29 @@ export default function MarketsList({ wallet, onOpenMarket }) {
     return () => clearInterval(iv);
   }, [fetchMarkets]);
 
+  // Cap info for the Create button tooltip + disabled state. Refetched
+  // whenever markets change (so resolving/creating a market updates the
+  // tooltip without a reload).
+  const fetchCap = useCallback(() => {
+    if (!wallet) { setCap(null); return; }
+    api.getUserCap(wallet).then(setCap).catch(() => setCap(null));
+  }, [wallet]);
+
+  useEffect(() => {
+    fetchCap();
+  }, [fetchCap, markets]);
+
+  // Exposed to the parent (NXMarket.jsx) so cross-tab triggers — e.g.
+  // a resolve fired from the Detail modal — can force a refetch even
+  // when the ambient 30s polling hasn't ticked yet.
+  useImperativeHandle(ref, () => ({
+    refresh: () => { fetchMarkets(); fetchCap(); },
+  }), [fetchMarkets, fetchCap]);
+
   const onCreated = () => {
     setCreateMode(null);
     fetchMarkets();
+    fetchCap();
   };
 
   const selectStyle = {
@@ -359,12 +380,19 @@ export default function MarketsList({ wallet, onOpenMarket }) {
         </label>
         <div style={{ flex: 1 }} />
         <button onClick={() => setCreateMode('user')} className="win-btn"
-          disabled={!wallet}
+          disabled={!wallet || (cap && !cap.can_create)}
+          title={
+            !wallet ? 'Connect your wallet to create a market'
+            : cap && !cap.can_create
+              ? `Cap reached: ${cap.active_markets}/${cap.max_markets} active. Mint more devs or resolve existing markets.`
+              : 'Create a new market (costs 500 $NXT)'
+          }
           style={{ padding: '3px 10px', fontSize: 11, fontWeight: 'bold' }}>
           + Create Market (500 $NXT)
         </button>
         {isAdmin && (
           <button onClick={() => setCreateMode('official')} className="win-btn"
+            title="Admin: create an official market (auto-minted seed, no cap)"
             style={{
               padding: '3px 10px', fontSize: 11, fontWeight: 'bold',
               background: '#fff8c4',
@@ -466,3 +494,7 @@ function EmptyState({ wallet, onCreate }) {
     </div>
   );
 }
+
+
+const MarketsList = forwardRef(MarketsListInner);
+export default MarketsList;

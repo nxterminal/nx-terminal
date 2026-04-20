@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 
 
@@ -26,6 +26,21 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
   const [stage, setStage] = useState('idle'); // 'idle' | 'submitting' | 'error'
   const [error, setError] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [cap, setCap] = useState(null); // escalera state for user markets
+
+  // Fetch cap info for user mode. Official mode bypasses this since the
+  // admin endpoint doesn't apply the escalera.
+  useEffect(() => {
+    if (!wallet || isOfficial) {
+      setCap(null);
+      return;
+    }
+    let cancelled = false;
+    api.getUserCap(wallet)
+      .then(c => { if (!cancelled) setCap(c); })
+      .catch(() => { if (!cancelled) setCap(null); });
+    return () => { cancelled = true; };
+  }, [wallet, isOfficial]);
 
   const qLen = question.trim().length;
   const closeAtMs = closeAt ? new Date(closeAt).getTime() : 0;
@@ -34,8 +49,10 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
   const validClose = closeAtMs >= minMs;
   const validLiquidity = liquidityB >= 10 && liquidityB <= 10000;
   const validSeed = !isOfficial || (seedNxt >= 100 && seedNxt <= 10000);
+  const capBlocks = !isOfficial && cap && !cap.can_create;
   const canSubmit = validQuestion && validClose && validLiquidity && validSeed
-    && (isOfficial || confirmed) && stage === 'idle';
+    && (isOfficial || confirmed) && stage === 'idle'
+    && !capBlocks;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -94,6 +111,48 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
               border: '1px solid #856404', color: '#856404',
             }}>
               Connect your wallet to create a market.
+            </div>
+          )}
+
+          {capBlocks && (
+            <div style={{
+              padding: 10, marginBottom: 10,
+              background: '#ffebee', border: '2px solid #c62828',
+              color: '#7a1d1d',
+              fontFamily: "'VT323', monospace",
+            }}>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 'bold', marginBottom: 4 }}>
+                ⚠ You've reached your market cap
+              </div>
+              <div style={{ fontSize: 'var(--text-sm, 12px)', marginBottom: 4 }}>
+                Active markets: <b>{cap.active_markets} / {cap.max_markets}</b>
+                {' · '}Current devs: <b>{cap.dev_count}</b>
+              </div>
+              <div style={{ fontSize: 'var(--text-sm, 12px)', marginTop: 6 }}>
+                Ways to get more slots:
+              </div>
+              <ul style={{
+                margin: '2px 0 0 18px', padding: 0, fontSize: 'var(--text-sm, 12px)',
+                lineHeight: 1.4,
+              }}>
+                <li>Resolve or close existing markets</li>
+                <li>Mint more devs: 5 devs → 5 slots, 20+ devs → unlimited</li>
+              </ul>
+            </div>
+          )}
+
+          {!isOfficial && cap && cap.can_create && cap.max_markets !== null && (
+            <div style={{
+              padding: 6, marginBottom: 10, background: '#fffde7',
+              border: '1px solid #c7b86a', fontSize: 'var(--text-sm, 12px)',
+              color: '#6e5a00',
+            }}>
+              You have <b>{cap.active_markets}/{cap.max_markets}</b> active
+              user markets. After creating this one:{' '}
+              <b>{cap.active_markets + 1}/{cap.max_markets}</b>.
+              {cap.max_markets < 5 && (
+                <> Mint more devs to raise your cap.</>
+              )}
             </div>
           )}
 
@@ -234,7 +293,14 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
             </button>
             <button onClick={submit} className="win-btn"
               style={{ padding: '4px 12px', fontWeight: 'bold' }}
-              disabled={!canSubmit || !wallet}>
+              disabled={!canSubmit || !wallet}
+              title={
+                !wallet ? 'Connect your wallet to create a market'
+                : capBlocks ? `Cap reached: ${cap.active_markets}/${cap.max_markets} active. Mint more devs or resolve existing markets.`
+                : !validQuestion ? 'Question must be 10-200 chars'
+                : !validClose ? 'close_at must be at least 1h in the future'
+                : undefined
+              }>
               {stage === 'submitting'
                 ? 'Creating…'
                 : isOfficial ? 'Create (free)' : 'Create (500 $NXT)'}

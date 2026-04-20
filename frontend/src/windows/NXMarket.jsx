@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import MarketsList from './nxmarket/MarketsList';
 import MarketDetailModal from './nxmarket/MarketDetailModal';
@@ -73,6 +73,15 @@ export default function NXMarket() {
   const [tab, setTab] = useState('markets');
   const [helpOpen, setHelpOpen] = useState(false);
   const [openMarketId, setOpenMarketId] = useState(null);
+  // Ref to the MarketsList so cross-child actions (e.g. a resolve from
+  // the Detail modal) can trigger an immediate refetch — otherwise the
+  // list stays stale until the 30s polling tick.
+  const marketsListRef = useRef(null);
+
+  const handleMarketResolved = () => {
+    setOpenMarketId(null);
+    if (marketsListRef.current) marketsListRef.current.refresh();
+  };
 
   return (
     <div style={{
@@ -107,6 +116,7 @@ export default function NXMarket() {
       <div style={{ flex: 1, padding: 12, overflow: 'hidden' }}>
         {tab === 'markets' && (
           <MarketsList
+            ref={marketsListRef}
             wallet={wallet}
             onOpenMarket={(id) => setOpenMarketId(id)} />
         )}
@@ -146,7 +156,8 @@ export default function NXMarket() {
         <MarketDetailModal
           marketId={openMarketId}
           wallet={wallet}
-          onClose={() => setOpenMarketId(null)} />
+          onClose={() => setOpenMarketId(null)}
+          onMarketResolved={handleMarketResolved} />
       )}
     </div>
   );
