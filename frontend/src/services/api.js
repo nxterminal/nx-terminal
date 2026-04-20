@@ -336,6 +336,14 @@ export const api = {
   getUserCap: (wallet) =>
     fetchJSON(`${API_BASE}/api/nxmarket/markets/cap/${wallet}`),
 
+  // NXMARKET admin pending list — closed-unresolved markets with
+  // per-side pool breakdowns. Drives the yellow alert banner atop
+  // MarketsList for admin wallets.
+  getPendingMarkets: (wallet) =>
+    fetchJSON(`${API_BASE}/api/nxmarket/markets/pending`, {
+      headers: { 'X-Admin-Wallet': wallet || '' },
+    }),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };

@@ -4,6 +4,7 @@ import { Win98Icon } from '../../components/Win98Icons';
 import { isNxMarketAdmin } from '../NXMarket';
 import CreateMarketModal from './CreateMarketModal';
 import BuyModal from './BuyModal';
+import PendingMarketsAlert from './PendingMarketsAlert';
 
 
 const CATEGORY_ICON_IDS = new Set([
@@ -341,6 +342,13 @@ function MarketsListInner({ wallet, onOpenMarket }, ref) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Admin-only pending-resolution banner — self-hides when the
+          wallet isn't admin or there's nothing to show. */}
+      <PendingMarketsAlert
+        wallet={wallet}
+        isAdmin={isAdmin}
+        onMarketResolved={() => { fetchMarkets(); fetchCap(); }} />
+
       {/* Filter bar */}
       <div className="win-panel" style={{
         padding: 8, marginBottom: 10,

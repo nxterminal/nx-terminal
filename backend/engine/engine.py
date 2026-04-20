@@ -1919,6 +1919,9 @@ def run_engine():
     pending_funds_interval = timedelta(seconds=_FUND_RETRY_INTERVAL_SEC)
     orphan_scan_interval = _ORPHAN_SCAN_INTERVAL
     nxmarket_close_interval = timedelta(minutes=5)
+    # Timeouts are 30-day decisions — hourly cadence is plenty. The
+    # job internally bounds its batch to 100 rows per run.
+    nxmarket_timeout_interval = timedelta(hours=1)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2012,6 +2015,7 @@ def run_engine():
     # Run the NX Market auto-close sweep on the first pass too (catch
     # any market that expired while the engine was down).
     last_nxmarket_close = datetime.now(timezone.utc) - nxmarket_close_interval
+    last_nxmarket_timeout = datetime.now(timezone.utc) - nxmarket_timeout_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2065,6 +2069,20 @@ def run_engine():
                     except Exception as e:
                         log.error(f"auto_close_expired_markets error: {e}")
                     last_nxmarket_close = now
+
+                # Auto-resolve as 'invalid' any NX Market that's been
+                # sitting in 'closed' for more than 30 days without
+                # admin action. Keeps the pending list from growing
+                # unbounded. Hourly cadence.
+                if now - last_nxmarket_timeout >= nxmarket_timeout_interval:
+                    try:
+                        from backend.services.nxmarket_lifecycle import (
+                            auto_timeout_invalid_markets,
+                        )
+                        auto_timeout_invalid_markets()
+                    except Exception as e:
+                        log.error(f"auto_timeout_invalid_markets error: {e}")
+                    last_nxmarket_timeout = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
