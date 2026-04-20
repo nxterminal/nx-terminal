@@ -897,6 +897,44 @@ function IconMedal({ size = 32 }) {
   );
 }
 
+function IconNxMarket({ size = 32 }) {
+  // Monitor on a stand, screen split horizontally: YES (green ↑) top,
+  // NO (red ↓) bottom. Matches the Win2k chrome of the other icons
+  // (IconMyPC / IconChart). No emoji — pure SVG gradients.
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="nxmMon" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8e8e0" />
+          <stop offset="100%" stopColor="#b0b0a0" />
+        </linearGradient>
+        <linearGradient id="nxmYes" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4adf8a" />
+          <stop offset="100%" stopColor="#1ea562" />
+        </linearGradient>
+        <linearGradient id="nxmNo" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f37968" />
+          <stop offset="100%" stopColor="#c0392b" />
+        </linearGradient>
+      </defs>
+      {/* Monitor body + stand */}
+      <rect x="2" y="3" width="28" height="20" rx="1.5" fill="url(#nxmMon)" stroke="#666" strokeWidth="0.8" />
+      <rect x="11" y="23" width="10" height="2" fill="url(#nxmMon)" stroke="#888" strokeWidth="0.5" />
+      <rect x="8" y="25" width="16" height="3" rx="0.8" fill="url(#nxmMon)" stroke="#888" strokeWidth="0.5" />
+      {/* Screen split */}
+      <rect x="4" y="5" width="24" height="8" fill="url(#nxmYes)" />
+      <rect x="4" y="13" width="24" height="8" fill="url(#nxmNo)" />
+      <line x1="4" y1="13" x2="28" y2="13" stroke="#fff" strokeWidth="0.6" opacity="0.8" />
+      {/* YES arrow (up) */}
+      <polygon points="10,10.5 13,7 16,10.5 14.5,10.5 14.5,12 11.5,12 11.5,10.5" fill="#fff" stroke="#0a5c30" strokeWidth="0.4" />
+      {/* NO arrow (down) */}
+      <polygon points="19,14.5 20.5,14.5 20.5,16 23.5,16 23.5,14.5 26,14.5 22.5,18.5" fill="#fff" stroke="#7c1f12" strokeWidth="0.4" />
+      {/* Power LED */}
+      <circle cx="16" cy="21.8" r="0.7" fill="#33cc33" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -925,6 +963,7 @@ export const ICON_MAP = {
   'mission-control': IconMissionControl,
   'achievements': IconMedal,
   'dev-camp': IconDevCamp,
+  'nxmarket': IconNxMarket,
 };
 
 export function Win98Icon({ id, size = 32 }) {

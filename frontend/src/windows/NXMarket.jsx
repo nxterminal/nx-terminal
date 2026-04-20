@@ -33,13 +33,13 @@ function HelpModal({ onClose }) {
           color: '#fff', padding: '3px 6px', fontSize: 'var(--text-base)',
           fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
         }}>
-          <span>What is NXMARKET?</span>
+          <span>What is NX Market?</span>
           <button onClick={onClose} className="win-btn"
             style={{ padding: '0 4px', fontWeight: 'bold' }}>X</button>
         </div>
         <div style={{ padding: 14, fontSize: 'var(--text-base)', lineHeight: 1.5 }}>
           <p>
-            <b>NXMARKET</b> is a prediction market. Bet $NXT on whether
+            <b>NX Market</b> is a prediction market. Bet $NXT on whether
             future events resolve YES or NO.
           </p>
           <p style={{ marginTop: 10 }}>
@@ -132,7 +132,7 @@ export default function NXMarket() {
             color: '#000080', textDecoration: 'underline',
             fontFamily: "'VT323', monospace", fontSize: 'var(--text-sm)',
           }}>
-          What is NXMARKET?
+          What is NX Market?
         </button>
       </div>
 
