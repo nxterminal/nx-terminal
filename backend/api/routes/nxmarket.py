@@ -981,6 +981,82 @@ def list_markets(
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# GET /api/nxmarket/markets/pending (admin) — drives the admin banner
+# in MarketsList. Registered BEFORE /markets/{market_id} on purpose:
+# Starlette matches routes in declaration order, and if the int-param
+# detail route came first it would 422 on the literal "pending".
+# ---------------------------------------------------------------------------
+
+
+@router.get("/markets/pending")
+def list_pending_markets(request: Request):
+    _require_admin(request)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT m.id, m.question, m.category, m.market_type,
+                       m.close_at, m.created_by, m.seed_nxt
+                  FROM nxmarket_markets m
+                 WHERE m.status = 'closed'
+                   AND m.outcome IS NULL
+                 ORDER BY m.close_at ASC
+                """,
+            )
+            markets = cur.fetchall()
+
+            out: list[dict] = []
+            for m in markets:
+                mid = int(m["id"])
+                cur.execute(
+                    """
+                    SELECT
+                      COALESCE(SUM(nxt_amount) FILTER (WHERE side='buy'),  0)  AS buys,
+                      COALESCE(SUM(nxt_amount) FILTER (WHERE side='sell'), 0)  AS sells,
+                      COALESCE(SUM(nxt_amount) FILTER (
+                        WHERE side='buy' AND outcome='YES'), 0)               AS yes_vol,
+                      COALESCE(SUM(nxt_amount) FILTER (
+                        WHERE side='buy' AND outcome='NO'),  0)               AS no_vol,
+                      COUNT(DISTINCT wallet_address)                           AS bettors,
+                      COUNT(DISTINCT wallet_address) FILTER (
+                        WHERE side='buy' AND outcome='YES')                    AS yes_bettors,
+                      COUNT(DISTINCT wallet_address) FILTER (
+                        WHERE side='buy' AND outcome='NO')                     AS no_bettors
+                    FROM nxmarket_trades WHERE market_id = %s
+                    """,
+                    (mid,),
+                )
+                agg = cur.fetchone()
+
+                pool_total = max(
+                    0, int(Decimal(agg["buys"]) - Decimal(agg["sells"])),
+                )
+                close_at = m["close_at"]
+                now = datetime.now(timezone.utc)
+                closed_days = max(0, (now - close_at).days) if close_at else 0
+                days_until_timeout = max(0, 30 - closed_days)
+
+                out.append({
+                    "id": mid,
+                    "question": m["question"],
+                    "category": m["category"],
+                    "market_type": m["market_type"],
+                    "close_at": close_at.isoformat() if close_at else None,
+                    "closed_since_days": closed_days,
+                    "days_until_timeout": days_until_timeout,
+                    "pool_total": pool_total,
+                    "yes_volume": int(Decimal(agg["yes_vol"])),
+                    "no_volume": int(Decimal(agg["no_vol"])),
+                    "bettors_count": int(agg["bettors"] or 0),
+                    "yes_bettors": int(agg["yes_bettors"] or 0),
+                    "no_bettors": int(agg["no_bettors"] or 0),
+                })
+
+    return {"markets": out, "total_pending": len(out)}
+
+
 @router.get("/markets/{market_id}")
 def get_market_detail(market_id: int):
     with get_db() as conn:
