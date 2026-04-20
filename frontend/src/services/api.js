@@ -323,6 +323,13 @@ export const api = {
       body: JSON.stringify({ wallet, vote }),
     }),
 
+  // NXMARKET leaderboard (PR C2) — top users by net profit. Period
+  // toggle: 'all' (entire history) or '30d' (last 30 days).
+  getLeaderboard: (period = 'all', limit = 25) =>
+    fetchJSON(
+      `${API_BASE}/api/nxmarket/leaderboard?period=${encodeURIComponent(period)}&limit=${limit}`,
+    ),
+
   // WebSocket
   wsUrl: `${WS_BASE}/ws/feed`,
 };
