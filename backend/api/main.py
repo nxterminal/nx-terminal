@@ -390,6 +390,12 @@ def _run_auto_migrations():
                     "ALTER TABLE nxmarket_trades "
                     "ADD COLUMN IF NOT EXISTS penalty_nxt NUMERIC(20,2) NOT NULL DEFAULT 0"
                 )
+                # PR 3 — admin who resolved the market (audit trail). Nullable
+                # until a market is resolved.
+                cur.execute(
+                    "ALTER TABLE nxmarket_markets "
+                    "ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(42)"
+                )
                 cur.execute(
                     "CREATE INDEX IF NOT EXISTS idx_nxmarket_trades_market_time "
                     "ON nxmarket_trades(market_id, created_at DESC)"
