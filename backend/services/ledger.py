@@ -86,13 +86,15 @@ class LedgerSource:
     # the outcome row(s) sharing the same ref_id.
     #   HACK_MAINFRAME_COST — attempts against the corporate mainframe
     #   HACK_RAID_COST      — attempts against another player's dev
-    # NXMARKET — Fase 1 foundation (PR 1) + trading (PR 2). Payout /
-    # commission / treasury sources reserved for PR 3 (admin resolve).
+    # NXMARKET — Fase 1 foundation (PR 1) + trading (PR 2) + resolve (PR 3).
     NXMARKET_SEED_MINTED = "nxmarket_seed_minted"
     NXMARKET_CREATION_FEE = "nxmarket_creation_fee"
     NXMARKET_BUY_YES = "nxmarket_buy_yes"
     NXMARKET_BUY_NO = "nxmarket_buy_no"
     NXMARKET_SELL = "nxmarket_sell"
+    NXMARKET_PAYOUT = "nxmarket_payout"
+    NXMARKET_COMMISSION = "nxmarket_commission"
+    NXMARKET_TREASURY_FEE = "nxmarket_treasury_fee"
 
     @classmethod
     def all_sources(cls) -> Iterable[str]:

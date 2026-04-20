@@ -49,6 +49,11 @@ USER_MARKET_CREATOR_FEE_PERCENT = Decimal("5")
 LIQUIDITY_B_MIN = Decimal("10")
 LIQUIDITY_B_MAX = Decimal("10000")
 MIN_CLOSE_AT_LEAD = timedelta(hours=1)
+# Flat 3% of pool_total collected on every resolve, paid to the
+# treasury wallet. Mirrors the treasury constant repeated in
+# shop.py / engine.py / backfill_funds.py to avoid a cross-import.
+TREASURY_FEE_PERCENT = Decimal("3")
+_TREASURY_WALLET = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +87,10 @@ class ExitBody(BaseModel):
     wallet: str
     side: str
     shares_to_sell: Decimal
+
+
+class ResolveBody(BaseModel):
+    resolution: str
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +189,222 @@ def create_official_market(body: CreateOfficialMarketBody, request: Request):
             )
 
     return {"market_id": int(market_id), "status": "active"}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/admin/nxmarket/markets/{id}/resolve (PR 3)
+# ---------------------------------------------------------------------------
+
+
+@admin_router.post("/markets/{market_id}/resolve")
+def resolve_market(market_id: int, body: ResolveBody, request: Request):
+    admin_wallet = _require_admin(request)
+
+    if body.resolution not in ("YES", "NO"):
+        raise HTTPException(400, "resolution must be 'YES' or 'NO'")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # 1. Lock the market row; assert it can still be resolved.
+            cur.execute(
+                "SELECT id, market_type, created_by, creator_fee_percent, "
+                "status, total_volume_nxt FROM nxmarket_markets "
+                "WHERE id = %s FOR UPDATE",
+                (market_id,),
+            )
+            market = cur.fetchone()
+            if not market:
+                raise HTTPException(404, "market not found")
+            if market["status"] == "resolved":
+                raise HTTPException(400, "market already resolved")
+            if market["status"] not in ("active", "closed"):
+                raise HTTPException(
+                    400, f"market is not resolvable (status={market['status']})"
+                )
+
+            # 2. pool_total = net NXT users put in via trading.
+            #    SUM(buys) - SUM(sells). Excludes seed_nxt by design
+            #    (seed is locked liquidity, not redistributed).
+            #    Penalties retained on sells are included because
+            #    sells.nxt_amount is value_received (post-penalty).
+            cur.execute(
+                """
+                SELECT
+                  COALESCE(SUM(nxt_amount) FILTER (WHERE side = 'buy'), 0) AS buys,
+                  COALESCE(SUM(nxt_amount) FILTER (WHERE side = 'sell'), 0) AS sells
+                FROM nxmarket_trades WHERE market_id = %s
+                """,
+                (market_id,),
+            )
+            r = cur.fetchone()
+            pool_total = int(Decimal(r["buys"]) - Decimal(r["sells"]))
+            if pool_total < 0:
+                pool_total = 0
+
+            is_user_market = market["market_type"] == "user"
+
+            # 3. Fees (floor).
+            treasury_fee = pool_total * int(TREASURY_FEE_PERCENT) // 100
+            creator_commission = 0
+            if is_user_market and pool_total > 0:
+                creator_commission = (
+                    pool_total * int(market["creator_fee_percent"]) // 100
+                )
+            distributable = pool_total - treasury_fee - creator_commission
+
+            # 4-5. Lock winning positions; compute total_winning_shares.
+            cur.execute(
+                """
+                SELECT id, wallet_address, shares
+                  FROM nxmarket_positions
+                 WHERE market_id = %s AND outcome = %s AND shares > 0
+                 FOR UPDATE
+                """,
+                (market_id, body.resolution),
+            )
+            winning_positions = cur.fetchall()
+            total_winning_shares = sum(
+                (Decimal(p["shares"]) for p in winning_positions),
+                Decimal(0),
+            )
+
+            # 6-7-8. Distribute to winners (only when distributable > 0 and
+            # winners exist). Otherwise everything rolls into treasury.
+            payouts: list[dict] = []
+            paid_to_winners = 0
+
+            if winning_positions and total_winning_shares > 0 and distributable > 0:
+                for pos in winning_positions:
+                    share = Decimal(pos["shares"])
+                    raw = (Decimal(distributable) * share) / total_winning_shares
+                    payout_i = int(raw)  # floor
+                    if payout_i <= 0:
+                        continue
+                    try:
+                        credit_wallet_balance(
+                            cur,
+                            wallet_address=pos["wallet_address"],
+                            amount_nxt=payout_i,
+                            ledger_source=LedgerSource.NXMARKET_PAYOUT,
+                            ref_table="nxmarket_markets",
+                            ref_id=market_id,
+                        )
+                    except NoDevsError as exc:
+                        # Atomicity: roll back the whole resolve. The
+                        # context manager will rollback on HTTPException.
+                        raise HTTPException(
+                            500,
+                            f"winner wallet {pos['wallet_address']} owns no "
+                            f"devs — cannot credit payout; resolve aborted "
+                            f"({exc})",
+                        )
+                    payouts.append({
+                        "wallet": pos["wallet_address"],
+                        "amount_nxt": payout_i,
+                        "shares": float(share),
+                    })
+                    paid_to_winners += payout_i
+
+            # Dust = rounding residue from integer payouts.
+            dust = distributable - paid_to_winners if winning_positions else distributable
+            treasury_total = treasury_fee + dust
+            if not winning_positions or total_winning_shares <= 0:
+                # No winners → the full pool (minus any creator commission
+                # if applicable) goes to treasury.
+                treasury_total = pool_total - creator_commission
+
+            # 9. Treasury credit (best-effort: if the treasury wallet
+            # owns no devs in this env, fall back to admin_log warning —
+            # critical to not block user payouts).
+            if treasury_total > 0:
+                try:
+                    credit_wallet_balance(
+                        cur,
+                        wallet_address=_TREASURY_WALLET,
+                        amount_nxt=treasury_total,
+                        ledger_source=LedgerSource.NXMARKET_TREASURY_FEE,
+                        ref_table="nxmarket_markets",
+                        ref_id=market_id,
+                    )
+                except NoDevsError:
+                    log.warning(
+                        "nxmarket_resolve treasury has no devs; "
+                        "fee=%s market=%s — recorded in admin_log only",
+                        treasury_total, market_id,
+                    )
+                    admin_log_event(
+                        cur,
+                        event_type="nxmarket_treasury_uncollected",
+                        wallet_address=_TREASURY_WALLET,
+                        payload={
+                            "market_id": market_id,
+                            "amount_nxt": treasury_total,
+                        },
+                    )
+
+            # 10. Creator commission (only if user market and pool > 0).
+            if creator_commission > 0:
+                try:
+                    credit_wallet_balance(
+                        cur,
+                        wallet_address=market["created_by"],
+                        amount_nxt=creator_commission,
+                        ledger_source=LedgerSource.NXMARKET_COMMISSION,
+                        ref_table="nxmarket_markets",
+                        ref_id=market_id,
+                    )
+                except NoDevsError as exc:
+                    raise HTTPException(
+                        500,
+                        f"creator {market['created_by']} owns no devs — "
+                        f"cannot pay commission; resolve aborted ({exc})",
+                    )
+
+            # 11. Mark the market resolved.
+            cur.execute(
+                """
+                UPDATE nxmarket_markets
+                   SET status = 'resolved',
+                       outcome = %s,
+                       resolved_at = NOW(),
+                       resolved_by = %s
+                 WHERE id = %s
+                """,
+                (body.resolution, admin_wallet, market_id),
+            )
+
+            # 12. Audit log.
+            admin_log_event(
+                cur,
+                event_type="nxmarket_resolved",
+                wallet_address=admin_wallet,
+                payload={
+                    "market_id": market_id,
+                    "resolution": body.resolution,
+                    "pool_total": pool_total,
+                    "treasury_fee": treasury_fee,
+                    "treasury_total": treasury_total,
+                    "creator_commission": creator_commission,
+                    "distributable": distributable,
+                    "winners_count": len(payouts),
+                    "total_winning_shares": float(total_winning_shares),
+                    "paid_to_winners": paid_to_winners,
+                    "dust": dust,
+                },
+            )
+
+    return {
+        "market_id": market_id,
+        "resolution": body.resolution,
+        "pool_total": pool_total,
+        "treasury_fee": treasury_fee,
+        "treasury_total": treasury_total,
+        "creator_commission": creator_commission,
+        "distributable": distributable,
+        "paid_to_winners": paid_to_winners,
+        "winners_count": len(payouts),
+        "dust": dust,
+    }
 
 
 # ---------------------------------------------------------------------------
