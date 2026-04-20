@@ -478,10 +478,10 @@ def test_create_official_market_auto_mints_seed_no_debit(client, clean_db):
     assert snap["price_no"] == Decimal("0.5")
 
 
-def test_create_user_market_debits_500_nxt_from_wallet(client, clean_db):
-    _seed_devs([(10, USER_WALLET, 300), (11, USER_WALLET, 400)])
+def test_create_user_market_debits_1000_nxt_from_wallet(client, clean_db):
+    _seed_devs([(10, USER_WALLET, 600), (11, USER_WALLET, 800)])
     pre_total = _balance_sum(USER_WALLET)
-    assert pre_total == 700
+    assert pre_total == 1400
 
     resp = client.post(
         "/api/nxmarket/markets",
@@ -500,21 +500,22 @@ def test_create_user_market_debits_500_nxt_from_wallet(client, clean_db):
     assert row["market_type"] == "user"
     assert row["created_by"] == USER_WALLET
     assert row["creator_fee_percent"] == Decimal("5")
-    assert row["seed_nxt"] == Decimal("500")
-    assert row["shares_yes"] == row["shares_no"] == Decimal("250")
+    assert row["seed_nxt"] == Decimal("1000")
+    assert row["shares_yes"] == row["shares_no"] == Decimal("500")
 
-    # Exactly 500 NXT drained from the wallet's devs.
-    assert _balance_sum(USER_WALLET) == pre_total - 500
+    # Exactly 1000 NXT drained from the wallet's devs.
+    assert _balance_sum(USER_WALLET) == pre_total - 1000
 
     # Ledger shows the debit, tagged with the correct source.
     rows = _ledger_rows(USER_WALLET, "nxmarket_creation_fee")
     assert len(rows) >= 1
     total_delta = sum(int(r["delta_nxt"]) for r in rows)
-    assert total_delta == -500
+    assert total_delta == -1000
 
 
 def test_create_user_market_fails_if_insufficient_balance(client, clean_db):
-    _seed_devs([(20, USER_WALLET, 400)])
+    # 900 NXT < 1000 NXT cost → rejected.
+    _seed_devs([(20, USER_WALLET, 900)])
     resp = client.post(
         "/api/nxmarket/markets",
         json={
@@ -534,7 +535,40 @@ def test_create_user_market_fails_if_insufficient_balance(client, clean_db):
     # No ledger row either.
     assert _ledger_rows(USER_WALLET, "nxmarket_creation_fee") == []
     # Balance unchanged.
-    assert _balance_sum(USER_WALLET) == 400
+    assert _balance_sum(USER_WALLET) == 900
+
+
+def test_user_market_creation_requires_1000_nxt(client, clean_db):
+    # Boundary test: 800 rejected, exactly 1000 accepted and drained to 0.
+    _seed_devs([(30, USER_WALLET, 800)])
+    r_under = client.post(
+        "/api/nxmarket/markets",
+        json={
+            "wallet": USER_WALLET,
+            "question": "Will X happen?",
+            "close_at": _future(),
+            "liquidity_b": 100,
+        },
+    )
+    assert r_under.status_code == 400
+    assert _balance_sum(USER_WALLET) == 800
+
+    # Top up to exactly 1000.
+    _seed_devs([(31, USER_WALLET, 200)])
+    assert _balance_sum(USER_WALLET) == 1000
+
+    r_ok = client.post(
+        "/api/nxmarket/markets",
+        json={
+            "wallet": USER_WALLET,
+            "question": "Will X happen?",
+            "close_at": _future(),
+            "liquidity_b": 100,
+        },
+    )
+    assert r_ok.status_code == 200, r_ok.text
+    # Full balance consumed.
+    assert _balance_sum(USER_WALLET) == 0
 
 
 # ---------------------------------------------------------------------------

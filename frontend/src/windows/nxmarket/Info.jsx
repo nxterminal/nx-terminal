@@ -105,7 +105,7 @@ export default function Info() {
       <div style={sectionStyle}>
         <h3 style={headingStyle}>Creating a market</h3>
         <p style={bodyStyle}>
-          Creating a market costs <strong>500 NXT</strong> (deducted
+          Creating a market costs <strong>1000 NXT</strong> (deducted
           from your in-game balance). You need devs to create markets,
           according to this scale:
         </p>
@@ -141,7 +141,7 @@ export default function Info() {
         </p>
         <p style={{ ...bodyStyle, marginTop: 6 }}>
           <strong>User markets</strong> are created by any wallet with
-          at least 1 dev. Cost 500 NXT. The creator earns 5%
+          at least 1 dev. Cost 1000 NXT. The creator earns 5%
           commission on the final pool when the market resolves.
         </p>
       </div>
