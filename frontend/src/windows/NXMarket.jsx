@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import MarketsList from './nxmarket/MarketsList';
+import MarketDetailModal from './nxmarket/MarketDetailModal';
 
 // Mirrors backend/api/routes/admin.py::ADMIN_WALLETS. Same set Inbox.jsx
 // uses for the Support Tickets admin tab. Backend remains source of truth
@@ -137,6 +138,12 @@ export default function NXMarket() {
       </div>
 
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+      {openMarketId && (
+        <MarketDetailModal
+          marketId={openMarketId}
+          wallet={wallet}
+          onClose={() => setOpenMarketId(null)} />
+      )}
     </div>
   );
 }
