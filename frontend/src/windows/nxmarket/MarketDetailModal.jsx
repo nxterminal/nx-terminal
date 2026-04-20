@@ -105,7 +105,7 @@ function TradesTable({ trades }) {
 }
 
 
-export default function MarketDetailModal({ marketId, wallet, onClose }) {
+export default function MarketDetailModal({ marketId, wallet, onClose, onMarketResolved }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [buySide, setBuySide] = useState(null);   // 'YES' | 'NO' | null
@@ -350,7 +350,14 @@ export default function MarketDetailModal({ marketId, wallet, onClose }) {
         <ResolveMarketConfirm market={market} resolution={resolveSide}
           wallet={wallet}
           onClose={() => setResolveSide(null)}
-          onResolved={() => { setResolveSide(null); fetchDetail(); }} />
+          onResolved={() => {
+            setResolveSide(null);
+            fetchDetail();
+            // Notify the parent so MarketsList can refetch immediately
+            // (prevents the market from showing as 'active' for up to
+            // the 30s polling window after a resolve).
+            if (onMarketResolved) onMarketResolved();
+          }} />
       )}
     </Overlay>
   );

@@ -132,6 +132,60 @@ def _row_with_prices(row: dict) -> dict:
     return out
 
 
+# User-market creation cap escalera. Prevents a single wallet from
+# flooding the market list and nudges players toward minting more devs.
+# Official markets (admin-created) are NOT counted against the cap.
+#   0 devs      → 0 markets
+#   1-4 devs    → N markets
+#   5-19 devs   → 5 markets
+#   20+ devs    → unlimited (max_markets=None)
+def _calculate_user_market_cap(cur, wallet: str) -> dict:
+    w = wallet.lower()
+    cur.execute(
+        "SELECT COUNT(*) AS cnt FROM devs WHERE LOWER(owner_address) = %s",
+        (w,),
+    )
+    r = cur.fetchone()
+    dev_count = int(r["cnt"] if isinstance(r, dict) else r[0] or 0)
+
+    if dev_count == 0:
+        max_markets = 0
+    elif dev_count < 5:
+        max_markets = dev_count
+    elif dev_count < 20:
+        max_markets = 5
+    else:
+        max_markets = None
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS cnt FROM nxmarket_markets
+         WHERE LOWER(created_by) = %s
+           AND status = 'active'
+           AND market_type = 'user'
+        """,
+        (w,),
+    )
+    r = cur.fetchone()
+    active_count = int(r["cnt"] if isinstance(r, dict) else r[0] or 0)
+
+    if max_markets is None:
+        remaining = None
+        can_create = True
+    else:
+        remaining = max(0, max_markets - active_count)
+        can_create = active_count < max_markets
+
+    return {
+        "wallet": w,
+        "dev_count": dev_count,
+        "max_markets": max_markets,
+        "active_markets": active_count,
+        "remaining": remaining,
+        "can_create": can_create,
+    }
+
+
 # ---------------------------------------------------------------------------
 # POST /api/admin/nxmarket/markets (official)
 # ---------------------------------------------------------------------------
@@ -420,6 +474,22 @@ def create_user_market(body: CreateUserMarketBody):
 
     with get_db() as conn:
         with conn.cursor() as cur:
+            # Escalera check fails fast before we touch balances or
+            # allocate a market id. Admin wallets are intentionally
+            # subject to the same cap for user markets — they have the
+            # /admin/markets flow for unlimited official creation.
+            cap = _calculate_user_market_cap(cur, wallet)
+            if not cap["can_create"]:
+                raise HTTPException(
+                    400,
+                    f"Market cap reached: "
+                    f"{cap['active_markets']}/{cap['max_markets']} active "
+                    f"(you have {cap['dev_count']} dev"
+                    f"{'s' if cap['dev_count'] != 1 else ''}). "
+                    f"Resolve or wait for existing markets to close, or "
+                    f"mint more devs (20+ for unlimited).",
+                )
+
             cur.execute(
                 "SELECT COALESCE(SUM(balance_nxt), 0) AS total "
                 "FROM devs WHERE LOWER(owner_address) = %s",
@@ -1182,3 +1252,19 @@ def get_leaderboard(
         "leaderboard": leaderboard,
         "total_users": total_users,
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/nxmarket/markets/cap/{wallet} — expose user's escalera state
+# so the frontend can render the Create Market modal with an
+# informative cap-reached panel instead of bouncing off the 400 at submit.
+# Public (no auth) — the data is per-wallet and not sensitive.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/markets/cap/{wallet}")
+def get_user_market_cap(wallet: str):
+    w = validate_wallet(wallet)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            return _calculate_user_market_cap(cur, w)
