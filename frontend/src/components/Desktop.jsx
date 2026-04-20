@@ -45,6 +45,8 @@ import BSOD from './BSOD';
 import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
+import { useWallet } from '../hooks/useWallet';
+import { isNxMarketAdmin } from '../windows/NXMarket';
 import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
@@ -71,7 +73,7 @@ const DESKTOP_ICONS = [
   { id: 'netwatch',        icon: '',           label: 'MegaWatch',       desc: 'Real-time MegaETH activity monitor' },
   { id: 'mega-sentinel',   icon: '\u{1F6E1}',  label: 'Mega Sentinel',   desc: 'Network firewall and threat sentinel' },
   { id: 'mission-control', icon: '\u{1F4CB}',  label: 'Mission Control', desc: 'Assign your devs to timed missions' },
-  { id: 'nxmarket',        icon: '\u{1F4CA}',  label: 'NXMARKET',         desc: 'Predict outcomes — bet $NXT on YES/NO markets' },
+  { id: 'nxmarket',        icon: '\u{1F4CA}',  label: 'NX Market',       desc: 'Predict outcomes — bet $NXT on YES/NO markets', adminOnly: true },
   { id: 'achievements',    icon: '\u2605',     label: 'Achievements',    desc: 'Unlock badges for milestones reached' },
   { id: 'dev-camp',        icon: '\u{1F393}',  label: 'Dev Camp',        desc: 'Train devs to boost their stats' },
 ];
@@ -178,6 +180,8 @@ export default function Desktop() {
   } = useWindowManager();
 
   const { devCount, tier, nextTier } = useDevCount();
+  const { address: wallet } = useWallet();
+  const nxMarketVisible = isNxMarketAdmin(wallet);
 
   const [wallpaperStyle, setWallpaperStyle] = useState(getWallpaperStyle);
   const [wallpaperOverlay, setWallpaperOverlay] = useState(getWallpaperOverlay);
@@ -329,7 +333,7 @@ export default function Desktop() {
       {wallpaperOverlay === 'scanlines' && <div className="wallpaper-scanlines" />}
 
       <div className={`desktop-icons${iconScale !== 'medium' ? ` scale-${iconScale}` : ''}`}>
-        {DESKTOP_ICONS.filter(item => !item.hidden).map(item => (
+        {DESKTOP_ICONS.filter(item => !item.hidden && (!item.adminOnly || nxMarketVisible)).map(item => (
           <DesktopIcon
             key={item.id}
             id={item.id}

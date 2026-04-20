@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Win98Icon } from './Win98Icons';
+import { useWallet } from '../hooks/useWallet';
+import { isNxMarketAdmin } from '../windows/NXMarket';
 
 const PROGRAMS = [
   { id: 'live-feed', label: 'Live Feed' },
   { id: 'world-chat', label: 'World Chat' },
   { id: 'leaderboard', label: 'Leaderboard' },
   { id: 'protocol-market', label: 'Protocol Market' },
-  { id: 'nxmarket', label: 'NXMARKET' },
+  { id: 'nxmarket', label: 'NX Market', adminOnly: true },
   { id: 'ai-lab', label: 'AI Lab' },
   { id: 'my-devs', label: 'My Devs' },
   { id: 'inbox', label: 'Inbox' },
@@ -25,6 +27,11 @@ export default function StartMenu({ open, onClose, openWindow }) {
   const [showGames, setShowGames] = useState(false);
   const [shutdownMsg, setShutdownMsg] = useState(false);
   const menuRef = useRef(null);
+  const { address: wallet } = useWallet();
+  const nxMarketVisible = isNxMarketAdmin(wallet);
+  const visiblePrograms = PROGRAMS.filter(
+    p => !p.adminOnly || nxMarketVisible,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -86,7 +93,7 @@ export default function StartMenu({ open, onClose, openWindow }) {
 
               {showPrograms && (
                 <div className="start-submenu" onMouseLeave={() => setShowPrograms(false)}>
-                  {PROGRAMS.map(prog => (
+                  {visiblePrograms.map(prog => (
                     <div
                       key={prog.id}
                       className="start-menu-item"
