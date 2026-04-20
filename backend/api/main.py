@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -313,6 +313,100 @@ def _run_auto_migrations():
                         ON nxt_ledger(correlation_id)
                         WHERE correlation_id IS NOT NULL
                 """)
+                # NXMARKET — prediction market foundation (PR 1 of Fase NXMARKET).
+                # Source of truth for table shapes lives with this block; buy/sell
+                # (PR 2) and admin resolve (PR 3) will reuse them as-is.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_markets (
+                        id                   BIGSERIAL PRIMARY KEY,
+                        question             TEXT NOT NULL,
+                        category             VARCHAR(40),
+                        market_type          VARCHAR(20) NOT NULL
+                                              CHECK (market_type IN ('official', 'user')),
+                        created_by           VARCHAR(42) NOT NULL,
+                        creator_fee_percent  NUMERIC(5,2) NOT NULL DEFAULT 0,
+                        seed_nxt             NUMERIC(20,2) NOT NULL,
+                        shares_yes           NUMERIC(30,8) NOT NULL,
+                        shares_no            NUMERIC(30,8) NOT NULL,
+                        liquidity_b          NUMERIC(20,2) NOT NULL,
+                        status               VARCHAR(20) NOT NULL DEFAULT 'active'
+                                              CHECK (status IN ('active', 'closed', 'resolved', 'invalid')),
+                        outcome              VARCHAR(10)
+                                              CHECK (outcome IS NULL OR outcome IN ('YES', 'NO', 'invalid')),
+                        close_at             TIMESTAMPTZ NOT NULL,
+                        resolved_at          TIMESTAMPTZ,
+                        total_volume_nxt     NUMERIC(20,2) NOT NULL DEFAULT 0,
+                        created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_markets_status_close "
+                    "ON nxmarket_markets(status, close_at)"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_markets_type_status "
+                    "ON nxmarket_markets(market_type, status)"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_markets_creator "
+                    "ON nxmarket_markets(created_by)"
+                )
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_positions (
+                        id              BIGSERIAL PRIMARY KEY,
+                        market_id       BIGINT NOT NULL
+                                          REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        outcome         VARCHAR(10) NOT NULL
+                                          CHECK (outcome IN ('YES', 'NO')),
+                        shares          NUMERIC(30,8) NOT NULL DEFAULT 0,
+                        cost_basis      NUMERIC(20,2) NOT NULL DEFAULT 0,
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        UNIQUE (market_id, wallet_address, outcome)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_positions_wallet "
+                    "ON nxmarket_positions(wallet_address)"
+                )
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_trades (
+                        id              BIGSERIAL PRIMARY KEY,
+                        market_id       BIGINT NOT NULL
+                                          REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        side            VARCHAR(10) NOT NULL CHECK (side IN ('buy', 'sell')),
+                        outcome         VARCHAR(10) NOT NULL CHECK (outcome IN ('YES', 'NO')),
+                        shares          NUMERIC(30,8) NOT NULL,
+                        nxt_amount      NUMERIC(20,2) NOT NULL,
+                        price           NUMERIC(10,6) NOT NULL,
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_trades_market_time "
+                    "ON nxmarket_trades(market_id, created_at DESC)"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_trades_wallet_time "
+                    "ON nxmarket_trades(wallet_address, created_at DESC)"
+                )
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxmarket_price_history (
+                        id                BIGSERIAL PRIMARY KEY,
+                        market_id         BIGINT NOT NULL
+                                            REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
+                        price_yes         NUMERIC(10,6) NOT NULL,
+                        price_no          NUMERIC(10,6) NOT NULL,
+                        total_volume_nxt  NUMERIC(20,2) NOT NULL DEFAULT 0,
+                        snapshot_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxmarket_price_history_market_time "
+                    "ON nxmarket_price_history(market_id, snapshot_at DESC)"
+                )
                 # Soft-delete dev activity spam — rows stay for forensics but
                 # are hidden from all SELECT queries (deleted_at IS NULL filter).
                 cur.execute("""
@@ -552,6 +646,8 @@ app.include_router(missions.router, prefix="/api/missions", tags=["Missions"])
 app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(nxmarket.router, prefix="/api/nxmarket", tags=["NXMARKET"])
+app.include_router(nxmarket.admin_router, prefix="/api/admin/nxmarket", tags=["NXMARKET-Admin"])
 app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])
 
