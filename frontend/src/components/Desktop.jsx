@@ -71,6 +71,7 @@ const DESKTOP_ICONS = [
   { id: 'netwatch',        icon: '',           label: 'MegaWatch',       desc: 'Real-time MegaETH activity monitor' },
   { id: 'mega-sentinel',   icon: '\u{1F6E1}',  label: 'Mega Sentinel',   desc: 'Network firewall and threat sentinel' },
   { id: 'mission-control', icon: '\u{1F4CB}',  label: 'Mission Control', desc: 'Assign your devs to timed missions' },
+  { id: 'nxmarket',        icon: '\u{1F4CA}',  label: 'NXMARKET',         desc: 'Predict outcomes — bet $NXT on YES/NO markets' },
   { id: 'achievements',    icon: '\u2605',     label: 'Achievements',    desc: 'Unlock badges for milestones reached' },
   { id: 'dev-camp',        icon: '\u{1F393}',  label: 'Dev Camp',        desc: 'Train devs to boost their stats' },
 ];
