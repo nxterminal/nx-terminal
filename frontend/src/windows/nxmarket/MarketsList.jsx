@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { Win98Icon } from '../../components/Win98Icons';
 import { isNxMarketAdmin } from '../NXMarket';
 import CreateMarketModal from './CreateMarketModal';
+import BuyModal from './BuyModal';
 
 
 const CATEGORY_ICON_IDS = new Set([
@@ -82,7 +83,63 @@ function ProbabilityRow({ side, price }) {
 }
 
 
-function MarketCard({ market, onClick }) {
+function QuickBuyButton({ side, disabled, reason, onClick }) {
+  const isYes = side === 'YES';
+  const base = isYes ? '#2ecc71' : '#e74c3c';
+  const dark = isYes ? '#1e8449' : '#a93226';
+  const [hover, setHover] = useState(false);
+  const effectiveBg = disabled ? '#bdbdbd'
+    : hover ? dark
+    : base;
+
+  return (
+    <button
+      // stopPropagation is critical — the card's onClick opens the
+      // DetailModal; without it a quick-buy click would fire both.
+      onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      disabled={disabled}
+      title={disabled ? reason : undefined}
+      style={{
+        flex: 1, padding: '10px 12px', fontSize: 13, fontWeight: 'bold',
+        fontFamily: 'Tahoma, sans-serif',
+        color: '#fff', background: effectiveBg,
+        border: disabled ? '1px solid #888' : `1px solid ${dark}`,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        letterSpacing: 0.5,
+        opacity: disabled ? 0.55 : 1,
+        transition: 'background 0.1s',
+      }}>
+      Buy {side}
+    </button>
+  );
+}
+
+
+function QuickBuyRow({ market, walletConnected, onQuickBuy }) {
+  const isActive = market.status === 'active';
+  const reason = !walletConnected
+    ? 'Connect wallet to bet'
+    : !isActive
+      ? 'Market closed — awaiting resolution'
+      : null;
+  const disabled = !walletConnected || !isActive;
+
+  return (
+    <div style={{
+      display: 'flex', gap: 8, marginTop: 10,
+    }}>
+      <QuickBuyButton side="YES" disabled={disabled} reason={reason}
+        onClick={() => onQuickBuy('YES')} />
+      <QuickBuyButton side="NO" disabled={disabled} reason={reason}
+        onClick={() => onQuickBuy('NO')} />
+    </div>
+  );
+}
+
+
+function MarketCard({ market, onClick, walletConnected, onQuickBuy }) {
   const isResolved = market.status === 'resolved';
   const isClosed = market.status === 'closed';
   const [hover, setHover] = useState(false);
@@ -94,10 +151,11 @@ function MarketCard({ market, onClick }) {
       onMouseLeave={() => setHover(false)}
       className="win-panel"
       style={{
-        padding: 12, marginBottom: 10, cursor: 'pointer',
+        padding: 12, cursor: 'pointer',
         background: hover ? '#f5f5ec' : '#ffffff',
         transition: 'background 0.1s',
         fontFamily: 'Tahoma, sans-serif',
+        display: 'flex', flexDirection: 'column', minHeight: 200,
       }}>
 
       {/* Header row */}
@@ -164,6 +222,19 @@ function MarketCard({ market, onClick }) {
         </div>
       )}
 
+      {/* Quick-buy buttons — resolved markets skip the row entirely; closed
+          markets keep it visible but disabled so users understand the
+          state. The buttons stopPropagation so clicking one doesn't also
+          fire the card's onClick (which opens DetailModal). */}
+      {!isResolved && (
+        <QuickBuyRow market={market}
+          walletConnected={walletConnected}
+          onQuickBuy={(side) => onQuickBuy && onQuickBuy(market, side)} />
+      )}
+
+      {/* Spacer pushes footer to the bottom so grid cards align */}
+      <div style={{ flex: 1 }} />
+
       {/* Footer */}
       <div style={{
         marginTop: 10, fontSize: 11, color: '#777',
@@ -212,8 +283,15 @@ export default function MarketsList({ wallet, onOpenMarket }) {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [createMode, setCreateMode] = useState(null); // 'user' | 'official' | null
+  const [buyState, setBuyState] = useState(null);    // { market, side } | null
 
   const isAdmin = isNxMarketAdmin(wallet);
+  const walletConnected = !!wallet;
+
+  const handleQuickBuy = (market, side) => {
+    if (!walletConnected) return;
+    setBuyState({ market, side });
+  };
 
   const fetchMarkets = useCallback(() => {
     const params = {};
@@ -319,10 +397,23 @@ export default function MarketsList({ wallet, onOpenMarket }) {
           <EmptyState wallet={wallet}
             onCreate={() => setCreateMode('user')} />
         )}
-        {markets && markets.map(m => (
-          <MarketCard key={m.id} market={m}
-            onClick={() => onOpenMarket && onOpenMarket(m.id)} />
-        ))}
+        {markets && markets.length > 0 && (
+          <div style={{
+            display: 'grid',
+            // Auto-fit gives us 2 cols on the 920px default window and
+            // falls back to 1 column gracefully when the user shrinks
+            // the window below ~720px.
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: 12,
+          }}>
+            {markets.map(m => (
+              <MarketCard key={m.id} market={m}
+                walletConnected={walletConnected}
+                onQuickBuy={handleQuickBuy}
+                onClick={() => onOpenMarket && onOpenMarket(m.id)} />
+            ))}
+          </div>
+        )}
       </div>
 
       {createMode && (
@@ -331,6 +422,19 @@ export default function MarketsList({ wallet, onOpenMarket }) {
           wallet={wallet}
           onClose={() => setCreateMode(null)}
           onCreated={onCreated}
+        />
+      )}
+
+      {buyState && (
+        <BuyModal
+          market={buyState.market}
+          side={buyState.side}
+          wallet={wallet}
+          onClose={() => setBuyState(null)}
+          onBought={() => {
+            setBuyState(null);
+            fetchMarkets();
+          }}
         />
       )}
     </div>
