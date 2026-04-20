@@ -4,6 +4,7 @@ import MarketsList from './nxmarket/MarketsList';
 import MarketDetailModal from './nxmarket/MarketDetailModal';
 import MyPositions from './nxmarket/MyPositions';
 import Leaderboard from './nxmarket/Leaderboard';
+import Info from './nxmarket/Info';
 
 // Mirrors backend/api/routes/admin.py::ADMIN_WALLETS. Same set Inbox.jsx
 // uses for the Support Tickets admin tab. Backend remains source of truth
@@ -98,6 +99,7 @@ export default function NXMarket() {
           { id: 'markets', label: 'Markets' },
           { id: 'positions', label: 'My Positions' },
           { id: 'leaderboard', label: 'Leaderboard' },
+          { id: 'info', label: 'Info' },
         ].map(t => (
           <button key={t.id}
             onClick={() => setTab(t.id)}
@@ -127,6 +129,9 @@ export default function NXMarket() {
         )}
         {tab === 'leaderboard' && (
           <Leaderboard wallet={wallet} />
+        )}
+        {tab === 'info' && (
+          <Info />
         )}
       </div>
 
