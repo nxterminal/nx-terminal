@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
+import MarketsList from './nxmarket/MarketsList';
 
 // Mirrors backend/api/routes/admin.py::ADMIN_WALLETS. Same set Inbox.jsx
 // uses for the Support Tickets admin tab. Backend remains source of truth
@@ -68,6 +69,7 @@ export default function NXMarket() {
   const { address: wallet } = useWallet();
   const [tab, setTab] = useState('markets');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [openMarketId, setOpenMarketId] = useState(null);
 
   return (
     <div style={{
@@ -98,13 +100,11 @@ export default function NXMarket() {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, padding: 12, overflow: 'auto' }}>
+      <div style={{ flex: 1, padding: 12, overflow: 'hidden' }}>
         {tab === 'markets' && (
-          <div style={{
-            color: 'var(--text-secondary)', textAlign: 'center', marginTop: 60,
-          }}>
-            Loading markets...
-          </div>
+          <MarketsList
+            wallet={wallet}
+            onOpenMarket={(id) => setOpenMarketId(id)} />
         )}
         {tab === 'positions' && (
           <div style={{
