@@ -384,6 +384,12 @@ def _run_auto_migrations():
                         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     )
                 """)
+                # PR 2 — penalty paid on exits (3% LMSR slippage surcharge).
+                # Default 0 so buy rows (and any pre-PR-2 rows) stay valid.
+                cur.execute(
+                    "ALTER TABLE nxmarket_trades "
+                    "ADD COLUMN IF NOT EXISTS penalty_nxt NUMERIC(20,2) NOT NULL DEFAULT 0"
+                )
                 cur.execute(
                     "CREATE INDEX IF NOT EXISTS idx_nxmarket_trades_market_time "
                     "ON nxmarket_trades(market_id, created_at DESC)"

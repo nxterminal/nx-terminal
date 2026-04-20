@@ -129,3 +129,73 @@ def debit_wallet_balance(
         )
 
     return debited
+
+
+class NoDevsError(ValueError):
+    """Raised when the wallet owns no devs to credit."""
+
+
+def credit_wallet_balance(
+    cursor,
+    wallet_address: str,
+    amount_nxt: int,
+    ledger_source: str,
+    ref_table: str,
+    ref_id: int,
+) -> List[dict]:
+    """Credit ``amount_nxt`` to the wallet's dev with the largest balance.
+
+    Symmetric to ``debit_wallet_balance`` but never splits — NXT always
+    lands in the single dev holding the most, keeping credits atomic and
+    predictable. If the wallet owns no devs, raises ``NoDevsError``.
+
+    Returns ``[{"dev_token_id": t, "amount": a}]`` (always length 1).
+    """
+    if amount_nxt <= 0:
+        raise ValueError(f"amount_nxt must be positive, got {amount_nxt!r}")
+    if not LedgerSource.is_valid(ledger_source):
+        raise ValueError(f"Invalid ledger_source: {ledger_source!r}")
+
+    wallet = wallet_address.lower()
+
+    cursor.execute(
+        """
+        SELECT token_id, balance_nxt
+          FROM devs
+         WHERE LOWER(owner_address) = %s
+         ORDER BY balance_nxt DESC, token_id ASC
+         FOR UPDATE
+        """,
+        (wallet,),
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        raise NoDevsError(f"wallet {wallet} owns no devs; cannot credit")
+
+    first = rows[0]
+    tid = int(first["token_id"] if isinstance(first, dict) else first[0])
+
+    cursor.execute(
+        "UPDATE devs SET balance_nxt = balance_nxt + %s WHERE token_id = %s",
+        (amount_nxt, tid),
+    )
+    if is_shadow_write_enabled():
+        try:
+            ledger_insert(
+                cursor,
+                wallet_address=wallet,
+                dev_token_id=tid,
+                delta_nxt=amount_nxt,
+                source=ledger_source,
+                ref_table=ref_table,
+                ref_id=ref_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning(
+                "ledger_shadow_write_failed source=%s dev=%s err=%s",
+                ledger_source,
+                tid,
+                exc,
+            )
+
+    return [{"dev_token_id": tid, "amount": amount_nxt}]
