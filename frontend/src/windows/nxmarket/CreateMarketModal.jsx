@@ -154,14 +154,40 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
           {isOfficial && (
             <label style={{ display: 'block', marginBottom: 8 }}>
               <div style={{ fontSize: 'var(--text-sm, 12px)', color: 'var(--text-secondary)' }}>
-                Liquidity b: <b>{liquidityB}</b>
+                Liquidity b:
                 {' '}<span style={{ fontSize: 'var(--text-xs, 11px)' }}>
                   (higher = more stable, lower = more volatile)
                 </span>
               </div>
-              <input type="range" min={10} max={10000} step={10}
-                value={liquidityB} onChange={e => setLiquidityB(Number(e.target.value))}
-                style={{ width: '100%' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="range" min={10} max={10000} step={10}
+                  value={liquidityB}
+                  onChange={e => setLiquidityB(Number(e.target.value))}
+                  style={{ flex: 1 }} />
+                <input type="number" min={10} max={10000} step={10}
+                  value={liquidityB}
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    if (!Number.isNaN(v)) setLiquidityB(v);
+                  }}
+                  onBlur={e => {
+                    const v = Number(e.target.value);
+                    if (Number.isNaN(v) || v < 10) setLiquidityB(10);
+                    else if (v > 10000) setLiquidityB(10000);
+                  }}
+                  style={{
+                    width: 78, padding: '2px 4px',
+                    fontFamily: "'VT323', monospace",
+                    fontSize: 'var(--text-base)',
+                    background: '#fff', border: '2px inset #888',
+                    boxSizing: 'border-box', textAlign: 'right',
+                  }} />
+              </div>
+              {!validLiquidity && (
+                <div style={{ fontSize: 'var(--text-xs, 11px)', color: '#b71c1c' }}>
+                  Must be between 10 and 10,000
+                </div>
+              )}
             </label>
           )}
 
