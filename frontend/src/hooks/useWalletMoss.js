@@ -6,6 +6,7 @@ import {
 } from '@megaeth-labs/wallet-sdk-react';
 import { MEGAETH_CHAIN_ID } from '../services/contract';
 import { useMegaName } from './useMegaName';
+import { useWalletProviderContext } from '../contexts/WalletProviderContext';
 
 // useWalletMoss — MegaETH Wallet SDK implementation of the wallet interface.
 //
@@ -25,6 +26,7 @@ export function useWalletMoss() {
   const { initialised, status, address } = useStatus();
   const connectMutation = useMossConnect();
   const disconnectMutation = useMossDisconnect();
+  const { setActiveProvider } = useWalletProviderContext();
 
   // Resolve .mega name — same hook, same cache, shared with the wagmi path.
   const megaName = useMegaName(address);
@@ -38,9 +40,13 @@ export function useWalletMoss() {
     connectMutation.mutate();
   }, [connectMutation]);
 
+  // Disconnect: fire MOSS's disconnect AND clear activeProvider so the
+  // wallet selector re-appears on the next Connect click. Users stay in
+  // full control of which wallet they want each session.
   const disconnect = useCallback(() => {
     disconnectMutation.mutate();
-  }, [disconnectMutation]);
+    setActiveProvider(null);
+  }, [disconnectMutation, setActiveProvider]);
 
   // MOSS is MegaETH-only. No-op to keep interface compatible.
   const switchToMegaETH = useCallback(async () => {

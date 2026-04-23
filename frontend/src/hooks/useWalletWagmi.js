@@ -2,6 +2,7 @@ import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { MEGAETH_CHAIN_ID } from '../services/contract';
 import { useMegaName } from './useMegaName';
+import { useWalletProviderContext } from '../contexts/WalletProviderContext';
 
 // useWalletWagmi — wagmi / MetaMask implementation of the wallet interface.
 //
@@ -13,8 +14,9 @@ import { useMegaName } from './useMegaName';
 export function useWalletWagmi() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
   const { connect, error: connectError } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
+  const { setActiveProvider } = useWalletProviderContext();
   // Resolves the current user's wallet to a .mega name when available.
   // Falls back to the truncated 0x… format automatically below, so all
   // ~8 consumers of `displayAddress` get the upgrade for free.
@@ -24,6 +26,14 @@ export function useWalletWagmi() {
 
   const connectWallet = () => {
     connect({ connector: injected() });
+  };
+
+  // Custom disconnect: run wagmi's disconnect AND clear activeProvider
+  // so the wallet selector re-appears on the next Connect click. Users
+  // stay in full control of which wallet they want each session.
+  const disconnect = () => {
+    wagmiDisconnect();
+    setActiveProvider(null);
   };
 
   const switchToMegaETH = async () => {

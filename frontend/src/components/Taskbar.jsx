@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { useWalletSelector } from '../contexts/WalletSelectorContext';
 import { playToggleClick } from '../utils/sound';
 import StartMenu from './StartMenu';
 
@@ -8,6 +9,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
   const [cycle, setCycle] = useState(null);
   const [startOpen, setStartOpen] = useState(false);
   const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError } = useWallet();
+  const { isOpen: selectorOpen } = useWalletSelector();
   const [walletError, setWalletError] = useState(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [assistantOn, setAssistantOn] = useState(
@@ -31,8 +33,11 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
     return () => clearInterval(id);
   }, []);
 
-  // Surface wagmi connect errors
+  // Surface wagmi connect errors — but not while the wallet selector
+  // modal is open. The modal renders its own inline error banner, and
+  // firing a second Win98 toast on top of it would be noisy duplication.
   useEffect(() => {
+    if (selectorOpen) return;
     if (connectError) {
       if (connectError.name === 'UserRejectedRequestError') {
         setWalletError('Connection rejected. You must approve the wallet connection request to continue.');
@@ -42,7 +47,7 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
         setWalletError(connectError.shortMessage || connectError.message || 'Failed to connect wallet.');
       }
     }
-  }, [connectError]);
+  }, [connectError, selectorOpen]);
 
   const handleWalletClick = () => {
     if (isConnected) {
