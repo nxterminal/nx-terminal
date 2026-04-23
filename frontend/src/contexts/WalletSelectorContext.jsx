@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 // WalletSelectorContext owns the state of the provider-picker modal and
 // the orchestration for switching between wagmi and MOSS. Scaffolded in
@@ -35,6 +35,16 @@ export function WalletSelectorProvider({ children }) {
   const selectProvider = useCallback(async (_next) => {
     return undefined;
   }, []);
+
+  // Dev-only toggle so the modal can be smoke-tested before the hook-level
+  // wiring lands in commit 4. Stripped in the final polish commit.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__openSelector = open;
+    return () => {
+      if (window.__openSelector === open) delete window.__openSelector;
+    };
+  }, [open]);
 
   const value = {
     isOpen,

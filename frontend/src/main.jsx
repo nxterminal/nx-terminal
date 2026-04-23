@@ -7,6 +7,7 @@ import { wagmiConfig } from './services/wagmi';
 import { DevsProvider } from './contexts/DevsContext';
 import { WalletProviderContextProvider } from './contexts/WalletProviderContext';
 import { WalletSelectorProvider } from './contexts/WalletSelectorContext';
+import WalletSelectorModal from './components/WalletSelectorModal';
 import './index.css';
 import App from './App.jsx';
 import MossTest from './pages/MossTest.jsx';
@@ -43,6 +44,7 @@ createRoot(document.getElementById('root')).render(
               <DevsProvider>
                 <Root />
               </DevsProvider>
+              <WalletSelectorModal />
             </WalletSelectorProvider>
           </WalletProviderContextProvider>
         </MegaProvider>
