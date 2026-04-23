@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useState } from 'react';
 import { useConnect as useWagmiConnect, useDisconnect as useWagmiDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import {
@@ -121,16 +121,6 @@ export function WalletSelectorProvider({ children }) {
     mossConnectMutation,
     mossDisconnectMutation,
   ]);
-
-  // Dev-only toggle so the modal can be smoke-tested before the hook-level
-  // wiring lands in commit 4. Stripped in the final polish commit.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.__openSelector = open;
-    return () => {
-      if (window.__openSelector === open) delete window.__openSelector;
-    };
-  }, [open]);
 
   const value = {
     isOpen,
