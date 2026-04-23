@@ -14,8 +14,8 @@ import { useWalletProviderContext } from './WalletProviderContext';
 // - isOpen: whether the selector modal is currently visible.
 // - open / close: imperative controls, used by useWallet when activeProvider
 //   is null and by the modal itself.
-// - selectProvider(next): orchestrates disconnect-previous → setActive →
-//   connect-new, with a 30s MOSS timeout and error surfacing.
+// - selectProvider(next): orchestrates disconnect-previous → connect-new →
+//   setActive, with a 30s MOSS timeout and error surfacing.
 // - pending: which provider (if any) is currently mid-connect, for per-card
 //   spinner state in the modal.
 // - error: last error from selectProvider, cleared on next attempt.
@@ -79,8 +79,6 @@ export function WalletSelectorProvider({ children }) {
         }
       }
 
-      setActiveProvider(next);
-
       // FIX: close the selector modal before MOSS connects so its iframe
       // (z-index 9999, hardcoded by the SDK) isn't obscured by our modal
       // (z-index 10050). The iframe must be interactable for the user to
@@ -114,11 +112,24 @@ export function WalletSelectorProvider({ children }) {
         await connectPromise;
       }
 
+      // FIX: only commit activeProvider AFTER a successful connection.
+      // If the user cancels or the connect throws, we fall into catch()
+      // and never persist the choice — so the next Connect click opens
+      // the selector again instead of blindly routing to the half-chosen
+      // provider. Fixes the bug where cancelling MOSS left 'moss' stuck
+      // in localStorage.
+      setActiveProvider(next);
+
       clearTimer();
       setPending(null);
       setIsOpen(false);
     } catch (err) {
       clearTimer();
+      // FIX: defensively clear activeProvider on failure. In the normal
+      // path this is a no-op (we never set it on failure anymore), but
+      // if any edge case leaves a stale value from a previous attempt,
+      // this ensures the selector re-appears on the next Connect click.
+      setActiveProvider(null);
       setError(err instanceof Error ? err : new Error(String(err)));
       setPending(null);
       // FIX: re-open the modal on MOSS failure so the error banner becomes
