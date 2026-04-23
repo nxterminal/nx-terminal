@@ -1,0 +1,87 @@
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { MEGAETH_CHAIN_ID } from '../services/contract';
+import { useMegaName } from './useMegaName';
+
+// useWalletWagmi — wagmi / MetaMask implementation of the wallet interface.
+//
+// This is the exact logic that used to live in useWallet.js before the
+// multi-provider refactor. No behavior changes — same hook, same return
+// shape, just isolated so useWallet.js can dispatch between this and
+// useWalletMoss based on the active provider.
+
+export function useWalletWagmi() {
+  const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
+  const { connect, error: connectError } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
+  // Resolves the current user's wallet to a .mega name when available.
+  // Falls back to the truncated 0x… format automatically below, so all
+  // ~8 consumers of `displayAddress` get the upgrade for free.
+  const megaName = useMegaName(address);
+
+  const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
+
+  const connectWallet = () => {
+    connect({ connector: injected() });
+  };
+
+  const switchToMegaETH = async () => {
+    // Try wagmi switchChain first
+    try {
+      await switchChainAsync({ chainId: MEGAETH_CHAIN_ID });
+    } catch {
+      // Fallback: use window.ethereum directly to add+switch
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x10E6' }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x10E6',
+                chainName: 'MegaETH',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.megaeth.com/rpc'],
+                blockExplorerUrls: ['https://mega.etherscan.io'],
+              }],
+            });
+          }
+        }
+      }
+    }
+  };
+
+  const formatAddress = (addr) => {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  return {
+    address,
+    isConnected,
+    isConnecting: isConnecting || isReconnecting,
+    chain,
+    isWrongChain,
+    connectError,
+    connect: connectWallet,
+    disconnect,
+    switchToMegaETH,
+    // Backwards compat alias
+    switchToMonad: switchToMegaETH,
+    formatAddress,
+    // If the wallet has a .mega name registered, displayAddress upgrades
+    // to e.g. "bread.mega". Otherwise it keeps the existing 0x1234…abcd
+    // format. Consumers don't need to change — every existing call site
+    // reads this field and the upgrade is automatic.
+    displayAddress: address ? (megaName || formatAddress(address)) : null,
+    megaName,
+    // Provider identifier — lets consumers know which backend is answering.
+    // Useful for debugging and for selector UI to highlight active option.
+    providerId: 'wagmi',
+  };
+}
