@@ -8,6 +8,7 @@ import { DevsProvider } from './contexts/DevsContext';
 import { WalletProviderContextProvider } from './contexts/WalletProviderContext';
 import { WalletSelectorProvider } from './contexts/WalletSelectorContext';
 import WalletSelectorModal from './components/WalletSelectorModal';
+import WalletSelectorCancelOverlay from './components/WalletSelectorCancelOverlay';
 import './index.css';
 import App from './App.jsx';
 import MossTest from './pages/MossTest.jsx';
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')).render(
                 <Root />
               </DevsProvider>
               <WalletSelectorModal />
+              <WalletSelectorCancelOverlay />
             </WalletSelectorProvider>
           </WalletProviderContextProvider>
         </MegaProvider>
