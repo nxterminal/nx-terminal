@@ -81,6 +81,15 @@ export function WalletSelectorProvider({ children }) {
 
       setActiveProvider(next);
 
+      // FIX: close the selector modal before MOSS connects so its iframe
+      // (z-index 9999, hardcoded by the SDK) isn't obscured by our modal
+      // (z-index 10050). The iframe must be interactable for the user to
+      // complete the passkey flow. wagmi uses a native extension popup
+      // that renders above everything, so no early-close needed there.
+      if (next === 'moss') {
+        setIsOpen(false);
+      }
+
       const connectPromise =
         next === 'wagmi'
           ? wagmiConnectAsync({ connector: injected() })
@@ -112,6 +121,14 @@ export function WalletSelectorProvider({ children }) {
       clearTimer();
       setError(err instanceof Error ? err : new Error(String(err)));
       setPending(null);
+      // FIX: re-open the modal on MOSS failure so the error banner becomes
+      // visible again. We closed it above to let the iframe render; now
+      // that we know the flow failed, the user needs to see what happened
+      // and get a chance to retry. wagmi path never closed the modal, so
+      // no re-open is needed there.
+      if (next === 'moss') {
+        setIsOpen(true);
+      }
     }
   }, [
     activeProvider,
