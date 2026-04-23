@@ -1,77 +1,29 @@
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
-import { injected } from 'wagmi/connectors';
-import { MEGAETH_CHAIN_ID } from '../services/contract';
-import { useMegaName } from './useMegaName';
+import { useWalletProviderContext } from '../contexts/WalletProviderContext';
+import { useWalletWagmi } from './useWalletWagmi';
+import { useWalletMoss } from './useWalletMoss';
+
+// useWallet — unified wallet hook, provider-agnostic.
+//
+// Dispatches to the wagmi or MOSS implementation based on the active
+// provider stored in WalletProviderContext. Both return the same shape,
+// so existing consumers (Desktop, Mint, FundDev, NXT Wallet, etc.) keep
+// working without changes.
+//
+// Important backward-compat note:
+// - When activeProvider === null (first-time user, nobody has picked yet),
+//   we default to wagmi so read-only flows and pre-connect UI continue
+//   behaving exactly as before the refactor.
+// - Both hooks are always called (Rules of Hooks), but only the active
+//   one's return value is used. wagmi's hooks are cheap when disconnected;
+//   MOSS's iframe bootstraps lazily — see useWalletMoss for details.
 
 export function useWallet() {
-  const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
-  const { connect, error: connectError } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { switchChainAsync } = useSwitchChain();
-  // Resolves the current user's wallet to a .mega name when available.
-  // Falls back to the truncated 0x… format automatically below, so all
-  // ~8 consumers of `displayAddress` get the upgrade for free.
-  const megaName = useMegaName(address);
+  const { isMoss } = useWalletProviderContext();
 
-  const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
+  // Both hooks must be called unconditionally to satisfy Rules of Hooks.
+  // The inactive one's result is simply ignored.
+  const wagmi = useWalletWagmi();
+  const moss = useWalletMoss();
 
-  const connectWallet = () => {
-    connect({ connector: injected() });
-  };
-
-  const switchToMegaETH = async () => {
-    // Try wagmi switchChain first
-    try {
-      await switchChainAsync({ chainId: MEGAETH_CHAIN_ID });
-    } catch {
-      // Fallback: use window.ethereum directly to add+switch
-      if (window.ethereum) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x10E6' }],
-          });
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0x10E6',
-                chainName: 'MegaETH',
-                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-                rpcUrls: ['https://mainnet.megaeth.com/rpc'],
-                blockExplorerUrls: ['https://mega.etherscan.io'],
-              }],
-            });
-          }
-        }
-      }
-    }
-  };
-
-  const formatAddress = (addr) => {
-    if (!addr) return '';
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
-  return {
-    address,
-    isConnected,
-    isConnecting: isConnecting || isReconnecting,
-    chain,
-    isWrongChain,
-    connectError,
-    connect: connectWallet,
-    disconnect,
-    switchToMegaETH,
-    // Backwards compat alias
-    switchToMonad: switchToMegaETH,
-    formatAddress,
-    // If the wallet has a .mega name registered, displayAddress upgrades
-    // to e.g. "bread.mega". Otherwise it keeps the existing 0x1234…abcd
-    // format. Consumers don't need to change — every existing call site
-    // reads this field and the upgrade is automatic.
-    displayAddress: address ? (megaName || formatAddress(address)) : null,
-    megaName,
-  };
+  return isMoss ? moss : wagmi;
 }
