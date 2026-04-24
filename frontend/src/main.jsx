@@ -14,8 +14,11 @@ import MossTest from './pages/MossTest.jsx';
 
 const queryClient = new QueryClient();
 
-// MOSS SDK config. Only consumed by /moss-test (a diagnostic page); the
-// production wallet flow now goes through the wagmi connector.
+// MOSS SDK config. Only consumed by the /moss-test diagnostic page; the
+// production wallet flow goes through the wagmi connector. MegaProvider
+// is mounted only on that route to avoid double-initialising the MOSS
+// SDK — the wallet SDK can only be initialized once per page load, so
+// the wagmi connector and a top-level MegaProvider would compete.
 const mossConfig = {
   network: 'mainnet',
   logging: 'warn',
@@ -28,25 +31,27 @@ const mossConfig = {
 function Root() {
   const path = window.location.pathname;
   if (path === '/moss-test' || path === '/moss-test/') {
-    return <MossTest />;
+    return (
+      <MegaProvider config={mossConfig}>
+        <MossTest />
+      </MegaProvider>
+    );
   }
   return <App />;
 }
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <MegaProvider config={mossConfig}>
-          <WalletSelectorProvider>
-            <DevsProvider>
-              <Root />
-            </DevsProvider>
-            <WalletSelectorModal />
-            <WalletSelectorCancelOverlay />
-          </WalletSelectorProvider>
-        </MegaProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        <WalletSelectorProvider>
+          <DevsProvider>
+            <Root />
+          </DevsProvider>
+          <WalletSelectorModal />
+          <WalletSelectorCancelOverlay />
+        </WalletSelectorProvider>
+      </WagmiProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );

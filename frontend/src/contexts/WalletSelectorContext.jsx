@@ -44,13 +44,14 @@ export function WalletSelectorProvider({ children }) {
     setIsOpen(false);
   }, []);
 
-  const selectConnector = useCallback(async (connector) => {
+  const selectConnector = useCallback(async (connector, pendingLabel) => {
     if (!connector) {
       setError(new Error('Wallet not available'));
+      setPending(null);
       return;
     }
     setError(null);
-    setPending(connector.id);
+    setPending(pendingLabel ?? connector.id);
     try {
       await connectAsync({ connector });
       setIsOpen(false);
@@ -72,10 +73,10 @@ export function WalletSelectorProvider({ children }) {
     setIsOpen(false);
   }, [reset]);
 
-  // Deprecated alias for the legacy 'wagmi'|'moss' string API. Maps to a
-  // concrete connector and forwards through the same connect path.
-  // Pending stays the legacy string for the duration so the existing
-  // modal's `pending === 'moss'` check keeps working until chunk 3.
+  // Deprecated alias for the legacy 'wagmi'|'moss' string API. Resolves
+  // the legacy id to a concrete connector and delegates to selectConnector
+  // with the legacy string as pendingLabel — so the existing modal's
+  // `pending === 'moss'` check keeps working until chunk 3.
   const selectProvider = useCallback(async (legacyId) => {
     const connector =
       legacyId === 'wagmi'
@@ -83,21 +84,8 @@ export function WalletSelectorProvider({ children }) {
         : legacyId === 'moss'
           ? connectors.find(isMossConnector)
           : null;
-    if (!connector) {
-      setError(new Error('Wallet not available'));
-      return;
-    }
-    setError(null);
-    setPending(legacyId);
-    try {
-      await connectAsync({ connector });
-      setIsOpen(false);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setPending(null);
-    }
-  }, [connectAsync, connectors]);
+    return selectConnector(connector, legacyId);
+  }, [connectors, selectConnector]);
 
   const value = {
     isOpen,
