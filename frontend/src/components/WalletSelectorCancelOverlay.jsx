@@ -2,39 +2,52 @@ import { useWalletSelector } from '../contexts/WalletSelectorContext';
 import styles from './WalletSelectorCancelOverlay.module.css';
 
 // WalletSelectorCancelOverlay — floating "Cancel" button rendered on top
-// of the MOSS iframe while a connect attempt is in flight.
+// of the MOSS iframe while a connect attempt is in flight, plus a CSS
+// injection that hides the MOSS iframe after a cancel.
 //
-// Why this exists:
-// The MOSS SDK iframe can leave the user stranded — if they cancel inside
-// the iframe (close the passkey dialog, abandon the code entry, etc.) the
-// iframe doesn't always close automatically, and our connect mutation
-// stays pending until the 10s client-side timeout fires. This overlay
-// gives users an explicit escape hatch: one click aborts the pending
-// mutation, clears activeProvider, and re-opens the wallet selector.
+// Why the CSS injection:
+// The MOSS SDK mounts a fullscreen iframe (100vw x 100vh, z-index 9999)
+// and doesn't close it automatically when disconnect() is called. Without
+// hiding it, after the user cancels they see our reopened selector
+// partially obscured by the MOSS iframe in the background, which looks
+// broken. We target the iframe by its src attribute (stable across SDK
+// versions since the origin is part of the product, not an impl detail).
 //
-// Visibility: only renders when `pending === 'moss'`. MetaMask has its
-// own native cancel inside the browser extension popup, so we don't need
-// a custom overlay for the wagmi flow.
-//
-// Z-index: 10100, explicitly above the MOSS iframe's hardcoded 9999 so
-// the button is clickable over the iframe. Below nothing else in the app.
+// Visibility:
+// - Cancel button: only while `pending === 'moss'`.
+// - Hide-iframe CSS: only while `mossHidden === true`, which the context
+//   sets after a MOSS cancel/timeout/error and clears on the next connect.
 
 export default function WalletSelectorCancelOverlay() {
-  const { pending, cancelPending } = useWalletSelector();
+  const { pending, cancelPending, mossHidden } = useWalletSelector();
 
-  if (pending !== 'moss') return null;
+  const showCancelButton = pending === 'moss';
+  const hideIframe = mossHidden;
+
+  if (!showCancelButton && !hideIframe) return null;
 
   return (
-    <div className={styles.overlay} role="presentation">
-      <button
-        type="button"
-        className={styles.button}
-        onClick={cancelPending}
-        aria-label="Cancel connection and choose another wallet"
-      >
-        <span className={styles.icon} aria-hidden="true">×</span>
-        <span className={styles.label}>Cancel</span>
-      </button>
-    </div>
+    <>
+      {hideIframe && (
+        <style>{`
+          iframe[src*="account.megaeth.com"] {
+            display: none !important;
+          }
+        `}</style>
+      )}
+      {showCancelButton && (
+        <div className={styles.overlay} role="presentation">
+          <button
+            type="button"
+            className={styles.button}
+            onClick={cancelPending}
+            aria-label="Cancel connection and choose another wallet"
+          >
+            <span className={styles.icon} aria-hidden="true">×</span>
+            <span className={styles.label}>Cancel & choose another wallet</span>
+          </button>
+        </div>
+      )}
+    </>
   );
 }
