@@ -1,31 +1,38 @@
 import { useEffect, useRef } from 'react';
 import { useWalletSelector } from '../contexts/WalletSelectorContext';
-import { useWalletProviderContext } from '../contexts/WalletProviderContext';
-import { MetaMaskIcon, MegaIcon } from './WalletSelectorModal.icons';
 import styles from './WalletSelectorModal.module.css';
+import metamaskLogo from '../assets/wallets/metamasklogo.png';
+import megaethLogo from '../assets/wallets/megaethlogo.png';
 
 // WalletSelectorModal — modern dark dialog letting the user pick between
 // MetaMask (wagmi) and MegaETH Wallet (MOSS). Mounted once at app level so
 // any consumer of useWallet().connect() can open it without per-site code.
+//
+// Icons:
+// The brand marks are real PNG assets bundled into the build, not inline
+// SVG approximations. The previous inline-SVG version was readable but
+// off-brand; shipping the actual logos makes the selector feel like a
+// first-class product surface rather than a scaffold. Logos are pre-sized
+// to 128×128 with transparent backgrounds so they render crisp at the
+// card's 40px display size and blend into the dark card background.
 
 const PROVIDERS = [
   {
     id: 'wagmi',
     name: 'MetaMask',
     subtitle: 'Browser extension',
-    Icon: MetaMaskIcon,
+    logo: metamaskLogo,
   },
   {
     id: 'moss',
     name: 'MegaETH Wallet',
     subtitle: 'Embedded — no extension needed',
-    Icon: MegaIcon,
+    logo: megaethLogo,
   },
 ];
 
 export default function WalletSelectorModal() {
   const { isOpen, close, selectProvider, pending, error } = useWalletSelector();
-  const { activeProvider } = useWalletProviderContext();
 
   const dialogRef = useRef(null);
   const firstCardRef = useRef(null);
@@ -36,7 +43,6 @@ export default function WalletSelectorModal() {
   useEffect(() => {
     if (!isOpen) return;
     previousFocusRef.current = document.activeElement;
-    // Wait one frame so the dialog is mounted and the card ref is attached.
     const id = requestAnimationFrame(() => {
       firstCardRef.current?.focus();
     });
@@ -44,8 +50,6 @@ export default function WalletSelectorModal() {
       cancelAnimationFrame(id);
       const prev = previousFocusRef.current;
       if (prev && typeof prev.focus === 'function') {
-        // Deferred so the restore happens after the dialog unmounts and
-        // any blur from disabled-on-unmount buttons has settled.
         requestAnimationFrame(() => prev.focus());
       }
     };
@@ -122,9 +126,8 @@ export default function WalletSelectorModal() {
           Choose how you&apos;d like to connect to MegaETH.
         </p>
         <div className={styles.cards}>
-          {PROVIDERS.map(({ id, name, subtitle, Icon }, index) => {
+          {PROVIDERS.map(({ id, name, subtitle, logo }, index) => {
             const isPending = pending === id;
-            const isActive = activeProvider === id;
             return (
               <button
                 key={id}
@@ -133,26 +136,26 @@ export default function WalletSelectorModal() {
                 className={styles.card}
                 onClick={() => selectProvider(id)}
                 disabled={pending !== null}
-                aria-label={
-                  isActive ? `${name} — current wallet` : `Connect with ${name}`
-                }
+                aria-label={`Connect with ${name}`}
               >
                 <span className={styles.cardIcon}>
                   {isPending ? (
                     <span className={styles.spinner} aria-hidden="true" />
                   ) : (
-                    <Icon size={36} />
+                    <img
+                      src={logo}
+                      alt=""
+                      className={styles.cardIconImg}
+                      aria-hidden="true"
+                      draggable="false"
+                    />
                   )}
                 </span>
                 <span className={styles.cardBody}>
                   <span className={styles.cardName}>{name}</span>
                   <span className={styles.cardSubtitle}>{subtitle}</span>
                 </span>
-                {isActive && (
-                  <span className={styles.cardBadge} aria-hidden="true">
-                    Current
-                  </span>
-                )}
+                <span className={styles.cardArrow} aria-hidden="true">→</span>
               </button>
             );
           })}
