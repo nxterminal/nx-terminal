@@ -139,10 +139,16 @@ export default function WalletSelectorModal() {
           {connectors.map((connector, index) => {
             const { name, subtitle, logo, iconClassName } =
               getCardPresentation(connector);
-            const isPending = pending === connector.id;
+            const isPending =
+              connector.id != null && pending === connector.id;
             return (
               <button
-                key={connector.id ?? connector.name ?? index}
+                key={
+                  connector.uid ||
+                  connector.id ||
+                  connector.name ||
+                  `connector-${index}`
+                }
                 ref={index === 0 ? firstCardRef : undefined}
                 type="button"
                 className={styles.card}
