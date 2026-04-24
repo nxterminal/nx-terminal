@@ -72,10 +72,12 @@ export function WalletSelectorProvider({ children }) {
 
     setError(null);
     setPending(next);
-    // Reset the hidden flag — if the iframe was hidden from a previous
-    // cancel, any new connect attempt should make it interactive again
-    // (in case the new attempt is for MOSS itself).
-    setMossHidden(false);
+ // Reset the hidden flag only when the user picks MOSS again — we need
+    // its iframe interactive for a new MOSS attempt. For wagmi we keep the
+    // iframe hidden so it doesn't show through behind the MetaMask popup.
+    if (next === 'moss') {
+      setMossHidden(false);
+    }
 
     let timeoutId = null;
     const clearTimer = () => {
