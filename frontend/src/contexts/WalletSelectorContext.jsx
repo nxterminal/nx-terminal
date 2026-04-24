@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
 import { useConnect } from 'wagmi';
-import { isMossConnector } from '../services/wagmi';
 
 // WalletSelectorContext owns the state of the wallet picker modal.
 //
@@ -11,20 +10,15 @@ import { isMossConnector } from '../services/wagmi';
 // Public shape:
 // - isOpen         boolean — modal visibility
 // - open / close   imperative controls used by useWallet and the modal
-// - selectConnector(connector)  canonical: takes a wagmi connector
-//                  instance from useConnect().connectors. Tracks `pending`
-//                  by connector.id, closes on success.
+// - connectors     array of wagmi connectors registered in wagmiConfig
+// - selectConnector(connector, pendingLabel?)  takes a wagmi connector
+//                  instance and tracks `pending` by connector.id (or by
+//                  pendingLabel if provided). Closes the modal on
+//                  success; sets `error` on failure.
 // - cancelPending()  resets wagmi's mutation state and closes the modal
 // - pending        connector.id of an in-flight connect, else null
 // - error          last error from connectAsync, raw (consumers read
 //                  err.message / err.shortMessage)
-//
-// Deprecated, removed in chunk 3 alongside the modal/overlay rewrite:
-// - selectProvider(legacyId)   maps 'wagmi'|'moss' → connector
-// - mossHidden                 always false; old overlay used to inject
-//                              CSS to hide MOSS's iframe after a cancel,
-//                              no longer needed (wagmi connector owns its
-//                              own iframe lifecycle)
 
 const WalletSelectorContext = createContext(null);
 
@@ -73,31 +67,15 @@ export function WalletSelectorProvider({ children }) {
     setIsOpen(false);
   }, [reset]);
 
-  // Deprecated alias for the legacy 'wagmi'|'moss' string API. Resolves
-  // the legacy id to a concrete connector and delegates to selectConnector
-  // with the legacy string as pendingLabel — so the existing modal's
-  // `pending === 'moss'` check keeps working until chunk 3.
-  const selectProvider = useCallback(async (legacyId) => {
-    const connector =
-      legacyId === 'wagmi'
-        ? connectors.find((c) => !isMossConnector(c))
-        : legacyId === 'moss'
-          ? connectors.find(isMossConnector)
-          : null;
-    return selectConnector(connector, legacyId);
-  }, [connectors, selectConnector]);
-
   const value = {
     isOpen,
     open,
     close,
+    connectors,
     selectConnector,
     cancelPending,
     pending,
     error,
-    // Deprecated. Removed in chunk 3.
-    selectProvider,
-    mossHidden: false,
   };
 
   return (
