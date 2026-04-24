@@ -18,6 +18,10 @@ import { useWalletProviderContext } from './WalletProviderContext';
 //   setActive, with a 10s MOSS timeout and error surfacing.
 // - cancelPending(): user-initiated cancellation of an in-flight MOSS
 //   connect. Used by the floating cancel overlay when the iframe is open.
+// - mossHidden: true after the user cancels MOSS, until a new connect
+//   attempt starts. The cancel overlay injects CSS to hide the iframe
+//   while this is true — MOSS's SDK doesn't close its own iframe on
+//   disconnect, so we do it from our side.
 // - pending: which provider (if any) is currently mid-connect, for per-card
 //   spinner state in the modal and for showing the cancel overlay.
 // - error: last error from selectProvider, cleared on next attempt.
@@ -35,6 +39,9 @@ export function WalletSelectorProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(null);
   const [error, setError] = useState(null);
+  // When true, the cancel overlay injects CSS to hide the MOSS iframe.
+  // Cleared automatically at the start of any new selectProvider() call.
+  const [mossHidden, setMossHidden] = useState(false);
 
   const { activeProvider, setActiveProvider } = useWalletProviderContext();
 
@@ -65,6 +72,10 @@ export function WalletSelectorProvider({ children }) {
 
     setError(null);
     setPending(next);
+    // Reset the hidden flag — if the iframe was hidden from a previous
+    // cancel, any new connect attempt should make it interactive again
+    // (in case the new attempt is for MOSS itself).
+    setMossHidden(false);
 
     let timeoutId = null;
     const clearTimer = () => {
@@ -167,6 +178,11 @@ export function WalletSelectorProvider({ children }) {
         } catch {
           /* best-effort */
         }
+        // The MOSS SDK doesn't close its own iframe on disconnect. Flag
+        // it as hidden so the cancel overlay injects CSS to hide it;
+        // this lets the user see the reopened selector without MOSS's
+        // iframe covering everything.
+        setMossHidden(true);
       }
       setPending(null);
       // Distinguish manual cancel from real errors — no red banner for
@@ -211,6 +227,7 @@ export function WalletSelectorProvider({ children }) {
     cancelPending,
     pending,
     error,
+    mossHidden,
   };
 
   return (
