@@ -33,6 +33,16 @@ if (MOSS_CONNECTOR_ID === undefined) {
   );
 }
 
+// Identifies the active wagmi connector as MOSS. Callers pass the
+// connector from useAccount() — undefined/null is treated as "not MOSS".
+export function isMossConnector(connector) {
+  if (!connector) return false;
+  if (MOSS_CONNECTOR_ID !== undefined) {
+    return connector.id === MOSS_CONNECTOR_ID;
+  }
+  return connector.name === MOSS_CONNECTOR_NAME;
+}
+
 export const wagmiConfig = createConfig({
   chains: [megaeth],
   connectors: [injected(), MOSS_CONNECTOR],
