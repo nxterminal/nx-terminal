@@ -1,15 +1,17 @@
+import { useCallback } from 'react';
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { writeContract as wagmiWriteContract } from 'wagmi/actions';
 import { injected } from 'wagmi/connectors';
+import { wagmiConfig } from '../services/wagmi';
 import { MEGAETH_CHAIN_ID } from '../services/contract';
 import { useMegaName } from './useMegaName';
 import { useWalletProviderContext } from '../contexts/WalletProviderContext';
 
 // useWalletWagmi — wagmi / MetaMask implementation of the wallet interface.
 //
-// This is the exact logic that used to live in useWallet.js before the
-// multi-provider refactor. No behavior changes — same hook, same return
-// shape, just isolated so useWallet.js can dispatch between this and
-// useWalletMoss based on the active provider.
+// Mirrors the shape returned by useWalletMoss so useWallet() can dispatch
+// between them transparently. Consumers read from this via useWallet() only —
+// no component should import this hook directly.
 
 export function useWalletWagmi() {
   const { address, isConnected, chain, isConnecting, isReconnecting } = useAccount();
@@ -17,9 +19,6 @@ export function useWalletWagmi() {
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
   const { setActiveProvider } = useWalletProviderContext();
-  // Resolves the current user's wallet to a .mega name when available.
-  // Falls back to the truncated 0x… format automatically below, so all
-  // ~8 consumers of `displayAddress` get the upgrade for free.
   const megaName = useMegaName(address);
 
   const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
@@ -28,20 +27,15 @@ export function useWalletWagmi() {
     connect({ connector: injected() });
   };
 
-  // Custom disconnect: run wagmi's disconnect AND clear activeProvider
-  // so the wallet selector re-appears on the next Connect click. Users
-  // stay in full control of which wallet they want each session.
   const disconnect = () => {
     wagmiDisconnect();
     setActiveProvider(null);
   };
 
   const switchToMegaETH = async () => {
-    // Try wagmi switchChain first
     try {
       await switchChainAsync({ chainId: MEGAETH_CHAIN_ID });
     } catch {
-      // Fallback: use window.ethereum directly to add+switch
       if (window.ethereum) {
         try {
           await window.ethereum.request({
@@ -66,6 +60,37 @@ export function useWalletWagmi() {
     }
   };
 
+  // writeContract — provider-agnostic contract write. Mirrors the signature
+  // used by MOSS's callContract so useWallet() can dispatch without the
+  // caller caring which SDK is underneath.
+  //
+  // Params:
+  //   address:       contract address (0x...)
+  //   abi:           ABI array (or subset)
+  //   functionName:  name of the function to call
+  //   args:          args array
+  //   value:         optional, for payable functions (bigint, or string that
+  //                  parses to bigint)
+  //
+  // Returns: transaction hash (string). Throws on failure. User rejection
+  // throws with a detectable shape — callsites use isUserRejection() from
+  // walletErrors.js to distinguish cancel-from-error.
+  const writeContract = useCallback(async ({ address: target, abi, functionName, args, value }) => {
+    const params = {
+      address: target,
+      abi,
+      functionName,
+      args,
+    };
+    // wagmi wants `value` as bigint. Accept either bigint or string for
+    // symmetry with MOSS's interface.
+    if (value !== undefined && value !== null) {
+      params.value = typeof value === 'bigint' ? value : BigInt(value);
+    }
+    const hash = await wagmiWriteContract(wagmiConfig, params);
+    return hash;
+  }, []);
+
   const formatAddress = (addr) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -81,17 +106,11 @@ export function useWalletWagmi() {
     connect: connectWallet,
     disconnect,
     switchToMegaETH,
-    // Backwards compat alias
     switchToMonad: switchToMegaETH,
+    writeContract,
     formatAddress,
-    // If the wallet has a .mega name registered, displayAddress upgrades
-    // to e.g. "bread.mega". Otherwise it keeps the existing 0x1234…abcd
-    // format. Consumers don't need to change — every existing call site
-    // reads this field and the upgrade is automatic.
     displayAddress: address ? (megaName || formatAddress(address)) : null,
     megaName,
-    // Provider identifier — lets consumers know which backend is answering.
-    // Useful for debugging and for selector UI to highlight active option.
     providerId: 'wagmi',
   };
 }
