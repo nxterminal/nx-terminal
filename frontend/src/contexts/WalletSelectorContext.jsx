@@ -18,44 +18,51 @@ import { useWalletProviderContext } from './WalletProviderContext';
 //   setActive, with a 10s MOSS timeout and error surfacing.
 // - cancelPending(): user-initiated cancellation of an in-flight MOSS
 //   connect. Used by the floating cancel overlay when the iframe is open.
-// - mossHidden: true after the user cancels MOSS, until a new connect
-//   attempt starts. The cancel overlay injects CSS to hide the iframe
-//   while this is true — MOSS's SDK doesn't close its own iframe on
-//   disconnect, so we do it from our side.
+// - mossHidden: true after the user cancels MOSS, until they pick MOSS
+//   again. The cancel overlay injects CSS to hide the iframe while this
+//   is true — MOSS's SDK doesn't close its own iframe on disconnect, so
+//   we do it from our side.
 // - pending: which provider (if any) is currently mid-connect, for per-card
 //   spinner state in the modal and for showing the cancel overlay.
 // - error: last error from selectProvider, cleared on next attempt.
 
-// Lowered from 30s → 10s. The iframe is open and interactive during this
-// window, so a user who actually wants to complete the flow will click
-// something well before the timeout fires. 10s is long enough for the
-// code-input + passkey exchange to start, short enough that a user who
-// abandons gets the selector back without an awkward wait.
 const MOSS_CONNECT_TIMEOUT_MS = 10_000;
 
 const WalletSelectorContext = createContext(null);
+
+// Turn any thrown value (Error, wagmi error object, string, etc.) into a
+// readable message. wagmi errors are often plain objects with a `message`
+// or `shortMessage` field; without this helper `String(err)` gives us
+// "[object Object]" which leaks to the UI banner.
+function toReadableMessage(err, fallback = 'Something went wrong. Please try again.') {
+  if (!err) return fallback;
+  if (typeof err === 'string') return err;
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'object') {
+    // wagmi/viem conventions — prefer shortMessage for UI, fall back to message.
+    if (typeof err.shortMessage === 'string' && err.shortMessage) return err.shortMessage;
+    if (typeof err.message === 'string' && err.message) return err.message;
+    if (typeof err.name === 'string' && err.name) return err.name;
+  }
+  return fallback;
+}
 
 export function WalletSelectorProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(null);
   const [error, setError] = useState(null);
   // When true, the cancel overlay injects CSS to hide the MOSS iframe.
-  // Cleared automatically at the start of any new selectProvider() call.
+  // Only reset when the user picks MOSS again; otherwise it stays hidden
+  // so the iframe doesn't show through behind other provider flows.
   const [mossHidden, setMossHidden] = useState(false);
 
   const { activeProvider, setActiveProvider } = useWalletProviderContext();
 
-  // Both providers' mutations are subscribed unconditionally so we always
-  // have stable async handles regardless of which one is currently active.
-  // This is the same "call both, use one" pattern as useWallet.js.
   const { connectAsync: wagmiConnectAsync } = useWagmiConnect();
   const { disconnectAsync: wagmiDisconnectAsync } = useWagmiDisconnect();
   const mossConnectMutation = useMossConnect();
   const mossDisconnectMutation = useMossDisconnect();
 
-  // Ref to the current in-flight cancel signaller. When the user clicks
-  // the cancel overlay, we reject the MOSS connect promise through this
-  // controller and the selectProvider() try/catch handles the rest.
   const cancelRef = useRef(null);
 
   const open = useCallback(() => {
@@ -72,9 +79,9 @@ export function WalletSelectorProvider({ children }) {
 
     setError(null);
     setPending(next);
- // Reset the hidden flag only when the user picks MOSS again — we need
-    // its iframe interactive for a new MOSS attempt. For wagmi we keep the
-    // iframe hidden so it doesn't show through behind the MetaMask popup.
+    // Only unhide the MOSS iframe when the user picks MOSS again. For
+    // wagmi, keep it hidden so it doesn't show through behind MetaMask's
+    // popup after a previous cancel.
     if (next === 'moss') {
       setMossHidden(false);
     }
@@ -87,9 +94,6 @@ export function WalletSelectorProvider({ children }) {
       }
     };
 
-    // Local controller for this specific selectProvider invocation.
-    // Stored in cancelRef so the overlay can reach it; cleared when the
-    // flow resolves (success, timeout, error, or manual cancel).
     const controller = {
       cancelled: false,
       cancel: null,
@@ -97,14 +101,17 @@ export function WalletSelectorProvider({ children }) {
 
     try {
       // D2: disconnect the previous provider before switching so we don't
-      // leave a zombie session in MetaMask or the MOSS iframe. Errors here
-      // are non-fatal — the user is switching anyway, a failed cleanup
-      // shouldn't block the new connect.
+      // leave a zombie session. BUT: if the previous provider was MOSS and
+      // it's currently hidden (user cancelled it), calling disconnect on
+      // the SDK can cause the iframe to re-mount and flash back into view.
+      // Skip MOSS cleanup in that case — the iframe is already in a
+      // disconnected state from the cancel, re-disconnecting is a no-op
+      // in the best case and a visual glitch in the worst.
       if (activeProvider && activeProvider !== next) {
         try {
           if (activeProvider === 'wagmi') {
             await wagmiDisconnectAsync();
-          } else if (activeProvider === 'moss') {
+          } else if (activeProvider === 'moss' && !mossHidden) {
             await mossDisconnectMutation.mutateAsync();
           }
         } catch {
@@ -112,16 +119,8 @@ export function WalletSelectorProvider({ children }) {
         }
       }
 
-      // Close the selector modal before MOSS connects so its iframe
-      // (z-index 9999, hardcoded by the SDK) isn't obscured by our modal
-      // (z-index 10050). The iframe must be interactable for the user to
-      // complete the passkey flow. wagmi uses a native extension popup
-      // that renders above everything, so no early-close needed there.
       if (next === 'moss') {
         setIsOpen(false);
-        // Expose this invocation's controller so the cancel overlay can
-        // reach it. Only set for moss because wagmi has the browser's
-        // native cancel in its extension popup.
         cancelRef.current = controller;
       }
 
@@ -131,9 +130,6 @@ export function WalletSelectorProvider({ children }) {
           : mossConnectMutation.mutateAsync();
 
       if (next === 'moss') {
-        // Race the connect against: (1) a 10s timeout, (2) a manual cancel
-        // from the user via the overlay. Whichever wins first rejects the
-        // overall promise and lands us in the catch block.
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(() => {
             reject(
@@ -154,11 +150,6 @@ export function WalletSelectorProvider({ children }) {
         await connectPromise;
       }
 
-      // Only commit activeProvider AFTER a successful connection.
-      // If the user cancels or the connect throws, we fall into catch()
-      // and never persist the choice — so the next Connect click opens
-      // the selector again instead of blindly routing to the half-chosen
-      // provider.
       setActiveProvider(next);
 
       clearTimer();
@@ -168,9 +159,6 @@ export function WalletSelectorProvider({ children }) {
     } catch (err) {
       clearTimer();
       cancelRef.current = null;
-      // Defensively clear activeProvider on failure. Guarantees the
-      // selector re-appears on the next Connect click regardless of
-      // what went wrong (timeout, cancel, MetaMask rejection, etc.).
       setActiveProvider(null);
       // Best-effort cleanup of any half-opened MOSS session so the SDK
       // doesn't rehydrate a zombie flow on the next attempt.
@@ -180,29 +168,28 @@ export function WalletSelectorProvider({ children }) {
         } catch {
           /* best-effort */
         }
-        // The MOSS SDK doesn't close its own iframe on disconnect. Flag
-        // it as hidden so the cancel overlay injects CSS to hide it;
-        // this lets the user see the reopened selector without MOSS's
-        // iframe covering everything.
+        // MOSS's SDK doesn't close its own iframe. Flag it as hidden so
+        // the overlay's injected CSS keeps it out of sight until the user
+        // picks MOSS again.
         setMossHidden(true);
       }
       setPending(null);
-      // Distinguish manual cancel from real errors — no red banner for
-      // cancels, the user knows what they did.
       if (controller.cancelled) {
+        // Manual cancel — no red banner, the user knows what they did.
         setError(null);
       } else {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        // Convert whatever was thrown into a readable message. Prevents
+        // "[object Object]" from leaking to the UI when wagmi/viem throw
+        // plain objects instead of Error instances.
+        setError(new Error(toReadableMessage(err)));
       }
-      // Re-open the selector after MOSS failures so the user lands back
-      // on the picker instead of an empty screen. wagmi never closed the
-      // modal in the first place, so no re-open needed there.
       if (next === 'moss') {
         setIsOpen(true);
       }
     }
   }, [
     activeProvider,
+    mossHidden,
     setActiveProvider,
     wagmiConnectAsync,
     wagmiDisconnectAsync,
@@ -210,10 +197,6 @@ export function WalletSelectorProvider({ children }) {
     mossDisconnectMutation,
   ]);
 
-  // Called by the floating cancel overlay. Triggers the cancel promise
-  // inside the current selectProvider() call, which causes it to reject
-  // and fall into the catch block (setting activeProvider=null, clearing
-  // pending, re-opening the selector).
   const cancelPending = useCallback(() => {
     const controller = cancelRef.current;
     if (controller && typeof controller.cancel === 'function') {
