@@ -37,8 +37,13 @@ export function useWallet() {
     isConnecting,
     isReconnecting,
     chain,
+    chainId,
     connector,
   } = useAccount();
+  // connectError is the last error from the useConnect instance tied to
+  // THIS hook call. It's not a global app-wide connect error — each
+  // useWallet() subscriber sees its own slot. Taskbar is the canonical
+  // reader for showing connect-failed banners.
   const { connectors, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
@@ -48,11 +53,19 @@ export function useWallet() {
   const megaName = useMegaName(address);
 
   const isMoss = isMossConnector(connector);
-  const isWrongChain = isConnected && chain?.id !== megaeth.id;
+  // chainId from useAccount is reliable even when the connected chain is
+  // not in wagmiConfig.chains; chain?.id would be undefined in that case
+  // and produce a false-positive wrong-chain banner.
+  const isWrongChain =
+    isConnected && chainId !== undefined && chainId !== megaeth.id;
 
   const switchToMegaETH = useCallback(async () => {
-    // MOSS is pinned to MegaETH at construction time — nothing to switch.
-    if (isMoss) return;
+    if (isMoss) {
+      // MOSS is pinned to MegaETH at construction time. Log so debugging
+      // a stuck "switch" button is obvious.
+      console.info('[wallet] MOSS is fixed to MegaETH, no switch needed');
+      return;
+    }
 
     try {
       await switchChainAsync({ chainId: megaeth.id });
@@ -106,7 +119,7 @@ export function useWallet() {
     isConnected,
     isConnecting: isConnecting || isReconnecting,
     chain,
-    chainId: chain?.id,
+    chainId,
     connector,
     isMoss,
     isWrongChain,
@@ -132,8 +145,9 @@ export function useWallet() {
     displayAddress: address ? (megaName || formatAddress(address)) : null,
     megaName,
 
-    // Debug / UI hints
-    providerId: isMoss ? 'moss' : (connector ? 'wagmi' : null),
+    // Debug / UI hints. For "is it MOSS?" checks, use isMoss instead —
+    // comparing activeProvider against strings would require duplicating
+    // the id-vs-name fallback logic from isMossConnector.
     activeProvider: connector?.id ?? null,
   };
 }
