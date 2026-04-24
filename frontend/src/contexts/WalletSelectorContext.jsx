@@ -1,69 +1,39 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
-import { useConnect as useWagmiConnect, useDisconnect as useWagmiDisconnect } from 'wagmi';
-import { injected } from 'wagmi/connectors';
-import {
-  useConnect as useMossConnect,
-  useDisconnect as useMossDisconnect,
-} from '@megaeth-labs/wallet-sdk-react';
-import { useWalletProviderContext } from './WalletProviderContext';
+import { createContext, useCallback, useContext, useState } from 'react';
+import { useConnect } from 'wagmi';
+import { isMossConnector } from '../services/wagmi';
 
-// WalletSelectorContext owns the state of the provider-picker modal and
-// the orchestration for switching between wagmi and MOSS.
+// WalletSelectorContext owns the state of the wallet picker modal.
+//
+// Now that MOSS is a wagmi connector, all "select a wallet" flows route
+// through wagmi's useConnect — no MOSS SDK code path, no Promise.race,
+// no manual timeout. Wagmi handles user-cancel by rejecting connectAsync.
 //
 // Public shape:
-// - isOpen: whether the selector modal is currently visible.
-// - open / close: imperative controls, used by useWallet when activeProvider
-//   is null and by the modal itself.
-// - selectProvider(next): orchestrates disconnect-previous → connect-new →
-//   setActive, with a 10s MOSS timeout and error surfacing.
-// - cancelPending(): user-initiated cancellation of an in-flight MOSS
-//   connect. Used by the floating cancel overlay when the iframe is open.
-// - mossHidden: true after the user cancels MOSS, until they pick MOSS
-//   again. The cancel overlay injects CSS to hide the iframe while this
-//   is true — MOSS's SDK doesn't close its own iframe on disconnect, so
-//   we do it from our side.
-// - pending: which provider (if any) is currently mid-connect, for per-card
-//   spinner state in the modal and for showing the cancel overlay.
-// - error: last error from selectProvider, cleared on next attempt.
-
-const MOSS_CONNECT_TIMEOUT_MS = 30_000;
+// - isOpen         boolean — modal visibility
+// - open / close   imperative controls used by useWallet and the modal
+// - selectConnector(connector)  canonical: takes a wagmi connector
+//                  instance from useConnect().connectors. Tracks `pending`
+//                  by connector.id, closes on success.
+// - cancelPending()  resets wagmi's mutation state and closes the modal
+// - pending        connector.id of an in-flight connect, else null
+// - error          last error from connectAsync, raw (consumers read
+//                  err.message / err.shortMessage)
+//
+// Deprecated, removed in chunk 3 alongside the modal/overlay rewrite:
+// - selectProvider(legacyId)   maps 'wagmi'|'moss' → connector
+// - mossHidden                 always false; old overlay used to inject
+//                              CSS to hide MOSS's iframe after a cancel,
+//                              no longer needed (wagmi connector owns its
+//                              own iframe lifecycle)
 
 const WalletSelectorContext = createContext(null);
-
-// Turn any thrown value (Error, wagmi error object, string, etc.) into a
-// readable message. wagmi errors are often plain objects with a `message`
-// or `shortMessage` field; without this helper `String(err)` gives us
-// "[object Object]" which leaks to the UI banner.
-function toReadableMessage(err, fallback = 'Something went wrong. Please try again.') {
-  if (!err) return fallback;
-  if (typeof err === 'string') return err;
-  if (err instanceof Error && err.message) return err.message;
-  if (typeof err === 'object') {
-    // wagmi/viem conventions — prefer shortMessage for UI, fall back to message.
-    if (typeof err.shortMessage === 'string' && err.shortMessage) return err.shortMessage;
-    if (typeof err.message === 'string' && err.message) return err.message;
-    if (typeof err.name === 'string' && err.name) return err.name;
-  }
-  return fallback;
-}
 
 export function WalletSelectorProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(null);
   const [error, setError] = useState(null);
-  // When true, the cancel overlay injects CSS to hide the MOSS iframe.
-  // Only reset when the user picks MOSS again; otherwise it stays hidden
-  // so the iframe doesn't show through behind other provider flows.
-  const [mossHidden, setMossHidden] = useState(false);
 
-  const { activeProvider, setActiveProvider } = useWalletProviderContext();
-
-  const { connectAsync: wagmiConnectAsync } = useWagmiConnect();
-  const { disconnectAsync: wagmiDisconnectAsync } = useWagmiDisconnect();
-  const mossConnectMutation = useMossConnect();
-  const mossDisconnectMutation = useMossDisconnect();
-
-  const cancelRef = useRef(null);
+  const { connectAsync, connectors, reset } = useConnect();
 
   const open = useCallback(() => {
     setError(null);
@@ -74,145 +44,72 @@ export function WalletSelectorProvider({ children }) {
     setIsOpen(false);
   }, []);
 
-  const selectProvider = useCallback(async (next) => {
-    if (next !== 'wagmi' && next !== 'moss') return;
-
-    setError(null);
-    setPending(next);
-    // Only unhide the MOSS iframe when the user picks MOSS again. For
-    // wagmi, keep it hidden so it doesn't show through behind MetaMask's
-    // popup after a previous cancel.
-    if (next === 'moss') {
-      setMossHidden(false);
+  const selectConnector = useCallback(async (connector) => {
+    if (!connector) {
+      setError(new Error('Wallet not available'));
+      return;
     }
-
-    let timeoutId = null;
-    const clearTimer = () => {
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-    };
-
-    const controller = {
-      cancelled: false,
-      cancel: null,
-    };
-
+    setError(null);
+    setPending(connector.id);
     try {
-      // D2: disconnect the previous provider before switching so we don't
-      // leave a zombie session. BUT: if the previous provider was MOSS and
-      // it's currently hidden (user cancelled it), calling disconnect on
-      // the SDK can cause the iframe to re-mount and flash back into view.
-      // Skip MOSS cleanup in that case — the iframe is already in a
-      // disconnected state from the cancel, re-disconnecting is a no-op
-      // in the best case and a visual glitch in the worst.
-      if (activeProvider && activeProvider !== next) {
-        try {
-          if (activeProvider === 'wagmi') {
-            await wagmiDisconnectAsync();
-          } else if (activeProvider === 'moss' && !mossHidden) {
-            await mossDisconnectMutation.mutateAsync();
-          }
-        } catch {
-          /* best-effort */
-        }
-      }
-
-      if (next === 'moss') {
-        setIsOpen(false);
-        cancelRef.current = controller;
-      }
-
-      const connectPromise =
-        next === 'wagmi'
-          ? wagmiConnectAsync({ connector: injected() })
-          : mossConnectMutation.mutateAsync();
-
-      if (next === 'moss') {
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(
-              new Error(
-                'Timed out connecting to MegaETH Wallet. Please try again.'
-              )
-            );
-          }, MOSS_CONNECT_TIMEOUT_MS);
-        });
-        const cancelPromise = new Promise((_, reject) => {
-          controller.cancel = () => {
-            controller.cancelled = true;
-            reject(new Error('cancelled'));
-          };
-        });
-        await Promise.race([connectPromise, timeoutPromise, cancelPromise]);
-      } else {
-        await connectPromise;
-      }
-
-      setActiveProvider(next);
-
-      clearTimer();
-      cancelRef.current = null;
-      setPending(null);
+      await connectAsync({ connector });
       setIsOpen(false);
     } catch (err) {
-      clearTimer();
-      cancelRef.current = null;
-      setActiveProvider(null);
-      // Best-effort cleanup of any half-opened MOSS session so the SDK
-      // doesn't rehydrate a zombie flow on the next attempt.
-      if (next === 'moss') {
-        try {
-          await mossDisconnectMutation.mutateAsync();
-        } catch {
-          /* best-effort */
-        }
-        // MOSS's SDK doesn't close its own iframe. Flag it as hidden so
-        // the overlay's injected CSS keeps it out of sight until the user
-        // picks MOSS again.
-        setMossHidden(true);
-      }
+      // wagmi rejects connectAsync with the underlying provider error on
+      // user cancel, transport failure, etc. Pass through so the modal
+      // can read err.message / err.shortMessage as before.
+      setError(err);
+    } finally {
       setPending(null);
-      if (controller.cancelled) {
-        // Manual cancel — no red banner, the user knows what they did.
-        setError(null);
-      } else {
-        // Convert whatever was thrown into a readable message. Prevents
-        // "[object Object]" from leaking to the UI when wagmi/viem throw
-        // plain objects instead of Error instances.
-        setError(new Error(toReadableMessage(err)));
-      }
-      if (next === 'moss') {
-        setIsOpen(true);
-      }
     }
-  }, [
-    activeProvider,
-    mossHidden,
-    setActiveProvider,
-    wagmiConnectAsync,
-    wagmiDisconnectAsync,
-    mossConnectMutation,
-    mossDisconnectMutation,
-  ]);
+  }, [connectAsync]);
 
+  // wagmi's useConnect tracks an internal mutation state. reset() clears
+  // any in-flight error/status so the next open of the modal starts clean.
   const cancelPending = useCallback(() => {
-    const controller = cancelRef.current;
-    if (controller && typeof controller.cancel === 'function') {
-      controller.cancel();
+    reset();
+    setPending(null);
+    setIsOpen(false);
+  }, [reset]);
+
+  // Deprecated alias for the legacy 'wagmi'|'moss' string API. Maps to a
+  // concrete connector and forwards through the same connect path.
+  // Pending stays the legacy string for the duration so the existing
+  // modal's `pending === 'moss'` check keeps working until chunk 3.
+  const selectProvider = useCallback(async (legacyId) => {
+    const connector =
+      legacyId === 'wagmi'
+        ? connectors.find((c) => !isMossConnector(c))
+        : legacyId === 'moss'
+          ? connectors.find(isMossConnector)
+          : null;
+    if (!connector) {
+      setError(new Error('Wallet not available'));
+      return;
     }
-  }, []);
+    setError(null);
+    setPending(legacyId);
+    try {
+      await connectAsync({ connector });
+      setIsOpen(false);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setPending(null);
+    }
+  }, [connectAsync, connectors]);
 
   const value = {
     isOpen,
     open,
     close,
-    selectProvider,
+    selectConnector,
     cancelPending,
     pending,
     error,
-    mossHidden,
+    // Deprecated. Removed in chunk 3.
+    selectProvider,
+    mossHidden: false,
   };
 
   return (

@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MegaProvider } from '@megaeth-labs/wallet-sdk-react';
 import { wagmiConfig } from './services/wagmi';
 import { DevsProvider } from './contexts/DevsContext';
-import { WalletProviderContextProvider } from './contexts/WalletProviderContext';
 import { WalletSelectorProvider } from './contexts/WalletSelectorContext';
 import WalletSelectorModal from './components/WalletSelectorModal';
 import WalletSelectorCancelOverlay from './components/WalletSelectorCancelOverlay';
@@ -15,9 +14,8 @@ import MossTest from './pages/MossTest.jsx';
 
 const queryClient = new QueryClient();
 
-// MOSS SDK config. The iframe wallet only bootstraps when something
-// actually calls mega.initialise() via the connect mutation, so mounting
-// this provider is cheap for users who stay on MetaMask.
+// MOSS SDK config. Only consumed by /moss-test (a diagnostic page); the
+// production wallet flow now goes through the wagmi connector.
 const mossConfig = {
   network: 'mainnet',
   logging: 'warn',
@@ -40,15 +38,13 @@ createRoot(document.getElementById('root')).render(
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <MegaProvider config={mossConfig}>
-          <WalletProviderContextProvider>
-            <WalletSelectorProvider>
-              <DevsProvider>
-                <Root />
-              </DevsProvider>
-              <WalletSelectorModal />
-              <WalletSelectorCancelOverlay />
-            </WalletSelectorProvider>
-          </WalletProviderContextProvider>
+          <WalletSelectorProvider>
+            <DevsProvider>
+              <Root />
+            </DevsProvider>
+            <WalletSelectorModal />
+            <WalletSelectorCancelOverlay />
+          </WalletSelectorProvider>
         </MegaProvider>
       </QueryClientProvider>
     </WagmiProvider>
