@@ -3,10 +3,15 @@ import {
   useStatus,
   useConnect as useMossConnect,
   useDisconnect as useMossDisconnect,
+  useCallContract as useMossCallContract,
 } from '@megaeth-labs/wallet-sdk-react';
 import { MEGAETH_CHAIN_ID } from '../services/contract';
 import { useMegaName } from './useMegaName';
 import { useWalletProviderContext } from '../contexts/WalletProviderContext';
+import {
+  WalletUserRejectedError,
+  WalletUnsupportedError,
+} from './walletErrors';
 
 // useWalletMoss — MegaETH Wallet SDK implementation of the wallet interface.
 //
@@ -21,11 +26,15 @@ import { useWalletProviderContext } from '../contexts/WalletProviderContext';
 // - The iframe wallet boots lazily — `initialised` from useStatus() is the
 //   signal that MOSS is ready. While false, we surface `isConnecting: true`
 //   so the UI can show a loading state instead of an awkward in-between.
+// - MOSS callContract does NOT throw on user rejection; it resolves with
+//   { status: 'cancelled' }. We convert that to a thrown error so callsites
+//   see the same "throw on failure" contract as wagmi.
 
 export function useWalletMoss() {
   const { initialised, status, address } = useStatus();
   const connectMutation = useMossConnect();
   const disconnectMutation = useMossDisconnect();
+  const callContractMutation = useMossCallContract();
   const { setActiveProvider } = useWalletProviderContext();
 
   // Resolve .mega name — same hook, same cache, shared with the wagmi path.
@@ -33,16 +42,10 @@ export function useWalletMoss() {
 
   const isConnected = status === 'connected' && !!address;
 
-  // Expose connect / disconnect as plain functions matching the wagmi
-  // interface. useMutation's .mutate() fires and forgets; we don't need
-  // the returned promise at this level — UI reads state from useStatus().
   const connect = useCallback(() => {
     connectMutation.mutate();
   }, [connectMutation]);
 
-  // Disconnect: fire MOSS's disconnect AND clear activeProvider so the
-  // wallet selector re-appears on the next Connect click. Users stay in
-  // full control of which wallet they want each session.
   const disconnect = useCallback(() => {
     disconnectMutation.mutate();
     setActiveProvider(null);
@@ -52,6 +55,63 @@ export function useWalletMoss() {
   const switchToMegaETH = useCallback(async () => {
     return Promise.resolve();
   }, []);
+
+  // writeContract — provider-agnostic contract write for MOSS. Translates
+  // MOSS's TransactionResult shape into the same throw-on-failure contract
+  // that wagmi uses, so callsites can share try/catch logic.
+  //
+  // MOSS response shapes:
+  //   { status: 'approved', receipt: { hash } }  → resolve with hash
+  //   { status: 'cancelled' }                    → throw WalletUserRejectedError
+  //   { status: 'error', error: string }         → throw Error with message
+  //
+  // Params match useWalletWagmi.writeContract's signature exactly.
+  const writeContract = useCallback(
+    async ({ address: target, abi, functionName, args, value }) => {
+      const request = {
+        address: target,
+        abi,
+        functionName,
+        args,
+      };
+      if (value !== undefined && value !== null) {
+        // MOSS accepts bigint or string — normalize to bigint for consistency.
+        request.value = typeof value === 'bigint' ? value : BigInt(value);
+      }
+
+      let result;
+      try {
+        result = await callContractMutation.mutateAsync(request);
+      } catch (err) {
+        // MOSS generally doesn't throw, but a transport-level error (iframe
+        // not ready, Penpal comms failure, etc) can still throw. Treat this
+        // as an unsupported / broken path so callsites can fall back.
+        throw new WalletUnsupportedError(
+          err?.message || 'MegaETH Wallet could not complete this action.'
+        );
+      }
+
+      if (!result || typeof result !== 'object') {
+        throw new Error('Unexpected response from MegaETH Wallet.');
+      }
+
+      if (result.status === 'approved') {
+        const hash = result.receipt?.hash;
+        if (!hash) {
+          throw new Error('Transaction approved but no hash returned.');
+        }
+        return hash;
+      }
+
+      if (result.status === 'cancelled') {
+        throw new WalletUserRejectedError();
+      }
+
+      // status === 'error' or anything else
+      throw new Error(result.error || 'Transaction failed.');
+    },
+    [callContractMutation]
+  );
 
   const formatAddress = (addr) => {
     if (!addr) return '';
@@ -71,23 +131,18 @@ export function useWalletMoss() {
   return {
     address: address || undefined,
     isConnected,
-    // While the iframe is bootstrapping OR the connect mutation is pending,
-    // surface as "connecting" so the UI shows a spinner instead of a broken
-    // empty state.
     isConnecting: !initialised || connectMutation.isPending,
     chain,
-    // MOSS is MegaETH-native. No wrong-chain state is possible.
     isWrongChain: false,
     connectError: connectMutation.error || null,
     connect,
     disconnect,
     switchToMegaETH,
-    // Backwards compat alias — mirrors what useWalletWagmi exposes.
     switchToMonad: switchToMegaETH,
+    writeContract,
     formatAddress,
     displayAddress: address ? (megaName || formatAddress(address)) : null,
     megaName,
-    // Provider identifier — lets consumers know which backend is answering.
     providerId: 'moss',
   };
 }
