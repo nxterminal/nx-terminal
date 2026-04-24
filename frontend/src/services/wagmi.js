@@ -17,12 +17,25 @@ export const megaeth = {
   },
 };
 
+// Instantiate the MOSS connector once so we can export its identity
+// without guessing the id string. useWallet compares connector?.id
+// against MOSS_CONNECTOR_ID to decide whether the active wallet is MOSS.
+const MOSS_CONNECTOR = megaWallet({ network: 'mainnet' });
+
+export const MOSS_CONNECTOR_ID = MOSS_CONNECTOR.id;
+export const MOSS_CONNECTOR_NAME = MOSS_CONNECTOR.name;
+
+if (MOSS_CONNECTOR_ID === undefined) {
+  // Fallback: the connector resolves its id lazily inside wagmi. Callers
+  // should also compare against MOSS_CONNECTOR_NAME when this happens.
+  console.warn(
+    '[wallet] MOSS_CONNECTOR.id is undefined at build time — falling back to name match'
+  );
+}
+
 export const wagmiConfig = createConfig({
   chains: [megaeth],
-  connectors: [
-    injected(),
-    megaWallet({ network: 'mainnet' }),
-  ],
+  connectors: [injected(), MOSS_CONNECTOR],
   transports: {
     [megaeth.id]: http('https://mainnet.megaeth.com/rpc'),
   },
