@@ -9,12 +9,12 @@ import megaethLogo from '../assets/wallets/megaethlogo.png';
 // any consumer of useWallet().connect() can open it without per-site code.
 //
 // Icons:
-// The brand marks are real PNG assets bundled into the build, not inline
-// SVG approximations. The previous inline-SVG version was readable but
-// off-brand; shipping the actual logos makes the selector feel like a
-// first-class product surface rather than a scaffold. Logos are pre-sized
-// to 128×128 with transparent backgrounds so they render crisp at the
-// card's 40px display size and blend into the dark card background.
+// Real brand PNGs (128×128, transparent backgrounds) bundled into the
+// build. MetaMask is orange-on-transparent and reads well on dark. MOSS's
+// mark is dark-on-transparent, so its card icon gets a light background
+// plate via CSS (styles.cardIconMoss) to give the logo the contrast it
+// needs to be readable — matches the look of the MOSS connect sheet
+// where the logo sits on a cream panel.
 
 const PROVIDERS = [
   {
@@ -22,12 +22,14 @@ const PROVIDERS = [
     name: 'MetaMask',
     subtitle: 'Browser extension',
     logo: metamaskLogo,
+    iconClassName: 'cardIcon',
   },
   {
     id: 'moss',
-    name: 'MegaETH Wallet',
+    name: 'MOSS — MegaETH Wallet',
     subtitle: 'Embedded — no extension needed',
     logo: megaethLogo,
+    iconClassName: 'cardIconMoss',
   },
 ];
 
@@ -126,7 +128,7 @@ export default function WalletSelectorModal() {
           Choose how you&apos;d like to connect to MegaETH.
         </p>
         <div className={styles.cards}>
-          {PROVIDERS.map(({ id, name, subtitle, logo }, index) => {
+          {PROVIDERS.map(({ id, name, subtitle, logo, iconClassName }, index) => {
             const isPending = pending === id;
             return (
               <button
@@ -138,7 +140,7 @@ export default function WalletSelectorModal() {
                 disabled={pending !== null}
                 aria-label={`Connect with ${name}`}
               >
-                <span className={styles.cardIcon}>
+                <span className={styles[iconClassName]}>
                   {isPending ? (
                     <span className={styles.spinner} aria-hidden="true" />
                   ) : (
