@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { useWallet } from '../hooks/useWallet';
+import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
 import { api } from '../services/api';
 
@@ -515,7 +516,9 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
   });
 
   // ── Direct RPC fallback if wagmi reads fail ──────────────
-  // Try: 1) window.ethereum (wallet provider), 2) direct RPC fetch, 3) hardcoded known values
+  // Try: 1) window.ethereum (injected wallet's RPC), 2) public RPC fetch,
+  //      3) hardcoded known values. The injected step skips itself in MOSS
+  //      sessions (no window.ethereum) and falls through to step 2.
   useEffect(() => {
     if (mintPrice != null && mintPhase != null && remaining != null) return;
     let cancelled = false;
@@ -536,9 +539,16 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
         return json.result;
       };
 
-      // Provider via window.ethereum (wallet's own RPC connection)
+      // Provider via window.ethereum — wallet's own RPC connection. This
+      // is the one remaining window.ethereum reference in the migrated
+      // codebase, kept on purpose: it serves MetaMask users whose
+      // configured wallet RPC succeeds when our public RPC is rate-limited
+      // or down. MOSS users have no window.ethereum so the guard makes
+      // this branch fail fast and the next provider in the array runs.
       const walletCall = async (data) => {
-        if (!window.ethereum) throw new Error('No wallet');
+        if (typeof window === 'undefined' || !window.ethereum) {
+          throw new Error('No injected provider');
+        }
         return await window.ethereum.request({
           method: 'eth_call',
           params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'],
@@ -616,11 +626,16 @@ export default function HireDevs({ onMint, openDevProfile, openWindow }) {
     hash: txHash,
   });
 
-  // Surface write errors
+  // Surface write errors. User-cancellation isn't an error from the user's
+  // POV — clear the banner instead of showing a red box on a deliberate
+  // "no" click. Other failures (revert, network, etc.) get normalized
+  // through toReadableMessage so MetaMask vs MOSS errors look the same.
   useEffect(() => {
-    if (writeError) {
-      const msg = writeError.shortMessage || writeError.message || 'Transaction failed';
-      setMintError(msg);
+    if (!writeError) return;
+    if (isUserRejection(writeError)) {
+      setMintError(null);
+    } else {
+      setMintError(toReadableMessage(writeError, 'Transaction failed'));
     }
   }, [writeError]);
 
