@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
 import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { useDevs } from '../contexts/DevsContext';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE } from '../services/contract';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
 
@@ -160,8 +160,7 @@ async function waitForReceipt(txHash, maxWait = 60) {
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const allIds = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
-  const { isConnected, chain, writeContract } = useWallet();
-  const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
+  const { isWrongChain, switchToMegaETH, writeContract } = useWallet();
 
   const [claimEnabled, setClaimEnabled] = useState(null);
   const [pendingOnChain, setPendingOnChain] = useState(null); // { gross, fee, net } from previewClaim
@@ -260,24 +259,13 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     }
   };
 
-  // ── Single COLLECT button: wake wallet → sync → claim ──
+  // ── Single COLLECT button: sync → claim ──
   const handleClaim = async () => {
     if (selectedIds.length === 0) return;
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
 
-    // Step 0: Ensure wallet is alive BEFORE wasting time on sync
-    setClaimStep('signing');
-    try {
-      await ensureWalletReady();
-    } catch (e) {
-      setClaimStep('error');
-      setClaimError(e.message);
-      return;
-    }
-
-    // Step 1: Sync (wallet is confirmed alive)
     setClaimStep('syncing');
 
     const idsToSync = selectedIds.map(id => Number(id));
@@ -316,14 +304,6 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
-    // Ensure wallet is alive before claiming
-    try {
-      await ensureWalletReady();
-    } catch (e) {
-      setClaimStep('error');
-      setClaimError(e.message);
-      return;
-    }
     await doClaimNXT(allIds);
   };
 
@@ -448,8 +428,19 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
           {/* Wrong chain warning */}
           {isWrongChain && (
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--terminal-red)', margin: '8px 0 4px' }}>
-              Switch to MegaETH network to collect.
+            <div style={{
+              fontSize: 'var(--text-sm)', color: 'var(--terminal-red)',
+              margin: '8px 0 4px', display: 'flex', alignItems: 'center',
+              gap: '8px', flexWrap: 'wrap',
+            }}>
+              <span>Switch to MegaETH network to collect.</span>
+              <button
+                className="win-btn"
+                onClick={switchToMegaETH}
+                style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}
+              >
+                Switch to MegaETH
+              </button>
             </div>
           )}
 
@@ -482,7 +473,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
           {claimStep === 'signing' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: 'var(--text-base)', marginTop: '8px' }}>
-              Confirm in MetaMask...
+              Confirm in your wallet...
             </div>
           )}
 
