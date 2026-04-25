@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
-import { writeContract as wagmiWriteContract } from 'wagmi/actions';
-import { wagmiConfig } from '../services/wagmi';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { useDevs } from '../contexts/DevsContext';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
 
@@ -111,15 +110,38 @@ async function fetchPreviewClaim(tokenIds) {
   return { gross: BigInt(decoded[0]), fee: BigInt(decoded[1]), net: BigInt(decoded[2]) };
 }
 
-function AddTokenButton() {
+// AddTokenButton — single button that adapts to the active wallet.
+//
+// MOSS users get an "Open MOSS Wallet" CTA that delegates to the
+// connector's wallet_open. Injected users get the EIP-747 watchAsset
+// flow ("Add $NXT to wallet"). The size prop covers the two visual
+// contexts where this button is rendered: the BalanceTab footer
+// (default 'base') and the post-claim success row ('small').
+function AddTokenButton({ size = 'base' }) {
+  const { isMoss, openWallet } = useWallet();
+
+  const variantStyle = size === 'small'
+    ? { fontSize: 'var(--text-sm)', padding: '3px 14px', marginTop: '8px' }
+    : { fontSize: 'var(--text-base)', padding: '4px 12px', fontFamily: "'VT323', monospace" };
+
+  const handleClick = isMoss
+    ? openWallet
+    : () => {
+        // EIP-747 watchAsset — only injected wallets implement it. MOSS
+        // would reject the method, so the isMoss branch above prevents
+        // ever reaching this code path.
+        if (typeof window === 'undefined' || !window.ethereum) return;
+        window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
+        });
+      };
+
+  const label = isMoss ? 'Open MOSS Wallet' : 'Add $NXT to wallet';
+
   return (
-    <button className="win-btn" onClick={() => {
-      window.ethereum?.request({
-        method: 'wallet_watchAsset',
-        params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
-      });
-    }} style={{ fontSize: 'var(--text-base)', padding: '4px 12px', fontFamily: "'VT323', monospace" }}>
-      Add $NXT to MetaMask
+    <button className="win-btn" onClick={handleClick} style={variantStyle}>
+      {label}
     </button>
   );
 }
