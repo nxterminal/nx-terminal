@@ -45,6 +45,7 @@ import BSOD from './BSOD';
 import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
+import { useWallet } from '../hooks/useWallet';
 import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
@@ -178,6 +179,7 @@ export default function Desktop() {
   } = useWindowManager();
 
   const { devCount, tier, nextTier } = useDevCount();
+  const { address, isConnected } = useWallet();
 
   const [wallpaperStyle, setWallpaperStyle] = useState(getWallpaperStyle);
   const [wallpaperOverlay, setWallpaperOverlay] = useState(getWallpaperOverlay);
@@ -212,12 +214,18 @@ export default function Desktop() {
     };
   }, []);
 
-  // Poll backend for new notifications (every 30s)
+  // Poll backend for new notifications (every 30s).
+  // Re-keys on [address, isConnected] so the polling starts when the user
+  // connects mid-session and stops cleanly on disconnect; React fires the
+  // cleanup before re-running the effect so the previous setTimeout/
+  // setInterval pair is torn down before a new one is scheduled.
   useEffect(() => {
-    const addr = window.ethereum?.selectedAddress;
-    if (!addr) return;
+    if (!isConnected || !address) return;
+    // Reset notif tracking — what the previous address already saw doesn't
+    // apply to a new active address (account switch, MetaMask → MOSS, etc).
+    lastNotifCheck.current = 0;
     const check = () => {
-      api.getNotifications(addr, true).then(notifs => {
+      api.getNotifications(address, true).then(notifs => {
         if (!Array.isArray(notifs)) return;
         // Only count types the Inbox window actually displays. The backend
         // may hold unread rows (protocol_created, ai_created, …) that don't
@@ -236,7 +244,7 @@ export default function Desktop() {
     const t = setTimeout(check, 5000);
     const iv = setInterval(check, 30000);
     return () => { clearTimeout(t); clearInterval(iv); };
-  }, []);
+  }, [address, isConnected]);
 
   const refreshSettings = useCallback(() => {
     setWallpaperStyle(getWallpaperStyle());
