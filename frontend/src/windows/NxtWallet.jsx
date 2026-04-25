@@ -497,14 +497,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
                   {claimTxHash.slice(0, 10)}...
                 </a></>}
               </div>
-              <button className="win-btn" onClick={() => {
-                window.ethereum?.request({
-                  method: 'wallet_watchAsset',
-                  params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
-                });
-              }} style={{ fontSize: 'var(--text-sm)', padding: '3px 14px', marginTop: '8px' }}>
-                Add $NXT to MetaMask
-              </button>
+              <AddTokenButton size="small" />
             </div>
           )}
 
@@ -580,7 +573,6 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
           <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
             {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
           </div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>(in MetaMask)</div>
         </div>
       </div>
       <div style={{
