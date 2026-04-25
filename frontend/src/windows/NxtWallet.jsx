@@ -160,7 +160,7 @@ async function waitForReceipt(txHash, maxWait = 60) {
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const allIds = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
-  const { isConnected, chain } = useWallet();
+  const { isConnected, chain, writeContract } = useWallet();
   const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
 
   const [claimEnabled, setClaimEnabled] = useState(null);
@@ -206,7 +206,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const net = Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
   const totalDeduction = gross - net;
 
-  // ── Shared claim logic: send TX via MetaMask, poll receipt ──
+  // ── Shared claim logic: send TX via the active wallet, poll receipt ──
   const doClaimNXT = async (ids) => {
     console.log('[COLLECT] doClaimNXT start. wallet:', wallet, 'ids count:', ids.length);
     if (!wallet) { setClaimStep('error'); setClaimError('Wallet not connected'); return; }
@@ -215,17 +215,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimStep('signing');
     let txHash;
     try {
-      txHash = await sendClaimNXT(wallet, ids);
-    } catch (e) {
-      console.error('[COLLECT] sendClaimNXT threw:', e);
-      console.error('[COLLECT] error code:', e?.code, 'message:', e?.message);
-      const msg = e?.message || String(e);
-      if (e?.code === 4001 || msg.includes('reject') || msg.includes('denied') || msg.includes('cancel')) {
-        setClaimStep('error');
-        setClaimError('Transaction rejected in MetaMask');
+      txHash = await writeContract({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'claimNXT',
+        args: [ids],
+      });
+    } catch (err) {
+      console.error('[COLLECT] claim failed:', err);
+      // Option A: a deliberate user cancellation isn't an error from the
+      // user's POV. Reset to 'idle' so the COLLECT button is clickable
+      // again, no red banner. Other failures fall through to the error
+      // panel with a normalized message.
+      if (isUserRejection(err)) {
+        setClaimStep('idle');
+        setClaimError(null);
       } else {
         setClaimStep('error');
-        setClaimError(msg);
+        setClaimError(toReadableMessage(err, 'Transaction failed'));
       }
       return;
     }
