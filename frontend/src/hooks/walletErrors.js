@@ -1,9 +1,10 @@
 // frontend/src/hooks/walletErrors.js
 //
 // Shared error types and helpers for wallet interactions.
-// Used by useWalletWagmi and useWalletMoss to normalize error handling
-// across providers so callsites can react to user rejection or
-// unsupported-provider conditions without caring which wallet is active.
+// Used by useWallet, HireDevs, NxtWallet, and MyDevs to normalize error
+// handling across the wagmi connectors (injected + MOSS) so callsites
+// can react to user rejection or unsupported-provider conditions
+// without caring which wallet is active.
 
 /**
  * Thrown when the user explicitly rejects/cancels a wallet action.
