@@ -563,7 +563,7 @@ export default function MissionControl() {
   const [confirmDevs, setConfirmDevs] = useState(null);
 
   const { devCount, tier } = useDevCount();
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, connect } = useWallet();
 
   // ── Fetch data ──────────────────────────────────────────
   const fetchAvailable = useCallback(async () => {
@@ -682,7 +682,14 @@ export default function MissionControl() {
   if (!isConnected || !address) {
     return (
       <div style={{ padding: '20px', fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)', background: T.bg, color: T.text, height: '100%' }}>
-        Connect your wallet to access Mission Control.
+        <div>Connect your wallet to access Mission Control.</div>
+        <button
+          onClick={connect}
+          className="win-btn"
+          style={{ marginTop: 12, padding: '6px 20px', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}
+        >
+          Connect Wallet
+        </button>
       </div>
     );
   }

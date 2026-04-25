@@ -764,7 +764,7 @@ export default function NxtWallet() {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const lastGoodRef = useRef({ summary: null, history: [], movements: [] });
 
-  const { address, isConnected, displayAddress } = useWallet();
+  const { address, isConnected, displayAddress, connect } = useWallet();
   const wallet = isConnected ? address : null;
   const { tokenIds: contextTokenIds } = useDevs();
   const tokenIds = contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
@@ -830,6 +830,13 @@ export default function NxtWallet() {
       }}>
         <div style={{ fontSize: '28px' }}>$</div>
         <div>{'> Connect wallet to view your $NXT balance'}</div>
+        <button
+          onClick={connect}
+          className="win-btn"
+          style={{ marginTop: 8, padding: '6px 20px', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}
+        >
+          Connect Wallet
+        </button>
       </div>
     );
   }

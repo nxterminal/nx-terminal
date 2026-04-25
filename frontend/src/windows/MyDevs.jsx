@@ -2432,6 +2432,7 @@ export default function MyDevs({ openDevProfile }) {
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
             Your developers will appear here once your wallet is connected.
           </div>
+          {/* connect = openSelector via useWallet(). */}
           <button className="win-btn" onClick={connect} style={{ padding: '4px 20px', fontWeight: 'bold' }}>
             Connect Wallet
           </button>
