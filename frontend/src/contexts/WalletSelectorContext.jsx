@@ -38,7 +38,7 @@ export function WalletSelectorProvider({ children }) {
     setIsOpen(false);
   }, []);
 
-const selectConnector = useCallback(async (connector, pendingLabel) => {
+  const selectConnector = useCallback(async (connector, pendingLabel) => {
     if (!connector) {
       setError(new Error('Wallet not available'));
       setPending(null);
@@ -47,10 +47,10 @@ const selectConnector = useCallback(async (connector, pendingLabel) => {
     setError(null);
     setPending(pendingLabel ?? connector.id);
     // Close the picker immediately so the wallet's own UI (e.g. MOSS's
-    // password iframe with Sign in / Create PassKey / Recover Wallet)
-    // isn't covered by our modal during connect. If the user cancels,
-    // the cancel overlay handles their exit. If connect fails, we reopen
-    // so they can read the error and retry.
+    // "Enter code" gate, Sign in / Create PassKey iframe) isn't covered
+    // by our modal during connect. If the user cancels, the cancel
+    // overlay handles their exit. If connect fails, we reopen so they
+    // can read the error and retry.
     setIsOpen(false);
     try {
       await connectAsync({ connector });
