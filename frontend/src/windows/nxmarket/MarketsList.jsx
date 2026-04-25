@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { api } from '../../services/api';
+import { useWallet } from '../../hooks/useWallet';
 import { Win98Icon } from '../../components/Win98Icons';
 import { isNxMarketAdmin } from '../NXMarket';
 import CreateMarketModal from './CreateMarketModal';
@@ -118,14 +119,32 @@ function QuickBuyButton({ side, disabled, reason, onClick }) {
 }
 
 
-function QuickBuyRow({ market, walletConnected, onQuickBuy }) {
+function QuickBuyRow({ market, walletConnected, onQuickBuy, onConnect }) {
   const isActive = market.status === 'active';
-  const reason = !walletConnected
-    ? 'Connect wallet to bet'
-    : !isActive
-      ? 'Market closed — awaiting resolution'
-      : null;
-  const disabled = !walletConnected || !isActive;
+
+  // No-wallet state: collapse the YES/NO pair into a single CTA so users
+  // see a clickable path to connect instead of two greyed-out buttons.
+  // The flex:1 button keeps the row's height and width consistent with
+  // the wallet-connected state.
+  if (!walletConnected) {
+    return (
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onConnect(); }}
+          className="win-btn"
+          style={{
+            flex: 1, padding: '10px 12px', fontSize: 13, fontWeight: 'bold',
+            fontFamily: 'Tahoma, sans-serif',
+          }}
+        >
+          Connect Wallet to Bet
+        </button>
+      </div>
+    );
+  }
+
+  const reason = !isActive ? 'Market closed — awaiting resolution' : null;
+  const disabled = !isActive;
 
   return (
     <div style={{
@@ -140,7 +159,7 @@ function QuickBuyRow({ market, walletConnected, onQuickBuy }) {
 }
 
 
-function MarketCard({ market, onClick, walletConnected, onQuickBuy }) {
+function MarketCard({ market, onClick, walletConnected, onQuickBuy, onConnect }) {
   const isResolved = market.status === 'resolved';
   const isClosed = market.status === 'closed';
   const [hover, setHover] = useState(false);
@@ -230,7 +249,8 @@ function MarketCard({ market, onClick, walletConnected, onQuickBuy }) {
       {!isResolved && (
         <QuickBuyRow market={market}
           walletConnected={walletConnected}
-          onQuickBuy={(side) => onQuickBuy && onQuickBuy(market, side)} />
+          onQuickBuy={(side) => onQuickBuy && onQuickBuy(market, side)}
+          onConnect={onConnect} />
       )}
 
       {/* Spacer pushes footer to the bottom so grid cards align */}
@@ -289,6 +309,10 @@ function MarketsListInner({ wallet, onOpenMarket }, ref) {
 
   const isAdmin = isNxMarketAdmin(wallet);
   const walletConnected = !!wallet;
+  // `connect` from useWallet is the selector-opening wrapper (T3) — the
+  // existing `wallet` prop stays the source of truth for connected state,
+  // we just need a way to trigger the picker for users who haven't.
+  const { connect } = useWallet();
 
   const handleQuickBuy = (market, side) => {
     if (!walletConnected) return;
@@ -387,17 +411,24 @@ function MarketsListInner({ wallet, onOpenMarket }, ref) {
           </select>
         </label>
         <div style={{ flex: 1 }} />
-        <button onClick={() => setCreateMode('user')} className="win-btn"
-          disabled={!wallet || (cap && !cap.can_create)}
-          title={
-            !wallet ? 'Connect your wallet to create a market'
-            : cap && !cap.can_create
-              ? `Cap reached: ${cap.active_markets}/${cap.max_markets} active. Mint more devs or resolve existing markets.`
-              : 'Create a new market (costs 1000 $NXT)'
-          }
-          style={{ padding: '3px 10px', fontSize: 11, fontWeight: 'bold' }}>
-          + Create Market (1000 $NXT)
-        </button>
+        {wallet ? (
+          <button onClick={() => setCreateMode('user')} className="win-btn"
+            disabled={cap && !cap.can_create}
+            title={
+              cap && !cap.can_create
+                ? `Cap reached: ${cap.active_markets}/${cap.max_markets} active. Mint more devs or resolve existing markets.`
+                : 'Create a new market (costs 1000 $NXT)'
+            }
+            style={{ padding: '3px 10px', fontSize: 11, fontWeight: 'bold' }}>
+            + Create Market (1000 $NXT)
+          </button>
+        ) : (
+          <button onClick={connect} className="win-btn"
+            title="Connect your wallet to create a market"
+            style={{ padding: '3px 10px', fontSize: 11, fontWeight: 'bold' }}>
+            Connect Wallet
+          </button>
+        )}
         {isAdmin && (
           <button onClick={() => setCreateMode('official')} className="win-btn"
             title="Admin: create an official market (auto-minted seed, no cap)"
@@ -446,6 +477,7 @@ function MarketsListInner({ wallet, onOpenMarket }, ref) {
               <MarketCard key={m.id} market={m}
                 walletConnected={walletConnected}
                 onQuickBuy={handleQuickBuy}
+                onConnect={connect}
                 onClick={() => onOpenMarket && onOpenMarket(m.id)} />
             ))}
           </div>
