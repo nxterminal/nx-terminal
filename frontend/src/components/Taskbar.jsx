@@ -8,7 +8,7 @@ import StartMenu from './StartMenu';
 export default function Taskbar({ windows, onWindowClick, openWindow, unreadCount = 0 }) {
   const [cycle, setCycle] = useState(null);
   const [startOpen, setStartOpen] = useState(false);
-  const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError } = useWallet();
+  const { address, isConnected, isConnecting, connect, disconnect, displayAddress, connectError, isMoss, openWallet, depositWallet } = useWallet();
   const { isOpen: selectorOpen } = useWalletSelector();
   const [walletError, setWalletError] = useState(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
@@ -297,6 +297,40 @@ export default function Taskbar({ windows, onWindowClick, openWindow, unreadCoun
       >
         {isConnected ? displayAddress : isConnecting ? 'Connecting...' : 'Connect'}
       </button>
+
+      {isMoss && (
+        <>
+          <button
+            className="win-btn"
+            style={{ minWidth: 'auto', padding: '0 6px', display: 'flex', alignItems: 'center' }}
+            onClick={openWallet}
+            title="Open MOSS Wallet"
+            aria-label="Open MOSS Wallet"
+          >
+            {/* Wallet pouch with a side compartment + snap closure */}
+            <svg viewBox="0 0 16 16" style={{ display: 'block', width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
+              <rect x="2" y="4" width="12" height="9" fill="#e8e8d8" stroke="#666" strokeWidth="0.7" rx="0.5"/>
+              <path d="M2 6 L14 6" stroke="#666" strokeWidth="0.6"/>
+              <rect x="10" y="8" width="3.5" height="2.5" fill="#005500" stroke="#666" strokeWidth="0.6"/>
+              <circle cx="11.7" cy="9.2" r="0.5" fill="#e8e8d8"/>
+            </svg>
+          </button>
+          <button
+            className="win-btn"
+            style={{ minWidth: 'auto', padding: '0 6px', display: 'flex', alignItems: 'center' }}
+            onClick={depositWallet}
+            title="Deposit funds"
+            aria-label="Deposit funds"
+          >
+            {/* Down arrow dropping into a tray */}
+            <svg viewBox="0 0 16 16" style={{ display: 'block', width: 'var(--icon-size)', height: 'var(--icon-size)' }}>
+              <path d="M8 2 L8 9 M5 6.5 L8 9.5 L11 6.5" fill="none" stroke="#005500" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="2" y="11" width="12" height="3" fill="#e8e8d8" stroke="#666" strokeWidth="0.7"/>
+              <line x1="4" y1="12.5" x2="6" y2="12.5" stroke="#666" strokeWidth="0.6"/>
+            </svg>
+          </button>
+        </>
+      )}
 
       <div className="taskbar-divider" />
 
