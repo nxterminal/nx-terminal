@@ -48,6 +48,19 @@ export default function WalletSelectorModal() {
   const firstCardRef = useRef(null);
   const previousFocusRef = useRef(null);
 
+  // Show only MetaMask + MOSS in the picker. Other auto-detected injected
+  // wallets (Phantom, etc.) get hidden — wagmi exposes them via EIP-6963
+  // but our UI only has cards for the two supported flows. If the user
+  // has no MetaMask extension, fall back to the generic 'injected'
+  // connector for compatibility with Brave Wallet / Rabby.
+  const hasMetaMaskExtension = connectors.some(c => c.id === 'io.metamask');
+  const filteredConnectors = connectors.filter(c => {
+    if (isMossConnector(c)) return true;
+    if (c.id === 'io.metamask') return true;
+    if (c.id === 'injected' && !hasMetaMaskExtension) return true;
+    return false;
+  });
+
   // Focus management: remember the element that had focus before open,
   // autofocus the first wallet card, restore focus to the trigger on close.
   useEffect(() => {
@@ -136,7 +149,7 @@ export default function WalletSelectorModal() {
           Choose how you&apos;d like to connect to MegaETH.
         </p>
         <div className={styles.cards}>
-          {connectors.map((connector, index) => {
+          {filteredConnectors.map((connector, index) => {
             const { name, subtitle, logo, iconClassName } =
               getCardPresentation(connector);
             const isPending =
