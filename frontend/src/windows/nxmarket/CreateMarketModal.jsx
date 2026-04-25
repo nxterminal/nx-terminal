@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { useWallet } from '../../hooks/useWallet';
 
 
 function isoMin(hours) {
@@ -17,6 +18,7 @@ const USER_DEFAULT_B = 100;
 
 
 export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) {
+  const { connect } = useWallet();
   const isOfficial = mode === 'official';
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('crypto');
@@ -109,8 +111,16 @@ export default function CreateMarketModal({ mode, wallet, onClose, onCreated }) 
             <div style={{
               padding: 6, marginBottom: 8, background: '#fff3cd',
               border: '1px solid #856404', color: '#856404',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
             }}>
-              Connect your wallet to create a market.
+              <span>Connect your wallet to create a market.</span>
+              <button
+                onClick={connect}
+                className="win-btn"
+                style={{ padding: '2px 10px', fontSize: 11, fontWeight: 'bold' }}
+              >
+                Connect Wallet
+              </button>
             </div>
           )}
 

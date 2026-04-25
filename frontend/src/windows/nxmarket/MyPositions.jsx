@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../services/api';
+import { useWallet } from '../../hooks/useWallet';
 
 // PR 1's read endpoints don't expose a per-wallet positions feed, so
 // we walk every market the user has *traded* in by:
@@ -83,6 +84,7 @@ function PositionRow({ entry, onExit, onOpenMarket }) {
 
 
 export default function MyPositions({ wallet, onOpenMarket }) {
+  const { connect } = useWallet();
   const [active, setActive] = useState(null);
   const [resolved, setResolved] = useState(null);
   const [error, setError] = useState(null);
@@ -158,7 +160,14 @@ export default function MyPositions({ wallet, onOpenMarket }) {
       <div style={{
         textAlign: 'center', marginTop: 60, color: 'var(--text-secondary)',
       }}>
-        Connect your wallet to see your positions.
+        <div>Connect your wallet to see your positions.</div>
+        <button
+          onClick={connect}
+          className="win-btn"
+          style={{ marginTop: 12, padding: '6px 20px', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}
+        >
+          Connect Wallet
+        </button>
       </div>
     );
   }

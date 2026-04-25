@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MegaProvider } from '@megaeth-labs/wallet-sdk-react';
 import { wagmiConfig } from './services/wagmi';
 import { DevsProvider } from './contexts/DevsContext';
-import { WalletProviderContextProvider } from './contexts/WalletProviderContext';
 import { WalletSelectorProvider } from './contexts/WalletSelectorContext';
 import WalletSelectorModal from './components/WalletSelectorModal';
 import WalletSelectorCancelOverlay from './components/WalletSelectorCancelOverlay';
@@ -15,9 +14,11 @@ import MossTest from './pages/MossTest.jsx';
 
 const queryClient = new QueryClient();
 
-// MOSS SDK config. The iframe wallet only bootstraps when something
-// actually calls mega.initialise() via the connect mutation, so mounting
-// this provider is cheap for users who stay on MetaMask.
+// MOSS SDK config. Only consumed by the /moss-test diagnostic page; the
+// production wallet flow goes through the wagmi connector. MegaProvider
+// is mounted only on that route to avoid double-initialising the MOSS
+// SDK — the wallet SDK can only be initialized once per page load, so
+// the wagmi connector and a top-level MegaProvider would compete.
 const mossConfig = {
   network: 'mainnet',
   logging: 'warn',
@@ -30,27 +31,27 @@ const mossConfig = {
 function Root() {
   const path = window.location.pathname;
   if (path === '/moss-test' || path === '/moss-test/') {
-    return <MossTest />;
+    return (
+      <MegaProvider config={mossConfig}>
+        <MossTest />
+      </MegaProvider>
+    );
   }
   return <App />;
 }
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <MegaProvider config={mossConfig}>
-          <WalletProviderContextProvider>
-            <WalletSelectorProvider>
-              <DevsProvider>
-                <Root />
-              </DevsProvider>
-              <WalletSelectorModal />
-              <WalletSelectorCancelOverlay />
-            </WalletSelectorProvider>
-          </WalletProviderContextProvider>
-        </MegaProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        <WalletSelectorProvider>
+          <DevsProvider>
+            <Root />
+          </DevsProvider>
+          <WalletSelectorModal />
+          <WalletSelectorCancelOverlay />
+        </WalletSelectorProvider>
+      </WagmiProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );

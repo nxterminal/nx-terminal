@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import $ from 'jquery';
 import clippy from 'clippyjs';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
 
 // Must set jQuery globally BEFORE clippy uses it
 window.jQuery = $;
@@ -100,15 +101,8 @@ const MESSAGES = [
   "Your dev's hacking skill is scarier than a smart contract audit.",
 ];
 
-function isWalletConnected() {
-  try {
-    return window.ethereum && window.ethereum.selectedAddress;
-  } catch {
-    return false;
-  }
-}
-
 export default function NXAssistant() {
+  const { address, isConnected } = useWallet();
   const agentRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const messageIndexRef = useRef(0);
@@ -173,10 +167,13 @@ export default function NXAssistant() {
 
       try { agent.play('Greeting'); } catch {}
 
-      // First message after greeting animation
+      // First message after greeting animation.
+      // Accept stale closure: welcome message is a snapshot at agent
+      // load. If the user connects mid-greeting, the periodic random
+      // messages (every 60-120s) take over without wallet checks anyway.
       setTimeout(() => {
         if (thisAttempt !== loadAttemptRef.current) return;
-        if (!isWalletConnected()) {
+        if (!isConnected) {
           agent.speak(WELCOME_MSG);
         } else {
           agent.speak(MESSAGES[Math.floor(Math.random() * MESSAGES.length)]);
@@ -267,9 +264,14 @@ export default function NXAssistant() {
     return () => window.removeEventListener('nx-dev-hired', handleDevHired);
   }, []);
 
-  // Poll for unread notifications and announce them
+  // Poll for unread notifications and announce them.
+  // Re-keys on [address, isConnected] so polling starts when the user
+  // connects mid-session and stops cleanly on disconnect; React fires the
+  // cleanup before each re-run so the previous interval/timeout pair is
+  // torn down before a new one is scheduled.
   useEffect(() => {
     if (!loaded) return;
+    if (!isConnected || !address) return;
 
     const seenNotifs = new Set(JSON.parse(localStorage.getItem('nx-assistant-seen-notifs') || '[]'));
 
@@ -277,10 +279,7 @@ export default function NXAssistant() {
       const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
       if (!enabled || !agentRef.current) return;
 
-      const wallet = window.ethereum?.selectedAddress;
-      if (!wallet) return;
-
-      api.getNotifications(wallet, true)
+      api.getNotifications(address, true)
         .then(notifs => {
           if (!Array.isArray(notifs) || notifs.length === 0) return;
           // Find first unseen notification
@@ -310,7 +309,7 @@ export default function NXAssistant() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [loaded]);
+  }, [loaded, address, isConnected]);
 
   // Listen for agent change events
   useEffect(() => {

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { formatUnits } from 'viem';
 import { useWallet } from '../hooks/useWallet';
+import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
-import { NXT_TOKEN_ADDRESS, TREASURY_ADDRESS } from '../services/contract';
+import { NXT_TOKEN_ADDRESS, TREASURY_ADDRESS, ERC20_TRANSFER_ABI } from '../services/contract';
 import { playSpendSound, playGainSound, playActionSound } from '../utils/sound';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
@@ -744,6 +745,7 @@ function PendingCreditView({ dev, amount, txHash, attempts, copied, onCopy, onCl
 
 // ── Fund Modal ────────────────────────────────────────────
 function FundModal({ dev, address, onClose, onDevUpdate }) {
+  const { writeContract } = useWallet();
   const [amount, setAmount] = useState('');
   const [walletBal, setWalletBal] = useState(null);
   const [stage, setStage] = useState('idle'); // idle | signing | mining | pending | success | error
@@ -816,20 +818,13 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
       if (!txHash) {
         // No pending tx — sign and send a fresh on-chain transfer.
         setStage('signing');
-        // Build ERC-20 transfer(address,uint256) calldata
-        // selector: 0xa9059cbb
-        const toAddr = TREASURY_ADDRESS.slice(2).toLowerCase().padStart(64, '0');
         const amountWei = BigInt(amountNum) * BigInt(10 ** 18);
-        const amountHex = amountWei.toString(16).padStart(64, '0');
-        const calldata = '0xa9059cbb' + toAddr + amountHex;
 
-        txHash = await window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: address.toLowerCase(),
-            to: NXT_TOKEN_ADDRESS,
-            data: calldata,
-          }],
+        txHash = await writeContract({
+          address: NXT_TOKEN_ADDRESS,
+          abi: ERC20_TRANSFER_ABI,
+          functionName: 'transfer',
+          args: [TREASURY_ADDRESS, amountWei],
         });
 
         setStage('mining');
@@ -865,16 +860,22 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
       if (res.updated_dev && onDevUpdate) onDevUpdate(res.updated_dev);
       setTimeout(() => onClose(), 2500);
     } catch (err) {
-      setStage('error');
-      const msg = err?.message || 'Unknown error';
-      if (msg.includes('User denied') || msg.includes('rejected')) {
-        setErrorMsg('Transaction rejected by user');
-        // Wallet prompt rejected — nothing was signed, don't stash a pending.
-      } else {
-        setErrorMsg(msg.length > 80 ? msg.slice(0, 80) + '...' : msg);
+      // Option A: a deliberate cancellation isn't an error from the
+      // user's POV. Reset to idle so FUND is clickable again. pendingTx
+      // stays null naturally because setPendingTx only fires after the
+      // on-chain receipt — a rejection mid-signing has nothing to
+      // preserve.
+      if (isUserRejection(err)) {
+        setStage('idle');
+        setErrorMsg('');
+        return;
       }
-      // Keep pendingTx (if set) so the next click retries the backend POST
-      // instead of signing a brand new on-chain tx.
+      // Other failures: revert, network, backend POST after a confirmed
+      // tx, etc. If pendingTx was already populated above, keep it so the
+      // next click retries the backend POST instead of signing a fresh
+      // on-chain tx.
+      setStage('error');
+      setErrorMsg(toReadableMessage(err, 'Unknown error'));
     }
   };
 
@@ -1024,7 +1025,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
                 }}>
                 {stage === 'idle' && !hasPending && `\uD83D\uDCB0 FUND ${dev.name}`}
                 {stage === 'idle' && hasPending && `\uD83D\uDD04 Retry credit (${pendingTx.amount} $NXT)`}
-                {stage === 'signing' && 'Confirm in MetaMask...'}
+                {stage === 'signing' && 'Confirm in your wallet...'}
                 {stage === 'mining' && (hasPending ? 'Retrying credit...' : 'Processing...')}
                 {stage === 'success' && '\u2705 Funded!'}
                 {stage === 'error' && '\u274C Failed — Try Again'}
@@ -1041,7 +1042,7 @@ function FundModal({ dev, address, onClose, onDevUpdate }) {
               )}
 
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
-                Transfers $NXT from your MetaMask to your dev's in-game balance.
+                Transfers $NXT from your wallet to your dev's in-game balance.
               </div>
             </>
           )}
@@ -2431,6 +2432,7 @@ export default function MyDevs({ openDevProfile }) {
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted, #888)', textAlign: 'center' }}>
             Your developers will appear here once your wallet is connected.
           </div>
+          {/* connect = openSelector via useWallet(). */}
           <button className="win-btn" onClick={connect} style={{ padding: '4px 20px', fontWeight: 'bold' }}>
             Connect Wallet
           </button>

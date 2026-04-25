@@ -1,18 +1,42 @@
 import { useState } from 'react';
 import { api } from '../../services/api';
+import { useWallet } from '../../hooks/useWallet';
 
 
 const MAX_LEN = 500;
 
 
 export default function CommentInput({ marketId, wallet, onPosted }) {
+  const { connect } = useWallet();
   const [text, setText] = useState('');
   const [stage, setStage] = useState('idle'); // 'idle' | 'submitting'
   const [error, setError] = useState(null);
 
+  // No-wallet state: render a compact CTA row instead of the full
+  // textarea+post layout. Honest UX — the user can't type anything until
+  // they connect, so a tall disabled textarea is just visual noise.
+  if (!wallet) {
+    return (
+      <div className="win-panel" style={{
+        padding: 8, marginBottom: 10, background: '#ffffff',
+        fontFamily: 'Tahoma, sans-serif',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+      }}>
+        <span style={{ fontSize: 12, color: '#777' }}>Connect wallet to comment</span>
+        <button
+          onClick={connect}
+          className="win-btn"
+          style={{ padding: '4px 14px', fontSize: 12, fontWeight: 'bold' }}
+        >
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
+
   const trimmedLen = text.trim().length;
   const charCount = text.length;
-  const canSubmit = !!wallet && trimmedLen > 0 && trimmedLen <= MAX_LEN
+  const canSubmit = trimmedLen > 0 && trimmedLen <= MAX_LEN
     && stage === 'idle';
 
   const submit = async () => {
@@ -41,8 +65,7 @@ export default function CommentInput({ marketId, wallet, onPosted }) {
   if (charCount > 450 && charCount < 500) counterColor = '#a07a00';
   if (charCount >= 500) counterColor = '#b71c1c';
 
-  const disabledReason = !wallet ? 'Connect wallet to comment'
-    : trimmedLen === 0 ? 'Type something to post'
+  const disabledReason = trimmedLen === 0 ? 'Type something to post'
     : trimmedLen > MAX_LEN ? `Too long (${trimmedLen}/${MAX_LEN})`
     : null;
 
@@ -54,13 +77,13 @@ export default function CommentInput({ marketId, wallet, onPosted }) {
       <textarea
         value={text}
         onChange={e => setText(e.target.value.slice(0, MAX_LEN + 20))}
-        placeholder={wallet ? 'Add a comment...' : 'Connect wallet to comment'}
-        disabled={!wallet || stage === 'submitting'}
+        placeholder="Add a comment..."
+        disabled={stage === 'submitting'}
         rows={3}
         style={{
           width: '100%', padding: 6, boxSizing: 'border-box',
           fontFamily: 'Tahoma, sans-serif', fontSize: 12,
-          background: wallet ? '#fff' : '#eee',
+          background: '#fff',
           border: '2px inset #888', resize: 'vertical', minHeight: 60,
         }}
       />

@@ -1,44 +1,73 @@
 import { useEffect, useRef } from 'react';
 import { useWalletSelector } from '../contexts/WalletSelectorContext';
+import { isMossConnector } from '../services/wagmi';
 import styles from './WalletSelectorModal.module.css';
 import metamaskLogo from '../assets/wallets/metamasklogo.png';
 import megaethLogo from '../assets/wallets/megaethlogo.png';
 
-// WalletSelectorModal — modern dark dialog letting the user pick between
-// MetaMask (wagmi) and MegaETH Wallet (MOSS). Mounted once at app level so
-// any consumer of useWallet().connect() can open it without per-site code.
+// WalletSelectorModal — modern dark dialog letting the user pick a wallet.
 //
-// Icons:
-// Real brand PNGs (128×128, transparent backgrounds) bundled into the
-// build. MetaMask is orange-on-transparent and reads well on dark. MOSS's
-// mark is dark-on-transparent, so its card icon gets a light background
-// plate via CSS (styles.cardIconMoss) to give the logo the contrast it
-// needs to be readable — matches the look of the MOSS connect sheet
-// where the logo sits on a cream panel.
+// Cards are driven by the wagmi connectors registered in wagmiConfig and
+// exposed through the selector context. We pick the visual presentation
+// per connector by inspecting it with isMossConnector — the MegaETH
+// wallet connector gets the MOSS card (light icon plate); everything
+// else (currently `injected`) gets MetaMask styling.
+//
+// Mounted once at app level, outside DevsProvider, so it must not call
+// useWallet (which is used by data hooks underneath DevsProvider). Talks
+// only to the selector context + isMossConnector.
 
-const PROVIDERS = [
-  {
-    id: 'wagmi',
+function getCardPresentation(connector) {
+  if (isMossConnector(connector)) {
+    return {
+      name: 'MOSS — MegaETH Wallet',
+      subtitle: 'Embedded — no extension needed',
+      logo: megaethLogo,
+      iconClassName: 'cardIconMoss',
+    };
+  }
+  return {
     name: 'MetaMask',
     subtitle: 'Browser extension',
     logo: metamaskLogo,
     iconClassName: 'cardIcon',
-  },
-  {
-    id: 'moss',
-    name: 'MOSS — MegaETH Wallet',
-    subtitle: 'Embedded — no extension needed',
-    logo: megaethLogo,
-    iconClassName: 'cardIconMoss',
-  },
-];
+  };
+}
 
 export default function WalletSelectorModal() {
-  const { isOpen, close, selectProvider, pending, error } = useWalletSelector();
+  const {
+    isOpen,
+    close,
+    connectors,
+    selectConnector,
+    pending,
+    error,
+  } = useWalletSelector();
 
   const dialogRef = useRef(null);
   const firstCardRef = useRef(null);
   const previousFocusRef = useRef(null);
+
+  // Show only MetaMask + MOSS in the picker, MetaMask first. Other
+  // auto-detected injected wallets (Phantom, etc.) get hidden — wagmi
+  // exposes them via EIP-6963 but our UI only has cards for the two
+  // supported flows. If the user has no MetaMask extension, fall back
+  // to the generic 'injected' connector for compatibility with Brave
+  // Wallet / Rabby.
+  const hasMetaMaskExtension = connectors.some(c => c.id === 'io.metamask');
+  const filteredConnectors = connectors
+    .filter(c => {
+      if (isMossConnector(c)) return true;
+      if (c.id === 'io.metamask') return true;
+      if (c.id === 'injected' && !hasMetaMaskExtension) return true;
+      return false;
+    })
+    .sort((a, b) => {
+      // MetaMask first, MOSS second.
+      if (isMossConnector(a)) return 1;
+      if (isMossConnector(b)) return -1;
+      return 0;
+    });
 
   // Focus management: remember the element that had focus before open,
   // autofocus the first wallet card, restore focus to the trigger on close.
@@ -128,15 +157,23 @@ export default function WalletSelectorModal() {
           Choose how you&apos;d like to connect to MegaETH.
         </p>
         <div className={styles.cards}>
-          {PROVIDERS.map(({ id, name, subtitle, logo, iconClassName }, index) => {
-            const isPending = pending === id;
+          {filteredConnectors.map((connector, index) => {
+            const { name, subtitle, logo, iconClassName } =
+              getCardPresentation(connector);
+            const isPending =
+              connector.id != null && pending === connector.id;
             return (
               <button
-                key={id}
+                key={
+                  connector.uid ||
+                  connector.id ||
+                  connector.name ||
+                  `connector-${index}`
+                }
                 ref={index === 0 ? firstCardRef : undefined}
                 type="button"
                 className={styles.card}
-                onClick={() => selectProvider(id)}
+                onClick={() => selectConnector(connector)}
                 disabled={pending !== null}
                 aria-label={`Connect with ${name}`}
               >
@@ -164,7 +201,9 @@ export default function WalletSelectorModal() {
         </div>
         {error && (
           <div className={styles.error} role="alert">
-            {error.message || 'Failed to connect. Please try again.'}
+            {error.shortMessage ||
+              error.message ||
+              'Failed to connect. Please try again.'}
           </div>
         )}
       </div>

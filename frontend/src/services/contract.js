@@ -152,3 +152,19 @@ export const NXDEVNFT_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
 ];
+
+// Minimal ERC20 ABI — used by MyDevs/FundModal to sign transfer() calls
+// on $NXT through wagmi's writeContract. Only `transfer` is needed; the
+// app has no flow that requires approve/allowance.
+export const ERC20_TRANSFER_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+];

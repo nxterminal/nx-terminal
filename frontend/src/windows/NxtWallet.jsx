@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatUnits, encodeFunctionData, decodeFunctionResult } from 'viem';
-import { writeContract as wagmiWriteContract } from 'wagmi/actions';
-import { wagmiConfig } from '../services/wagmi';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { useDevs } from '../contexts/DevsContext';
-import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE, MEGAETH_CHAIN_ID } from '../services/contract';
+import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, NXT_TOKEN_ADDRESS, EXPLORER_BASE } from '../services/contract';
 
 const MAINNET_RPC = 'https://mainnet.megaeth.com/rpc';
 
@@ -111,93 +110,40 @@ async function fetchPreviewClaim(tokenIds) {
   return { gross: BigInt(decoded[0]), fee: BigInt(decoded[1]), net: BigInt(decoded[2]) };
 }
 
-function AddTokenButton() {
+// AddTokenButton — single button that adapts to the active wallet.
+//
+// MOSS users get an "Open MOSS Wallet" CTA that delegates to the
+// connector's wallet_open. Injected users get the EIP-747 watchAsset
+// flow ("Add $NXT to wallet"). The size prop covers the two visual
+// contexts where this button is rendered: the BalanceTab footer
+// (default 'base') and the post-claim success row ('small').
+function AddTokenButton({ size = 'base' }) {
+  const { isMoss, openWallet } = useWallet();
+
+  const variantStyle = size === 'small'
+    ? { fontSize: 'var(--text-sm)', padding: '3px 14px', marginTop: '8px' }
+    : { fontSize: 'var(--text-base)', padding: '4px 12px', fontFamily: "'VT323', monospace" };
+
+  const handleClick = isMoss
+    ? openWallet
+    : () => {
+        // EIP-747 watchAsset — only injected wallets implement it. MOSS
+        // would reject the method, so the isMoss branch above prevents
+        // ever reaching this code path.
+        if (typeof window === 'undefined' || !window.ethereum) return;
+        window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
+        });
+      };
+
+  const label = isMoss ? 'Open MOSS Wallet' : 'Add $NXT to wallet';
+
   return (
-    <button className="win-btn" onClick={() => {
-      window.ethereum?.request({
-        method: 'wallet_watchAsset',
-        params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
-      });
-    }} style={{ fontSize: 'var(--text-base)', padding: '4px 12px', fontFamily: "'VT323', monospace" }}>
-      Add $NXT to MetaMask
+    <button className="win-btn" onClick={handleClick} style={variantStyle}>
+      {label}
     </button>
   );
-}
-
-// ── Ensure wallet extension is alive (EIP-6963 + retry) ──
-async function ensureWalletReady() {
-  // Strategy 1: EIP-6963 — dispatch requestProvider event to wake extensions
-  console.log('[WALLET] Waking wallet via EIP-6963...');
-  const eip6963Provider = await new Promise((resolve) => {
-    const handler = (e) => {
-      window.removeEventListener('eip6963:announceProvider', handler);
-      resolve(e.detail?.provider);
-    };
-    window.addEventListener('eip6963:announceProvider', handler);
-    window.dispatchEvent(new Event('eip6963:requestProvider'));
-    setTimeout(() => {
-      window.removeEventListener('eip6963:announceProvider', handler);
-      resolve(null);
-    }, 1500);
-  });
-
-  if (eip6963Provider) {
-    try {
-      await eip6963Provider.request({ method: 'eth_accounts' });
-      console.log('[WALLET] EIP-6963 provider alive');
-      return eip6963Provider;
-    } catch {}
-  }
-
-  // Strategy 2: eth_requestAccounts with retries + exponential backoff
-  if (!window.ethereum) throw new Error('No wallet found. Install a wallet extension.');
-  console.log('[WALLET] Trying eth_requestAccounts with retries...');
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await Promise.race([
-        window.ethereum.request({ method: 'eth_requestAccounts' }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), 5000)),
-      ]);
-      console.log('[WALLET] Wallet alive (attempt', attempt + ')');
-      return window.ethereum;
-    } catch (e) {
-      if (e.message !== 'TIMEOUT') throw e;
-      console.log('[WALLET] Attempt', attempt, 'timed out, retrying...');
-      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
-    }
-  }
-
-  throw new Error('Wallet not responding. Refresh the page and try again.');
-}
-
-// ── Send claimNXT TX ─────────────────────────────────────
-async function sendClaimNXT(fromAddress, tokenIds) {
-  console.log('[COLLECT] sendClaimNXT. from:', fromAddress, 'count:', tokenIds.length);
-  const bigIds = tokenIds.map(id => BigInt(id));
-
-  // Try wagmi first (should work since ensureWalletReady pre-woke the extension)
-  try {
-    const txHash = await wagmiWriteContract(wagmiConfig, {
-      address: NXDEVNFT_ADDRESS,
-      abi: NXDEVNFT_ABI,
-      functionName: 'claimNXT',
-      args: [bigIds],
-    });
-    console.log('[COLLECT] wagmi OK, hash:', txHash);
-    return txHash;
-  } catch (e) {
-    console.warn('[COLLECT] wagmi failed, using direct:', e?.message);
-  }
-
-  // Direct fallback (wallet is guaranteed alive by ensureWalletReady)
-  const claimAbi = NXDEVNFT_ABI.find(f => f.name === 'claimNXT');
-  const calldata = encodeFunctionData({ abi: [claimAbi], functionName: 'claimNXT', args: [bigIds] });
-  const txHash = await window.ethereum.request({
-    method: 'eth_sendTransaction',
-    params: [{ from: fromAddress.toLowerCase(), to: NXDEVNFT_ADDRESS, data: calldata }],
-  });
-  console.log('[COLLECT] direct OK, hash:', txHash);
-  return txHash;
 }
 
 async function waitForReceipt(txHash, maxWait = 60) {
@@ -214,8 +160,7 @@ async function waitForReceipt(txHash, maxWait = 60) {
 // ── Withdraw Section (On-Chain) ──────────────────────────
 function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const allIds = tokenIds ? Array.from(tokenIds).map(id => BigInt(id)) : [];
-  const { isConnected, chain } = useWallet();
-  const isWrongChain = isConnected && chain?.id !== MEGAETH_CHAIN_ID;
+  const { isWrongChain, switchToMegaETH, writeContract } = useWallet();
 
   const [claimEnabled, setClaimEnabled] = useState(null);
   const [pendingOnChain, setPendingOnChain] = useState(null); // { gross, fee, net } from previewClaim
@@ -260,7 +205,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
   const net = Math.floor(gross * (1 - TOTAL_DEDUCTION_PCT / 100));
   const totalDeduction = gross - net;
 
-  // ── Shared claim logic: send TX via MetaMask, poll receipt ──
+  // ── Shared claim logic: send TX via the active wallet, poll receipt ──
   const doClaimNXT = async (ids) => {
     console.log('[COLLECT] doClaimNXT start. wallet:', wallet, 'ids count:', ids.length);
     if (!wallet) { setClaimStep('error'); setClaimError('Wallet not connected'); return; }
@@ -269,17 +214,24 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimStep('signing');
     let txHash;
     try {
-      txHash = await sendClaimNXT(wallet, ids);
-    } catch (e) {
-      console.error('[COLLECT] sendClaimNXT threw:', e);
-      console.error('[COLLECT] error code:', e?.code, 'message:', e?.message);
-      const msg = e?.message || String(e);
-      if (e?.code === 4001 || msg.includes('reject') || msg.includes('denied') || msg.includes('cancel')) {
-        setClaimStep('error');
-        setClaimError('Transaction rejected in MetaMask');
+      txHash = await writeContract({
+        address: NXDEVNFT_ADDRESS,
+        abi: NXDEVNFT_ABI,
+        functionName: 'claimNXT',
+        args: [ids],
+      });
+    } catch (err) {
+      console.error('[COLLECT] claim failed:', err);
+      // Option A: a deliberate user cancellation isn't an error from the
+      // user's POV. Reset to 'idle' so the COLLECT button is clickable
+      // again, no red banner. Other failures fall through to the error
+      // panel with a normalized message.
+      if (isUserRejection(err)) {
+        setClaimStep('idle');
+        setClaimError(null);
       } else {
         setClaimStep('error');
-        setClaimError(msg);
+        setClaimError(toReadableMessage(err, 'Transaction failed'));
       }
       return;
     }
@@ -307,24 +259,13 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     }
   };
 
-  // ── Single COLLECT button: wake wallet → sync → claim ──
+  // ── Single COLLECT button: sync → claim ──
   const handleClaim = async () => {
     if (selectedIds.length === 0) return;
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
 
-    // Step 0: Ensure wallet is alive BEFORE wasting time on sync
-    setClaimStep('signing');
-    try {
-      await ensureWalletReady();
-    } catch (e) {
-      setClaimStep('error');
-      setClaimError(e.message);
-      return;
-    }
-
-    // Step 1: Sync (wallet is confirmed alive)
     setClaimStep('syncing');
 
     const idsToSync = selectedIds.map(id => Number(id));
@@ -363,14 +304,6 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
     setClaimError(null);
     setSyncTxHash(null);
     setClaimTxHash(null);
-    // Ensure wallet is alive before claiming
-    try {
-      await ensureWalletReady();
-    } catch (e) {
-      setClaimStep('error');
-      setClaimError(e.message);
-      return;
-    }
     await doClaimNXT(allIds);
   };
 
@@ -495,8 +428,19 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
           {/* Wrong chain warning */}
           {isWrongChain && (
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--terminal-red)', margin: '8px 0 4px' }}>
-              Switch to MegaETH network to collect.
+            <div style={{
+              fontSize: 'var(--text-sm)', color: 'var(--terminal-red)',
+              margin: '8px 0 4px', display: 'flex', alignItems: 'center',
+              gap: '8px', flexWrap: 'wrap',
+            }}>
+              <span>Switch to MegaETH network to collect.</span>
+              <button
+                className="win-btn"
+                onClick={switchToMegaETH}
+                style={{ padding: '4px 16px', fontWeight: 'bold', fontSize: 'var(--text-sm)' }}
+              >
+                Switch to MegaETH
+              </button>
             </div>
           )}
 
@@ -529,7 +473,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
 
           {claimStep === 'signing' && (
             <div style={{ textAlign: 'center', padding: '8px', color: 'var(--terminal-amber)', fontSize: 'var(--text-base)', marginTop: '8px' }}>
-              Confirm in MetaMask...
+              Confirm in your wallet...
             </div>
           )}
 
@@ -553,14 +497,7 @@ function WithdrawSection({ wallet, tokenIds, gameBalance, devs, onClaimed }) {
                   {claimTxHash.slice(0, 10)}...
                 </a></>}
               </div>
-              <button className="win-btn" onClick={() => {
-                window.ethereum?.request({
-                  method: 'wallet_watchAsset',
-                  params: { type: 'ERC20', options: { address: NXT_TOKEN_ADDRESS, symbol: 'NXT', decimals: 18 } },
-                });
-              }} style={{ fontSize: 'var(--text-sm)', padding: '3px 14px', marginTop: '8px' }}>
-                Add $NXT to MetaMask
-              </button>
+              <AddTokenButton size="small" />
             </div>
           )}
 
@@ -636,7 +573,6 @@ function BalanceTab({ summary, wallet, tokenIds, onClaimed }) {
           <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--terminal-green)' }}>
             {walletNxt !== null ? formatNxt(walletNxt) : '...'} $NXT
           </div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>(in MetaMask)</div>
         </div>
       </div>
       <div style={{
@@ -828,7 +764,7 @@ export default function NxtWallet() {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const lastGoodRef = useRef({ summary: null, history: [], movements: [] });
 
-  const { address, isConnected, displayAddress } = useWallet();
+  const { address, isConnected, displayAddress, connect } = useWallet();
   const wallet = isConnected ? address : null;
   const { tokenIds: contextTokenIds } = useDevs();
   const tokenIds = contextTokenIds.length > 0 ? contextTokenIds.map(BigInt) : undefined;
@@ -894,6 +830,13 @@ export default function NxtWallet() {
       }}>
         <div style={{ fontSize: '28px' }}>$</div>
         <div>{'> Connect wallet to view your $NXT balance'}</div>
+        <button
+          onClick={connect}
+          className="win-btn"
+          style={{ marginTop: 8, padding: '6px 20px', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}
+        >
+          Connect Wallet
+        </button>
       </div>
     );
   }

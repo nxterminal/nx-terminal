@@ -6,7 +6,8 @@
  * or manually via refreshDevs().
  */
 import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useReadContract } from 'wagmi';
+import { useReadContract, usePublicClient } from 'wagmi';
+import { decodeAbiParameters } from 'viem';
 import { useWallet } from '../hooks/useWallet';
 import { NXDEVNFT_ADDRESS, NXDEVNFT_ABI, MEGAETH_CHAIN_ID, MEGAETH_RPC } from '../services/contract';
 import { api } from '../services/api';
@@ -23,6 +24,7 @@ export function useDevs() {
 
 export function DevsProvider({ children }) {
   const { address, isConnected } = useWallet();
+  const publicClient = usePublicClient({ chainId: MEGAETH_CHAIN_ID });
   const [devs, setDevs] = useState([]);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
@@ -55,19 +57,24 @@ export function DevsProvider({ children }) {
     let cancelled = false;
 
     const tryRpc = async () => {
-      const paddedAddr = address.slice(2).toLowerCase().padStart(64, '0');
-      const data = '0x8462151c' + paddedAddr;
-
+      // Each provider returns BigInt[] (the parsed tokensOfOwner result)
+      // or throws. Tier ordering: wagmi's publicClient first (gets viem's
+      // retry/timeout layer for free), direct RPC fetch as the genuine
+      // different-transport fallback when wagmi's transport is unhappy.
       const providers = [];
-      if (window.ethereum) {
+      if (publicClient) {
         providers.push(async () => {
-          return await window.ethereum.request({
-            method: 'eth_call',
-            params: [{ to: NXDEVNFT_ADDRESS, data }, 'latest'],
+          return await publicClient.readContract({
+            address: NXDEVNFT_ADDRESS,
+            abi: NXDEVNFT_ABI,
+            functionName: 'tokensOfOwner',
+            args: [address],
           });
         });
       }
       providers.push(async () => {
+        const paddedAddr = address.slice(2).toLowerCase().padStart(64, '0');
+        const data = '0x8462151c' + paddedAddr;
         const res = await fetch(MEGAETH_RPC, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,23 +82,18 @@ export function DevsProvider({ children }) {
         });
         const json = await res.json();
         if (json.error) throw new Error(json.error.message);
-        return json.result;
+        if (!json.result || json.result === '0x') throw new Error('Empty result');
+        const [tokens] = decodeAbiParameters([{ type: 'uint256[]' }], json.result);
+        return tokens;
       });
 
       for (const call of providers) {
         if (cancelled) return;
         try {
-          const result = await call();
-          if (!result || result === '0x') continue;
-          const hex = result.slice(2);
-          if (hex.length < 128) continue;
-          const length = parseInt(hex.slice(64, 128), 16);
-          const ids = [];
-          for (let i = 0; i < length; i++) {
-            ids.push(parseInt(hex.slice(128 + i * 64, 128 + (i + 1) * 64), 16));
-          }
+          const ids = await call();
+          if (!Array.isArray(ids)) continue;
           if (!cancelled) {
-            setRpcTokens(ids.map(BigInt));
+            setRpcTokens(ids);
             setRpcPending(false);
           }
           return;
