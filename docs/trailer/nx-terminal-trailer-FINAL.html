@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>NX Terminal — Trailer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET ===== */
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: Tahoma, "MS Sans Serif", Verdana, sans-serif;
+}
+button { font: inherit; cursor: default; }
+
+/* ===== THEME (classic) ===== */
+:root {
+  --bg-desktop: #008080;
+  --win-bg: #c0c0c0;
+  --win-title-l: #000080;
+  --win-title-r: #1084d0;
+  --border-light: #ffffff;
+  --border-dark: #808080;
+  --border-darker: #404040;
+  --selection: #000080;
+  --selection-text: #ffffff;
+  --terminal-bg: #0c0c0c;
+  --terminal-green: #33ff33;
+  --terminal-amber: #ffaa00;
+  --terminal-red: #ff4444;
+  --terminal-cyan: #00ffff;
+  --terminal-magenta: #ff44ff;
+  --gold: #ffd700;
+  --text-primary: #000000;
+  --text-secondary: #444444;
+  --text-muted: #555555;
+  --fit-scale: 1;
+}
+
+/* ===== STAGE / CAMERA ===== */
+#stage {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 1920px; height: 1080px;
+  transform: translate(-50%, -50%) scale(var(--fit-scale));
+  transform-origin: center center;
+  overflow: hidden;
+  background: #000;
+}
+#camera {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  transform-origin: 0 0;
+  transform: translate(0, 0) scale(1);
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* ===== DESKTOP ===== */
+#desktop {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-desktop);
+  overflow: hidden;
+}
+.wallpaper-logo {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.09;
+  color: #fff;
+  font-family: 'Press Start 2P', "Courier New", monospace;
+  letter-spacing: 6px;
+}
+.wallpaper-logo .l1 { font-size: 96px; }
+.wallpaper-logo .l2 { font-size: 36px; margin-top: 28px; letter-spacing: 14px; }
+
+/* ===== DESK ICONS ===== */
+.desk-icon {
+  position: absolute;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000, 0 0 4px rgba(0,0,0,0.6);
+}
+.desk-icon .glyph {
+  width: 56px; height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 26px;
+  color: var(--terminal-green);
+  background: linear-gradient(135deg, #1a1a1a, #050505);
+  border: 2px solid #000;
+  box-shadow: inset 1px 1px 0 #444, inset -1px -1px 0 #000;
+}
+.desk-icon .label {
+  font-family: Tahoma, sans-serif;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.1;
+  max-width: 96px;
+}
+.desk-icon[data-selected="true"] .label {
+  background: var(--selection);
+  color: var(--selection-text);
+  padding: 1px 4px;
+}
+
+/* ===== TASKBAR ===== */
+.taskbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 38px;
+  background: var(--win-bg);
+  border-top: 2px solid var(--border-light);
+  box-shadow: inset 0 -1px 0 var(--border-darker);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  gap: 6px;
+  z-index: 50;
+  font-family: Tahoma, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.start-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--win-bg);
+  border: 2px solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.start-flag {
+  display: grid;
+  grid-template-columns: 9px 9px;
+  grid-template-rows: 9px 9px;
+  gap: 1px;
+}
+.start-flag span { display: block; }
+.start-flag span:nth-child(1) { background: #ff0000; }
+.start-flag span:nth-child(2) { background: #00aa00; }
+.start-flag span:nth-child(3) { background: #ffcc00; }
+.start-flag span:nth-child(4) { background: #0088ff; }
+.taskbar .spacer { flex: 1; }
+.taskbar .clock {
+  height: 28px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border: 2px solid;
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+  background: var(--win-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== WINDOW (reusable) ===== */
+.window {
+  position: absolute;
+  background: var(--win-bg);
+  border: 2px solid;
+  border-color: var(--border-light) var(--border-darker) var(--border-darker) var(--border-light);
+  box-shadow: 1px 1px 0 #000;
+  font-family: Tahoma, sans-serif;
+  color: var(--text-primary);
+  display: none;
+}
+.window[data-open="true"] { display: block; }
+.win-titlebar {
+  height: 26px;
+  background: linear-gradient(90deg, var(--win-title-l), var(--win-title-r));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+.win-titlebar .title { flex: 1; }
+.win-titlebar .controls { display: flex; gap: 2px; }
+.win-titlebar .controls button {
+  width: 18px; height: 16px;
+  background: var(--win-bg);
+  border: 1px solid;
+  border-color: var(--border-light) var(--border-darker) var(--border-darker) var(--border-light);
+  color: var(--text-primary);
+  font-size: 10px;
+  line-height: 1;
+}
+.win-body { padding: 8px; font-size: 13px; }
+
+/* ===== MOUSE CURSOR ===== */
+#mouse {
+  position: absolute;
+  top: 0; left: 0;
+  width: 22px; height: 28px;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(960px, 540px);
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* ===== CRT EFFECTS ===== */
+#crtScanlines, #crtVignette, #crtNoise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+}
+#crtScanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.18) 0,
+    rgba(0,0,0,0.18) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+#crtVignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0,0,0,0.55) 100%
+  );
+}
+#crtNoise {
+  background-image:
+    radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px;
+  background-position: 0 0, 1px 2px;
+  opacity: 0.32;
+  animation: noiseShift 0.18s steps(2) infinite;
+}
+@keyframes noiseShift {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(-1px, 1px); }
+  100% { transform: translate(1px, -1px); }
+}
+
+/* ===== START OVERLAY ===== */
+#startOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  cursor: pointer;
+}
+#startOverlay .label {
+  font-family: 'Press Start 2P', monospace;
+  color: var(--terminal-green);
+  font-size: 28px;
+  letter-spacing: 4px;
+  text-shadow: 0 0 12px rgba(51,255,51,0.6);
+  animation: blinkOverlay 1s steps(2) infinite;
+}
+@keyframes blinkOverlay { 50% { opacity: 0.2; } }
+#startOverlay.gone { display: none; }
+</style>
+</head>
+<body>
+
+<div id="startOverlay">
+  <div class="label">▶ CLICK TO BOOT</div>
+</div>
+
+<div id="stage">
+  <div id="camera">
+    <div id="desktop">
+      <div class="wallpaper-logo">
+        <div class="l1">NX TERMINAL</div>
+        <div class="l2">PROTOCOL WARS</div>
+      </div>
+
+      <div class="desk-icon" data-id="inbox" style="top:60px; left:60px;">
+        <div class="glyph">M</div>
+        <div class="label">Inbox</div>
+      </div>
+      <div class="desk-icon" data-id="mydevs" style="top:160px; left:60px;">
+        <div class="glyph">=</div>
+        <div class="label">My Devs</div>
+      </div>
+      <div class="desk-icon" data-id="ailab" style="top:260px; left:60px;">
+        <div class="glyph">~</div>
+        <div class="label">AI Lab</div>
+      </div>
+      <div class="desk-icon" data-id="market" style="top:360px; left:60px;">
+        <div class="glyph">$</div>
+        <div class="label">NX Market</div>
+      </div>
+
+      <div class="taskbar">
+        <button class="start-btn" type="button">
+          <div class="start-flag">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <span>Start</span>
+        </button>
+        <div class="spacer"></div>
+        <div class="clock" id="clock">02:36 PM</div>
+      </div>
+    </div>
+
+    <svg id="mouse" viewBox="0 0 22 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M2 2 L2 22 L7 18 L10 25 L13 24 L10 17 L17 17 Z"
+            fill="#ffffff" stroke="#000000" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+
+    <div id="crtScanlines"></div>
+    <div id="crtVignette"></div>
+    <div id="crtNoise"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   AUDIO ENGINE — ported from frontend/src/utils/sound.js
+   Uses a single shared AudioContext (vs. per-call) so we keep
+   timing tight across smash cuts. initAudio() is the user-gesture
+   bootstrap required by browsers.
+   ============================================================ */
+let audioCtx = null;
+
+function initAudio() {
+  if (audioCtx) return audioCtx;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+  } catch (e) {
+    console.warn('AudioContext init failed', e);
+  }
+  return audioCtx;
+}
+
+function playTones(freqs, dur, gain) {
+  if (!audioCtx) return;
+  dur = dur || 0.2;
+  gain = gain || 0.1;
+  try {
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.type = 'square';
+    freqs.forEach((f, i) => osc.frequency.setValueAtTime(f, t0 + i * 0.05));
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.01, t0 + dur);
+    osc.start(t0);
+    osc.stop(t0 + dur);
+  } catch (e) {}
+}
+
+function playSpendSound()  { playTones([800, 600, 400], 0.20, 0.12); }
+function playGainSound()   { playTones([400, 600, 800, 1000], 0.25, 0.12); }
+function playActionSound() { playTones([500, 700], 0.15, 0.10); }
+
+function playToggleClick() {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(900, t0);
+    g.gain.setValueAtTime(0.08, t0);
+    g.gain.exponentialRampToValueAtTime(0.01, t0 + 0.08);
+    osc.start(t0);
+    osc.stop(t0 + 0.08);
+  } catch (e) {}
+}
+
+/* ===== Extra trailer SFX ===== */
+function sfxBoot() {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.0);
+    osc.start(t0);
+    osc.stop(t0 + 1.05);
+  } catch (e) {}
+}
+
+function sfxImpact() {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, t0);
+    osc.frequency.exponentialRampToValueAtTime(40, t0 + 0.2);
+    g.gain.setValueAtTime(0.25, t0);
+    g.gain.exponentialRampToValueAtTime(0.01, t0 + 0.2);
+    osc.start(t0);
+    osc.stop(t0 + 0.22);
+
+    const len = Math.floor(audioCtx.sampleRate * 0.2);
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+    const ng = audioCtx.createGain();
+    ng.gain.value = 0.18;
+    noise.connect(ng);
+    ng.connect(audioCtx.destination);
+    noise.start(t0);
+  } catch (e) {}
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+const mouse = { x: 960, y: 540 };
+
+function moveMouse(x, y, dur) {
+  dur = dur == null ? 1000 : dur;
+  const el = document.getElementById('mouse');
+  el.style.transition = 'transform ' + dur + 'ms cubic-bezier(0.22, 1, 0.36, 1)';
+  el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+  mouse.x = x;
+  mouse.y = y;
+  return sleep(dur);
+}
+
+async function clickAtMouse() {
+  playToggleClick();
+  const el = document.getElementById('mouse');
+  el.style.transition = 'transform 80ms ease-out';
+  el.style.transform = 'translate(' + mouse.x + 'px, ' + mouse.y + 'px) scale(0.85)';
+  await sleep(80);
+  el.style.transform = 'translate(' + mouse.x + 'px, ' + mouse.y + 'px) scale(1)';
+  await sleep(80);
+}
+
+function camTo(cx, cy, zoom, dur) {
+  zoom = zoom == null ? 1 : zoom;
+  dur = dur == null ? 1300 : dur;
+  const cam = document.getElementById('camera');
+  const tx = 960 - cx * zoom;
+  const ty = 540 - cy * zoom;
+  cam.style.transition = 'transform ' + dur + 'ms cubic-bezier(0.22, 1, 0.36, 1)';
+  cam.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + zoom + ')';
+  return sleep(dur);
+}
+
+function resetCam(dur) {
+  dur = dur == null ? 1300 : dur;
+  const cam = document.getElementById('camera');
+  cam.style.transition = 'transform ' + dur + 'ms cubic-bezier(0.22, 1, 0.36, 1)';
+  cam.style.transform = 'translate(0px, 0px) scale(1)';
+  return sleep(dur);
+}
+
+function openWindow(id) {
+  const el = document.getElementById(id);
+  if (el) el.dataset.open = 'true';
+}
+
+function closeWindow(id) {
+  const el = document.getElementById(id);
+  if (el) el.dataset.open = 'false';
+}
+
+function centerOf(target) {
+  const el = (typeof target === 'string') ? document.querySelector(target) : target;
+  if (!el) return { x: 960, y: 540 };
+  const stage = document.getElementById('stage');
+  const sRect = stage.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const sx = sRect.width / 1920 || 1;
+  return {
+    x: (r.left - sRect.left) / sx + (r.width / sx) / 2,
+    y: (r.top  - sRect.top)  / sx + (r.height / sx) / 2
+  };
+}
+
+/* ============================================================
+   FIT STAGE — keeps 1920x1080 letterboxed inside any viewport
+   ============================================================ */
+function fitStage() {
+  const sx = window.innerWidth / 1920;
+  const sy = window.innerHeight / 1080;
+  const s = Math.min(sx, sy);
+  document.documentElement.style.setProperty('--fit-scale', String(s));
+}
+window.addEventListener('load', fitStage);
+window.addEventListener('resize', fitStage);
+fitStage();
+
+/* ============================================================
+   CLOCK — ticks every 4s, starts at 14:36 (canonical desktop time)
+   ============================================================ */
+let clockMinutes = 14 * 60 + 36;
+function tickClock() {
+  const h24 = Math.floor(clockMinutes / 60) % 24;
+  const m = clockMinutes % 60;
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = ((h24 + 11) % 12) + 1;
+  const el = document.getElementById('clock');
+  if (el) {
+    el.textContent =
+      String(h12).padStart(2, '0') + ':' +
+      String(m).padStart(2, '0') + ' ' + ampm;
+  }
+  clockMinutes += 1;
+}
+tickClock();
+setInterval(tickClock, 4000);
+
+/* ============================================================
+   TRAILER ENTRY (placeholder for 3.A)
+   ============================================================ */
+async function runTrailer() {
+  console.log('Trailer ready (3.A scaffold)');
+}
+
+/* ============================================================
+   START OVERLAY — user gesture unlocks AudioContext
+   ============================================================ */
+document.getElementById('startOverlay').addEventListener('click', () => {
+  initAudio();
+  const ov = document.getElementById('startOverlay');
+  ov.classList.add('gone');
+  setTimeout(runTrailer, 200);
+});
+</script>
+</body>
+</html>
