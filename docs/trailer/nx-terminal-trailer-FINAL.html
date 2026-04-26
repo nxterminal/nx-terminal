@@ -354,6 +354,77 @@ button { font: inherit; cursor: default; }
 }
 @keyframes blinkOverlay { 50% { opacity: 0.2; } }
 #startOverlay.gone { display: none; }
+
+/* ===== SCENE 1 — BIOS BOOT ===== */
+#bootScreen {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 9500;
+  padding: 40px;
+  font-family: 'VT323', monospace;
+  font-size: 24px;
+  color: #33ff33;
+  text-shadow: 0 0 6px rgba(51,255,51,0.5);
+  line-height: 1.4;
+  white-space: pre;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+#bootScreen .boot-line {
+  display: block;
+  white-space: pre;
+  min-height: 1.4em;
+}
+#whiteFlash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 9700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease-out;
+}
+#whiteFlash.active { opacity: 1; }
+
+/* ===== SCENE 2 — DESKTOP REVEAL ===== */
+.desktop-icons .desk-icon {
+  opacity: 0;
+  transform: translateY(-15px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.desktop-icons.revealed .desk-icon {
+  opacity: 1;
+  transform: translateY(0);
+}
+.taskbar {
+  opacity: 0;
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.taskbar.revealed { opacity: 1; }
+
+.desk-icon.selected .desk-icon-label {
+  background: var(--selection);
+  color: var(--selection-text);
+  padding: 1px 4px;
+}
+
+#nxLogo {
+  position: absolute;
+  top: 22px;
+  right: 32px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: #33ff33;
+  text-shadow: 0 0 6px rgba(51,255,51,0.55);
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  z-index: 100;
+  pointer-events: none;
+}
+#nxLogo.visible { opacity: 1; }
 </style>
 </head>
 <body>
@@ -999,6 +1070,8 @@ button { font: inherit; cursor: default; }
         <div class="spacer"></div>
         <div class="clock" id="clock">02:36 PM</div>
       </div>
+
+      <div id="nxLogo">NX TERMINAL</div>
     </div>
 
     <svg id="mouse" viewBox="0 0 22 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1009,6 +1082,9 @@ button { font: inherit; cursor: default; }
     <div id="crtScanlines"></div>
     <div id="crtVignette"></div>
     <div id="crtNoise"></div>
+
+    <div id="bootScreen"><span class="boot-line" id="bootLine1"></span><span class="boot-line" id="bootLine2"></span><span class="boot-line" id="bootLine3"></span></div>
+    <div id="whiteFlash"></div>
   </div>
 </div>
 
@@ -1226,10 +1302,184 @@ tickClock();
 setInterval(tickClock, 4000);
 
 /* ============================================================
-   TRAILER ENTRY (placeholder for 3.A)
+   TYPING HELPER — fast, chunked typing (~50-80ms per chunk)
+   ============================================================ */
+async function typeLine(el, text, totalMs) {
+  totalMs = totalMs == null ? 350 : totalMs;
+  const ticks = Math.max(6, Math.min(12, Math.ceil(text.length / 5)));
+  const chunkSize = Math.ceil(text.length / ticks);
+  const tickMs = Math.max(20, Math.floor(totalMs / ticks));
+  for (let i = 1; i <= ticks; i++) {
+    const cut = Math.min(text.length, i * chunkSize);
+    el.textContent = text.slice(0, cut);
+    if (i < ticks) await sleep(tickMs);
+  }
+  el.textContent = text;
+}
+
+function softClick(gain) {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(900, t0);
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+    osc.start(t0);
+    osc.stop(t0 + 0.07);
+  } catch (e) {}
+}
+
+/* ============================================================
+   SCENE 1 — BIOS BOOT (1.5s)
+   ============================================================ */
+async function runScene_1_bios() {
+  const mouseEl = document.getElementById('mouse');
+  if (mouseEl) mouseEl.style.opacity = '0';
+
+  const boot = document.getElementById('bootScreen');
+  const l1 = document.getElementById('bootLine1');
+  const l2 = document.getElementById('bootLine2');
+  const l3 = document.getElementById('bootLine3');
+  const flash = document.getElementById('whiteFlash');
+
+  l1.textContent = ''; l2.textContent = ''; l3.textContent = '';
+  boot.style.opacity = '1';
+  boot.style.display = 'block';
+
+  sfxBoot();
+
+  const t0 = performance.now();
+  softClick(0.04);
+  await typeLine(l1, 'NX TERMINAL — Developer Retrieval System v4.2', 320);
+
+  softClick(0.04);
+  await typeLine(l2, 'Establishing connection to MegaETH... OK', 300);
+
+  /* progress bar fill ~400ms */
+  const BAR_W = 12;
+  const BAR_MS = 400;
+  const STEP_MS = Math.floor(BAR_MS / BAR_W);
+  for (let i = 1; i <= BAR_W; i++) {
+    const filled = '█'.repeat(i);
+    const empty = ' '.repeat(BAR_W - i);
+    const pct = Math.round((i / BAR_W) * 100);
+    l3.textContent = '[' + filled + empty + '] ' + pct + '%';
+    await sleep(STEP_MS);
+  }
+  softClick(0.04);
+
+  /* hold until t+1.3s */
+  const elapsed = performance.now() - t0;
+  if (elapsed < 1300) await sleep(1300 - elapsed);
+
+  /* white flash 200ms */
+  flash.classList.add('active');
+  await sleep(100);
+  playGainSound();
+  await sleep(100);
+  flash.classList.remove('active');
+
+  /* fade boot screen (don't await — overlaps with scene 2) */
+  boot.style.opacity = '0';
+  setTimeout(() => { if (boot && boot.parentNode) boot.parentNode.removeChild(boot); }, 250);
+
+  /* total scene = 1500ms */
+  const sceneElapsed = performance.now() - t0;
+  if (sceneElapsed < 1500) await sleep(1500 - sceneElapsed);
+}
+
+/* ============================================================
+   SCENE 2 — DESKTOP REVEAL (2s)
+   ============================================================ */
+async function runScene_2_desktop() {
+  const t0 = performance.now();
+
+  const icons = document.querySelector('.desktop-icons');
+  const taskbar = document.querySelector('.taskbar');
+
+  /* 1. reveal icons + taskbar simultaneously (600ms fade) */
+  icons.classList.add('revealed');
+  taskbar.classList.add('revealed');
+  playGainSound();
+
+  /* 8 ultra-low ticks ~50ms apart, materializing effect */
+  for (let i = 0; i < 8; i++) {
+    softClick(0.03);
+    await sleep(50);
+  }
+  /* (8 * 50 = 400ms elapsed) */
+
+  /* hold to t=0.7s — cursor jitter at center */
+  const target07 = 700;
+  let now = performance.now() - t0;
+  if (now < target07) await sleep(target07 - now);
+
+  const mouseEl = document.getElementById('mouse');
+  mouseEl.style.opacity = '1';
+  /* place at center instantly (no transition) */
+  mouseEl.style.transition = 'transform 0ms';
+  mouseEl.style.transform = 'translate(960px, 540px)';
+  mouse.x = 960; mouse.y = 540;
+  await sleep(20);
+
+  /* 3 micro-jitters ±40px from origin, 80-120ms each */
+  for (let i = 0; i < 3; i++) {
+    const dx = (Math.random() - 0.5) * 80;
+    const dy = (Math.random() - 0.5) * 80;
+    const dur = 80 + Math.floor(Math.random() * 40);
+    await moveMouse(960 + dx, 540 + dy, dur);
+  }
+
+  /* hold to t=1.3s — NX TERMINAL logo fade-in */
+  const target13 = 1300;
+  now = performance.now() - t0;
+  if (now < target13) await sleep(target13 - now);
+
+  const logo = document.getElementById('nxLogo');
+  logo.classList.add('visible');
+  softClick(0.05);
+
+  /* hold to t=1.7s — cursor to Inbox with overshoot */
+  const target17 = 1700;
+  now = performance.now() - t0;
+  if (now < target17) await sleep(target17 - now);
+
+  const inbox = document.querySelector('.desk-icon[data-id="inbox"]');
+  const ic = centerOf(inbox);
+  const fromX = mouse.x, fromY = mouse.y;
+  const dx = ic.x - fromX, dy = ic.y - fromY;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const overX = ic.x + (dx / dist) * 30;
+  const overY = ic.y + (dy / dist) * 30;
+  await moveMouse(overX, overY, 260);
+  await moveMouse(ic.x, ic.y, 140);
+
+  /* hold to t=1.9s — highlight Inbox */
+  const target19 = 1900;
+  now = performance.now() - t0;
+  if (now < target19) await sleep(target19 - now);
+
+  inbox.classList.add('selected');
+  softClick(0.05);
+
+  /* hold to t=2.0s end */
+  const target20 = 2000;
+  now = performance.now() - t0;
+  if (now < target20) await sleep(target20 - now);
+}
+
+/* ============================================================
+   TRAILER ENTRY
    ============================================================ */
 async function runTrailer() {
-  console.log('Trailer ready (3.A scaffold)');
+  await runScene_1_bios();      // 0.0s → 1.5s
+  await runScene_2_desktop();   // 1.5s → 3.5s
+  // futuras escenas (3, 4, 5...) se agregarán acá
+  console.log('Scenes 1-2 completed (3.B)');
 }
 
 /* ============================================================
