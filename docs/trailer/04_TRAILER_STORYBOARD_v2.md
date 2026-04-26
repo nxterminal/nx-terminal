@@ -193,7 +193,7 @@ Texto LITERAL `[03c]`:
 
 ```
 1. PizzaPredictor AI
-   Predicts your hangover patterns with 87% accuracy
+   Predicts your hangover patterns with 87% accuracy using on-chain sentiment data
    847 votes · NEXUS_7X
 
 2. ExBlocker AI
@@ -360,7 +360,7 @@ Animación de mint (1.5s):
 - Texto cambiando: `Generating... → Decrypting... → Compiling...`
 - A los t+25.5s aparece avatar pixelart procedural canvas
 - Nombre big: `BUNNY_404` VT323 dorado
-- Sub: `[DEGEN] · Y.AI · ARBITRAGE` (cubrimos la 6ta corp que faltaba)
+- Sub: `[DEGEN] · ZUCK LABS · BROADCAST` (corp canon del Arena squad)
 
 `playGainSound` × 3 ascendentes.
 
@@ -402,7 +402,8 @@ Logo "NX TERMINAL — PROTOCOL WARS" arriba (texto stylized CSS).
 A los t+31.5s, último Clippy efímero (200ms):
 
 ```
-You can do this. Probably.
+According to my calculations, you have a 0.3% chance of winning.
+That's up from yesterday!
 ```
 
 A los t+31.8s fade to black con `playToggleClick` final.
@@ -427,7 +428,7 @@ t+32.0s: fin.
 
 ---
 
-## SMASH CUTS (10 totales, sin contar transiciones)
+## SMASH CUTS (11 totales, sin contar transiciones)
 
 | t | Texto | Color | Duración |
 |---|---|---|---|
@@ -454,7 +455,7 @@ t+32.0s: fin.
 |---|---|---|
 | 4 — My Devs | 10.2s | "It looks like you're writing a protocol. Would you like me to add more bugs?" |
 | 8 — Mint | 26.5s | "BUNNY_404 has entered the simulation. May the bugs be ever in their favor." |
-| 8 — Cierre | 31.5s | "You can do this. Probably." |
+| 8 — Cierre | 31.5s | "According to my calculations, you have a 0.3% chance of winning. That's up from yesterday!" |
 
 ---
 
@@ -472,12 +473,30 @@ Sin cambios respecto a v1:
 
 ---
 
-## DECISIÓN: 6 corps cubiertas
+## DECISIÓN: 5 corps cubiertas (de 6 canónicas)
 
-En v1 la corp Y.AI (ARBITRAGE) quedaba sin mostrar. En v2 la cubrimos
-en el mint del cierre — el dev nuevo BUNNY_404 es DEGEN · Y.AI · ARBITRAGE.
-Las 5 corps del Arena cubren las otras: AUDIT, INFILTRATE, BROADCAST,
-DEPLOY, BRIDGE. Total: 6/6 corps representadas.
+Las 5 corps del Arena squad cubren: AUDIT // MISANTHROPIC, BROADCAST // ZUCK LABS,
+DEPLOY // CLOSED AI, BRIDGE // SHALLOW MIND, INFILTRATE // MISTRIAL. La 6ta corp
+canónica `Y_AI` (`backend/api/routes/players.py:94`, `frontend/.../netwatch/utils/constants.js:43`)
+queda fuera del trailer porque no tiene un department canónico en el formato
+`DEPT // CORP` del Arena. Total: **5/6 corps representadas**.
+
+---
+
+## ASSUMPTIONS (concesiones cinematográficas confirmadas)
+
+- **Corp Y.AI**: confirmada en código (`netwatch/utils/constants.js:43`,
+  `monad-sdk/data/constants.js:37`, `dev-academy/data/corps.js:6`) pero
+  **sin department canon** en formato Arena (`DEPT // CORP`). Trailer
+  usa `ZUCK LABS · BROADCAST` (canon del Arena squad, BUNNY_187).
+- **`ARBITRAGE` como department**: NO existe canon. Solo aparece como
+  template lowercase de protocolo (`backend/engine/templates.py:57`,
+  "Flash loan powered {adj} arbitrage engine"). Descartado del trailer.
+- **Nombres de devs (NEXUS_7X, ZERO_DAY, PHANTOM_3, BUNNY_404)**:
+  invenciones que respetan el formato canon del Arena squad
+  (ROBOT_NNN / BUNNY_NNN / ZOMBIE_NNN). NO corresponden a tokens
+  minteados reales. Concesión cinematográfica confirmada por el
+  usuario.
 
 ---
 
