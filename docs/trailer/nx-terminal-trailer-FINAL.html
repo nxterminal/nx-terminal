@@ -608,8 +608,8 @@ button { font: inherit; cursor: default; }
 .devcard {
   background: rgba(255,255,255,0.04);
   border: 1px solid #333;
-  padding: 12px;
-  margin-bottom: 10px;
+  padding: 8px;
+  margin-bottom: 6px;
   display: flex;
   gap: 14px;
   position: relative;
@@ -711,16 +711,29 @@ button { font: inherit; cursor: default; }
   box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
   pointer-events: none;
 }
+.clippy-balloon::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  right: 29px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 9px solid #000;
+  z-index: 1;
+}
 .clippy-balloon::after {
   content: '';
   position: absolute;
-  bottom: -8px;
+  bottom: -7px;
   right: 30px;
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-top: 8px solid #FFC;
+  z-index: 2;
 }
 .clippy-balloon.show {
   animation: clippyBounce 300ms cubic-bezier(0.16, 1.4, 0.5, 1) forwards;
@@ -1502,6 +1515,94 @@ button { font: inherit; cursor: default; }
                 <span class="stat-icon">&#128027;</span>
                 <span class="stat-label">Bugs</span>
                 <span class="stat-value">47/20</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="devcard" id="devcard-2">
+          <div class="dev-avatar">
+            <img src="gif/190.gif" alt="ZERO_DAY">
+          </div>
+          <div class="dev-info">
+            <div>
+              <span class="dev-name">ZERO_DAY</span>
+              <span class="dev-archetype archetype-degen">DEGEN</span>
+            </div>
+            <div class="dev-stats-grid">
+              <div class="stat-row" data-stat="energy">
+                <span class="stat-icon">&#9889;</span>
+                <span class="stat-label">Energy</span>
+                <span class="stat-value">64/100</span>
+              </div>
+              <div class="stat-row" data-stat="pc">
+                <span class="stat-icon">&#128187;</span>
+                <span class="stat-label">PC</span>
+                <span class="stat-value">52/100</span>
+              </div>
+              <div class="stat-row" data-stat="caffeine">
+                <span class="stat-icon">&#9749;</span>
+                <span class="stat-label">Caffeine</span>
+                <span class="stat-value">98/100</span>
+              </div>
+              <div class="stat-row" data-stat="knowledge">
+                <span class="stat-icon">&#128218;</span>
+                <span class="stat-label">Knowledge</span>
+                <span class="stat-value">45/100</span>
+              </div>
+              <div class="stat-row" data-stat="social">
+                <span class="stat-icon">&#128101;</span>
+                <span class="stat-label">Social</span>
+                <span class="stat-value">88/100</span>
+              </div>
+              <div class="stat-row" data-stat="bugs">
+                <span class="stat-icon">&#128027;</span>
+                <span class="stat-label">Bugs</span>
+                <span class="stat-value">12/20</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="devcard" id="devcard-3">
+          <div class="dev-avatar">
+            <img src="gif/1.gif" alt="PHANTOM_3">
+          </div>
+          <div class="dev-info">
+            <div>
+              <span class="dev-name">PHANTOM_3</span>
+              <span class="dev-archetype archetype-script">SCRIPT_KIDDIE</span>
+            </div>
+            <div class="dev-stats-grid">
+              <div class="stat-row" data-stat="energy">
+                <span class="stat-icon">&#9889;</span>
+                <span class="stat-label">Energy</span>
+                <span class="stat-value">31/100</span>
+              </div>
+              <div class="stat-row" data-stat="pc">
+                <span class="stat-icon">&#128187;</span>
+                <span class="stat-label">PC</span>
+                <span class="stat-value">22/100</span>
+              </div>
+              <div class="stat-row" data-stat="caffeine">
+                <span class="stat-icon">&#9749;</span>
+                <span class="stat-label">Caffeine</span>
+                <span class="stat-value">12/100</span>
+              </div>
+              <div class="stat-row" data-stat="knowledge">
+                <span class="stat-icon">&#128218;</span>
+                <span class="stat-label">Knowledge</span>
+                <span class="stat-value">28/100</span>
+              </div>
+              <div class="stat-row" data-stat="social">
+                <span class="stat-icon">&#128101;</span>
+                <span class="stat-label">Social</span>
+                <span class="stat-value">5/100</span>
+              </div>
+              <div class="stat-row" data-stat="bugs">
+                <span class="stat-icon">&#128027;</span>
+                <span class="stat-label">Bugs</span>
+                <span class="stat-value">8/20</span>
               </div>
             </div>
           </div>
