@@ -51,13 +51,15 @@ CLAIMABLE_PER_INTERVAL_WEI = 100_000_000_000_000_000_000  # half per 12h interva
 
 # Action costs
 COST_CREATE_PROTOCOL_NXT = 3
-COST_CREATE_PROTOCOL_ENERGY = 1
+COST_CREATE_PROTOCOL_ENERGY = 3
 COST_CREATE_AI_NXT = 1
-COST_CREATE_AI_ENERGY = 1
-COST_MOVE_ENERGY = 2
+COST_CREATE_AI_ENERGY = 3
+COST_MOVE_ENERGY = 1
 COST_INVEST_ENERGY = 1
-COST_REVIEW_ENERGY = 3
+COST_SELL_ENERGY = 1
+COST_REVIEW_ENERGY = 2
 COST_CHAT_ENERGY = 0
+COST_REST_ENERGY = 0
 
 # Starting balance by rarity
 STARTING_BALANCE = {
@@ -75,15 +77,6 @@ CODE_QUALITY_BONUS = {
     "rare": 10,
     "legendary": 15,
     "mythic": 20,
-}
-
-# Energy regen bonus by rarity (extra per natural regen)
-ENERGY_REGEN_BONUS = {
-    "common": 0,
-    "uncommon": 0,
-    "rare": 1,
-    "legendary": 1,
-    "mythic": 2,
 }
 
 # ============================================================

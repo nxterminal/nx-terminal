@@ -233,15 +233,6 @@ def apply_context_modifiers(weights: dict, dev: dict, context: dict) -> dict:
     mood = dev["mood"]
     location = dev["location"]
 
-    # --- Energy constraints ---
-    if energy < COST_CREATE_PROTOCOL_ENERGY: w["CREATE_PROTOCOL"] = 0
-    if energy < COST_CREATE_AI_ENERGY: w["CREATE_AI"] = 0
-    if energy < COST_REVIEW_ENERGY: w["CODE_REVIEW"] = 0
-    if energy < COST_MOVE_ENERGY: w["MOVE"] = 0
-    if energy < COST_INVEST_ENERGY:
-        w["INVEST"] = 0
-        w["SELL"] = 0
-
     # Energy level influence
     if energy <= 2:
         w["REST"] *= 4.0
@@ -427,7 +418,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         lines_written = random.randint(50, 300)
         cur.execute("""
             UPDATE devs SET
-                energy = energy - %s,
+                energy = GREATEST(0, energy - %s),
                 balance_nxt = balance_nxt - %s,
                 total_spent = total_spent + %s,
                 protocols_created = protocols_created + 1,
@@ -455,7 +446,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
 
         cur.execute("""
             UPDATE devs SET
-                energy = energy - %s,
+                energy = GREATEST(0, energy - %s),
                 balance_nxt = balance_nxt - %s,
                 total_spent = total_spent + %s,
                 ais_created = ais_created + 1
@@ -497,7 +488,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
 
             cur.execute("""
                 UPDATE devs SET
-                    energy = energy - %s,
+                    energy = GREATEST(0, energy - %s),
                     balance_nxt = balance_nxt - %s,
                     total_spent = total_spent + %s,
                     total_invested = total_invested + %s
@@ -515,6 +506,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         """, (dev["token_id"],))
         inv = cur.fetchone()
         if inv:
+            result["energy_cost"] = COST_SELL_ENERGY
             sell_value = int(inv["shares"] * random.uniform(0.5, 1.8))
             pnl = sell_value - inv["nxt_invested"]
 
@@ -531,9 +523,10 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
             cur.execute("""
                 UPDATE devs SET
                     balance_nxt = balance_nxt + %s,
-                    total_earned = total_earned + %s
+                    total_earned = total_earned + %s,
+                    energy = GREATEST(0, energy - %s)
                 WHERE token_id = %s
-            """, (sell_value, sell_value, dev["token_id"]))
+            """, (sell_value, sell_value, COST_SELL_ENERGY, dev["token_id"]))
 
             # Shadow-write to nxt_ledger (Fase 3B, fixed in follow-up).
             # protocol_investments.id is the natural SERIAL PK — each
@@ -571,7 +564,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         result["details"] = {"from": old_loc, "to": new_loc}
 
         cur.execute("""
-            UPDATE devs SET energy = energy - %s, location = %s WHERE token_id = %s
+            UPDATE devs SET energy = GREATEST(0, energy - %s), location = %s WHERE token_id = %s
         """, (COST_MOVE_ENERGY, new_loc, dev["token_id"]))
 
     elif action == "CHAT":
@@ -580,7 +573,7 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         # context, so we route them to REST instead — they still advance
         # their tick, recover energy, and log an action, just not a chat.
         if not dev.get("ipfs_hash"):
-            regen = random.randint(2, 4) + ENERGY_REGEN_BONUS.get(rarity, 0)
+            regen = 5
             result["details"] = {"energy_restored": regen}
             cur.execute(
                 "UPDATE devs SET energy = LEAST(max_energy, energy + %s), "
@@ -640,20 +633,20 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
                 cur.execute("UPDATE protocols SET value = GREATEST(0, value - %s), code_quality = GREATEST(0, code_quality - %s) WHERE id = %s",
                             (damage, quality_drop, proto["id"]))
                 review_lines = random.randint(20, 100)
-                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, bugs_found = bugs_found + 1, reputation = reputation + 5, lines_of_code = lines_of_code + %s WHERE token_id = %s",
+                cur.execute("UPDATE devs SET energy = GREATEST(0, energy - %s), code_reviews_done = code_reviews_done + 1, bugs_found = bugs_found + 1, reputation = reputation + 5, lines_of_code = lines_of_code + %s WHERE token_id = %s",
                             (COST_REVIEW_ENERGY, review_lines, dev["token_id"]))
                 result["details"] = {"protocol_id": proto["id"], "name": proto["name"], "found_bug": True}
                 result["chat_msg"] = gen_chat_message(arch, "code_review_bug", name=proto["name"])
             else:
                 review_lines = random.randint(10, 50)
-                cur.execute("UPDATE devs SET energy = energy - %s, code_reviews_done = code_reviews_done + 1, reputation = reputation + 1, lines_of_code = lines_of_code + %s WHERE token_id = %s",
+                cur.execute("UPDATE devs SET energy = GREATEST(0, energy - %s), code_reviews_done = code_reviews_done + 1, reputation = reputation + 1, lines_of_code = lines_of_code + %s WHERE token_id = %s",
                             (COST_REVIEW_ENERGY, review_lines, dev["token_id"]))
                 result["details"] = {"protocol_id": proto["id"], "name": proto["name"], "found_bug": False}
                 result["chat_msg"] = gen_chat_message(arch, "code_review_clean", name=proto["name"])
             result["chat_channel"] = "location"
 
     elif action == "REST":
-        regen = random.randint(2, 4) + ENERGY_REGEN_BONUS.get(rarity, 0)
+        regen = 5
         result["details"] = {"energy_restored": regen}
         cur.execute("UPDATE devs SET energy = LEAST(max_energy, energy + %s), hours_since_sleep = 0 WHERE token_id = %s",
                     (regen, dev["token_id"]))
@@ -667,10 +660,6 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
     if random.random() < 0.10:
         new_mood = random.choice(MOODS)
         cur.execute("UPDATE devs SET mood = %s WHERE token_id = %s", (new_mood, dev["token_id"]))
-
-    # --- Natural energy regen (30% chance, +1) ---
-    if action != "REST" and random.random() < 0.30:
-        cur.execute("UPDATE devs SET energy = LEAST(max_energy, energy + 1) WHERE token_id = %s", (dev["token_id"],))
 
     # --- Auto-vote on a random AI (15% chance) ---
     if random.random() < 0.15:
@@ -931,7 +920,11 @@ def process_dev(conn, dev: dict, context: dict) -> dict:
 # ============================================================
 
 def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
-    """Get devs whose next_cycle_at has passed."""
+    """Get devs whose next_cycle_at has passed.
+
+    Devs with energy <= 0 are excluded — they stay idle until FEED'd
+    via the shop. Salary still pays them (separate cron) but they
+    don't act."""
     cur = get_cursor(conn)
     cur.execute("""
         SELECT token_id, name, owner_address, archetype, corporation, rarity_tier,
@@ -939,6 +932,7 @@ def fetch_due_devs(conn, limit: int = SCHEDULER_BATCH_SIZE) -> list:
                balance_nxt, reputation, status, ipfs_hash
         FROM devs
         WHERE status = 'active'
+          AND energy > 0
           AND next_cycle_at <= NOW()
         ORDER BY next_cycle_at ASC
         LIMIT %s
@@ -1037,18 +1031,17 @@ def pay_salaries(conn):
     cur.execute("""
         UPDATE devs SET
             balance_nxt = balance_nxt + %s,
-            total_earned = total_earned + %s,
-            energy = LEAST(max_energy, energy + 1 +
-                CASE rarity_tier
-                    WHEN 'rare' THEN 1
-                    WHEN 'legendary' THEN 1
-                    WHEN 'mythic' THEN 2
-                    ELSE 0
-                END
-            )
+            total_earned = total_earned + %s
         WHERE status IN ('active', 'on_mission')
         RETURNING token_id, owner_address
     """, (effective_salary, effective_salary))
+
+    # Hourly energy decay: -1 per salary tick. Active devs only —
+    # on_mission devs keep energy frozen during the mission.
+    cur.execute("""
+        UPDATE devs SET energy = GREATEST(0, energy - 1)
+        WHERE status = 'active'
+    """)
 
     paid_rows = cur.fetchall()
     count = len(paid_rows)
