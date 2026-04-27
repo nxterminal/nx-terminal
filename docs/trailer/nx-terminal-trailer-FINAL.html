@@ -564,7 +564,8 @@ button { font: inherit; cursor: default; }
 
 /* ===== SCENE 4 — MY DEVS WINDOW ===== */
 .mydevs-window,
-.ailab-window {
+.ailab-window,
+.nxmarket-window {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -580,11 +581,13 @@ button { font: inherit; cursor: default; }
   color: #000;
   overflow: hidden;
 }
-.mydevs-window { width: 820px; height: 540px; }
-.ailab-window  { width: 760px; height: 480px; }
+.mydevs-window   { width: 820px; height: 540px; }
+.ailab-window    { width: 760px; height: 480px; }
+.nxmarket-window { width: 880px; height: 560px; }
 
 .mydevs-window.open,
-.ailab-window.open {
+.ailab-window.open,
+.nxmarket-window.open {
   animation: windowOpenAnim 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -784,6 +787,200 @@ button { font: inherit; cursor: default; }
   background: #ffe0ff !important;
   border-color: #ff44ff !important;
 }
+
+/* ===== SCENE 6 — NX MARKET ===== */
+.nxmarket-body {
+  background: #ece9d8;
+  padding: 14px;
+  height: calc(100% - 22px);
+  overflow: hidden;
+}
+.market-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #888;
+  margin-bottom: 12px;
+}
+.market-tab {
+  padding: 6px 14px;
+  background: #d8d4be;
+  border: 1px solid #888;
+  border-bottom: none;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  color: #555;
+  margin-right: 2px;
+}
+.market-tab.active {
+  background: #ffffff;
+  color: #000;
+  border-bottom: 2px solid #000080;
+  font-weight: bold;
+}
+.market-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000;
+}
+.market-filter {
+  padding: 2px 6px;
+  border: 1px inset #888;
+  background: #fff;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+}
+.market-create-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: var(--win-bg);
+  border: 2px outset #fff;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: default;
+}
+.market-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  position: relative;
+}
+.market-card {
+  background: #fff;
+  border: 1px solid #888;
+  padding: 12px;
+  position: relative;
+  opacity: 0;
+}
+.market-card.show {
+  animation: cardPop 200ms ease-out forwards;
+}
+@keyframes cardPop {
+  0%   { opacity: 0; transform: scale(0.85) translateY(10px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.market-card.zoomed {
+  animation: none;
+  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+  transform: scale(1.6) translateY(-30px);
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+.mc-header {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.mc-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+}
+.mc-icon.sports        { background: #2e8a40; }
+.mc-icon.crypto        { background: #f7931a; }
+.mc-icon.other         { background: #ff44ff; }
+.mc-icon.entertainment { background: #cc3344; }
+.mc-title {
+  flex: 1;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000;
+  line-height: 1.3;
+}
+.mc-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 6px;
+  background: #1565c0;
+  color: #fff;
+  font-family: Tahoma, sans-serif;
+  font-weight: bold;
+  font-size: 9px;
+}
+.mc-meta {
+  font-family: Tahoma, sans-serif;
+  font-size: 10px;
+  color: #777;
+  margin-bottom: 6px;
+}
+.mc-pct-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+}
+.mc-yes { color: #1e8449; }
+.mc-no  { color: #a93226; }
+.mc-connect {
+  margin-top: 8px;
+  padding: 5px;
+  background: var(--win-bg);
+  border: 1px outset #fff;
+  text-align: center;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  color: #555;
+}
+.pct-pulse {
+  animation: pctPulse 0.4s steps(2) infinite;
+  color: #00ff00 !important;
+  text-shadow: 0 0 10px #00ff00;
+}
+@keyframes pctPulse {
+  50% { opacity: 0.5; }
+}
+
+/* ===== CARROT RAIN + NXT POPUPS ===== */
+.carrot-rain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 700;
+  overflow: hidden;
+}
+.carrot-drop {
+  position: absolute;
+  font-size: 32px;
+  top: -50px;
+  animation: carrotFall 1.5s linear forwards;
+}
+@keyframes carrotFall {
+  to { transform: translateY(110vh) rotate(360deg); }
+}
+.nxt-popup {
+  position: absolute;
+  font-family: 'VT323', monospace;
+  font-size: 36px;
+  font-weight: bold;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+  z-index: 800;
+  animation: popupRise 1s ease-out forwards;
+}
+@keyframes popupRise {
+  0%   { opacity: 0; transform: translateY(0); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-80px); }
+}
+.nxt-popup.green   { color: #33ff33; }
+.nxt-popup.magenta { color: #ff44ff; transform: rotate(-5deg); }
 </style>
 </head>
 <body>
@@ -1631,11 +1828,103 @@ button { font: inherit; cursor: default; }
         </table>
       </div>
     </div>
+
+    <div class="nxmarket-window" id="nxmarketWindow">
+      <div class="inbox-titlebar">
+        <span>&#127920; NX Market - Prediction Markets</span>
+        <span class="title-btns">
+          <span class="title-btn">_</span>
+          <span class="title-btn">&#9633;</span>
+          <span class="title-btn">&#215;</span>
+        </span>
+      </div>
+      <div class="nxmarket-body">
+
+        <div class="market-tabs">
+          <div class="market-tab active">Markets</div>
+          <div class="market-tab">My Positions</div>
+          <div class="market-tab">Leaderboard</div>
+          <div class="market-tab">Info</div>
+        </div>
+
+        <div class="market-filters">
+          <span>Status</span>
+          <select class="market-filter" disabled><option>Active</option></select>
+          <span>Category</span>
+          <select class="market-filter" disabled><option>All</option></select>
+          <span>Type</span>
+          <select class="market-filter" disabled><option>All</option></select>
+          <div class="market-create-btn">+ Create Market (1000 $NXT)</div>
+        </div>
+
+        <div class="market-cards" id="marketCards">
+
+          <div class="market-card" id="card-1">
+            <div class="mc-badge">OFFICIAL</div>
+            <div class="mc-header">
+              <div class="mc-icon sports">&#9917;</div>
+              <div class="mc-title">Will Atletico de Madrid win the Champions League 2026?</div>
+            </div>
+            <div class="mc-meta">sports &middot; closes in 33d</div>
+            <div class="mc-pct-row">
+              <span class="mc-yes">YES 41%</span>
+              <span class="mc-no">NO 59%</span>
+            </div>
+            <div class="mc-connect">Connect Wallet to Bet</div>
+          </div>
+
+          <div class="market-card" id="card-2">
+            <div class="mc-badge">OFFICIAL</div>
+            <div class="mc-header">
+              <div class="mc-icon crypto">&#8383;</div>
+              <div class="mc-title">Will Bitcoin reach $100,000 USD before July 1, 2026?</div>
+            </div>
+            <div class="mc-meta">crypto &middot; closes in 65d</div>
+            <div class="mc-pct-row">
+              <span class="mc-yes">YES 52%</span>
+              <span class="mc-no">NO 48%</span>
+            </div>
+            <div class="mc-connect">Connect Wallet to Bet</div>
+          </div>
+
+          <div class="market-card" id="card-3">
+            <div class="mc-badge">OFFICIAL</div>
+            <div class="mc-header">
+              <div class="mc-icon other">&#128048;</div>
+              <div class="mc-title">Will NX Terminal reach 25% minted (8,750 devs) before July 1, 2026?</div>
+            </div>
+            <div class="mc-meta">other &middot; closes in 65d</div>
+            <div class="mc-pct-row">
+              <span class="mc-yes" id="card-3-yes">YES 71%</span>
+              <span class="mc-no">NO 29%</span>
+            </div>
+            <div class="mc-connect">Connect Wallet to Bet</div>
+          </div>
+
+          <div class="market-card" id="card-4">
+            <div class="mc-badge">OFFICIAL</div>
+            <div class="mc-header">
+              <div class="mc-icon entertainment">&#127918;</div>
+              <div class="mc-title">Will GTA 6 be delayed past November 2026?</div>
+            </div>
+            <div class="mc-meta">entertainment &middot; closes in 218d</div>
+            <div class="mc-pct-row">
+              <span class="mc-yes">YES 50%</span>
+              <span class="mc-no">NO 50%</span>
+            </div>
+            <div class="mc-connect">Connect Wallet to Bet</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="smash-cut" id="smashCut">
     <div class="smash-cut-text" id="smashCutText"></div>
   </div>
+
+  <div class="carrot-rain" id="carrotRain" style="display:none;"></div>
 </div>
 
 <script>
@@ -2043,7 +2332,11 @@ async function smashCut(text, options) {
   if (glitchRgb)           overlay.classList.add('glitch-rgb');
 
   textEl.style.fontSize = fontSize + 'px';
-  textEl.textContent = text;
+  textEl.innerHTML = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
 
   overlay.style.opacity = '1';
   if (sound) playToggleClick();
@@ -2257,16 +2550,114 @@ async function runScene_5_ailab() {
 }
 
 /* ============================================================
+   SCENE 6 — NX MARKET / META BET (~2.65s)
+   ============================================================ */
+async function runScene_6_nxmarket() {
+  const win        = document.getElementById('nxmarketWindow');
+  const cards      = document.querySelectorAll('#marketCards .market-card');
+  const card1      = document.getElementById('card-1');
+  const card2      = document.getElementById('card-2');
+  const card3      = document.getElementById('card-3');
+  const card4      = document.getElementById('card-4');
+  const card3Yes   = document.getElementById('card-3-yes');
+  const carrotRain = document.getElementById('carrotRain');
+
+  /* ── Sub-beat 6.1: window opens + 4 cards pop together (0.8s) ── */
+  win.style.opacity = '';
+  cards.forEach(c => {
+    c.classList.remove('show', 'zoomed');
+    c.style.opacity = '';
+  });
+  win.classList.add('open');
+  playToggleClick();
+
+  await sleep(300);
+
+  cards.forEach(c => c.classList.add('show'));
+  playGainSound();
+
+  await sleep(500);
+
+  /* ── Sub-beat 6.2: zoom card-3 + dim others (0.7s) ── */
+  card1.style.transition = 'opacity 300ms';
+  card2.style.transition = 'opacity 300ms';
+  card4.style.transition = 'opacity 300ms';
+  card1.style.opacity = '0.15';
+  card2.style.opacity = '0.15';
+  card4.style.opacity = '0.15';
+
+  card3.classList.add('zoomed');
+  card3Yes.classList.add('pct-pulse');
+
+  await sleep(700);
+
+  /* ── Sub-beat 6.2b: meta smash cut (0.65s incl 50ms gap) ── */
+  playGainSound();
+  await sleep(50);
+
+  await smashCut('PEOPLE ARE BETTING\nON THE GAME ITSELF.', {
+    duration: 600,
+    color: 'white',
+    fontSize: 80
+  });
+
+  /* ── Sub-beat 6.3: undo zoom + carrot rain + popups (0.5s) ── */
+  card3.classList.remove('zoomed');
+  card3Yes.classList.remove('pct-pulse');
+  card1.style.opacity = '1';
+  card2.style.opacity = '1';
+  card4.style.opacity = '1';
+
+  carrotRain.style.display = 'block';
+  for (let i = 0; i < 10; i++) {
+    const carrot = document.createElement('div');
+    carrot.className = 'carrot-drop';
+    carrot.textContent = '🥕';
+    carrot.style.left = (Math.random() * 100) + '%';
+    carrot.style.animationDelay = (Math.random() * 0.3) + 's';
+    carrot.style.animationDuration = (1.2 + Math.random() * 0.6) + 's';
+    carrotRain.appendChild(carrot);
+    setTimeout(() => carrot.remove(), 2000);
+  }
+
+  const popup1 = document.createElement('div');
+  popup1.className = 'nxt-popup green';
+  popup1.textContent = '+450 $NXT';
+  popup1.style.left = '30%';
+  popup1.style.top = '50%';
+  carrotRain.appendChild(popup1);
+  setTimeout(() => popup1.remove(), 1000);
+
+  const popup2 = document.createElement('div');
+  popup2.className = 'nxt-popup magenta';
+  popup2.textContent = 'WINNER';
+  popup2.style.left = '60%';
+  popup2.style.top = '40%';
+  carrotRain.appendChild(popup2);
+  setTimeout(() => popup2.remove(), 1000);
+
+  playGainSound();
+
+  await sleep(500);
+
+  /* close before next scene */
+  carrotRain.style.display = 'none';
+  win.classList.remove('open');
+  win.style.opacity = '0';
+}
+
+/* ============================================================
    TRAILER ENTRY
    ============================================================ */
 async function runTrailer() {
-  await runScene_1_bios();      // 0.0s → 1.5s
-  await runScene_2_desktop();   // 1.5s → 3.5s
-  await runScene_3_email();     // 3.5s → 7.5s
-  await runScene_4_mydevs();    // 7.5s → 10.5s (3.35s actual)
-  await runScene_5_ailab();     // 10.5s → 13.5s (2.6s actual)
-  // futuras escenas (6, 7, 8...) se agregarán acá
-  console.log('Scenes 1-5 completed (3.D)');
+  await runScene_1_bios();        // 0.0s → 1.5s
+  await runScene_2_desktop();     // 1.5s → 3.5s
+  await runScene_3_email();       // 3.5s → 7.5s
+  await runScene_4_mydevs();      // 7.5s → 10.5s (3.35s actual)
+  await runScene_5_ailab();       // 10.5s → 13.5s (2.6s actual)
+  await runScene_6_nxmarket();    // 13.5s → 16.0s (~2.65s actual)
+  // futuras escenas (7, 8...) se agregarán acá
+  console.log('Scenes 1-6 completed (3.E)');
 }
 
 /* ============================================================
