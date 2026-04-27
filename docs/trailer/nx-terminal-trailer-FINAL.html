@@ -551,6 +551,226 @@ button { font: inherit; cursor: default; }
   0%   { text-shadow: -3px 0 #ff0040,  3px 0 #00ffff; }
   100% { text-shadow:  3px 0 #ff0040, -3px 0 #00ffff; }
 }
+
+/* ===== SMASH CUT — extra color variants (3.D) ===== */
+.smash-cut.red .smash-cut-text {
+  color: #ff4444;
+  text-shadow: 0 0 30px #ff4444, 0 0 60px #ff4444;
+}
+.smash-cut.magenta .smash-cut-text {
+  color: #ff44ff;
+  text-shadow: 0 0 30px #ff44ff, 0 0 60px #ff44ff;
+}
+
+/* ===== SCENE 4 — MY DEVS WINDOW ===== */
+.mydevs-window,
+.ailab-window {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: var(--win-bg);
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  transform-origin: 0 0;
+  z-index: 500;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  color: #000;
+  overflow: hidden;
+}
+.mydevs-window { width: 820px; height: 540px; }
+.ailab-window  { width: 760px; height: 480px; }
+
+.mydevs-window.open,
+.ailab-window.open {
+  animation: windowOpenAnim 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mydevs-body {
+  background: var(--terminal-bg);
+  padding: 16px;
+  height: calc(100% - 22px);
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--terminal-green);
+  overflow: hidden;
+}
+.mydevs-header {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--gold);
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+}
+
+.devcard {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid #333;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 14px;
+  position: relative;
+}
+.dev-avatar {
+  width: 80px;
+  height: 80px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--border-dark);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+.dev-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+  transform: scale(2.2);
+  transform-origin: center 32%;
+  image-rendering: pixelated;
+}
+.dev-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dev-name {
+  font-family: 'VT323', monospace;
+  font-size: 28px;
+  color: var(--gold);
+}
+.dev-archetype {
+  display: inline-block;
+  padding: 2px 8px;
+  color: #fff;
+  font-family: Tahoma, sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.archetype-10x     { background: #aa0000; }
+.archetype-degen   { background: #7a5c00; }
+.archetype-script  { background: #005060; }
+
+.dev-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 16px;
+  margin-top: 8px;
+}
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+}
+.stat-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 16px;
+  text-align: center;
+}
+.stat-label {
+  color: #ccc;
+  flex: 1;
+}
+.stat-value {
+  color: var(--terminal-green);
+  font-weight: bold;
+}
+.stat-critical .stat-value {
+  color: #ff4444;
+  animation: critPulse 0.5s steps(2) infinite;
+}
+@keyframes critPulse {
+  50% { opacity: 0.4; }
+}
+
+/* ===== CLIPPY BALLOON ===== */
+.clippy-balloon {
+  position: absolute;
+  bottom: 60px;
+  right: 40px;
+  width: 320px;
+  background: #FFC;
+  border: 1px solid #000;
+  border-radius: 5px;
+  padding: 12px 14px;
+  font-family: Tahoma, sans-serif;
+  font-size: 13px;
+  color: #000;
+  z-index: 600;
+  opacity: 0;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+.clippy-balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 30px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #FFC;
+}
+.clippy-balloon.show {
+  animation: clippyBounce 300ms cubic-bezier(0.16, 1.4, 0.5, 1) forwards;
+}
+@keyframes clippyBounce {
+  0%   { opacity: 0; transform: translateY(20px) scale(0.6); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== SCENE 5 — AI LAB ===== */
+.ailab-body {
+  background: var(--terminal-bg);
+  padding: 18px;
+  height: calc(100% - 22px);
+  font-family: 'VT323', monospace;
+  overflow: hidden;
+}
+.ailab-header {
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 28px;
+  color: var(--terminal-magenta);
+  margin-bottom: 16px;
+  text-shadow: 0 0 8px rgba(255,68,255,0.6);
+  animation: ailabPulse 1s infinite alternate;
+  letter-spacing: 2px;
+}
+@keyframes ailabPulse {
+  to { text-shadow: 0 0 16px rgba(255,68,255,1); }
+}
+.ailab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Tahoma, sans-serif;
+  font-size: 13px;
+}
+.ailab-row {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+.ailab-row.show {
+  animation: aiRowIn 200ms ease-out forwards;
+}
+@keyframes aiRowIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+.ailab-row.highlight td {
+  background: #ffe0ff !important;
+  border-color: #ff44ff !important;
+}
 </style>
 </head>
 <body>
@@ -1230,6 +1450,86 @@ button { font: inherit; cursor: default; }
         <div class="email-body-text" id="emailBodyText"></div>
       </div>
     </div>
+
+    <div class="mydevs-window" id="mydevsWindow">
+      <div class="inbox-titlebar">
+        <span>My Devs - NX Terminal</span>
+        <span class="title-btns">
+          <span class="title-btn">_</span>
+          <span class="title-btn">&#9633;</span>
+          <span class="title-btn">&#215;</span>
+        </span>
+      </div>
+      <div class="mydevs-body">
+        <div class="mydevs-header">&gt; MY DEVELOPERS (3)  [&#8635; Refresh]</div>
+
+        <div class="devcard" id="devcard-1">
+          <div class="dev-avatar">
+            <img src="gif/28.gif" alt="NEXUS_7X">
+          </div>
+          <div class="dev-info">
+            <div>
+              <span class="dev-name">NEXUS_7X</span>
+              <span class="dev-archetype archetype-10x">10X_DEV</span>
+            </div>
+            <div class="dev-stats-grid">
+              <div class="stat-row" data-stat="energy">
+                <span class="stat-icon">&#9889;</span>
+                <span class="stat-label">Energy</span>
+                <span class="stat-value">92/100</span>
+              </div>
+              <div class="stat-row" data-stat="pc">
+                <span class="stat-icon">&#128187;</span>
+                <span class="stat-label">PC</span>
+                <span class="stat-value">88/100</span>
+              </div>
+              <div class="stat-row" data-stat="caffeine">
+                <span class="stat-icon">&#9749;</span>
+                <span class="stat-label">Caffeine</span>
+                <span class="stat-value">76/100</span>
+              </div>
+              <div class="stat-row" data-stat="knowledge">
+                <span class="stat-icon">&#128218;</span>
+                <span class="stat-label">Knowledge</span>
+                <span class="stat-value">84/100</span>
+              </div>
+              <div class="stat-row" data-stat="social">
+                <span class="stat-icon">&#128101;</span>
+                <span class="stat-label">Social</span>
+                <span class="stat-value">71/100</span>
+              </div>
+              <div class="stat-row stat-critical" data-stat="bugs">
+                <span class="stat-icon">&#128027;</span>
+                <span class="stat-label">Bugs</span>
+                <span class="stat-value">47/20</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="clippy-balloon" id="clippyMyDevs">
+        It looks like you're writing a protocol.
+        Would you like me to add more bugs?
+      </div>
+    </div>
+
+    <div class="ailab-window" id="ailabWindow">
+      <div class="inbox-titlebar">
+        <span>AI Lab - Absurd AI Laboratory</span>
+        <span class="title-btns">
+          <span class="title-btn">_</span>
+          <span class="title-btn">&#9633;</span>
+          <span class="title-btn">&#215;</span>
+        </span>
+      </div>
+      <div class="ailab-body">
+        <div class="ailab-header">&gt;&gt; ABSURD AI LABORATORY &lt;&lt;</div>
+        <table class="ailab-table">
+          <tbody id="ailabRows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <div class="smash-cut" id="smashCut">
@@ -1636,8 +1936,10 @@ async function smashCut(text, options) {
   const textEl  = document.getElementById('smashCutText');
 
   overlay.className = 'smash-cut';
-  if (color === 'white') overlay.classList.add('white');
-  if (glitchRgb)         overlay.classList.add('glitch-rgb');
+  if (color === 'white')   overlay.classList.add('white');
+  if (color === 'red')     overlay.classList.add('red');
+  if (color === 'magenta') overlay.classList.add('magenta');
+  if (glitchRgb)           overlay.classList.add('glitch-rgb');
 
   textEl.style.fontSize = fontSize + 'px';
   textEl.textContent = text;
@@ -1708,14 +2010,162 @@ async function runScene_3_email() {
 }
 
 /* ============================================================
+   SCENE 4 — MY DEVS / BUGS GAG (3.35s)
+   ============================================================ */
+async function runScene_4_mydevs() {
+  const win = document.getElementById('mydevsWindow');
+  const clippy = document.getElementById('clippyMyDevs');
+
+  /* ── Sub-beat 4.1: window opens (0.8s) ── */
+  win.style.opacity = '';
+  clippy.classList.remove('show');
+  clippy.style.opacity = '0';
+  win.classList.add('open');
+  playToggleClick();
+  await sleep(800);
+
+  /* ── Sub-beat 4.2: 6 vital bars rapid-fire (1.5s) ── */
+  const statRows = document.querySelectorAll('#devcard-1 .stat-row');
+  for (let i = 0; i < statRows.length; i++) {
+    const row = statRows[i];
+    row.style.transition = 'background 200ms';
+    row.style.background = 'rgba(255,215,0,0.2)';
+    playToggleClick();
+    await sleep(180);
+    row.style.background = 'transparent';
+    await sleep(70);
+  }
+
+  /* ── Sub-beat 4.3: BUGS: 47 hit + Clippy (1.05s) ── */
+  playSpendSound();
+  await smashCut('BUGS: 47', {
+    duration: 350,
+    color: 'red',
+    fontSize: 220
+  });
+
+  clippy.style.opacity = '';
+  clippy.classList.add('show');
+  await sleep(700);
+
+  /* close window for next scene */
+  clippy.classList.remove('show');
+  clippy.style.opacity = '0';
+  win.classList.remove('open');
+  win.style.opacity = '0';
+}
+
+/* ============================================================
+   SCENE 5 — AI LAB / SPOILER IT'S YOU (2.6s)
+   ============================================================ */
+async function runScene_5_ailab() {
+  const win = document.getElementById('ailabWindow');
+  const rowsContainer = document.getElementById('ailabRows');
+
+  /* ── Sub-beat 5.1: header magenta (0.4s) ── */
+  win.style.opacity = '';
+  win.classList.add('open');
+  playToggleClick();
+  await sleep(400);
+
+  /* ── Sub-beat 5.2: 3 AIs cascade (1.5s) ── */
+  const ais = [
+    {
+      name: 'PizzaPredictor AI',
+      desc: 'Predicts your hangover patterns with 87% accuracy using on-chain sentiment data',
+      votes: '847',
+      creator: 'NEXUS_7X',
+      highlight: false
+    },
+    {
+      name: 'ExBlocker AI',
+      desc: 'Scans for potential ex situations before you check your phone. 73% false positive rate',
+      votes: '612',
+      creator: 'ZERO_DAY',
+      highlight: false
+    },
+    {
+      name: 'Merge ConflictNegotiator AI',
+      desc: "Uses advanced regression to explain why your parallel parking always fails. Spoiler: it's you",
+      votes: '318',
+      creator: 'NEXUS_7X',
+      highlight: true
+    }
+  ];
+
+  rowsContainer.innerHTML = '';
+
+  for (let i = 0; i < ais.length; i++) {
+    const ai = ais[i];
+    const row = document.createElement('tr');
+    row.className = 'ailab-row';
+    if (ai.highlight) row.classList.add('highlight');
+
+    const td = document.createElement('td');
+    td.style.padding = '8px';
+    td.style.border = '1px solid #888';
+    td.style.background = ai.highlight ? '#ffe0ff' : '#fff';
+    td.style.color = '#000';
+
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = ai.name;
+
+    const descEl = document.createElement('span');
+    descEl.style.fontSize = '11px';
+    descEl.style.color = '#444';
+    descEl.textContent = ai.desc;
+
+    const metaEl = document.createElement('span');
+    metaEl.style.fontSize = '10px';
+    metaEl.style.color = '#666';
+    metaEl.textContent = ai.votes + ' votes · ' + ai.creator;
+
+    td.appendChild(nameEl);
+    td.appendChild(document.createElement('br'));
+    td.appendChild(descEl);
+    td.appendChild(document.createElement('br'));
+    td.appendChild(metaEl);
+    row.appendChild(td);
+
+    rowsContainer.appendChild(row);
+    requestAnimationFrame(() => row.classList.add('show'));
+
+    playToggleClick();
+    await sleep(500);
+  }
+
+  /* ── Sub-beat 5.3: SPOILER IT'S YOU (0.7s) ── */
+  playSpendSound();
+  await sleep(50);
+
+  await smashCut("SPOILER: IT'S YOU.", {
+    duration: 400,
+    color: 'magenta',
+    fontSize: 140
+  });
+
+  await smashCut('950 AIs DEPLOYED. NOBODY ASKED FOR THIS.', {
+    duration: 250,
+    color: 'green',
+    fontSize: 36
+  });
+
+  /* close window for next scene */
+  win.classList.remove('open');
+  win.style.opacity = '0';
+}
+
+/* ============================================================
    TRAILER ENTRY
    ============================================================ */
 async function runTrailer() {
   await runScene_1_bios();      // 0.0s → 1.5s
   await runScene_2_desktop();   // 1.5s → 3.5s
   await runScene_3_email();     // 3.5s → 7.5s
-  // futuras escenas (4, 5...) se agregarán acá
-  console.log('Scenes 1-3 completed (3.C)');
+  await runScene_4_mydevs();    // 7.5s → 10.5s (3.35s actual)
+  await runScene_5_ailab();     // 10.5s → 13.5s (2.6s actual)
+  // futuras escenas (6, 7, 8...) se agregarán acá
+  console.log('Scenes 1-5 completed (3.D)');
 }
 
 /* ============================================================
