@@ -106,12 +106,13 @@ const MESSAGES = [
 
 export default function NXAssistant() {
   const { address, isConnected } = useWallet();
-  const { devCount } = useDevCount();
+  const { devCount, isLoading: devCountLoading } = useDevCount();
   const agentRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const messageIndexRef = useRef(0);
   const loadAttemptRef = useRef(0);
   const onboardingActiveRef = useRef(false);
+  const hasSpokenInitialRef = useRef(false);
 
   const getAgentName = useCallback(() => {
     return localStorage.getItem('nx-assistant-agent') || 'Clippy';
@@ -167,7 +168,7 @@ export default function NXAssistant() {
       agentRef.current = agent;
       setLoaded(true);
 
-      agent.moveTo(window.innerWidth - 200, window.innerHeight - 180);
+      agent.moveTo(window.innerWidth - 200, window.innerHeight - 180, 0);
       agent.show();
 
       try { agent.play('Greeting'); } catch {}
@@ -202,37 +203,52 @@ export default function NXAssistant() {
     };
   }, [loadAgent, getAgentName]);
 
-  // Onboarding mode: persistent welcome until wallet connected AND first
-  // dev minted. Re-speaks every 8s so clippyjs's auto-hide doesn't strand
-  // the user with an empty bubble. Pauses random messages and notif
-  // polling via onboardingActiveRef so they don't pisar el welcome.
+  // Onboarding mode: anchor a contextual welcome until wallet connected
+  // AND first dev minted. Uses clippyjs's native hold=true so the balloon
+  // stays visible without a polling loop. Pauses random messages and
+  // notif polling via onboardingActiveRef so they don't pisar el welcome.
+  // When the user exits onboarding (mints first dev / connects), speaks
+  // a single random message so users with devs aren't stranded for
+  // 60-120s waiting for the periodic interval to fire.
   useEffect(() => {
     if (!loaded) return;
+    if (devCountLoading) return; // wait for on-chain balance
+    if (!agentRef.current) return;
 
     const isOnboarding = !isConnected || (isConnected && devCount === 0);
     onboardingActiveRef.current = isOnboarding;
 
-    if (!isOnboarding) return;
+    if (!isOnboarding) {
+      // Exiting onboarding: speak one random message (gated so it only
+      // fires the first time we land on the post-onboarding state).
+      if (!hasSpokenInitialRef.current) {
+        hasSpokenInitialRef.current = true;
+        const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        try {
+          agentRef.current.closeBalloon?.();
+          agentRef.current.speak(msg);
+          agentRef.current.animate?.();
+        } catch {}
+      }
+      return;
+    }
 
-    const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
-    if (!enabled) return;
-
+    // Onboarding mode: anchored balloon (hold=true). Re-arm the
+    // initial-spoken flag so the next exit triggers a fresh random.
+    hasSpokenInitialRef.current = false;
     const msg = !isConnected ? WELCOME_MSG : WELCOME_CONNECTED_MSG;
+    try {
+      agentRef.current.closeBalloon?.();
+      agentRef.current.speak(msg, true);
+      agentRef.current.animate?.();
+    } catch {}
 
-    const speakOnboarding = () => {
-      const stillEnabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
-      if (!stillEnabled || !agentRef.current) return;
-      try {
-        agentRef.current.stop?.();
-        agentRef.current.speak(msg);
-      } catch {}
+    return () => {
+      // Close anchored balloon on state transition so the next speak
+      // (random or different onboarding message) starts clean.
+      try { agentRef.current?.closeBalloon?.(); } catch {}
     };
-
-    speakOnboarding();
-    const interval = setInterval(speakOnboarding, 8000);
-
-    return () => clearInterval(interval);
-  }, [loaded, isConnected, devCount]);
+  }, [loaded, isConnected, devCount, devCountLoading]);
 
   // Periodic messages
   useEffect(() => {
@@ -277,6 +293,13 @@ export default function NXAssistant() {
 
       const msgFn = MINT_MESSAGES[Math.floor(Math.random() * MINT_MESSAGES.length)];
       const msg = msgFn(dev);
+
+      // Pre-empt the onboarding effect: when devCount flips 0→1 the
+      // effect would otherwise speak a random message right before the
+      // congrats lands. Marking the flag + closing the anchored balloon
+      // keeps the congrats as the single speak for this transition.
+      hasSpokenInitialRef.current = true;
+      try { agentRef.current?.closeBalloon?.(); } catch {}
 
       // Small delay so it doesn't overlap with other speech
       setTimeout(() => {
