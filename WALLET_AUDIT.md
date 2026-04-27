@@ -196,16 +196,117 @@ Pre-conditions: latest build of the branch served via `npm run dev`.
 
 ---
 
-## 6. Open questions for the user
+## 6. Decisions (resolved 2026-04-27)
 
-1. **Sort order:** MOSS at the top (brand-forward) or at the bottom (so familiar wallets come first)? Current behavior puts MetaMask first then MOSS.
-2. **Generic injected fallback label:** "Browser wallet" or "Other wallet"? Both fit the existing dark card style.
-3. **WalletConnect:** worth opening a follow-up issue for mobile coverage, or skip for now?
+1. **Sort order:** MOSS first (recommended MegaETH wallet, brand-forward).
+2. **Generic injected fallback label:** "Other wallet" with a neutral lucide-react `Wallet` icon (lucide-react is already a project dep, so no new packages).
+3. **WalletConnect:** not in scope for this fix — see follow-up TODO in §8.
 
 ---
 
-## 7. Status
+## 7. Implementation summary (Phase 3, applied)
+
+Files touched:
+
+- `frontend/src/components/WalletSelectorModal.jsx`
+  - Removed the hardcoded MetaMask+MOSS whitelist (`io.metamask` / `injected` / MOSS only).
+  - Added `isEip6963Connector(c)` — true for any wagmi connector that isn't MOSS and isn't the generic `injected()` fallback.
+  - Built `filteredConnectors` as: MOSS → MetaMask → other EIP-6963 connectors alphabetical → generic `injected()` only when no EIP-6963 connector is present.
+  - Extended `getCardPresentation()` with three new branches:
+    - `io.metamask` → existing hardcoded MetaMask card (unchanged behavior).
+    - `injected` (generic) → label "Other wallet" / "Browser extension" / lucide `Wallet` icon.
+    - any other connector → uses `connector.icon` (data URI from EIP-6963 announcement) + `connector.name`.
+  - Renamed `logo` → `logoSrc` for clarity in the presentation object; render block now picks lucide icon → `<img>` → fallback lucide icon, in that order.
+
+- `frontend/src/components/WalletSelectorModal.module.css`
+  - Added `.cardIconLucide` (22×22 zinc-300) so the neutral lucide icon sits centered inside the same 40×40 plate as the brand PNGs. No other style changes — dark card / hover / arrow / spinner / focus all preserved.
+
+Files NOT touched (intentionally):
+
+- `frontend/src/services/wagmi.js` — connectors stay as `[injected(), megaWallet({ network: 'mainnet' })]`. EIP-6963 auto-discovery is wagmi v2 default behavior.
+- `frontend/src/contexts/WalletSelectorContext.jsx` — already passes the live `connectors` list through.
+- `frontend/src/hooks/useWallet.js`, `walletErrors.js`, `WalletSelectorCancelOverlay.jsx`, MOSS SDK route, contract / mint / Fund Dev paths.
+
+Behavior parity for the existing happy paths:
+
+- **MetaMask card** — same PNG (`metamasklogo.png`), same `'Browser extension'` subtitle, same hardcoded path through the `io.metamask` connector. A user who connected MetaMask before this change will see the identical card and identical click behavior.
+- **MOSS card** — same PNG (`megaethlogo.png`), same cream `cardIconMoss` plate, same `'Embedded — no extension needed'` subtitle, same `megaWallet` connector. Cancel overlay still triggers off `isMossConnector(pendingConnector)` — unchanged.
+- **Sort change** — MOSS moves from second to first. This is a deliberate decision (resolution §6.1).
+
+Expected modal contents per setup:
+
+| Setup | Modal cards (top to bottom) |
+|---|---|
+| Only MetaMask installed | MOSS, MetaMask |
+| Only Rabby installed | MOSS, Rabby |
+| MetaMask + Rabby | MOSS, MetaMask, Rabby |
+| MetaMask + Coinbase Wallet | MOSS, MetaMask, Coinbase Wallet |
+| Rabby + Frame + Phantom (EVM) | MOSS, Frame, Phantom, Rabby |
+| No extension wallet at all | MOSS, Other wallet |
+| MetaMask + (any non-EIP-6963 legacy wallet) | MOSS, MetaMask  *(legacy wallet hidden — owns `window.ethereum` but doesn't announce; user can still go through MetaMask. Edge case, see TODO §8.2.)* |
+
+Visual description with Rabby installed (case 3 above):
+
+```
+┌─────────────────────────────────────────────┐
+│ Connect a wallet                          × │
+│ Choose how you'd like to connect to MegaETH.│
+│                                             │
+│  [🟫 MOSS plate ]  MOSS — MegaETH Wallet  →│
+│                    Embedded — no extension  │
+│                                             │
+│  [🦊 PNG       ]   MetaMask              → │
+│                    Browser extension        │
+│                                             │
+│  [🐰 data-URI  ]   Rabby Wallet          → │
+│                    Browser extension        │
+└─────────────────────────────────────────────┘
+```
+
+The Rabby card uses the exact same `.card` styling as MetaMask — same dark background, same padding, same arrow, same hover/focus state. Only the icon contents come from Rabby's own EIP-6963 announcement (data-URI SVG/PNG).
+
+---
+
+## 8. Follow-up TODOs
+
+### 8.1 WalletConnect v2 (mobile coverage) — deferred
+
+Not added in this fix per resolution §6.3. When mobile becomes a priority:
+
+- Install `@walletconnect/ethereum-provider` and use the `walletConnect` connector exported from `wagmi/connectors`.
+- Add `VITE_WALLETCONNECT_PROJECT_ID` to `frontend/.env.example` and document it. The Project ID is free at https://cloud.reown.com (formerly cloud.walletconnect.com).
+- Wire it as a third explicit connector in `services/wagmi.js`. The modal already iterates over the full connector list and would render a WalletConnect card automatically (its `connector.id === 'walletConnect'`, `connector.name === 'WalletConnect'`, and `connector.icon` is set by the connector itself).
+- Decide whether the WalletConnect QR card should be visually grouped separately ("Mobile wallets" section) or just sorted alphabetically inline.
+- Open question: project ID exposure in client bundle is fine per WalletConnect docs (it's a public identifier), but coordinate with the deploy pipeline so the env var lands on Render.
+
+### 8.2 Legacy wallets that only inject `window.ethereum` (no EIP-6963)
+
+A vanishingly small group of older wallets still skip EIP-6963 (e.g. some old MetaMask Mobile in-app browsers, very old Brave). When such a wallet is installed alongside MetaMask, our filter hides the generic "Other wallet" card (because `eip6963.length > 0`), leaving the legacy wallet inaccessible from the modal. Only worth fixing if real users complain — most users on those wallets get auto-handled because their wallet still owns `window.ethereum` after MetaMask's announcement and the EIP-6963 MetaMask card connects through MetaMask's own provider regardless.
+
+If we ever need to handle this: add a "Show all wallets" expander that always reveals the generic `injected()` card.
+
+---
+
+## 9. Manual test plan (for QA)
+
+Pre-conditions: latest build of the branch served via `npm run dev`.
+
+| # | Setup | Action | Expected |
+|---|---|---|---|
+| 1 | MetaMask only | Open portal → Connect | Cards: MOSS, MetaMask. Click MetaMask → MM popup → connect succeeds → modal closes. |
+| 2 | Rabby only | Open portal → Connect | Cards: MOSS, Rabby (Rabby card uses Rabby's own icon). Click Rabby → Rabby popup → connect succeeds. |
+| 3 | MetaMask + Rabby | Open portal → Connect | Cards: MOSS, MetaMask, Rabby. Both connect paths work; clicking MetaMask connects MetaMask, clicking Rabby connects Rabby — no provider hijack. |
+| 4 | No extension wallet | Open portal → Connect | Cards: MOSS, Other wallet (neutral icon). Clicking MOSS opens iframe and connects. Clicking "Other wallet" surfaces a clean "no provider" error. |
+| 5 | Coinbase Wallet only | Open portal → Connect | Cards: MOSS, Coinbase Wallet. Connect succeeds. |
+| 6 | MOSS connect, mid-iframe | Click "Cancel & choose another wallet" overlay | Iframe tears down; modal stays open with no stale pending; user can pick a different card. |
+| 7 | Any setup, post-connect | Open NXT Wallet → Claim | Claim transaction prompts on the active wallet — no MOSS-vs-MM provider mismatch. |
+| 8 | Any setup, wrong chain | Connect with wallet on a non-MegaETH chain | "Wrong network" banner appears; clicking switch performs `wallet_switchEthereumChain` to chainId 4326. |
+
+---
+
+## 10. Status
 
 - [x] Phase 1 — audit
-- [ ] Phase 2 — propose diff (waiting for OK)
-- [ ] Phase 3 — implement + test + commit
+- [x] Phase 2 — proposal & decisions captured
+- [x] Phase 3 — implement + commit + push
+- [ ] Phase 3 — manual QA pass (per §9, executed by user / next reviewer)

@@ -173,6 +173,15 @@
   user-select: none;
 }
 
+/* Neutral lucide-react icon used by the "Other wallet" fallback card and
+ * by EIP-6963 connectors that fail to provide a data-URI icon. Sized to
+ * sit comfortably inside the same 40×40 plate as the brand PNGs. */
+.cardIconLucide {
+  width: 22px;
+  height: 22px;
+  color: #a1a1aa;
+}
+
 .cardBody {
   flex: 1;
   min-width: 0;
