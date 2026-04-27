@@ -117,7 +117,7 @@ CREATE TABLE login_streaks (
     wallet_address VARCHAR(42) PRIMARY KEY,
     current_streak INTEGER NOT NULL DEFAULT 0,
     longest_streak INTEGER NOT NULL DEFAULT 0,
-    last_claim_date DATE,
+    last_claim_at TIMESTAMPTZ,
     total_claimed_nxt BIGINT NOT NULL DEFAULT 0
 );
 
@@ -211,31 +211,32 @@ def test_longest_streak_stays_monotonic_across_cycles():
     must reflect absolute history, not collapse with day_in_cycle."""
     conn = _connect()
     conn.autocommit = True
-    from datetime import timedelta
-    yesterday = date.today() - timedelta(days=1)
+    from datetime import datetime, timedelta, timezone
+    # 25h ago: cooldown elapsed (>=24h) but streak still alive (<48h).
+    last_claim = datetime.now(timezone.utc) - timedelta(hours=25)
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE login_streaks
                SET current_streak = 9, longest_streak = 9,
-                   last_claim_date = %s
+                   last_claim_at = %s
              WHERE wallet_address = %s
             """,
-            (yesterday, WALLET),
+            (last_claim, WALLET),
         )
         # Ensure the UPDATE actually hit — login_streaks row may not
         # exist yet, so insert-or-update.
         cur.execute(
             """
             INSERT INTO login_streaks (wallet_address, current_streak,
-                                       longest_streak, last_claim_date,
+                                       longest_streak, last_claim_at,
                                        total_claimed_nxt)
             VALUES (%s, 9, 9, %s, 0)
             ON CONFLICT (wallet_address) DO UPDATE
               SET current_streak = 9, longest_streak = 9,
-                  last_claim_date = EXCLUDED.last_claim_date
+                  last_claim_at = EXCLUDED.last_claim_at
             """,
-            (WALLET, yesterday),
+            (WALLET, last_claim),
         )
     conn.close()
 
