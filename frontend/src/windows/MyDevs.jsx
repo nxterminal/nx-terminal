@@ -1735,6 +1735,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const energyHigh = energyPct >= 70;
   const onMission = dev.status === 'on_mission';
   const missionCompleted = onMission && mission && new Date(mission.ends_at) <= new Date();
+  const isIdle = !!dev.is_idle;
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1913,8 +1914,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       }}
     >
       <div style={{
-        filter: onMission && !missionCompleted ? 'grayscale(100%)' : 'none',
-        opacity: onMission && !missionCompleted ? 0.7 : 1,
+        filter: ((onMission && !missionCompleted) || isIdle) ? 'grayscale(100%)' : 'none',
+        opacity: ((onMission && !missionCompleted) || isIdle) ? 0.7 : 1,
       }}>
       <SpendOverlay spends={spends} />
 
@@ -1961,10 +1962,17 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
             <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
-            <span style={{
-              color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#2d8a2d' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
-              textTransform: 'uppercase', fontWeight: 'bold',
-            }}>{dev.status || 'active'}</span>
+            {isIdle ? (
+              <span style={{
+                color: '#6a8aaa',
+                textTransform: 'uppercase', fontWeight: 'bold',
+              }}>💤 IDLE</span>
+            ) : (
+              <span style={{
+                color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#2d8a2d' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+                textTransform: 'uppercase', fontWeight: 'bold',
+              }}>{dev.status || 'active'}</span>
+            )}
           </div>
           {/* VIEW full image button — opens the in-app DevImageModal with
               PFP / FULL BODY toggle + downloads. Click stops propagation

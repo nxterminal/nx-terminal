@@ -181,6 +181,7 @@ export default function DevProfile({ devId }) {
 
   const hasStats = dev.stat_coding != null || dev.stat_hacking != null;
   const hasTraits = dev.alignment || dev.risk_level || dev.social_style || dev.coding_style || dev.work_ethic;
+  const isIdle = !!dev.is_idle;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
@@ -278,10 +279,14 @@ export default function DevProfile({ devId }) {
           Location: <span style={{ color: 'var(--text-primary, #fff)' }}>{dev.location ? dev.location.replace(/_/g, ' ') : '?'}</span>
         </span>
         <span style={{ color: 'var(--terminal-green)' }}>
-          Status: <span style={{
-            color: dev.status === 'active' ? '#33ff33' : dev.status === 'resting' ? '#ffaa00' : '#ff4444',
-            textTransform: 'uppercase',
-          }}>{dev.status || 'active'}</span>
+          Status: {isIdle ? (
+            <span style={{ color: '#6a8aaa', textTransform: 'uppercase' }}>💤 IDLE</span>
+          ) : (
+            <span style={{
+              color: dev.status === 'active' ? '#33ff33' : dev.status === 'resting' ? '#ffaa00' : '#ff4444',
+              textTransform: 'uppercase',
+            }}>{dev.status || 'active'}</span>
+          )}
         </span>
       </div>
 
@@ -358,6 +363,44 @@ export default function DevProfile({ devId }) {
           </div>
         </div>
       </div>
+
+      {/* ── Idle banner — quick FEED actions when energy hit 0 ── */}
+      {isIdle && (
+        <div style={{
+          margin: '8px 6px',
+          padding: '12px 14px',
+          background: 'linear-gradient(180deg, #1a2840 0%, #0e1a2e 100%)',
+          border: '2px solid #4a6a8a',
+          borderRadius: 0,
+          boxShadow: 'inset -2px -2px 0 #0a0a1e, inset 2px 2px 0 #2a3a5e',
+          fontFamily: "'VT323', monospace",
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ fontSize: 32, lineHeight: 1 }}>💤</div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ color: '#9ab8d8', fontSize: 16, fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 }}>
+              DEV IS IDLE
+            </div>
+            <div style={{ color: '#cfcfcf', fontSize: 13 }}>
+              Energy depleted. Feed your dev to wake them up.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <button className="win-btn" onClick={() => doShopAction('carrot', '🥕 Carrot')} disabled={shopBusy}>
+              🥕 Carrot 8
+            </button>
+            <button className="win-btn" onClick={() => doShopAction('pizza', '🍕 Pizza')} disabled={shopBusy}>
+              🍕 Pizza 20
+            </button>
+            <button className="win-btn" onClick={() => doShopAction('burger', '🍔 Burger')} disabled={shopBusy}>
+              🍔 Burger 40
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Actions (Shop) ── */}
       {address && (
