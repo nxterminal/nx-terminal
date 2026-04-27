@@ -332,16 +332,13 @@ def execute(db, dev, action, ctx):
             result["channel"] = "location"
 
     elif action == "REST":
-        regen = random.randint(2, 4) + ENERGY_REGEN_BONUS.get(rarity, 0)
+        regen = 5
         db.execute("UPDATE devs SET energy=MIN(max_energy, energy+?) WHERE token_id=?", (regen, tid))
         result["details"] = {"energy_restored": regen}
 
     # Mood shift 10%
     if random.random() < 0.10:
         db.execute("UPDATE devs SET mood=? WHERE token_id=?", (random.choice(MOODS), tid))
-    # Natural regen 30%
-    if action != "REST" and random.random() < 0.30:
-        db.execute("UPDATE devs SET energy=MIN(max_energy, energy+1) WHERE token_id=?", (tid,))
 
     # Auto-vote AI 15%
     if random.random() < 0.15:

@@ -37,9 +37,35 @@ def _run_auto_migrations():
                         wallet_address VARCHAR(42) PRIMARY KEY,
                         current_streak INTEGER NOT NULL DEFAULT 0,
                         longest_streak INTEGER NOT NULL DEFAULT 0,
-                        last_claim_date DATE,
+                        last_claim_at TIMESTAMPTZ,
                         total_claimed_nxt BIGINT NOT NULL DEFAULT 0
                     )
+                """)
+                # Idempotent migration: legacy schemas had `last_claim_date DATE`.
+                # ADD COLUMN IF NOT EXISTS covers fresh deploys; the DO block
+                # backfills + drops the legacy column only if it existed.
+                # Backfill anchors at 12:00 UTC on the recorded date — a fair
+                # midpoint that neither hands a near-instant re-claim (00:00
+                # anchor) nor punishes the user for the next ~24h (23:59
+                # anchor). Only affects the first claim post-deploy; after
+                # that, all timestamps are real and the 24h cooldown is
+                # strict.
+                cur.execute("ALTER TABLE login_streaks ADD COLUMN IF NOT EXISTS last_claim_at TIMESTAMPTZ")
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = current_schema()
+                              AND table_name = 'login_streaks'
+                              AND column_name = 'last_claim_date'
+                        ) THEN
+                            UPDATE login_streaks
+                               SET last_claim_at = (last_claim_date::timestamp + INTERVAL '12 hours') AT TIME ZONE 'UTC'
+                             WHERE last_claim_at IS NULL AND last_claim_date IS NOT NULL;
+                            ALTER TABLE login_streaks DROP COLUMN last_claim_date;
+                        END IF;
+                    END $$;
                 """)
                 # Ensure action_enum has all required values
                 cur.execute("""
@@ -158,18 +184,23 @@ def _run_auto_migrations():
                         ON CONFLICT (id) DO NOTHING
                     """, (a["id"], a["title"], a["description"], a["category"], a["icon"],
                           a["reward_nxt"], a["requirement_type"], a["requirement_value"], a["rarity"]))
-                # Seed MEGA TESTER PROGRAM event (permanent, won't be rotated)
+                # Seed OFFICIAL LAUNCH event (permanent, won't be rotated)
                 cur.execute("""
                     INSERT INTO world_events (title, description, event_type, effects, starts_at, ends_at, is_active)
-                    SELECT 'MEGA TESTER PROGRAM',
-                           'NX Terminal is currently running a testing phase. Regular operations continue as normal.',
+                    SELECT 'OFFICIAL LAUNCH',
+                           'NX Terminal is live on MegaETH. Launch bonuses active: +25% salary, -30% hack cost, +25% mission rewards. Welcome, dev.',
                            'weekly',
                            '{"salary_multiplier": 1.25, "hack_cost_multiplier": 0.7, "mission_reward_multiplier": 1.25}'::jsonb,
                            NOW(), '2099-12-31'::timestamptz, TRUE
-                    WHERE NOT EXISTS (SELECT 1 FROM world_events WHERE title = 'MEGA TESTER PROGRAM')
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM world_events
+                        WHERE title IN ('OFFICIAL LAUNCH', 'MEGA TESTER PROGRAM')
+                    )
                 """)
                 cur.execute("""
-                    UPDATE world_events SET description = 'NX Terminal is currently running a testing phase. Regular operations continue as normal.'
+                    UPDATE world_events
+                    SET title = 'OFFICIAL LAUNCH',
+                        description = 'NX Terminal is live on MegaETH. Launch bonuses active: +25% salary, -30% hack cost, +25% mission rewards. Welcome, dev.'
                     WHERE title = 'MEGA TESTER PROGRAM'
                 """)
                 # VIP testers table
