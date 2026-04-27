@@ -2,29 +2,62 @@ import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../services/api';
 
+function formatCountdown(seconds) {
+  if (seconds <= 0) return '00:00:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function DailyStreakPopup() {
   const { address, isConnected } = useWallet();
   const [data, setData] = useState(null);
   const [claiming, setClaiming] = useState(false);
   const [result, setResult] = useState(null);
   const [dismissed, setDismissed] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(0);
   const checked = useRef(false);
 
+  // Initial fetch: get streak status, gate by hasDev
   useEffect(() => {
     if (!isConnected || !address || checked.current || dismissed) return;
     checked.current = true;
-    // Only show streak popup if player has devs (registered player)
     api.getStreak(address)
       .then(d => {
-        if (!d.can_claim) return;
         // Verify player actually has devs before showing popup
         return api.getDevs({ owner: address, limit: 1 }).then(devs => {
           const hasDev = Array.isArray(devs) ? devs.length > 0 : (devs?.devs?.length > 0);
-          if (hasDev) setData(d);
+          if (!hasDev) return;
+          setData(d);
+          if (!d.can_claim && d.seconds_until_next_claim > 0) {
+            setSecondsRemaining(d.seconds_until_next_claim);
+          }
         });
       })
       .catch(() => {});
   }, [isConnected, address, dismissed]);
+
+  // Countdown ticker: decrement every second when in cooldown
+  useEffect(() => {
+    if (secondsRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsRemaining(prev => {
+        if (prev <= 1) {
+          // Cooldown ended → refetch to enable claim
+          api.getStreak(address)
+            .then(d => {
+              setData(d);
+              if (d.can_claim) setResult(null);
+            })
+            .catch(() => {});
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [secondsRemaining, address]);
 
   async function handleClaim() {
     if (!address) return;
@@ -32,8 +65,19 @@ export default function DailyStreakPopup() {
     try {
       const res = await api.claimStreak(address);
       setResult(res);
+      // After successful claim, set cooldown for next 24h
+      if (res.seconds_until_next_claim) {
+        setSecondsRemaining(res.seconds_until_next_claim);
+      }
     } catch (err) {
-      setResult({ error: err.message || 'Claim failed' });
+      // Race condition: backend says cooldown active
+      if (err.detail?.seconds_until_next_claim) {
+        setSecondsRemaining(err.detail.seconds_until_next_claim);
+        setData(prev => prev ? { ...prev, can_claim: false } : prev);
+        setResult(null);
+      } else {
+        setResult({ error: err.message || 'Claim failed' });
+      }
     } finally {
       setClaiming(false);
     }
@@ -41,19 +85,18 @@ export default function DailyStreakPopup() {
 
   if (!data || dismissed) return null;
 
-  // Cycle day = ((streak - 1) mod 7) + 1, clamped at [1..7]. Prefer the
-  // value the backend returns; fall back to a local compute in the
-  // (brief) window where a stale backend hasn't shipped day_in_cycle
-  // yet. The raw streak still drives longest-streak messaging.
   const cycleLength = (result?.cycle_length ?? data.cycle_length ?? 7);
-  const absoluteDay = result ? result.streak : data.next_day;
+  const absoluteDay = result ? result.streak : (data.next_day ?? data.current_streak ?? 1);
   const dayInCycle = (
     result?.day_in_cycle ??
     data.day_in_cycle ??
     Math.max(1, ((absoluteDay - 1) % cycleLength) + 1)
   );
   const day = dayInCycle;
-  const reward = result ? result.reward : data.next_reward;
+
+  const isCooldown = !data.can_claim && !result && secondsRemaining > 0;
+  const isClaimable = data.can_claim && !result;
+  const isResult = !!result;
 
   return (
     <div
@@ -90,7 +133,7 @@ export default function DailyStreakPopup() {
 
         {/* Body */}
         <div style={{ padding: 20, textAlign: 'center' }}>
-          {!result ? (
+          {isClaimable && (
             <>
               <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 12 }}>
                 DAILY ATTENDANCE — DAY {dayInCycle} OF {cycleLength}
@@ -122,7 +165,49 @@ export default function DailyStreakPopup() {
                 {claiming ? 'PROCESSING...' : 'CLAIM ATTENDANCE BONUS'}
               </button>
             </>
-          ) : result.error ? (
+          )}
+
+          {isCooldown && (
+            <>
+              <div style={{ fontSize: 14, color: '#cfcfcf', marginBottom: 12 }}>
+                COOLDOWN ACTIVE — DAY {dayInCycle} OF {cycleLength}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+                {Array.from({ length: Math.min(day, 7) }, (_, i) => (
+                  <div key={i} style={{
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: i < day ? '#2d8a2d' : '#1a1a2e',
+                    border: '2px solid #333',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, color: i < day ? '#66ff66' : '#555',
+                  }}>{i + 1}</div>
+                ))}
+              </div>
+              <div style={{ color: '#888', fontSize: 11, marginBottom: 6, letterSpacing: 1 }}>
+                NEXT CLAIM IN
+              </div>
+              <div style={{
+                color: '#66ff66', fontSize: 36, marginBottom: 12,
+                fontFamily: "'VT323', monospace", letterSpacing: 2,
+                textShadow: '0 0 8px rgba(102,255,102,0.4)',
+              }}>
+                {formatCountdown(secondsRemaining)}
+              </div>
+              <div style={{ color: '#cfcfcf', fontSize: 12, marginBottom: 16 }}>
+                Streak: {data.current_streak} days | Record: {data.longest_streak}
+              </div>
+              <div style={{ color: '#888', fontSize: 11, marginBottom: 16 }}>
+                Next reward: <span style={{ color: '#ffdd44' }}>+{data.next_reward} $NXT</span>
+              </div>
+              <button onClick={() => setDismissed(true)} style={{
+                width: '100%', padding: 8, fontSize: 14,
+                fontFamily: "'VT323', monospace", cursor: 'pointer',
+                background: '#333', color: '#cfcfcf', border: '1px solid #555',
+              }}>CLOSE</button>
+            </>
+          )}
+
+          {isResult && result.error && (
             <>
               <div style={{ color: '#ff4444', fontSize: 16, marginBottom: 12 }}>{result.error}</div>
               <button onClick={() => setDismissed(true)} style={{
@@ -131,7 +216,9 @@ export default function DailyStreakPopup() {
                 background: '#333', color: '#cfcfcf', border: '1px solid #555',
               }}>OK</button>
             </>
-          ) : (
+          )}
+
+          {isResult && !result.error && (
             <>
               <div style={{ color: '#66ff66', fontSize: 18, marginBottom: 8 }}>
                 ATTENDANCE LOGGED
@@ -142,6 +229,11 @@ export default function DailyStreakPopup() {
               <div style={{ color: '#cfcfcf', fontSize: 13, marginBottom: 4 }}>
                 Day {dayInCycle} of {cycleLength} · streak {result.streak} — {result.dev_name}
               </div>
+              {secondsRemaining > 0 && (
+                <div style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>
+                  Next claim in <span style={{ color: '#66ff66' }}>{formatCountdown(secondsRemaining)}</span>
+                </div>
+              )}
               <div style={{ color: '#cfcfcf', fontSize: 12, marginBottom: 16 }}>
                 Check your inbox for confirmation.
               </div>
@@ -150,6 +242,19 @@ export default function DailyStreakPopup() {
                 fontFamily: "'VT323', monospace", cursor: 'pointer',
                 background: '#333', color: '#ccc', border: '1px solid #555',
               }}>CONTINUE</button>
+            </>
+          )}
+
+          {!isClaimable && !isCooldown && !isResult && (
+            <>
+              <div style={{ color: '#888', fontSize: 13, marginBottom: 12 }}>
+                Loading streak status...
+              </div>
+              <button onClick={() => setDismissed(true)} style={{
+                width: '100%', padding: 8, fontSize: 14,
+                fontFamily: "'VT323', monospace", cursor: 'pointer',
+                background: '#333', color: '#cfcfcf', border: '1px solid #555',
+              }}>CLOSE</button>
             </>
           )}
         </div>
