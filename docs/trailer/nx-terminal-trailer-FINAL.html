@@ -287,7 +287,7 @@ button { font: inherit; cursor: default; }
   top: 0; left: 0;
   width: 22px; height: 28px;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 100;
   transform: translate(960px, 540px);
   transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
@@ -425,6 +425,130 @@ button { font: inherit; cursor: default; }
   pointer-events: none;
 }
 #nxLogo.visible { opacity: 1; }
+
+/* ===== SCENE 3 — INBOX WINDOW ===== */
+.inbox-window {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 720px;
+  height: 480px;
+  background: var(--win-bg);
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: scale(0.4) translate(-50%, -50%);
+  transform-origin: 0 0;
+  z-index: 200;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  color: #000;
+  overflow: hidden;
+}
+.inbox-window.open {
+  animation: windowOpenAnim 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes windowOpenAnim {
+  0%   { opacity: 0; transform: scale(0.4) translate(-50%, -50%); }
+  30%  { opacity: 1; transform: scale(1.04) translate(-50%, -50%); }
+  100% { opacity: 1; transform: scale(1)    translate(-50%, -50%); }
+}
+.inbox-titlebar {
+  height: 22px;
+  padding: 0 6px;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.inbox-titlebar .title-btns {
+  display: flex;
+  gap: 2px;
+}
+.inbox-titlebar .title-btn {
+  width: 18px;
+  height: 16px;
+  background: var(--win-bg);
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  color: #000;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  display: inline-block;
+}
+.inbox-body {
+  background: #ffffff;
+  padding: 20px;
+  height: calc(100% - 22px);
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  color: #000;
+  overflow: hidden;
+}
+.email-header {
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+.email-subject {
+  font-family: Tahoma, sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #000080;
+  margin-bottom: 8px;
+}
+.email-meta {
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 4px;
+}
+.email-meta strong { color: #000; }
+.email-body-text {
+  font-family: Tahoma, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000;
+  white-space: pre-wrap;
+}
+
+/* ===== SCENE 3 — SMASH CUT OVERLAY ===== */
+.smash-cut {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+}
+.smash-cut-text {
+  font-family: 'VT323', monospace;
+  font-size: 180px;
+  color: #33ff33;
+  text-shadow: 0 0 30px #33ff33, 0 0 60px #33ff33;
+  letter-spacing: 8px;
+}
+.smash-cut.white .smash-cut-text {
+  color: #ffffff;
+  text-shadow: 0 0 30px #ffffff, 0 0 60px #ffffff;
+}
+.smash-cut.glitch-rgb .smash-cut-text {
+  animation: rgbGlitch 100ms steps(2) infinite;
+}
+@keyframes rgbGlitch {
+  0%   { text-shadow: -3px 0 #ff0040,  3px 0 #00ffff; }
+  100% { text-shadow:  3px 0 #ff0040, -3px 0 #00ffff; }
+}
 </style>
 </head>
 <body>
@@ -1085,6 +1209,29 @@ button { font: inherit; cursor: default; }
 
     <div id="bootScreen"><span class="boot-line" id="bootLine1"></span><span class="boot-line" id="bootLine2"></span><span class="boot-line" id="bootLine3"></span></div>
     <div id="whiteFlash"></div>
+
+    <div class="inbox-window" id="inboxWindow">
+      <div class="inbox-titlebar">
+        <span>Inbox - NX Mail</span>
+        <span class="title-btns">
+          <span class="title-btn">_</span>
+          <span class="title-btn">&#9633;</span>
+          <span class="title-btn">&#215;</span>
+        </span>
+      </div>
+      <div class="inbox-body">
+        <div class="email-header">
+          <div class="email-subject">Welcome to NX Terminal &mdash; Protocol Wars Awaits</div>
+          <div class="email-meta"><strong>From:</strong> NX Terminal System &lt;system@nxterminal.corp&gt;</div>
+          <div class="email-meta"><strong>Date:</strong> Apr 26, 2026</div>
+        </div>
+        <div class="email-body-text" id="emailBodyText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="smash-cut" id="smashCut">
+    <div class="smash-cut-text" id="smashCutText"></div>
   </div>
 </div>
 
@@ -1473,13 +1620,100 @@ async function runScene_2_desktop() {
 }
 
 /* ============================================================
+   SMASH CUT HELPER
+   ============================================================ */
+async function smashCut(text, options) {
+  options = options || {};
+  const duration  = options.duration  != null ? options.duration  : 250;
+  const color     = options.color     || 'green';
+  const glitchRgb = options.glitchRgb || false;
+  const fontSize  = options.fontSize  != null ? options.fontSize  : 180;
+  const sound     = options.sound     !== false;
+
+  const overlay = document.getElementById('smashCut');
+  const textEl  = document.getElementById('smashCutText');
+
+  overlay.className = 'smash-cut';
+  if (color === 'white') overlay.classList.add('white');
+  if (glitchRgb)         overlay.classList.add('glitch-rgb');
+
+  textEl.style.fontSize = fontSize + 'px';
+  textEl.textContent = text;
+
+  overlay.style.opacity = '1';
+  if (sound) playToggleClick();
+
+  await sleep(duration);
+
+  overlay.style.opacity = '0';
+}
+
+/* ============================================================
+   SCENE 3 — EMAIL FLASH (4s)
+   ============================================================ */
+async function runScene_3_email() {
+  const win  = document.getElementById('inboxWindow');
+  const body = document.getElementById('emailBodyText');
+
+  /* ── Sub-beat 3.1: email opens (0.8s) ── */
+  body.textContent = '';
+  win.style.opacity = '';
+  win.classList.add('open');
+  playToggleClick();
+  await sleep(800);
+
+  /* ── Sub-beat 3.1b: body appears (no typing) ── */
+  body.textContent =
+    "Welcome to NX Terminal.\n\n" +
+    "You've entered the simulation —\n" +
+    "a satirical alternate history where\n" +
+    "dystopian AI corporations compete\n" +
+    "for dominance.";
+  await sleep(0);
+  await sleep(800);
+
+  /* ── Sub-beat 3.2: smash cuts CODE/TRADE/HACK/SURVIVE (1.4s) ── */
+  await smashCut('CODE.',     { duration: 250, color: 'green', fontSize: 180 });
+  await sleep(100);
+  await smashCut('TRADE.',    { duration: 250, color: 'green', fontSize: 180 });
+  await sleep(100);
+  await smashCut('HACK.',     { duration: 250, color: 'green', fontSize: 180 });
+  await sleep(100);
+  await smashCut('SURVIVE.',  { duration: 250, color: 'green', fontSize: 180 });
+  await sleep(100);
+
+  /* ── Sub-beat 3.3: closing punchline (1.85s) ── */
+  body.textContent =
+    "— NX Terminal Automated Systems\n" +
+    "  (This message was generated by AI.\n" +
+    "   The AI wishes you well. For now.)";
+
+  await sleep(1100);
+
+  playSpendSound();
+  await sleep(50);
+
+  await smashCut('FOR NOW.', {
+    duration: 700,
+    color: 'white',
+    glitchRgb: true,
+    fontSize: 200
+  });
+
+  /* close inbox before next scene */
+  win.classList.remove('open');
+  win.style.opacity = '0';
+}
+
+/* ============================================================
    TRAILER ENTRY
    ============================================================ */
 async function runTrailer() {
   await runScene_1_bios();      // 0.0s → 1.5s
   await runScene_2_desktop();   // 1.5s → 3.5s
-  // futuras escenas (3, 4, 5...) se agregarán acá
-  console.log('Scenes 1-2 completed (3.B)');
+  await runScene_3_email();     // 3.5s → 7.5s
+  // futuras escenas (4, 5...) se agregarán acá
+  console.log('Scenes 1-3 completed (3.C)');
 }
 
 /* ============================================================
