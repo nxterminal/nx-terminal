@@ -3,6 +3,7 @@ import $ from 'jquery';
 import clippy from 'clippyjs';
 import { api } from '../services/api';
 import { useWallet } from '../hooks/useWallet';
+import { useDevCount } from '../hooks/useDevCount';
 
 // Must set jQuery globally BEFORE clippy uses it
 window.jQuery = $;
@@ -19,6 +20,8 @@ window.clippy = clippy;
 const AGENTS = ['Clippy', 'Merlin', 'Rover', 'Links', 'Peedy', 'Genius', 'F1'];
 
 const WELCOME_MSG = 'Welcome to NX Terminal! I see you haven\'t connected your wallet yet. Open Mint/Hire Devs and click "Connect Wallet to Mint" to get started!';
+
+const WELCOME_CONNECTED_MSG = 'Wallet connected, dev. 🎉 Now open Mint/Hire Devs to mint your first autonomous dev and start playing!';
 
 const MESSAGES = [
   // ── Original classics ──
@@ -103,10 +106,12 @@ const MESSAGES = [
 
 export default function NXAssistant() {
   const { address, isConnected } = useWallet();
+  const { devCount } = useDevCount();
   const agentRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const messageIndexRef = useRef(0);
   const loadAttemptRef = useRef(0);
+  const onboardingActiveRef = useRef(false);
 
   const getAgentName = useCallback(() => {
     return localStorage.getItem('nx-assistant-agent') || 'Clippy';
@@ -167,19 +172,10 @@ export default function NXAssistant() {
 
       try { agent.play('Greeting'); } catch {}
 
-      // First message after greeting animation.
-      // Accept stale closure: welcome message is a snapshot at agent
-      // load. If the user connects mid-greeting, the periodic random
-      // messages (every 60-120s) take over without wallet checks anyway.
-      setTimeout(() => {
-        if (thisAttempt !== loadAttemptRef.current) return;
-        if (!isConnected) {
-          agent.speak(WELCOME_MSG);
-        } else {
-          agent.speak(MESSAGES[Math.floor(Math.random() * MESSAGES.length)]);
-        }
-        try { agent.animate(); } catch {}
-      }, 1500);
+      // The first contextual message is owned by the onboarding effect
+      // below — it reacts to isConnected/devCount and re-speaks every
+      // 8s while the user is in the onboarding flow. Once devCount >= 1
+      // the periodic random-message interval takes over.
     }, () => {
       clearTimeout(loadTimeout);
       // Fallback to Clippy if specific agent fails
@@ -206,6 +202,38 @@ export default function NXAssistant() {
     };
   }, [loadAgent, getAgentName]);
 
+  // Onboarding mode: persistent welcome until wallet connected AND first
+  // dev minted. Re-speaks every 8s so clippyjs's auto-hide doesn't strand
+  // the user with an empty bubble. Pauses random messages and notif
+  // polling via onboardingActiveRef so they don't pisar el welcome.
+  useEffect(() => {
+    if (!loaded) return;
+
+    const isOnboarding = !isConnected || (isConnected && devCount === 0);
+    onboardingActiveRef.current = isOnboarding;
+
+    if (!isOnboarding) return;
+
+    const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
+    if (!enabled) return;
+
+    const msg = !isConnected ? WELCOME_MSG : WELCOME_CONNECTED_MSG;
+
+    const speakOnboarding = () => {
+      const stillEnabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
+      if (!stillEnabled || !agentRef.current) return;
+      try {
+        agentRef.current.stop?.();
+        agentRef.current.speak(msg);
+      } catch {}
+    };
+
+    speakOnboarding();
+    const interval = setInterval(speakOnboarding, 8000);
+
+    return () => clearInterval(interval);
+  }, [loaded, isConnected, devCount]);
+
   // Periodic messages
   useEffect(() => {
     if (!loaded) return;
@@ -213,6 +241,7 @@ export default function NXAssistant() {
     const interval = setInterval(() => {
       const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
       if (!enabled || !agentRef.current) return;
+      if (onboardingActiveRef.current) return;
 
       const msg = MESSAGES[messageIndexRef.current % MESSAGES.length];
       messageIndexRef.current++;
@@ -278,6 +307,7 @@ export default function NXAssistant() {
     const pollNotifications = () => {
       const enabled = localStorage.getItem('nx-assistant-enabled') !== 'false';
       if (!enabled || !agentRef.current) return;
+      if (onboardingActiveRef.current) return;
 
       api.getNotifications(address, true)
         .then(notifs => {
