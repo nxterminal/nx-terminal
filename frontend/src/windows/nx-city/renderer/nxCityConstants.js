@@ -124,3 +124,6 @@ export function currentPhase() {
   if (h >= 17 && h < 19) return 'DUSK';
   return 'NIGHT';
 }
+
+// Alias for renderer compatibility
+export { WEATHER_TYPES as WEATHERS };

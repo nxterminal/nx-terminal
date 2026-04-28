@@ -9,7 +9,7 @@
 //   rc  = render context { ctx, time, flicker } — flicker is the user
 //         setting boolean, b.flicker is the per-building seed.
 
-import { TW, TH, ZONE, hash32, shade } from './nxCityConstants';
+import { TW, TH, ZONE, hash32, shade } from './nxCityConstants.js';
 
 // --- shared box + windows primitives ------------------------------
 
@@ -542,3 +542,14 @@ export const ARCHETYPES = [
     },
   },
 ];
+
+/**
+ * Dispatcher used by the renderer module.
+ * Delegates to each archetype's own render() method.
+ */
+export function drawBuildingArchetype(rc, b, p, z, alpha, day) {
+  if (b.archetype && typeof b.archetype.render === 'function') {
+    b.archetype.render(b, p, z, alpha, day, rc);
+  }
+}
+
