@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Wallet } from 'lucide-react';
 import { useWalletSelector } from '../contexts/WalletSelectorContext';
-import { isMossConnector } from '../services/wagmi';
+import { isMossConnector, SHOW_MOSS_WALLET } from '../services/wagmi';
 import styles from './WalletSelectorModal.module.css';
 import metamaskLogo from '../assets/wallets/metamasklogo.png';
 import megaethLogo from '../assets/wallets/megaethlogo.png';
@@ -98,7 +98,7 @@ export default function WalletSelectorModal() {
   //      announced itself — avoids duplicating Rabby / MetaMask under
   //      the misleading "Other wallet" label when their EIP-6963
   //      connector is already in the list.
-  const moss = connectors.find(isMossConnector);
+  const moss = SHOW_MOSS_WALLET ? connectors.find(isMossConnector) : null;
   const eip6963 = connectors
     .filter(isEip6963Connector)
     .sort((a, b) => {

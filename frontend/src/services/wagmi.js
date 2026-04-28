@@ -29,6 +29,12 @@ export function isMossConnector(connector) {
   return connector?.id === MOSS_CONNECTOR_ID;
 }
 
+// Feature flag controlling whether MOSS appears in the wallet picker.
+// Set to true when MOSS goes public. The connector stays registered in
+// wagmiConfig either way so existing MOSS sessions keep working and the
+// flag flip is a one-line change with no other code paths to touch.
+export const SHOW_MOSS_WALLET = false;
+
 export const wagmiConfig = createConfig({
   chains: [megaeth],
   connectors: [injected(), megaWallet({ network: 'mainnet' })],
