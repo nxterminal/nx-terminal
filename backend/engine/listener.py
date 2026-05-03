@@ -107,6 +107,11 @@ CORPORATION_POOL = [
     "ZUCK_LABS", "Y_AI", "MISTRIAL_SYSTEMS",
 ]
 
+# NX-PHASE-2.2: legacy 14-value species pool. Canonical set is
+# {Bunny, Zombie, Robot, Ghost}, enforced by species_values CHECK
+# constraint on nx.devs. Only consumed by _generate_dev_data_legacy
+# below, which is the never-should-run fallback for a missing
+# dev_canonical_traits row.
 SPECIES_POOL = [
     "Wolf", "Cat", "Owl", "Fox", "Bear", "Raven", "Snake", "Shark",
     "Monkey", "Robot", "Alien", "Ghost", "Dragon", "Human",
@@ -119,6 +124,10 @@ ALIGNMENT_POOL = [
 ]
 
 RISK_LEVEL_POOL = ["Conservative", "Moderate", "Aggressive", "Reckless"]
+# NX-PHASE-2.2: legacy pools below contain values retired by Phase 2.2
+# (Mentor, Troll, "Speed Runner", "Copy Paste", Grinder, Steady,
+# Balanced). They are blocked by CHECK constraints on nx.devs and only
+# survive here for the legacy fallback path.
 SOCIAL_STYLE_POOL = ["Quiet", "Social", "Loud", "Troll", "Mentor"]
 CODING_STYLE_POOL = ["Methodical", "Chaotic", "Perfectionist", "Speed Runner", "Copy Paste"]
 WORK_ETHIC_POOL = ["Grinder", "Lazy", "Balanced", "Obsessed", "Steady"]

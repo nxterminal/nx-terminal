@@ -381,8 +381,21 @@ WORLD_EVENT_TEMPLATES = [
 ]
 
 # ============================================================
-# VISUAL TRAITS (for PFP generation)
+# VISUAL TRAITS (LEGACY — for PFP generation)
 # ============================================================
+# NX-PHASE-2.2: these legacy pools predate `dev_canonical_traits`. The
+# canonical visual fields (species + clothing + clothing_pattern +
+# eyewear + neckwear + spots + blush + ear_detail) come from the bundle
+# and live in `dev_canonical_traits`. The values below (Wolf/Cat/Owl
+# species, "Terminal Green"/"Matrix Rain" backgrounds, etc.) are not
+# part of the canonical set and would fail the species_values CHECK
+# constraint on `nx.devs` if `gen_visual_traits()` ran today against
+# production.
+#
+# These constants and `gen_visual_traits()` are still consumed by
+# `engine.mint_dev()` (only invoked from `seed_test_devs()`, a local
+# dev utility — see backend/engine/engine.py:2100). They're kept for
+# the local-only path; do not add new callers.
 
 SPECIES = [
     "Wolf", "Cat", "Owl", "Fox", "Bear", "Raven", "Snake", "Shark",
@@ -481,7 +494,15 @@ def gen_chat_message(archetype: str, context: str, **kwargs) -> str:
 
 
 def gen_visual_traits(rarity: str) -> dict:
-    """Generate PFP visual traits. Rarer = rarer traits."""
+    """Generate PFP visual traits. Rarer = rarer traits.
+
+    NX-PHASE-2.2: legacy. Visual identity now comes from
+    `dev_canonical_traits` (populated from the canonical bundle). This
+    function is only used by `engine.mint_dev` → `seed_test_devs`, the
+    local-only dev seeding utility. The values it returns are not part
+    of the canonical species set and would fail the species_values
+    CHECK constraint on `nx.devs`.
+    """
     traits = {
         "species": random.choice(SPECIES),
         "background": random.choice(BACKGROUNDS),

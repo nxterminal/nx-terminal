@@ -1194,6 +1194,14 @@ def take_balance_snapshots(conn):
 # ============================================================
 
 def mint_dev(conn, token_id: int, owner_address: str, corporation: str) -> dict:
+    # NX-PHASE-2.2: legacy mint path. Production mints go through
+    # backend.engine.listener.run_listener() → backend.services.canonical.mint
+    # which reads dev_canonical_traits and produces canonical-compliant
+    # values. This function is only invoked by `seed_test_devs()` (a
+    # local-only dev utility) and uses the legacy gen_visual_traits()
+    # output, which is NOT in the canonical species set. Running this
+    # against a production DB with the Step 5b CHECK constraints applied
+    # will fail at INSERT — that's intentional, not a bug.
     """Create a new dev in the DB after on-chain mint."""
     cur = get_cursor(conn)
 

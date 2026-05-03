@@ -1,7 +1,24 @@
 """
-NX TERMINAL — Procedural Dev Generator (shared module)
-Used by both the blockchain listener and the API for on-demand generation.
-All generation is deterministic based on token_id.
+NX TERMINAL — Procedural Dev Generator (LEGACY)
+
+NX-PHASE-2.2: this module is the **legacy** procedural generator that
+predates `dev_canonical_traits`. The canonical-aware mint path now lives
+in `backend/services/canonical/mint.py` and is used by both
+`backend/engine/listener.py` and the on-demand fallback in
+`backend/api/routes/devs.py:_insert_dev_on_demand`.
+
+Both call sites still import `generate_dev_data` from this module as a
+**fallback** for the impossible-in-practice case where
+`dev_canonical_traits` is missing a row. The legacy pools below
+(`SPECIES_POOL` with Wolf/Cat/Owl/etc., `SOCIAL_STYLE_POOL` with
+Mentor/Troll, `CODING_STYLE_POOL` with Speed Runner/Copy Paste,
+`WORK_ETHIC_POOL` with Grinder/Steady/Balanced) produce values that
+would fail the Step 5b CHECK constraints on `nx.devs`, so any actual
+fallback execution will surface as an INSERT error rather than a
+silent corruption.
+
+DO NOT add new callers of this module. Read from
+`dev_canonical_traits` via `backend.services.canonical.mint` instead.
 """
 
 import random
@@ -41,6 +58,12 @@ CORPORATION_POOL = [
     "ZUCK_LABS", "Y_AI", "MISTRIAL_SYSTEMS",
 ]
 
+# NX-PHASE-2.2: legacy 14-value species pool. The canonical species set
+# is {Bunny, Zombie, Robot, Ghost} and is enforced by the species_values
+# CHECK constraint on nx.devs. These values are kept here only because
+# this module is the procedural fallback used when dev_canonical_traits
+# is missing a row (which should never happen post-ingest). Any actual
+# INSERT with a value from this list will fail the CHECK constraint.
 SPECIES_POOL = [
     "Wolf", "Cat", "Owl", "Fox", "Bear", "Raven", "Snake", "Shark",
     "Monkey", "Robot", "Alien", "Ghost", "Dragon", "Human",
@@ -53,6 +76,12 @@ ALIGNMENT_POOL = [
 ]
 
 RISK_LEVEL_POOL = ["Conservative", "Moderate", "Aggressive", "Reckless"]
+# NX-PHASE-2.2: legacy pools — the retired values (Mentor, Troll,
+# "Speed Runner", "Copy Paste", Grinder, Steady, Balanced) are blocked
+# by the Step 5b CHECK constraints on nx.devs. Canonical values come
+# from the bundle and live in dev_canonical_traits + the
+# CANONICAL_SOCIAL_STYLE / CANONICAL_CODING_STYLE / CANONICAL_WORK_ETHIC
+# sets in backend/services/canonical/translation.py.
 SOCIAL_STYLE_POOL = ["Quiet", "Social", "Loud", "Troll", "Mentor"]
 CODING_STYLE_POOL = ["Methodical", "Chaotic", "Perfectionist", "Speed Runner", "Copy Paste"]
 WORK_ETHIC_POOL = ["Grinder", "Lazy", "Balanced", "Obsessed", "Steady"]
