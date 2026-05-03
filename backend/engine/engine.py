@@ -1058,8 +1058,8 @@ def pay_salaries(conn):
     # clause's `status = 'active'`. Mission devs are protected by the
     # same clause — their status stays `on_mission` regardless of energy.
     cur.execute("""
-        UPDATE devs SET status = 'exhausted'::dev_status_enum
-        WHERE status = 'active'::dev_status_enum
+        UPDATE devs SET status = 'exhausted'
+        WHERE status = 'active'
           AND energy <= 0
     """)
 
