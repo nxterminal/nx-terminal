@@ -331,6 +331,19 @@ async def buy_item(req: PurchaseRequest):
                         "UPDATE devs SET coffee_count = coffee_count + 1 WHERE token_id = %s",
                         (req.target_dev_id,)
                     )
+                # Recovery: if this energy_boost lifted the dev out of
+                # `exhausted`, flip status back to `active` in the same
+                # transaction. Order matters — the `energy > 0` guard
+                # checks the post-increment energy. Idempotent for devs
+                # already active or in another state (on_mission protected
+                # by the explicit `status = 'exhausted'` WHERE clause).
+                cur.execute(
+                    "UPDATE devs SET status = 'active'::dev_status_enum "
+                    "WHERE token_id = %s "
+                    "  AND status = 'exhausted'::dev_status_enum "
+                    "  AND energy > 0",
+                    (req.target_dev_id,)
+                )
                 changes.append({"stat": "energy", "amount": effect["value"], "type": "gain"})
             elif effect["type"] == "caffeine_boost":
                 cur.execute(
