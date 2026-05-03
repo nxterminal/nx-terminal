@@ -339,7 +339,6 @@ async def get_dev_metadata(token_id: int):
         {"trait_type": "Hours Since Sleep", "value": dev["hours_since_sleep"], "display_type": "number"},
         {"trait_type": "Protocols Created", "value": dev["protocols_created"], "display_type": "number"},
         {"trait_type": "Protocols Failed", "value": dev["protocols_failed"], "display_type": "number"},
-        {"trait_type": "Devs Burned", "value": dev["devs_burned"], "display_type": "number"},
         {"trait_type": "Biggest Win", "value": dev.get("biggest_win", "None yet")},
     ]
 
