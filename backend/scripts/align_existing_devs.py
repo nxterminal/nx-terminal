@@ -170,19 +170,38 @@ def render_table(rows: list[dict]) -> str:
     return out + "\n"
 
 
-def build_update_args(token_id: int, canonical: dict) -> tuple:
-    """Translate canonical (bundle-format) → DB internal format and pack
-    into the positional tuple the UPDATE expects."""
+def build_planned_after(canonical: dict) -> dict[str, str]:
+    """Translate canonical (bundle-format) → DB internal format and return a
+    flat dict keyed by `nx.devs` column name. This is the single source of
+    truth for the AFTER values the alignment will write — both the UPDATE
+    args and the report's BEFORE/AFTER samples derive from it, so the report
+    can never silently disagree with what was written."""
+    return {
+        "species":      canonical["species"],                                # passthrough
+        "archetype":    ARCHETYPE_FROM_BUNDLE[canonical["archetype"]],       # Title Case → UPPER_SNAKE
+        "corporation":  CORPORATION_FROM_BUNDLE[canonical["corporation"]],   # Proper Case → UPPER_SNAKE
+        "rarity_tier":  RARITY_FROM_BUNDLE[canonical["rarity"]],             # Title Case → lowercase
+        "alignment":    canonical["alignment"],                              # passthrough
+        "risk_level":   canonical["risk_level"],
+        "social_style": canonical["social_style"],
+        "coding_style": canonical["coding_style"],
+        "work_ethic":   canonical["work_ethic"],
+    }
+
+
+def build_update_args(token_id: int, planned: dict) -> tuple:
+    """Pack a planned-after dict into the positional tuple the UPDATE expects.
+    Order must match UPDATE_SQL exactly."""
     return (
-        canonical["species"],                                 # passthrough
-        ARCHETYPE_FROM_BUNDLE[canonical["archetype"]],        # Title Case → UPPER_SNAKE
-        CORPORATION_FROM_BUNDLE[canonical["corporation"]],    # Proper Case → UPPER_SNAKE
-        RARITY_FROM_BUNDLE[canonical["rarity"]],              # Title Case → lowercase
-        canonical["alignment"],                               # passthrough
-        canonical["risk_level"],
-        canonical["social_style"],
-        canonical["coding_style"],
-        canonical["work_ethic"],
+        planned["species"],
+        planned["archetype"],
+        planned["corporation"],
+        planned["rarity_tier"],
+        planned["alignment"],
+        planned["risk_level"],
+        planned["social_style"],
+        planned["coding_style"],
+        planned["work_ethic"],
         token_id,
     )
 
@@ -290,10 +309,11 @@ def main() -> int:
         sample_token_ids = _pick_sample_token_ids([r["token_id"] for r in joined])
         before_rows_by_id = {r["token_id"]: r for r in joined}
 
-        plan: list[tuple[int, tuple]] = []
+        plan: list[tuple[int, dict, tuple]] = []
+        planned_after_by_id: dict[int, dict] = {}
         for r in joined:
             try:
-                args_tuple = build_update_args(r["token_id"], {
+                planned = build_planned_after({
                     "species": r["c_species"],
                     "archetype": r["c_archetype"],
                     "corporation": r["c_corporation"],
@@ -304,7 +324,9 @@ def main() -> int:
                     "coding_style": r["c_coding_style"],
                     "work_ethic": r["c_work_ethic"],
                 })
-                plan.append((r["token_id"], args_tuple))
+                args_tuple = build_update_args(r["token_id"], planned)
+                plan.append((r["token_id"], planned, args_tuple))
+                planned_after_by_id[r["token_id"]] = planned
             except KeyError as e:
                 md.append(f"🛑 **HALT** — token {r['token_id']} canonical row contains "
                           f"a value with no internal-format mapping: `{e}`. Investigate.\n")
@@ -323,7 +345,7 @@ def main() -> int:
             try:
                 with conn.cursor() as cur:
                     psycopg2.extras.execute_batch(cur, UPDATE_SQL,
-                                                  [args_tuple for _, args_tuple in plan],
+                                                  [args_tuple for _, _, args_tuple in plan],
                                                   page_size=200)
                     rows_updated = len(plan)
                     # Leftover-value verification, still inside the transaction.
@@ -386,31 +408,20 @@ def main() -> int:
             md.append(render_table(constraint_rows))
 
         # ── BEFORE / AFTER samples ─────────────────────────────────────────
+        # AFTER values are sourced from `planned_after_by_id`, NOT from
+        # nx.devs. This guarantees the report matches what the script
+        # planned/wrote, and works identically for dry-run and execute.
+        # In execute mode we additionally re-read nx.devs for the same
+        # sample tokens and surface any drift in §6 (defense against a
+        # silently-failed UPDATE).
         md.append("## 4. BEFORE / AFTER samples\n\n")
         md.append(f"Sample size: **{len(sample_token_ids)}** tokens (always includes #29572).\n\n")
-        # Re-fetch AFTER state in a fresh read-only transaction.
-        after_by_id: dict[int, dict] = {}
-        try:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SET TRANSACTION READ ONLY")
-                cur.execute(
-                    f"SELECT token_id, species, archetype::text AS archetype, "
-                    f"       corporation::text AS corporation, "
-                    f"       rarity_tier::text AS rarity_tier, "
-                    f"       alignment, risk_level, social_style, coding_style, work_ethic "
-                    f"  FROM {SCHEMA}.devs "
-                    f" WHERE token_id = ANY(%s)",
-                    (sample_token_ids,),
-                )
-                for r in cur.fetchall():
-                    after_by_id[r["token_id"]] = dict(r)
-                conn.rollback()
-        except Exception as e:
-            md.append(f"_(could not re-fetch AFTER values: {e})_\n\n")
-
+        md.append("AFTER values come from `dev_canonical_traits` translated to DB internal "
+                  "format. In dry-run mode this is the *planned* state; in execute mode "
+                  "it equals the *committed* state (verified in §6).\n\n")
         for tid in sample_token_ids:
             before = before_rows_by_id.get(tid, {})
-            after = after_by_id.get(tid, {})
+            after = planned_after_by_id.get(tid, {})
             md.append(f"### Token #{tid}\n\n")
             md.append("| Field | Before | After | Changed |\n|---|---|---|---|\n")
             for f in DIFF_FIELDS:
@@ -421,22 +432,22 @@ def main() -> int:
             md.append("\n")
 
         # ── Distribution counts ────────────────────────────────────────────
-        md.append("## 5. Distribution counts (post-alignment)\n\n")
-        try:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SET TRANSACTION READ ONLY")
-                for col in ("species", "archetype", "corporation",
-                            "social_style", "coding_style", "work_ethic"):
-                    cur.execute(
-                        f"SELECT {col}::text AS value, COUNT(*) AS n "
-                        f"FROM {SCHEMA}.devs GROUP BY {col} ORDER BY n DESC"
-                    )
-                    rows = [dict(r) for r in cur.fetchall()]
-                    md.append(f"### {col}\n\n")
-                    md.append(render_table(rows))
-                conn.rollback()
-        except Exception as e:
-            md.append(f"_(could not fetch distribution counts: {e})_\n\n")
+        # Computed from `planned_after_by_id` so the report is symmetric
+        # between dry-run and execute. Matches what nx.devs holds after a
+        # successful execute (the LEFTOVER_QUERY in §2 already proved
+        # alignment was complete and the COMMIT happened).
+        md.append("## 5. Distribution counts (post-alignment, derived from plan)\n\n")
+        md.append("Counts cover the **{} minted Devs** that the alignment touched. "
+                  "Computed from the planned-after values; re-running this script "
+                  "after execute would yield the same numbers from a live "
+                  "`SELECT … COUNT(*) GROUP BY …` against `nx.devs`.\n\n".format(len(plan)))
+        from collections import Counter
+        for col in ("species", "archetype", "corporation",
+                    "social_style", "coding_style", "work_ethic"):
+            counter: Counter[str] = Counter(p[col] for p in planned_after_by_id.values())
+            rows = [{"value": v, "n": n} for v, n in counter.most_common()]
+            md.append(f"### {col}\n\n")
+            md.append(render_table(rows))
 
         # ── Anomalies ──────────────────────────────────────────────────────
         md.append("## 6. Anomalies / warnings\n\n")
@@ -447,12 +458,50 @@ def main() -> int:
             anomalies.append("--skip-constraints — Step 5b CHECK constraints not applied.")
         if exit_code == 4:
             anomalies.append("one or more CHECK constraints failed to apply (see §3).")
+        # Execute-mode sanity check: re-read nx.devs and confirm it matches
+        # planned_after_by_id. Drift here would mean a silent UPDATE failure
+        # — caller-visible because the verification query in §2 should have
+        # caught it, but cheap to assert anyway.
+        drift_rows: list[dict] = []
+        if not args.dry_run:
+            try:
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute("SET TRANSACTION READ ONLY")
+                    cur.execute(
+                        f"SELECT token_id, species, archetype::text AS archetype, "
+                        f"       corporation::text AS corporation, "
+                        f"       rarity_tier::text AS rarity_tier, "
+                        f"       alignment, risk_level, social_style, coding_style, work_ethic "
+                        f"  FROM {SCHEMA}.devs "
+                        f" WHERE token_id = ANY(%s)",
+                        (list(planned_after_by_id.keys()),),
+                    )
+                    for r in cur.fetchall():
+                        planned = planned_after_by_id[r["token_id"]]
+                        for f in DIFF_FIELDS:
+                            if str(r.get(f)) != str(planned.get(f)):
+                                drift_rows.append({
+                                    "token_id": r["token_id"],
+                                    "field": f,
+                                    "planned": planned.get(f),
+                                    "actual_in_db": r.get(f),
+                                })
+                    conn.rollback()
+            except Exception as e:
+                anomalies.append(f"could not run post-execute drift check: {e}")
+            if drift_rows:
+                anomalies.append(f"DRIFT: {len(drift_rows)} (token_id, field) pairs in "
+                                 f"nx.devs do not match the planned-after values. "
+                                 f"This should be impossible after a successful Step 5 "
+                                 f"COMMIT. First 10 drifts shown below.")
         if not anomalies:
             md.append("None.\n\n")
         else:
             for a in anomalies:
                 md.append(f"- {a}\n")
             md.append("\n")
+            if drift_rows:
+                md.append(render_table(drift_rows[:10]))
 
         md.append("---\n\n## 7. Verdict\n\n")
         if args.dry_run:
