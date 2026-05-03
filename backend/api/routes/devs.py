@@ -339,95 +339,32 @@ async def get_dev_messages(token_id: int, limit: int = Query(20, le=50)):
 # ============================================================
 # METADATA — For NFT tokenURI (called by contract)
 # ============================================================
+#
+# NX-PHASE-3: composes from BOTH nx.devs (live state + identity in DB
+# internal format) AND nx.dev_canonical_traits (visual subtraits +
+# NX Souls). The pure composer lives in
+# backend/services/canonical/metadata.py so it can be unit-tested
+# without psycopg2 / fastapi in the import chain.
 
 @router.get("/{token_id}/metadata")
 async def get_dev_metadata(token_id: int):
+    """ERC-721 metadata endpoint — called by the smart contract's tokenURI.
+
+    Thin wrapper around `compose_metadata`: fetch the joined row, 404
+    if missing, otherwise compose. NX-PHASE-3.
     """
-    ERC-721 metadata endpoint — called by the smart contract's tokenURI.
-    Returns dynamic metadata reflecting the dev's current state.
-    """
-    dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
+    from backend.services.canonical.metadata import compose_metadata
+
+    dev = fetch_one(
+        "SELECT d.*, "
+        "       c.clothing, c.clothing_pattern, c.eyewear, c.neckwear, "
+        "       c.spots, c.blush, c.ear_detail, "
+        "       c.voice_tone, c.quirk, c.lore_faction "
+        "  FROM devs d "
+        "  LEFT JOIN dev_canonical_traits c ON c.token_id = d.token_id "
+        " WHERE d.token_id = %s",
+        (token_id,),
+    )
     if not dev:
         raise HTTPException(404, "Token not found")
-
-    # Visual traits (conditional — only include if present).
-    # Post Phase 2.2 alignment, species is one of {Bunny, Zombie, Robot, Ghost}
-    # and the column is NOT NULL for any minted Dev. The fallback exists for
-    # defensive safety (e.g., a row mid-INSERT before the canonical column
-    # is populated) — Bunny is the dominant species (87% of the bundle).
-    attrs = [
-        {"trait_type": "Species", "value": dev.get("species") or "Bunny"},
-        {"trait_type": "Skin", "value": dev.get("skin", "")},
-        {"trait_type": "Clothing", "value": dev.get("clothing", "")},
-        {"trait_type": "Vibe", "value": dev.get("vibe", "")},
-        {"trait_type": "Screen Glow", "value": dev.get("glow", "")},
-    ]
-    if dev.get("hair_style"):
-        attrs.append({"trait_type": "Hair Style", "value": dev["hair_style"]})
-    if dev.get("hair_color"):
-        attrs.append({"trait_type": "Hair Color", "value": dev["hair_color"]})
-    if dev.get("facial"):
-        attrs.append({"trait_type": "Facial Hair", "value": dev["facial"]})
-    if dev.get("headgear"):
-        attrs.append({"trait_type": "Headgear", "value": dev["headgear"]})
-    if dev.get("extra"):
-        attrs.append({"trait_type": "Extra", "value": dev["extra"]})
-
-    # Identity traits (static)
-    attrs += [
-        {"trait_type": "Archetype", "value": dev["archetype"]},
-        {"trait_type": "Corporation", "value": dev["corporation"]},
-        {"trait_type": "Rarity", "value": dev["rarity_tier"]},
-        {"trait_type": "Alignment", "value": dev.get("alignment", "")},
-        {"trait_type": "Risk Level", "value": dev.get("risk_level", "")},
-        {"trait_type": "Social Style", "value": dev.get("social_style", "")},
-        {"trait_type": "Coding Style", "value": dev.get("coding_style", "")},
-        {"trait_type": "Work Ethic", "value": dev.get("work_ethic", "")},
-    ]
-
-    # Base stats (static)
-    attrs += [
-        {"trait_type": "Coding", "value": dev["stat_coding"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Hacking", "value": dev["stat_hacking"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Trading", "value": dev["stat_trading"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Social", "value": dev["stat_social"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Endurance", "value": dev["stat_endurance"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Luck", "value": dev["stat_luck"], "display_type": "number", "max_value": 100},
-    ]
-
-    # Dynamic traits (updated by engine every tick)
-    attrs += [
-        {"trait_type": "Status", "value": dev["status"]},
-        {"trait_type": "Mood", "value": dev["mood"]},
-        {"trait_type": "Location", "value": dev["location"]},
-        {"trait_type": "Energy", "value": dev["energy"], "display_type": "number", "max_value": 100},
-        {"trait_type": "Reputation", "value": dev["reputation"], "display_type": "number"},
-        {"trait_type": "Balance ($NXT)", "value": int(dev["balance_nxt"]), "display_type": "number"},
-        {"trait_type": "Day", "value": dev["day"], "display_type": "number", "max_value": 21},
-        {"trait_type": "Coffee Count", "value": dev["coffee_count"], "display_type": "number"},
-        {"trait_type": "Lines of Code", "value": dev["lines_of_code"], "display_type": "number"},
-        {"trait_type": "Bugs Shipped", "value": dev["bugs_shipped"], "display_type": "number"},
-        {"trait_type": "Hours Since Sleep", "value": dev["hours_since_sleep"], "display_type": "number"},
-        {"trait_type": "Protocols Created", "value": dev["protocols_created"], "display_type": "number"},
-        {"trait_type": "Protocols Failed", "value": dev["protocols_failed"], "display_type": "number"},
-        {"trait_type": "Biggest Win", "value": dev.get("biggest_win", "None yet")},
-    ]
-
-    # Display-friendly names
-    corp_names = {
-        "CLOSED_AI": "Closed AI", "MISANTHROPIC": "Misanthropic",
-        "SHALLOW_MIND": "Shallow Mind", "ZUCK_LABS": "Zuck Labs",
-        "Y_AI": "Y.AI", "MISTRIAL_SYSTEMS": "Mistrial Systems",
-    }
-    corp_display = corp_names.get(dev["corporation"], dev["corporation"])
-    rarity = dev["rarity_tier"].capitalize()
-    a_an = "an" if rarity[0] in "AEIOUaeiou" else "a"
-
-    return {
-        "name": dev["name"],
-        "description": f"{dev['name']} — {a_an} {rarity} {dev['archetype']} at {corp_display}. {dev.get('alignment', '')}. Currently {dev['mood'].lower()} in {dev['location']}.",
-        "image": f"ipfs://{dev['ipfs_hash']}" if dev.get("ipfs_hash") else "",
-        "animation_url": f"ipfs://{dev['ipfs_hash']}" if dev.get("ipfs_hash") else "",
-        "external_url": f"https://nxterminal.xyz/dev/{token_id}",
-        "attributes": attrs,
-    }
+    return compose_metadata(dev, token_id)
