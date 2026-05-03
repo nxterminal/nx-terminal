@@ -7,6 +7,10 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, get_db
 from backend.engine.dev_generator import generate_dev_data
+from backend.services.canonical.mint import (
+    build_canonical_mint_data,
+    update_canonical_post_mint,
+)
 
 log = logging.getLogger("nx_api")
 
@@ -112,22 +116,85 @@ def _check_token_owner(token_id):
 
 
 def _insert_dev_on_demand(token_id, owner):
-    """Generate and insert a dev procedurally when the listener missed it."""
-    def check_name(name):
-        row = fetch_one("SELECT name FROM devs WHERE name = %s", (name,))
-        return row is not None
+    """Insert a Dev when the listener missed it. Identity comes from
+    `nx.dev_canonical_traits` (Phase 2.2 Step 6); engine fields are
+    generated deterministically from the token_id.
 
-    data = generate_dev_data(token_id, check_name_exists=check_name)
-
-    # Starting balance by rarity (same as engine mint_dev)
+    Falls back to the legacy procedural generator only if no canonical
+    row exists. With the bundle ingested, this fallback should never
+    run in practice — but if it does, the legacy values won't pass the
+    Step 5b CHECK constraints on `nx.devs`, so the INSERT will fail
+    loudly rather than silently corrupting the row.
+    """
     STARTING_BALANCE = {
         "common": 2000, "uncommon": 2500, "rare": 3000,
         "legendary": 5000, "mythic": 10000,
     }
-    start_balance = STARTING_BALANCE.get(data["rarity"], 2000)
 
     with get_db() as conn:
         with conn.cursor() as cur:
+            mint = build_canonical_mint_data(cur, token_id)
+            if mint is not None:
+                # Canonical-aware path (Phase 2.2 Step 6).
+                start_balance = STARTING_BALANCE.get(mint.rarity, 2000)
+                cur.execute("""
+                    INSERT INTO devs (
+                        token_id, name, owner_address, archetype, corporation, rarity_tier,
+                        personality_seed,
+                        alignment, risk_level, social_style, coding_style, work_ethic,
+                        species, ipfs_hash,
+                        stat_coding, stat_hacking, stat_trading, stat_social, stat_endurance, stat_luck,
+                        balance_nxt, total_earned,
+                        status, next_cycle_at, minted_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s,
+                        %s,
+                        %s, %s, %s, %s, %s,
+                        %s, %s,
+                        %s, %s, %s, %s, %s, %s,
+                        %s, %s,
+                        'active', NOW(), NOW()
+                    )
+                    ON CONFLICT (token_id) DO NOTHING
+                """, (
+                    token_id,
+                    mint.name, owner.lower(),
+                    mint.archetype, mint.corporation, mint.rarity,
+                    mint.personality_seed,
+                    mint.alignment, mint.risk_level, mint.social_style,
+                    mint.coding_style, mint.work_ethic,
+                    mint.species, mint.ipfs_hash,
+                    mint.stat_coding, mint.stat_hacking, mint.stat_trading,
+                    mint.stat_social, mint.stat_endurance, mint.stat_luck,
+                    start_balance, start_balance,
+                ))
+                cur.execute("""
+                    INSERT INTO players (wallet_address, corporation, total_devs_minted)
+                    VALUES (%s, %s, 1)
+                    ON CONFLICT (wallet_address) DO UPDATE SET
+                        total_devs_minted = players.total_devs_minted + 1,
+                        last_active_at = NOW()
+                """, (owner.lower(), mint.corporation))
+                # Fold real-seed NX Souls + engine baseline stats into canonical.
+                update_canonical_post_mint(cur, token_id, mint)
+                log.info(
+                    f"On-demand generated dev #{token_id} (canonical): "
+                    f"{mint.name} ({mint.archetype} @ {mint.corporation})"
+                )
+                return mint.name
+
+            # Fallback: legacy procedural generator. Should not run post-ingest.
+            log.error(
+                f"No dev_canonical_traits row for token {token_id} on on-demand "
+                f"generation. Falling back to legacy procedural generator — "
+                f"INSERT may fail Step 5b CHECK constraints."
+            )
+
+            def check_name(name):
+                row = fetch_one("SELECT name FROM devs WHERE name = %s", (name,))
+                return row is not None
+            data = generate_dev_data(token_id, check_name_exists=check_name)
+            start_balance = STARTING_BALANCE.get(data["rarity"], 2000)
             cur.execute("""
                 INSERT INTO devs (
                     token_id, name, owner_address, archetype, corporation, rarity_tier,
@@ -159,8 +226,6 @@ def _insert_dev_on_demand(token_id, owner):
                 data["stat_social"], data["stat_endurance"], data["stat_luck"],
                 start_balance, start_balance,
             ))
-
-            # Also ensure player record exists
             cur.execute("""
                 INSERT INTO players (wallet_address, corporation, total_devs_minted)
                 VALUES (%s, %s, 1)
@@ -168,9 +233,11 @@ def _insert_dev_on_demand(token_id, owner):
                     total_devs_minted = players.total_devs_minted + 1,
                     last_active_at = NOW()
             """, (owner.lower(), data["corporation"]))
-
-    log.info(f"On-demand generated dev #{token_id}: {data['name']} ({data['archetype']})")
-    return data["name"]
+            log.info(
+                f"On-demand generated dev #{token_id} (LEGACY FALLBACK): "
+                f"{data['name']} ({data['archetype']})"
+            )
+            return data["name"]
 
 
 @router.get("/{token_id}")
@@ -283,9 +350,13 @@ async def get_dev_metadata(token_id: int):
     if not dev:
         raise HTTPException(404, "Token not found")
 
-    # Visual traits (conditional — only include if present)
+    # Visual traits (conditional — only include if present).
+    # Post Phase 2.2 alignment, species is one of {Bunny, Zombie, Robot, Ghost}
+    # and the column is NOT NULL for any minted Dev. The fallback exists for
+    # defensive safety (e.g., a row mid-INSERT before the canonical column
+    # is populated) — Bunny is the dominant species (87% of the bundle).
     attrs = [
-        {"trait_type": "Species", "value": dev.get("species", "Human")},
+        {"trait_type": "Species", "value": dev.get("species") or "Bunny"},
         {"trait_type": "Skin", "value": dev.get("skin", "")},
         {"trait_type": "Clothing", "value": dev.get("clothing", "")},
         {"trait_type": "Vibe", "value": dev.get("vibe", "")},
