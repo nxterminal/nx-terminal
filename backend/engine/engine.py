@@ -1036,15 +1036,18 @@ def pay_salaries(conn):
         RETURNING token_id, owner_address
     """, (effective_salary, effective_salary))
 
+    # Drain the RETURNING cursor BEFORE the next execute() — otherwise
+    # the second UPDATE overwrites cur's result set and fetchall()
+    # below raises "no results to fetch".
+    paid_rows = cur.fetchall()
+    count = len(paid_rows)
+
     # Hourly energy decay: -1 per salary tick. Active devs only —
     # on_mission devs keep energy frozen during the mission.
     cur.execute("""
         UPDATE devs SET energy = GREATEST(0, energy - 1)
         WHERE status = 'active'
     """)
-
-    paid_rows = cur.fetchall()
-    count = len(paid_rows)
 
     # Shadow-write to nxt_ledger (Fase 3B). Each dev gets one row per
     # hour; a re-run within the same hour with the same salary collides
