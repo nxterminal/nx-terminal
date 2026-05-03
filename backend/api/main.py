@@ -497,6 +497,63 @@ def _run_auto_migrations():
                     WHERE type IN ('protocol_created', 'ai_created')
                     AND deleted_at IS NULL
                 """)
+                # ── Phase 2.2: canonical-traits migration ──────────────────
+                # See backend/db/migration_phase22_canonical.sql for the
+                # canonical reference. CHECK constraints on nx.devs are
+                # *intentionally* not added here — they are applied by
+                # backend/scripts/align_existing_devs.py after the alignment
+                # step clears the legacy values (Mentor, Troll, Copy Paste,
+                # Grinder, Steady, Balanced).
+                # NX-PHASE-2.2 Step A: drop legacy column.
+                cur.execute("ALTER TABLE devs DROP COLUMN IF EXISTS devs_burned")
+                # NX-PHASE-2.2 Step B: add 'exhausted' to dev_status_enum.
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'exhausted'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'dev_status_enum'))
+                        THEN ALTER TYPE dev_status_enum ADD VALUE 'exhausted'; END IF;
+                    END $$;
+                """)
+                # NX-PHASE-2.2 Step C: dev_canonical_traits table.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS dev_canonical_traits (
+                        token_id INTEGER PRIMARY KEY,
+                        species          VARCHAR(20) NOT NULL,
+                        archetype        VARCHAR(30) NOT NULL,
+                        corporation      VARCHAR(30) NOT NULL,
+                        rarity           VARCHAR(20) NOT NULL,
+                        alignment        VARCHAR(20) NOT NULL,
+                        risk_level       VARCHAR(20) NOT NULL,
+                        social_style     VARCHAR(20) NOT NULL,
+                        coding_style     VARCHAR(30) NOT NULL,
+                        work_ethic       VARCHAR(20) NOT NULL,
+                        skill_module     VARCHAR(20) NOT NULL,
+                        clothing         VARCHAR(40),
+                        clothing_pattern VARCHAR(40),
+                        eyewear          VARCHAR(30),
+                        neckwear         VARCHAR(30),
+                        spots            VARCHAR(20),
+                        blush            BOOLEAN,
+                        ear_detail       BOOLEAN,
+                        voice_tone       VARCHAR(20) NOT NULL,
+                        quirk            VARCHAR(50) NOT NULL,
+                        lore_faction     VARCHAR(20) NOT NULL,
+                        stat_coding      SMALLINT NOT NULL,
+                        stat_hacking     SMALLINT NOT NULL,
+                        stat_trading     SMALLINT NOT NULL,
+                        stat_social      SMALLINT NOT NULL,
+                        stat_endurance   SMALLINT NOT NULL,
+                        stat_luck        SMALLINT NOT NULL,
+                        bundle_source    VARCHAR(120) NOT NULL DEFAULT 'github:nxterminal/nx-metadata-bundle@main',
+                        ingested_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_corp ON dev_canonical_traits(corporation)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_archetype ON dev_canonical_traits(archetype)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_rarity ON dev_canonical_traits(rarity)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_voice_tone ON dev_canonical_traits(voice_tone)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_lore_faction ON dev_canonical_traits(lore_faction)")
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
