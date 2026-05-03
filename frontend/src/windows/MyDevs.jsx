@@ -1335,12 +1335,18 @@ function VitalBar({ iconType, label, value, max = 100, inverse = false }) {
 }
 
 // ── Stone Button (pixel art 3D, VT323) ──────────────────
-function StoneBtn({ emoji, label, onClick, disabled, title }) {
+// `className` opt-in lets callers layer animations (e.g.
+// `low-energy-warning` / `low-energy-critical` from App.css) on
+// top of the inline-styled button without replacing the inline
+// styling. Disabled state suppresses the className so a
+// disabled-glowing button doesn't visually invite a click.
+function StoneBtn({ emoji, label, onClick, disabled, title, className = '' }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
+      className={disabled ? '' : className}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
         width: '100%',
@@ -1437,7 +1443,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer, onRequest }) {
 // click-outside, opens upward over the button. Each option routes
 // through the parent's doShopAction (passed in as onBuy) so the
 // toast / updated_dev / triggerChanges plumbing is free.
-function FeedDropdown({ dev, busy, onBuy }) {
+function FeedDropdown({ dev, busy, onBuy, className = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -1462,6 +1468,7 @@ function FeedDropdown({ dev, busy, onBuy }) {
       <StoneBtn emoji={'\uD83E\uDD55'} label={'FEED \u25BE'}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
+        className={className}
         title="Feed your dev: Carrot (8), Pizza (20), Burger (40)" />
       {open && (
         <div onClick={e => e.stopPropagation()} style={{
@@ -1735,7 +1742,18 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const energyHigh = energyPct >= 70;
   const onMission = dev.status === 'on_mission';
   const missionCompleted = onMission && mission && new Date(mission.ends_at) <= new Date();
-  const isIdle = !!dev.is_idle;
+  // Source of truth for "this dev needs to be FED": the persisted
+  // `exhausted` status (Phase 2.2 wiring + this PR), not the legacy
+  // read-time `is_idle` flag (removed from the API response).
+  const isExhausted = dev.status === 'exhausted';
+  const energyVal = dev.energy ?? 0;
+  // Two-level glow on COFFEE + FEED. Critical at energy === 0 wins
+  // over warning. Applied via App.css keyframes; suppressed when the
+  // button is disabled (busy / on_mission etc.) inside StoneBtn.
+  const energyClass =
+    energyVal === 0 ? 'low-energy-critical' :
+    energyVal <= 5  ? 'low-energy-warning'  :
+    '';
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1914,8 +1932,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       }}
     >
       <div style={{
-        filter: ((onMission && !missionCompleted) || isIdle) ? 'grayscale(100%)' : 'none',
-        opacity: ((onMission && !missionCompleted) || isIdle) ? 0.7 : 1,
+        filter: ((onMission && !missionCompleted) || isExhausted) ? 'grayscale(100%)' : 'none',
+        opacity: ((onMission && !missionCompleted) || isExhausted) ? 0.7 : 1,
       }}>
       <SpendOverlay spends={spends} />
 
@@ -1962,14 +1980,23 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               {formatNumber(dev.balance_nxt)} $NXT
             </span>
             <span style={{ color: 'var(--text-muted, #888)' }}>{dev.mood || '-'}</span>
-            {isIdle ? (
+            {isExhausted ? (
+              // Violet IDLE badge — single source of truth is the
+              // persisted `status === 'exhausted'`. Same copy as the
+              // legacy `is_idle` badge for visual continuity. Color
+              // matches the `exhausted` branch of the status map below.
               <span style={{
-                color: '#6a8aaa',
+                color: '#9966cc',
                 textTransform: 'uppercase', fontWeight: 'bold',
               }}>💤 IDLE</span>
             ) : (
               <span style={{
-                color: dev.status === 'active' ? 'var(--green-on-grey, #005500)' : dev.status === 'on_mission' ? '#2d8a2d' : dev.status === 'resting' ? 'var(--amber-on-grey, #7a5500)' : 'var(--red-on-grey, #aa0000)',
+                color:
+                  dev.status === 'active'     ? 'var(--green-on-grey, #005500)' :
+                  dev.status === 'on_mission' ? '#2d8a2d' :
+                  dev.status === 'resting'    ? 'var(--amber-on-grey, #7a5500)' :
+                  dev.status === 'exhausted'  ? '#9966cc' :  // also handled by IDLE branch above; explicit for grep-ability
+                                                 'var(--red-on-grey, #aa0000)',
                 textTransform: 'uppercase', fontWeight: 'bold',
               }}>{dev.status || 'active'}</span>
             )}
@@ -2030,8 +2057,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           <StoneBtn emoji={'\u2615'} label="COFFEE"
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
+            className={energyClass}
             title="Coffee: 3 $NXT \u2192 +25 Caffeine" />
-          <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} />
+          <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
           <HackDropdown dev={dev} busy={busy}
             onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer} />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}

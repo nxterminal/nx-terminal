@@ -181,7 +181,9 @@ export default function DevProfile({ devId }) {
 
   const hasStats = dev.stat_coding != null || dev.stat_hacking != null;
   const hasTraits = dev.alignment || dev.risk_level || dev.social_style || dev.coding_style || dev.work_ethic;
-  const isIdle = !!dev.is_idle;
+  // Source of truth post Phase 2.2 wiring: persisted `status === 'exhausted'`
+  // (replacing the read-time `is_idle = energy <= 0` flag the API used to emit).
+  const isIdle = dev.status === 'exhausted';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
