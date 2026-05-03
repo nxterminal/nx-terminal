@@ -1,0 +1,415 @@
+{
+  "bundle_url_template": "https://raw.githubusercontent.com/nxterminal/nx-metadata-bundle/main/{N}.json",
+  "elapsed_seconds": 202.4,
+  "failures_sample": [],
+  "fetched_failed": 0,
+  "fetched_total": 35000,
+  "numeric_min_max": {
+    "Balance ($NXT)": {
+      "max": 0,
+      "min": 0
+    },
+    "Bugs Shipped": {
+      "max": 0,
+      "min": 0
+    },
+    "Coding": {
+      "max": 95,
+      "min": 5
+    },
+    "Coffee Count": {
+      "max": 5,
+      "min": 0
+    },
+    "Day": {
+      "max": 0,
+      "min": 0
+    },
+    "Devs Burned": {
+      "max": 0,
+      "min": 0
+    },
+    "Endurance": {
+      "max": 95,
+      "min": 5
+    },
+    "Energy": {
+      "max": 100,
+      "min": 100
+    },
+    "Hacking": {
+      "max": 95,
+      "min": 5
+    },
+    "Hours Since Sleep": {
+      "max": 48,
+      "min": 0
+    },
+    "Lines of Code": {
+      "max": 500,
+      "min": 0
+    },
+    "Luck": {
+      "max": 95,
+      "min": 5
+    },
+    "Protocols Created": {
+      "max": 0,
+      "min": 0
+    },
+    "Protocols Failed": {
+      "max": 0,
+      "min": 0
+    },
+    "Reputation": {
+      "max": 0,
+      "min": 0
+    },
+    "Social": {
+      "max": 95,
+      "min": 5
+    },
+    "Trading": {
+      "max": 95,
+      "min": 5
+    }
+  },
+  "skill_module_by_corporation": {
+    "Closed AI": {
+      "DEPLOY": 5835
+    },
+    "Misanthropic": {
+      "AUDIT": 5866
+    },
+    "Mistrial Systems": {
+      "INFILTRATE": 5825
+    },
+    "Shallow Mind": {
+      "BRIDGE": 5800
+    },
+    "Y.AI": {
+      "ARBITRAGE": 5856
+    },
+    "Zuck Labs": {
+      "BROADCAST": 5818
+    }
+  },
+  "string_value_counts": {
+    "Alignment": {
+      "Chaotic Evil": 3890,
+      "Chaotic Good": 3799,
+      "Chaotic Neutral": 3869,
+      "Lawful Evil": 3910,
+      "Lawful Good": 3881,
+      "Lawful Neutral": 3919,
+      "Neutral Evil": 3989,
+      "Neutral Good": 3861,
+      "True Neutral": 3882
+    },
+    "Archetype": {
+      "10X Dev": 3526,
+      "Degen": 5213,
+      "Fed": 4200,
+      "Grinder": 5314,
+      "Hacktivist": 4189,
+      "Influencer": 4103,
+      "Lurker": 4208,
+      "Script Kiddie": 4247
+    },
+    "Biggest Win": {
+      "None yet": 35000
+    },
+    "Blush": {
+      "No": 21058,
+      "Yes": 13942
+    },
+    "Clothing": {
+      "Bandana": 1276,
+      "Coat": 1275,
+      "Costume": 1267,
+      "Hoodie": 1233,
+      "Jacket": 1379,
+      "None": 20939,
+      "Scarf": 1221,
+      "Shirt": 1241,
+      "Sweater": 1321,
+      "Sweater V2": 1316,
+      "T-Shirt": 1213,
+      "Vest": 1319
+    },
+    "Clothing Pattern": {
+      "Checker": 1016,
+      "Chevron": 1076,
+      "Color Block": 1297,
+      "Diagonal Fade": 939,
+      "Gradient H": 911,
+      "Gradient V": 1054,
+      "H Stripes": 1681,
+      "None": 20939,
+      "Polka Dots": 817,
+      "Solid": 2165,
+      "Two Tone": 1902,
+      "V Stripes": 1203
+    },
+    "Coding Style": {
+      "Chaotic": 5749,
+      "Methodical": 5844,
+      "Minimalist": 5865,
+      "Over-Engineer": 5954,
+      "Perfectionist": 5852,
+      "Speedrun": 5736
+    },
+    "Corporation": {
+      "Closed AI": 5835,
+      "Misanthropic": 5866,
+      "Mistrial Systems": 5825,
+      "Shallow Mind": 5800,
+      "Y.AI": 5856,
+      "Zuck Labs": 5818
+    },
+    "Ear Detail": {
+      "No": 17526,
+      "Yes": 17474
+    },
+    "Eyewear": {
+      "Eye Patch": 2077,
+      "Glasses": 2097,
+      "Half-Rim": 2046,
+      "None": 24616,
+      "Shades": 2077,
+      "Visor": 2087
+    },
+    "Location": {
+      "Board Room": 3414,
+      "Dark Web": 3508,
+      "Governance Hall": 3596,
+      "Hackathon Hall": 3501,
+      "Hype Haus": 3486,
+      "Open Source Garden": 3515,
+      "Server Farm": 3549,
+      "The Graveyard": 3397,
+      "The Pit": 3450,
+      "VC Tower": 3584
+    },
+    "Mood": {
+      "Angry": 7130,
+      "Depressed": 7042,
+      "Excited": 6867,
+      "Focused": 6860,
+      "Neutral": 7101
+    },
+    "Neckwear": {
+      "Bow Tie": 2058,
+      "None": 30903,
+      "Tie": 2039
+    },
+    "Rarity": {
+      "Common": 15606,
+      "Legendary": 3179,
+      "Mythic": 1068,
+      "Rare": 5278,
+      "Uncommon": 9869
+    },
+    "Risk Level": {
+      "Aggressive": 8830,
+      "Conservative": 8685,
+      "Moderate": 8626,
+      "Reckless": 8859
+    },
+    "Skill Module": {
+      "ARBITRAGE": 5856,
+      "AUDIT": 5866,
+      "BRIDGE": 5800,
+      "BROADCAST": 5818,
+      "DEPLOY": 5835,
+      "INFILTRATE": 5825
+    },
+    "Social Style": {
+      "Influencer": 6946,
+      "Loud": 7018,
+      "Quiet": 7068,
+      "Silent": 7140,
+      "Social": 6828
+    },
+    "Species": {
+      "Bunny": 30425,
+      "Ghost": 1408,
+      "Robot": 1410,
+      "Zombie": 1757
+    },
+    "Spots": {
+      "Heavy": 5619,
+      "Light": 8524,
+      "Medium": 7768,
+      "None": 13089
+    },
+    "Status": {
+      "Active": 35000
+    },
+    "Work Ethic": {
+      "Casual": 8763,
+      "Dedicated": 8775,
+      "Lazy": 8842,
+      "Obsessed": 8620
+    }
+  },
+  "string_value_sets": {
+    "Alignment": [
+      "Chaotic Evil",
+      "Chaotic Good",
+      "Chaotic Neutral",
+      "Lawful Evil",
+      "Lawful Good",
+      "Lawful Neutral",
+      "Neutral Evil",
+      "Neutral Good",
+      "True Neutral"
+    ],
+    "Archetype": [
+      "10X Dev",
+      "Degen",
+      "Fed",
+      "Grinder",
+      "Hacktivist",
+      "Influencer",
+      "Lurker",
+      "Script Kiddie"
+    ],
+    "Biggest Win": [
+      "None yet"
+    ],
+    "Blush": [
+      "No",
+      "Yes"
+    ],
+    "Clothing": [
+      "Bandana",
+      "Coat",
+      "Costume",
+      "Hoodie",
+      "Jacket",
+      "None",
+      "Scarf",
+      "Shirt",
+      "Sweater",
+      "Sweater V2",
+      "T-Shirt",
+      "Vest"
+    ],
+    "Clothing Pattern": [
+      "Checker",
+      "Chevron",
+      "Color Block",
+      "Diagonal Fade",
+      "Gradient H",
+      "Gradient V",
+      "H Stripes",
+      "None",
+      "Polka Dots",
+      "Solid",
+      "Two Tone",
+      "V Stripes"
+    ],
+    "Coding Style": [
+      "Chaotic",
+      "Methodical",
+      "Minimalist",
+      "Over-Engineer",
+      "Perfectionist",
+      "Speedrun"
+    ],
+    "Corporation": [
+      "Closed AI",
+      "Misanthropic",
+      "Mistrial Systems",
+      "Shallow Mind",
+      "Y.AI",
+      "Zuck Labs"
+    ],
+    "Ear Detail": [
+      "No",
+      "Yes"
+    ],
+    "Eyewear": [
+      "Eye Patch",
+      "Glasses",
+      "Half-Rim",
+      "None",
+      "Shades",
+      "Visor"
+    ],
+    "Location": [
+      "Board Room",
+      "Dark Web",
+      "Governance Hall",
+      "Hackathon Hall",
+      "Hype Haus",
+      "Open Source Garden",
+      "Server Farm",
+      "The Graveyard",
+      "The Pit",
+      "VC Tower"
+    ],
+    "Mood": [
+      "Angry",
+      "Depressed",
+      "Excited",
+      "Focused",
+      "Neutral"
+    ],
+    "Neckwear": [
+      "Bow Tie",
+      "None",
+      "Tie"
+    ],
+    "Rarity": [
+      "Common",
+      "Legendary",
+      "Mythic",
+      "Rare",
+      "Uncommon"
+    ],
+    "Risk Level": [
+      "Aggressive",
+      "Conservative",
+      "Moderate",
+      "Reckless"
+    ],
+    "Skill Module": [
+      "ARBITRAGE",
+      "AUDIT",
+      "BRIDGE",
+      "BROADCAST",
+      "DEPLOY",
+      "INFILTRATE"
+    ],
+    "Social Style": [
+      "Influencer",
+      "Loud",
+      "Quiet",
+      "Silent",
+      "Social"
+    ],
+    "Species": [
+      "Bunny",
+      "Ghost",
+      "Robot",
+      "Zombie"
+    ],
+    "Spots": [
+      "Heavy",
+      "Light",
+      "Medium",
+      "None"
+    ],
+    "Status": [
+      "Active"
+    ],
+    "Work Ethic": [
+      "Casual",
+      "Dedicated",
+      "Lazy",
+      "Obsessed"
+    ]
+  }
+}
