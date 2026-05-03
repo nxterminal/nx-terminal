@@ -64,6 +64,27 @@ def shop_energy_boost(dev: dict, boost: int, max_energy: int = 100) -> dict:
     return out
 
 
+def shop_caffeine_boost(dev: dict, value: int, energy_bonus: int = 0,
+                        max_energy: int = 100) -> dict:
+    """Apply the shop's caffeine_boost handler with optional energy_bonus:
+
+    1) UPDATE devs SET caffeine = LEAST(100, caffeine + value),
+                       coffee_count = coffee_count + 1 WHERE token_id=%s
+    2) (only if energy_bonus > 0)
+         UPDATE devs SET energy = LEAST(energy + energy_bonus, max_energy) ...
+         UPDATE devs SET status = 'active'
+           WHERE status = 'exhausted' AND energy > 0
+    """
+    out = dict(dev)
+    out["caffeine"] = min(100, out.get("caffeine", 0) + value)
+    out["coffee_count"] = out.get("coffee_count", 0) + 1
+    if energy_bonus > 0:
+        out["energy"] = min(out["energy"] + energy_bonus, max_energy)
+        if out["status"] == "exhausted" and out["energy"] > 0:
+            out["status"] = "active"
+    return out
+
+
 # ── pay_salaries transition tests ────────────────────────────────────────
 
 
@@ -107,17 +128,29 @@ def test_pay_salaries_decays_active_dev_above_zero_without_status_flip():
 
 def test_food_recovery_flips_exhausted_to_active():
     """Pre: exhausted dev at energy=0. Pizza (+10) restores energy
-    and flips status back to active in the same transaction.
-
-    NOTE: the brief named this 'coffee_recovery' but in this codebase
-    the COFFEE shop item maps to `caffeine_boost`, NOT `energy_boost`,
-    so it doesn't actually restore energy or trigger recovery. The
-    energy-restoring items are FEED items: carrot, pizza, burger.
-    See PR description §2 for full mapping."""
+    and flips status back to active in the same transaction."""
     before = {"token_id": 29572, "status": "exhausted", "energy": 0}
     after = shop_energy_boost(before, boost=10)  # pizza
     assert after["energy"] == 10
     assert after["status"] == "active"
+
+
+def test_coffee_recovery_flips_exhausted_to_active():
+    """Pre: exhausted dev at energy=0. Coffee (+25 caffeine, +3 energy)
+    restores BOTH caffeine and energy; the energy_bonus path then flips
+    status to active in the same transaction. Mirrors the food recovery
+    test for the caffeine_boost-with-energy_bonus code path.
+
+    Coffee is the cheapest "wake up" option (3 NXT) but its energy
+    magnitude (3) is intentionally below carrot's 5 — food items stay
+    the more efficient $NXT/energy purchase. See shop.py:30-44."""
+    before = {"token_id": 29572, "status": "exhausted", "energy": 0,
+              "caffeine": 50, "coffee_count": 0}
+    after = shop_caffeine_boost(before, value=25, energy_bonus=3)
+    assert after["caffeine"] == 75       # +25, capped at 100
+    assert after["coffee_count"] == 1    # bumped
+    assert after["energy"] == 3          # +3 energy_bonus
+    assert after["status"] == "active"   # flipped from exhausted
 
 
 def test_recovery_idempotent_for_already_active():

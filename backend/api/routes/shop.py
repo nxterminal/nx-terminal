@@ -29,9 +29,17 @@ SHOP_ITEMS = {
     # ── Food & Drinks ───────────────────────────────────────
     "coffee": {
         "name": "Coffee",
-        "description": "Hot coffee boosts caffeine by 25",
+        # NX-PHASE-2.2 UX: coffee carries BOTH caffeine_boost (existing
+        # behavior, +25 caffeine) AND a small energy_bonus that triggers
+        # the exhausted→active recovery path. This keeps the COFFEE
+        # button's low-energy glow honest — clicking it on an exhausted
+        # Dev now actually wakes them up. Magnitude (3) is chosen below
+        # carrot's 5 so food items stay meaningful for refilling
+        # energy proper; coffee is the cheapest "wake up" option but
+        # not the most efficient $NXT/energy purchase.
+        "description": "Hot coffee: +25 caffeine, +3 energy",
         "cost_nxt": 3,
-        "effect": {"type": "caffeine_boost", "value": 25},
+        "effect": {"type": "caffeine_boost", "value": 25, "energy_bonus": 3},
     },
     "carrot": {
         "name": "Carrot",
@@ -351,6 +359,28 @@ async def buy_item(req: PurchaseRequest):
                     (effect["value"], req.target_dev_id)
                 )
                 changes.append({"stat": "caffeine", "amount": effect["value"], "type": "gain"})
+                # Optional secondary effect: items can opt-in to a small
+                # energy bump alongside the caffeine. Used by `coffee` so
+                # the COFFEE button's low-energy glow translates to actual
+                # recovery from exhausted (NX-PHASE-2.2 UX consistency).
+                # The recovery UPDATE pattern mirrors energy_boost — order
+                # matters, the `energy > 0` guard reads post-increment
+                # energy, on_mission devs are protected by the explicit
+                # `status = 'exhausted'` clause.
+                energy_bonus = effect.get("energy_bonus", 0)
+                if energy_bonus > 0:
+                    cur.execute(
+                        "UPDATE devs SET energy = LEAST(energy + %s, max_energy) WHERE token_id = %s",
+                        (energy_bonus, req.target_dev_id)
+                    )
+                    cur.execute(
+                        "UPDATE devs SET status = 'active'::dev_status_enum "
+                        "WHERE token_id = %s "
+                        "  AND status = 'exhausted'::dev_status_enum "
+                        "  AND energy > 0",
+                        (req.target_dev_id,)
+                    )
+                    changes.append({"stat": "energy", "amount": energy_bonus, "type": "gain"})
             elif effect["type"] == "mood_reset":
                 cur.execute(
                     "UPDATE devs SET mood = %s WHERE token_id = %s",

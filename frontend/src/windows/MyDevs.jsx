@@ -2058,7 +2058,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             onClick={(e) => doShopAction(e, 'coffee', 'Coffee')}
             disabled={busy}
             className={energyClass}
-            title="Coffee: 3 $NXT \u2192 +25 Caffeine" />
+            title="Coffee: 3 $NXT \u2192 +25 Caffeine, +3 Energy" />
           <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
           <HackDropdown dev={dev} busy={busy}
             onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer} />
