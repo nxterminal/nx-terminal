@@ -1,3 +1,8 @@
+from backend.services.canonical.mint import (
+    CanonicalMintData,
+    build_canonical_mint_data,
+    update_canonical_post_mint,
+)
 from backend.services.canonical.translation import (
     ARCHETYPE_FROM_BUNDLE,
     ARCHETYPE_TO_PUBLIC,
@@ -25,11 +30,14 @@ __all__ = [
     "CANONICAL_SOCIAL_STYLE",
     "CANONICAL_SPECIES",
     "CANONICAL_WORK_ETHIC",
+    "CanonicalMintData",
     "CORPORATION_FROM_BUNDLE",
     "CORPORATION_TO_PUBLIC",
     "RARITY_FROM_BUNDLE",
     "RARITY_TO_PUBLIC",
     "TRANSLATED_AXES",
+    "build_canonical_mint_data",
     "from_bundle_to_db",
     "to_public",
+    "update_canonical_post_mint",
 ]

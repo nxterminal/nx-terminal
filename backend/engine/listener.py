@@ -1,9 +1,21 @@
 """
 NX TERMINAL — Blockchain Listener
-Watches DevMinted events on MegaETH, generates dev data
-procedurally, and inserts new devs into the database automatically.
+Watches DevMinted events on MegaETH and inserts new devs into the
+database automatically.
+
+Identity (species, archetype, corp, rarity, alignment, risk_level,
+social_style, coding_style, work_ethic) comes from
+`nx.dev_canonical_traits` — populated in Phase 2.2 Step 4 from the
+canonical bundle on GitHub. The listener translates bundle-format
+values into DB internal format and writes them to `nx.devs`. Engine-
+side fresh values (personality_seed + baseline stats) are generated
+deterministically from token_id and then written back into
+`dev_canonical_traits` (replacing the synthetic-seed-derived NX Souls
+axes that the unminted-Dev ingest produced).
 
 Runs alongside the engine in the nx-engine service.
+
+NX-PHASE-2.2 Step 6: see backend/services/canonical/mint.py.
 """
 import os
 import sys
@@ -16,6 +28,26 @@ import psycopg2
 import psycopg2.extras
 from datetime import datetime, timezone
 from urllib.parse import urlparse
+
+# Phase 2.2 Step 6 — canonical-aware mint path. Falls back to the legacy
+# procedural generator below if `dev_canonical_traits` has no row for a
+# given token (which should never happen post-ingest).
+try:
+    from backend.services.canonical.mint import (
+        build_canonical_mint_data,
+        update_canonical_post_mint,
+    )
+except Exception:  # pragma: no cover - defensive: PYTHONPATH issues
+    # Re-add the project root and try once more so a relative-PYTHONPATH
+    # subshell doesn't silently disable canonical mint.
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _root = os.path.abspath(os.path.join(_here, "..", ".."))
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    from backend.services.canonical.mint import (  # type: ignore
+        build_canonical_mint_data,
+        update_canonical_post_mint,
+    )
 
 # ═══════════════════════════════════════════════════════════
 # CONFIG
@@ -165,11 +197,66 @@ def _weighted_choice(rng, weights):
 
 
 def generate_dev_data(token_id, cur):
-    """Generate all dev traits procedurally using tokenId as deterministic seed.
-    No HTTP calls — everything is derived from the tokenId."""
+    """Build the dict the legacy `insert_dev` expects, with identity
+    sourced from `nx.dev_canonical_traits` and engine-fresh fields
+    (name, stats, personality_seed) generated deterministically.
+
+    Returns None if the canonical row is missing — the caller falls
+    back to `_generate_dev_data_legacy` (preserved below for safety;
+    should not run in practice post-ingest).
+
+    NX-PHASE-2.2 Step 6.
+    """
+    mint = build_canonical_mint_data(cur, token_id)
+    if mint is None:
+        log.error(
+            f"No dev_canonical_traits row for token {token_id} — falling back "
+            f"to legacy procedural generator. Bundle ingest may be incomplete."
+        )
+        return _generate_dev_data_legacy(token_id, cur)
+    return {
+        "name": mint.name,
+        "archetype": mint.archetype,
+        "corporation": mint.corporation,
+        "rarity": mint.rarity,
+        "species": mint.species,
+        "stat_coding": mint.stat_coding,
+        "stat_hacking": mint.stat_hacking,
+        "stat_trading": mint.stat_trading,
+        "stat_social": mint.stat_social,
+        "stat_endurance": mint.stat_endurance,
+        "stat_luck": mint.stat_luck,
+        "alignment": mint.alignment,
+        "risk_level": mint.risk_level,
+        "social_style": mint.social_style,
+        "coding_style": mint.coding_style,
+        "work_ethic": mint.work_ethic,
+        "ipfs_hash": mint.ipfs_hash,
+        "personality_seed": mint.personality_seed,
+        # Carried through so run_listener() can update canonical post-mint
+        # without re-deriving. Not consumed by insert_dev() — it ignores
+        # unknown keys (the INSERT only references the fields it names).
+        "_canonical_voice_tone": mint.voice_tone,
+        "_canonical_quirk": mint.quirk,
+        "_canonical_lore_faction": mint.lore_faction,
+    }
+
+
+def _generate_dev_data_legacy(token_id, cur):
+    """Legacy fully-procedural generator. Kept as a safety fallback for
+    the case where `dev_canonical_traits` is empty or missing a row.
+    Pre-Phase-2.2 behaviour. Should not run in production after the
+    Step 4 ingest completes.
+
+    NX-PHASE-2.2: deprecated; the canonical-aware path above is the
+    primary code path. This function still uses the LEGACY pools below
+    (Wolf/Cat/Owl species, Mentor/Troll social, Speed Runner coding,
+    Grinder/Steady/Balanced work ethic) — those values would NOT pass
+    the Step 5b CHECK constraints on `nx.devs` and the INSERT would
+    fail. The fallback is therefore loud-on-failure, not silent.
+    """
     rng = random.Random(token_id)
 
-    # --- Name (deterministic, with uniqueness check) ---
     prefix = rng.choice(DEV_NAME_PREFIXES)
     suffix = rng.choice(DEV_NAME_SUFFIXES)
     name = f"{prefix}-{suffix}"
@@ -178,13 +265,11 @@ def generate_dev_data(token_id, cur):
     if cur.fetchone():
         name = f"{prefix}-{suffix}-{token_id}"
 
-    # --- Core traits (weighted random) ---
-    archetype = _weighted_choice(rng, ARCHETYPE_WEIGHTS)   # UPPERCASE
-    corporation = rng.choice(CORPORATION_POOL)              # UPPERCASE
-    rarity = _weighted_choice(rng, RARITY_WEIGHTS)          # lowercase (matches DB enum)
+    archetype = _weighted_choice(rng, ARCHETYPE_WEIGHTS)
+    corporation = rng.choice(CORPORATION_POOL)
+    rarity = _weighted_choice(rng, RARITY_WEIGHTS)
     species = rng.choice(SPECIES_POOL)
 
-    # --- Stats (15-95) ---
     stat_coding = rng.randint(15, 95)
     stat_hacking = rng.randint(15, 95)
     stat_trading = rng.randint(15, 95)
@@ -192,17 +277,13 @@ def generate_dev_data(token_id, cur):
     stat_endurance = rng.randint(15, 95)
     stat_luck = rng.randint(15, 95)
 
-    # --- Personality traits ---
     alignment = rng.choice(ALIGNMENT_POOL)
     risk_level = rng.choice(RISK_LEVEL_POOL)
     social_style = rng.choice(SOCIAL_STYLE_POOL)
     coding_style = rng.choice(CODING_STYLE_POOL)
     work_ethic = rng.choice(WORK_ETHIC_POOL)
 
-    # --- IPFS hash based on tokenId ---
     ipfs_hash = f"{IMAGE_CID}/{token_id}.gif"
-
-    # --- personality_seed (safe range for PostgreSQL INT) ---
     personality_seed = rng.randint(1, 2147483647)
 
     return {
@@ -462,12 +543,47 @@ def run_listener():
                             log.info(f"Dev #{token_id} already exists, skipping")
                             continue
 
-                        # Generate and insert dev procedurally (no IPFS dependency)
+                        # Mint flow (Phase 2.2 Step 6): identity from canonical,
+                        # engine state fresh, NX Souls + baseline stats written
+                        # back into canonical post-insert.
                         try:
                             dev_data = generate_dev_data(token_id, cur)
                             ensure_player(cur, owner, dev_data["corporation"])
                             insert_dev(cur, token_id, owner, dev_data)
                             insert_action_mint(cur, token_id, dev_data["name"], dev_data["archetype"])
+
+                            # If we took the canonical path, fold the real-seed
+                            # NX Souls + engine baseline stats back into
+                            # dev_canonical_traits so the metadata endpoint
+                            # serves consistent values across both tables.
+                            if "_canonical_voice_tone" in dev_data:
+                                from backend.services.canonical.mint import CanonicalMintData
+                                update_canonical_post_mint(
+                                    cur, token_id,
+                                    CanonicalMintData(
+                                        name=dev_data["name"],
+                                        archetype=dev_data["archetype"],
+                                        corporation=dev_data["corporation"],
+                                        rarity=dev_data["rarity"],
+                                        species=dev_data["species"],
+                                        alignment=dev_data["alignment"],
+                                        risk_level=dev_data["risk_level"],
+                                        social_style=dev_data["social_style"],
+                                        coding_style=dev_data["coding_style"],
+                                        work_ethic=dev_data["work_ethic"],
+                                        personality_seed=dev_data["personality_seed"],
+                                        stat_coding=dev_data["stat_coding"],
+                                        stat_hacking=dev_data["stat_hacking"],
+                                        stat_trading=dev_data["stat_trading"],
+                                        stat_social=dev_data["stat_social"],
+                                        stat_endurance=dev_data["stat_endurance"],
+                                        stat_luck=dev_data["stat_luck"],
+                                        ipfs_hash=dev_data["ipfs_hash"],
+                                        voice_tone=dev_data["_canonical_voice_tone"],
+                                        quirk=dev_data["_canonical_quirk"],
+                                        lore_faction=dev_data["_canonical_lore_faction"],
+                                    ),
+                                )
 
                             # Post-mint email to owner
                             try:
