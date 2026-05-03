@@ -125,3 +125,21 @@ def to_public(db_value: str, axis: str) -> str:
     if axis == "rarity":
         return RARITY_TO_PUBLIC[db_value]
     return db_value
+
+
+def quirk_to_public(quirk_internal: str | None) -> str:
+    """Translate snake_case NX-Souls quirk to Title Case for public metadata.
+
+    Examples:
+        "speaks_lowercase"        → "Speaks Lowercase"
+        "always_says_one_more_thing" → "Always Says One More Thing"
+        ""                         → ""
+        None                       → ""
+
+    Mechanical: split on `_`, `str.capitalize()` each token, join with spaces.
+    No lookup table — the quirk pool grows by appending and we don't want
+    to require a translation-map update for each new value.
+    """
+    if not quirk_internal:
+        return ""
+    return " ".join(word.capitalize() for word in quirk_internal.split("_"))

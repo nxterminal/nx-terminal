@@ -1,3 +1,7 @@
+from backend.services.canonical.metadata import (
+    compose_metadata,
+    emit_optional_visual,
+)
 from backend.services.canonical.mint import (
     CanonicalMintData,
     build_canonical_mint_data,
@@ -18,6 +22,7 @@ from backend.services.canonical.translation import (
     RARITY_TO_PUBLIC,
     TRANSLATED_AXES,
     from_bundle_to_db,
+    quirk_to_public,
     to_public,
 )
 
@@ -37,7 +42,10 @@ __all__ = [
     "RARITY_TO_PUBLIC",
     "TRANSLATED_AXES",
     "build_canonical_mint_data",
+    "compose_metadata",
+    "emit_optional_visual",
     "from_bundle_to_db",
+    "quirk_to_public",
     "to_public",
     "update_canonical_post_mint",
 ]
