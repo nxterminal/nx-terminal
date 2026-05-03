@@ -163,13 +163,24 @@ def test_visual_emitted_when_python_None_or_empty():
     assert "Spots" not in by
 
 
-def test_visual_bool_renders_yes_no():
-    """blush / ear_detail come back as Python bool from the join;
-    they render as 'Yes' / 'No' (mirroring the bundle)."""
+def test_visual_bool_true_renders_yes():
+    """blush / ear_detail come back as Python bool from the join.
+    True → emit `"Yes"`."""
     by = _attrs_by_type(compose_metadata(_row_29572(blush=True), 29572))
     assert by["Blush"]["value"] == "Yes"
+    by = _attrs_by_type(compose_metadata(_row_29572(ear_detail=True), 29572))
+    assert by["Ear Detail"]["value"] == "Yes"
+
+
+def test_visual_bool_false_omitted():
+    """False is treated like the string sentinel `"None"` and skipped
+    entirely — matches CryptoPunks-style "Earring" only appearing on
+    Punks that have one. Prevents `Blush: No` polluting OpenSea
+    filters on ~88% of Devs."""
+    by = _attrs_by_type(compose_metadata(_row_29572(blush=False), 29572))
+    assert "Blush" not in by
     by = _attrs_by_type(compose_metadata(_row_29572(ear_detail=False), 29572))
-    assert by["Ear Detail"]["value"] == "No"
+    assert "Ear Detail" not in by
 
 
 # ── 4. Removed fields not present ─────────────────────────────────────────
@@ -322,12 +333,12 @@ def test_token_29572_full_snapshot():
     assert by["Voice Tone"]["value"]   == "Aggressive"
     assert by["Quirk"]["value"]        == "Speaks Lowercase"
     assert by["Lore Faction"]["value"] == "Mainstream"
-    # Visual (only present when ≠ "None")
+    # Visual (only present when value is a positive signal)
     assert by["Clothing"]["value"]         == "Sweater V2"
     assert by["Clothing Pattern"]["value"] == "H Stripes"
     assert by["Spots"]["value"]            == "Heavy"
-    assert by["Blush"]["value"]            == "No"   # bool False
-    assert by["Ear Detail"]["value"]       == "Yes"  # bool True
+    assert "Blush" not in by                         # bool False → omitted
+    assert by["Ear Detail"]["value"]       == "Yes"  # bool True → emitted
     assert "Eyewear" not in by                       # was "None"
     assert "Neckwear" not in by                      # was "None"
     # Stats
@@ -374,6 +385,13 @@ def test_emit_optional_visual_emits_real_string():
     }
 
 
-def test_emit_optional_visual_renders_bool_as_yes_no():
+def test_emit_optional_visual_bool_true_renders_yes():
     assert _emit_optional_visual("Blush", True) == {"trait_type": "Blush", "value": "Yes"}
-    assert _emit_optional_visual("Blush", False) == {"trait_type": "Blush", "value": "No"}
+    assert _emit_optional_visual("Ear Detail", True) == {"trait_type": "Ear Detail", "value": "Yes"}
+
+
+def test_emit_optional_visual_bool_false_skipped():
+    """False is treated identically to the "None" sentinel — absence
+    of a positive trait is not itself a trait."""
+    assert _emit_optional_visual("Blush", False) is None
+    assert _emit_optional_visual("Ear Detail", False) is None

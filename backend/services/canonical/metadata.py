@@ -37,20 +37,30 @@ log = logging.getLogger("nx_api")
 
 
 def emit_optional_visual(trait_type: str, raw_value: Any) -> dict | None:
-    """Return a `{trait_type, value}` dict iff `raw_value` is a real value.
+    """Return a `{trait_type, value}` dict iff `raw_value` is a real,
+    *positive* value.
 
-    Bool columns (blush, ear_detail) render as "Yes" / "No" — including
-    False, which is a real signal ("this Dev has no blush"), not absent.
+    Bool columns (blush, ear_detail) render as "Yes" only when True —
+    False is treated identically to the string sentinel "None" and
+    skipped entirely. This matches the standard NFT pattern (e.g.,
+    CryptoPunks "Earring" only appears on Punks that have one) and
+    keeps OpenSea filters from being polluted by the absence of an
+    attribute on ~88% of Devs.
+
     The bool branch must come before the truthiness check; otherwise
-    `not raw_value` would skip False.
+    `not raw_value` would skip `False` for the wrong reason and rely
+    on a downstream return.
 
     Skip rules (return None):
       - Python None
       - empty string
       - the literal string "None" (the bundle's sentinel for absent visuals)
+      - bool False
     """
     if isinstance(raw_value, bool):
-        return {"trait_type": trait_type, "value": "Yes" if raw_value else "No"}
+        if not raw_value:
+            return None
+        return {"trait_type": trait_type, "value": "Yes"}
     if not raw_value:
         return None
     if isinstance(raw_value, str) and raw_value == "None":
