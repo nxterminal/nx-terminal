@@ -1452,3 +1452,30 @@
 .corp-feed-line {
   padding: 1px 0;
 }
+
+/* ──────────────────────────────────────────────────────────
+ * Low-energy button feedback (Phase 2.2 exhausted-state UX).
+ * Mirrors the streakGlow keyframe pattern but with box-shadow
+ * for a button glow rather than text-shadow. Two intensities:
+ *   - .low-energy-warning  → energy <= 5 (subtle violet)
+ *   - .low-energy-critical → energy === 0 (urgent red pulse)
+ * Applied conditionally to COFFEE and FEED buttons in MyDevs.jsx.
+ * ────────────────────────────────────────────────────────── */
+
+@keyframes lowEnergyCritical {
+  0%, 100% { box-shadow: 0 0 4px rgba(220, 50, 50, 0.4); }
+  50%      { box-shadow: 0 0 14px rgba(220, 50, 50, 0.9); }
+}
+
+@keyframes lowEnergyWarning {
+  0%, 100% { box-shadow: 0 0 3px rgba(150, 100, 220, 0.3); }
+  50%      { box-shadow: 0 0 8px rgba(150, 100, 220, 0.6); }
+}
+
+.low-energy-critical {
+  animation: lowEnergyCritical 1.2s ease-in-out infinite;
+}
+
+.low-energy-warning {
+  animation: lowEnergyWarning 2.5s ease-in-out infinite;
+}

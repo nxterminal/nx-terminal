@@ -1049,6 +1049,20 @@ def pay_salaries(conn):
         WHERE status = 'active'
     """)
 
+    # Wiring of the `exhausted` enum value (added by Phase 2.2 but
+    # previously unused). When energy hits 0 on this tick, demote the
+    # dev to `exhausted` so the engine's fetch_due_devs (status='active'
+    # AND energy > 0) skips them on subsequent ticks until they're FED
+    # via the shop. Idempotent: a re-run within the same hour is a no-op
+    # because already-exhausted devs are filtered out by the WHERE
+    # clause's `status = 'active'`. Mission devs are protected by the
+    # same clause — their status stays `on_mission` regardless of energy.
+    cur.execute("""
+        UPDATE devs SET status = 'exhausted'::dev_status_enum
+        WHERE status = 'active'::dev_status_enum
+          AND energy <= 0
+    """)
+
     # Shadow-write to nxt_ledger (Fase 3B). Each dev gets one row per
     # hour; a re-run within the same hour with the same salary collides
     # on idempotency_key and is a silent no-op. effective_salary is

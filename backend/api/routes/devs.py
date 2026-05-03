@@ -75,8 +75,6 @@ async def list_devs(
         " LIMIT %s OFFSET %s",
         params
     )
-    for r in rows:
-        r["is_idle"] = (r.get("energy") or 0) <= 0
     return rows
 
 
@@ -246,7 +244,6 @@ async def get_dev(token_id: int, owner: Optional[str] = None):
     Pass ?owner=0x... to skip the on-chain ownerOf check (frontend already verified)."""
     dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
     if dev:
-        dev["is_idle"] = (dev.get("energy") or 0) <= 0
         return dev
 
     # Not in DB — check if it exists on-chain
@@ -268,7 +265,6 @@ async def get_dev(token_id: int, owner: Optional[str] = None):
     dev = fetch_one("SELECT * FROM devs WHERE token_id = %s", (token_id,))
     if not dev:
         raise HTTPException(503, "Dev generation in progress, try again shortly")
-    dev["is_idle"] = (dev.get("energy") or 0) <= 0
     return dev
 
 

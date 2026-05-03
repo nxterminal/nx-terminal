@@ -185,6 +185,19 @@ export function DevsProvider({ children }) {
     return () => window.removeEventListener('nx-devs-refresh', handler);
   }, [refreshDevs]);
 
+  // Background polling — Phase 2.2 wiring of `exhausted` status means
+  // a Dev can transition state without any user action (energy decay
+  // in pay_salaries, ~hourly). 60s polls keep the UI's low-energy glow
+  // and IDLE badge in sync without a manual refresh. Stops when wallet
+  // disconnects (no `address`) so we don't spam the API on the public
+  // landing page. The 5-min STALE_TIME check inside the fetch effect
+  // is bypassed because refreshDevs() bumps refreshKey unconditionally.
+  useEffect(() => {
+    if (!address) return;
+    const interval = setInterval(() => { refreshDevs(); }, 60_000);
+    return () => clearInterval(interval);
+  }, [address, refreshDevs]);
+
   const updateDev = useCallback((fresh) => {
     setDevs(prev => prev.map(d => d.token_id === fresh.token_id ? fresh : d));
   }, []);
