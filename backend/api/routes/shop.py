@@ -346,9 +346,9 @@ async def buy_item(req: PurchaseRequest):
                 # already active or in another state (on_mission protected
                 # by the explicit `status = 'exhausted'` WHERE clause).
                 cur.execute(
-                    "UPDATE devs SET status = 'active'::dev_status_enum "
+                    "UPDATE devs SET status = 'active'
                     "WHERE token_id = %s "
-                    "  AND status = 'exhausted'::dev_status_enum "
+                    "  AND status = 'exhausted'
                     "  AND energy > 0",
                     (req.target_dev_id,)
                 )
@@ -374,9 +374,9 @@ async def buy_item(req: PurchaseRequest):
                         (energy_bonus, req.target_dev_id)
                     )
                     cur.execute(
-                        "UPDATE devs SET status = 'active'::dev_status_enum "
+                        "UPDATE devs SET status = 'active'
                         "WHERE token_id = %s "
-                        "  AND status = 'exhausted'::dev_status_enum "
+                        "  AND status = 'exhausted'
                         "  AND energy > 0",
                         (req.target_dev_id,)
                     )
