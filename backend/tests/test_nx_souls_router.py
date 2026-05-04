@@ -262,6 +262,55 @@ def test_climax_falls_back_to_haiku_when_sonnet_429(monkeypatch):
     assert any("haiku" in m.lower() for m in seen_models)
 
 
+# ─── Dynamic max_tokens by climax flag (Phase 2b) ────────────────────────
+
+
+def test_casual_turn_sends_200_max_tokens(monkeypatch):
+    """Phase 2a's prompt-level length discipline gets the model to
+    deflect essay requests verbally. Phase 2b enforces the cap at the
+    API boundary too: a non-climax (casual) turn must send
+    max_tokens=200 so the LLM can't quietly over-comply even when the
+    deflection is honoured."""
+    _set_all_keys(monkeypatch)
+    seen_payloads: list[dict] = []
+
+    async def fake_post(self, url, headers=None, json=None, timeout=None):
+        seen_payloads.append(json)
+        return _ok_response("short reply")
+
+    with patch.object(httpx.AsyncClient, "post", new=fake_post):
+        _, provider = _run(llm_router.call_llm("PERSONA", [], "yo ser"))
+
+    assert provider == "groq"
+    assert seen_payloads, "expected at least one provider call"
+    assert seen_payloads[0]["max_tokens"] == llm_router.MAX_TOKENS_CASUAL == 200
+
+
+def test_climax_turn_sends_600_max_tokens(monkeypatch):
+    """A climax turn (philosophical / long / question) needs headroom
+    for a genuinely thoughtful reply, so the budget rises to 600.
+    Pinning the value here so a future tweak that conflates the two
+    budgets is caught."""
+    _set_all_keys(monkeypatch)
+    seen_payloads: list[dict] = []
+
+    async def fake_post(self, url, headers=None, json=None, timeout=None):
+        seen_payloads.append(json)
+        return _ok_response("deep reply")
+
+    with patch.object(httpx.AsyncClient, "post", new=fake_post):
+        # Either an explicit climax=True or a question mark triggers
+        # the climax cascade; using a question keeps this consistent
+        # with `is_climax_turn`'s public contract.
+        _, provider = _run(
+            llm_router.call_llm("PERSONA", [], "what is my purpose?")
+        )
+
+    assert provider == "openrouter-sonnet"
+    assert seen_payloads, "expected at least one provider call"
+    assert seen_payloads[0]["max_tokens"] == llm_router.MAX_TOKENS_CLIMAX == 600
+
+
 # ─── Provider availability cache ─────────────────────────────────────────
 
 
