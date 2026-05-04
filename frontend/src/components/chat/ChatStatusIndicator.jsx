@@ -1,7 +1,7 @@
 /**
- * ChatStatusIndicator — colored dot summarising a Dev's current
- * availability for chat. Reads the boolean flags surfaced by
- * GET /api/user/{wallet}/conversations.
+ * ChatStatusIndicator — coloured dot (and optional label) summarising
+ * a Dev's current availability for chat. Reads the boolean flags
+ * surfaced by GET /api/user/{wallet}/conversations.
  *
  * Priority (first match wins):
  *   1. is_resting     → 💤 muted-blue   (quota maxed; rests until UTC
@@ -13,12 +13,15 @@
  *                                        is "busy")
  *   4. else           → 🟢 green        (active, fresh quota)
  *
- * The order matters: `resting` outranks `exhausted` because a
- * quota-maxed Dev cannot chat at all even if they regain energy,
- * whereas an exhausted Dev *can* still chat (resting blocks the
- * cascade; exhausted is just an engine flavour). This priority
- * is documented inline because the chat-endpoint behaviour and the
- * chat-list affordance must agree.
+ * `resting` outranks `exhausted` because a quota-maxed Dev cannot
+ * chat at all even if they regain energy, whereas an exhausted Dev
+ * *can* still chat. This priority is documented inline because the
+ * chat-endpoint behaviour and the chat-list affordance must agree.
+ *
+ * `showLabel` (default false) renders a short text label next to the
+ * dot. The chat-list rows and the conversation-view header opt in to
+ * the label; compact/inline indicators (e.g. future Phase 3.6 entry
+ * buttons) keep it off.
  */
 
 import styles from './chat.module.css';
@@ -33,19 +36,44 @@ export function getDevChatStatus(dev) {
 
 const LABELS = {
   active:     'Active',
+  // Shortened from "Resting until UTC midnight" — the full phrase
+  // lives in the title attribute / banner copy. The label here
+  // sits alongside other one-word statuses, so brevity wins.
+  resting:    'Resting',
+  exhausted:  'Exhausted',
+  on_mission: 'On mission',
+};
+
+const FULL_TITLES = {
+  active:     'Active',
   resting:    'Resting until UTC midnight',
   exhausted:  'Exhausted',
   on_mission: 'On mission',
 };
 
-export default function ChatStatusIndicator({ status }) {
-  const dotClass = `${styles.statusDot} ${styles[`statusDot_${status}`] || ''}`.trim();
+export default function ChatStatusIndicator({ status, showLabel = false }) {
+  const dotClass =
+    `${styles.statusDot} ${styles[`statusDot_${status}`] || ''}`.trim();
+  const fullTitle = FULL_TITLES[status] || status;
+  const shortLabel = LABELS[status] || status;
+
+  if (!showLabel) {
+    return (
+      <span
+        className={dotClass}
+        role="img"
+        aria-label={fullTitle}
+        title={fullTitle}
+      />
+    );
+  }
+
   return (
-    <span
-      className={dotClass}
-      role="img"
-      aria-label={LABELS[status] || status}
-      title={LABELS[status] || status}
-    />
+    <span className={styles.statusContainer} title={fullTitle}>
+      <span className={dotClass} aria-hidden="true" />
+      <span className={styles.statusLabel} aria-label={fullTitle}>
+        {shortLabel}
+      </span>
+    </span>
   );
 }

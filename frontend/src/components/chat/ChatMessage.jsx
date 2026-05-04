@@ -8,19 +8,25 @@
  *       Aligned left, mini avatar of the Dev. When `is_resting` is
  *       true the bubble gets a subtler treatment so the user can tell
  *       at a glance that this was the in-character rest line, not a
- *       fresh LLM reply.
+ *       fresh LLM reply (light italic, dashed border, 💤 prefix).
  *   - { role: 'system',    content, timestamp, kind: 'error' }
  *       Centered, muted; used by ChatConversation to surface network /
  *       rate-limit / overload errors as inline messages without
  *       interrupting the conversation flow.
  *
- * Timestamp format: HH:MM in the user's local timezone — the brief's
- * "no full ISO, no seconds" rule. We could use Intl.DateTimeFormat
- * with a memo if locale switching ever matters, but Date#toLocale-
- * TimeString is fine for one bubble per message.
+ * Timestamp format: HH:MM in the user's local timezone.
+ *
+ * Phase 3.5:
+ *   - Dev avatar uses the MyDevs PFP-zoom pattern (scale 2.2 +
+ *     transformOrigin 'center 32%') so the face is in frame at the
+ *     small 28px size.
+ *   - The wrapper carries `.chatMessage` so the message-slide-in
+ *     keyframe in chat.module.css triggers on every new bubble.
  */
 
 import styles from './chat.module.css';
+
+const MESSAGE_AVATAR_SIZE_PX = 28;
 
 function formatTimestamp(ts) {
   if (!ts) return '';
@@ -40,7 +46,7 @@ export default function ChatMessage({ message, dev }) {
 
   if (role === 'system') {
     return (
-      <div className={styles.chatMessageSystem}>
+      <div className={`${styles.chatMessageSystem} ${styles.chatMessage}`}>
         <span>{content}</span>
         {timestamp ? (
           <span className={styles.chatMessageTimestamp}>
@@ -53,7 +59,7 @@ export default function ChatMessage({ message, dev }) {
 
   if (role === 'user') {
     return (
-      <div className={styles.chatMessageUser}>
+      <div className={`${styles.chatMessageUser} ${styles.chatMessage}`}>
         <div className={styles.chatMessageBubble}>{content}</div>
         <div className={styles.chatMessageTimestamp}>
           {formatTimestamp(timestamp)}
@@ -69,23 +75,32 @@ export default function ChatMessage({ message, dev }) {
   }`.trim();
 
   return (
-    <div className={styles.chatMessageDev}>
-      {dev?.ipfs_image ? (
-        <img
-          src={dev.ipfs_image}
-          alt=""
-          className={styles.chatMessageAvatarMini}
-          loading="lazy"
-        />
-      ) : (
-        <div
-          className={`${styles.chatMessageAvatarMini} ${styles.chatListAvatarFallback}`}
-        >
-          {dev?.name?.slice(0, 2).toUpperCase() || '??'}
-        </div>
-      )}
+    <div className={`${styles.chatMessageDev} ${styles.chatMessage}`}>
+      <div
+        className={styles.chatAvatarFrame}
+        style={{
+          width: MESSAGE_AVATAR_SIZE_PX,
+          height: MESSAGE_AVATAR_SIZE_PX,
+        }}
+      >
+        {dev?.ipfs_image ? (
+          <img
+            src={dev.ipfs_image}
+            alt=""
+            loading="lazy"
+            className={styles.chatAvatarImage}
+          />
+        ) : (
+          <div className={styles.chatAvatarFallback}>
+            {dev?.name?.slice(0, 2).toUpperCase() || '??'}
+          </div>
+        )}
+      </div>
       <div className={styles.chatMessageDevBody}>
-        <div className={bubbleClass}>{content}</div>
+        <div className={bubbleClass}>
+          {isResting ? <span className={styles.chatMessageRestingPrefix}>💤 </span> : null}
+          {content}
+        </div>
         <div className={styles.chatMessageTimestamp}>
           {formatTimestamp(timestamp)}
         </div>

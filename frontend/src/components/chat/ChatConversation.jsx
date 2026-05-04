@@ -36,11 +36,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useChatModal } from '../../contexts/ChatContext';
 import { useDevChat } from '../../hooks/useDevChat';
 import ChatComposer from './ChatComposer';
 import ChatConversationHeader from './ChatConversationHeader';
 import ChatMessage from './ChatMessage';
 import ChatTypingIndicator from './ChatTypingIndicator';
+import { useChatSounds } from './useChatSounds';
 import styles from './chat.module.css';
 
 // Backend MAX_SESSION_MESSAGES is 20 — keep in sync. We slice the
@@ -84,6 +86,14 @@ export default function ChatConversation({
 
   const { sendMessage, isTyping } = useDevChat(walletAddress, dev?.token_id);
 
+  // Chat sounds — Phase 3.5. Enabled flag lives on ChatContext so the
+  // title-bar toggle can flip it; the hook itself is just an audio
+  // emitter with no other state. We deliberately do NOT play on user
+  // send (matches MSN behaviour); only the Dev reply triggers the
+  // ding.
+  const { chatSoundsEnabled } = useChatModal();
+  const { playMessageReceive } = useChatSounds(chatSoundsEnabled);
+
   // Auto-scroll to bottom on new message / typing-indicator change.
   // Anchoring on a sentinel div is more robust than scrollTop math
   // because the scroll container's content height changes on every
@@ -125,6 +135,12 @@ export default function ChatConversation({
       };
       setMessages((prev) => [...prev, assistantMsg]);
 
+      // Phase 3.5 — MSN-flavoured ding on every Dev reply, including
+      // the static rest line (the user still got an in-character
+      // response and the audible cue helps confirm the modal is
+      // working). User-send remains silent.
+      playMessageReceive();
+
       if (res.is_resting === true) {
         setIsResting(true);
       }
@@ -146,10 +162,11 @@ export default function ChatConversation({
           timestamp: Date.now(),
         },
       ]);
-      // Composer's draft was cleared synchronously on send — for
-      // network failures the user has to retype. The error message
-      // includes the original copy in their head. Phase 3.5 may add a
-      // Retry button on the system bubble.
+      // Phase 3.5 preserve-on-error: re-throw so <ChatComposer> can
+      // restore the cleared draft. The inline system bubble above
+      // already informs the user; the composer just brings their
+      // text back if they hadn't started a new draft.
+      throw err;
     }
   };
 
