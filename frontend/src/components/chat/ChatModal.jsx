@@ -29,6 +29,7 @@ import Draggable from 'react-draggable';
 import { useWallet } from '../../hooks/useWallet';
 import { useChatModal } from '../../contexts/ChatContext';
 import { isInNXSoulsBeta } from '../../config/betaFeatures';
+import ChatList from './ChatList';
 import ChatModalHeader from './ChatModalHeader';
 import styles from './chat.module.css';
 
@@ -97,10 +98,17 @@ export default function ChatModal() {
         />
         <div className={styles.msnContent}>
           {view === 'list' ? (
-            <div className={styles.msnPlaceholder}>
-              ChatList placeholder — Phase 3.3 will render the list of
-              Devs here
-            </div>
+            // Mounted only in list view → useConversations polls only
+            // here; switching to conversation view unmounts <ChatList>
+            // and clears the 60s interval (Phase 3.3 brief: pause
+            // polling when not in list view).
+            <ChatList
+              walletAddress={address}
+              onSelectDev={(devId) => {
+                setSelectedDevId(devId);
+                setView('conversation');
+              }}
+            />
           ) : (
             <div className={styles.msnPlaceholder}>
               ChatConversation placeholder for token {selectedDevId} —
