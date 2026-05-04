@@ -32,6 +32,13 @@ import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import ChatModalHeader from './ChatModalHeader';
 import styles from './chat.module.css';
 
+// Modal frame size — must match `.msnModal` width / height in
+// chat.module.css. Used to compute the centred default position so
+// react-draggable's transform-on-mount doesn't fight a CSS centering
+// translate. Update both places together.
+const MODAL_WIDTH_PX = 480;
+const MODAL_HEIGHT_PX = 640;
+
 export default function ChatModal() {
   const { address } = useWallet();
   const { isOpen, initialDevId, closeChatModal } = useChatModal();
@@ -52,6 +59,21 @@ export default function ChatModal() {
     }
   }, [initialDevId]);
 
+  // Initial centring. react-draggable v4 sets element.style.transform
+  // directly on mount, which would override any CSS-based centering
+  // translate. So the modal anchors at top:0/left:0 (see
+  // chat.module.css) and we feed Draggable an explicit
+  // defaultPosition. Center starts at (0,0) and is set on mount;
+  // because Draggable only reads defaultPosition on its initial
+  // mount, the `key` below forces a remount once the real centre is
+  // computed, picking up the new defaultPosition.
+  const [center, setCenter] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const x = Math.max(0, (window.innerWidth - MODAL_WIDTH_PX) / 2);
+    const y = Math.max(0, (window.innerHeight - MODAL_HEIGHT_PX) / 2);
+    setCenter({ x, y });
+  }, []);
+
   // react-draggable v4 + React 19 StrictMode: nodeRef avoids the
   // findDOMNode warning that ships with the deprecated default path.
   const nodeRef = useRef(null);
@@ -60,7 +82,12 @@ export default function ChatModal() {
   if (!isInNXSoulsBeta(address)) return null;
 
   return (
-    <Draggable handle=".msn-title-bar" nodeRef={nodeRef}>
+    <Draggable
+      handle=".msn-title-bar"
+      nodeRef={nodeRef}
+      defaultPosition={center}
+      key={`${center.x}-${center.y}`}
+    >
       <div ref={nodeRef} className={styles.msnModal}>
         <ChatModalHeader
           view={view}
