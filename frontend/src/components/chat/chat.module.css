@@ -224,3 +224,244 @@
 .statusDot_exhausted  { background: #9b6ad1; }
 .statusDot_on_mission { background: #b8b8b8; }
 
+/* ── Phase 3.4: conversation view ────────────────────────────────────
+ *
+ * Layout summary:
+ *   .msnModal (parent, flex column from Phase 3.2)
+ *     ├─ ChatConversationHeader (.msnTitleBar — fixed height, drag)
+ *     ├─ .chatMessageScroll      (flex: 1; overflow-y: auto)
+ *     ├─ .chatRestingState       (optional banner above composer)
+ *     └─ .chatComposer           (textarea + send, fixed by content)
+ *
+ * Phase 3.5 owns the full MSN-2003 styling pass (Tahoma everywhere,
+ * Win-XP-style sunken textarea, gradient send button, message-bubble
+ * borders). These rules are deliberately functional-only.
+ */
+
+.chatHeaderAvatarMini {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.chatHeaderName {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatHeaderArchetype {
+  font-size: 10px;
+  font-weight: normal;
+  opacity: 0.85;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+}
+
+.chatMessageScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatEmptyConversation {
+  margin: auto;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+/* User bubble — right-aligned, no avatar. */
+.chatMessageUser {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* Dev bubble — left-aligned, with mini avatar. */
+.chatMessageDev {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.chatMessageDevBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 80%;
+}
+
+.chatMessageAvatarMini {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: #ddd;
+  border-radius: 2px;
+}
+
+.chatMessageBubble {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.chatMessageUser .chatMessageBubble {
+  background: #c8e0ff;
+  border-color: #8ab4e8;
+}
+
+/* Subtler treatment for the in-character "resting" reply, so the user
+ * can tell at a glance that this was the static rest line and not a
+ * fresh LLM response. */
+.chatMessageBubbleResting {
+  background: #f0f0f0 !important;
+  border-color: #c0c0c0 !important;
+  color: #666;
+  font-style: italic;
+}
+
+.chatMessageTimestamp {
+  font-size: 10px;
+  color: #999;
+  padding: 0 4px;
+}
+
+/* System messages — centered, muted; used by ChatConversation to
+ * surface network / 429 / 503 errors inline. */
+.chatMessageSystem {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #b04040;
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  padding: 4px 8px;
+}
+
+/* Typing indicator — sits inside the scroll area so auto-scroll keeps
+ * it visible. Inline-flex so the dot animation stays on one line. */
+.chatTypingIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #777;
+  font-style: italic;
+}
+
+.chatTypingPrefix {
+  font-style: normal;
+}
+
+.chatTypingDots {
+  display: inline-block;
+  margin-left: 2px;
+  letter-spacing: 1px;
+}
+
+.chatTypingDots > span {
+  display: inline-block;
+  opacity: 0.2;
+  animation: chatTypingDot 1.2s infinite;
+}
+
+.chatTypingDots > span:nth-child(1) { animation-delay: 0s;   }
+.chatTypingDots > span:nth-child(2) { animation-delay: 0.2s; }
+.chatTypingDots > span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chatTypingDot {
+  0%, 60%, 100% { opacity: 0.2; }
+  30%           { opacity: 1;   }
+}
+
+/* Resting banner — sits between the message area and the composer
+ * when the Dev hit quota. Composer is also disabled in this state. */
+.chatRestingState {
+  padding: 6px 12px;
+  background: #eef3fb;
+  border-top: 1px solid #c0d0e8;
+  border-bottom: 1px solid #c0d0e8;
+  color: #4a6fa5;
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Composer — fixed-height row at the bottom of the modal. */
+.chatComposer {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: #ececec;
+  border-top: 1px solid #c0c0c0;
+}
+
+.chatComposerTextarea {
+  flex: 1;
+  resize: none;
+  padding: 6px 8px;
+  border: 1px solid #a0a0a0;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+  outline: none;
+}
+
+.chatComposerTextarea:focus-visible {
+  border-color: #4a6fa5;
+}
+
+.chatComposerTextarea:disabled {
+  background: #f4f4f4;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.chatComposerButton {
+  align-self: stretch;
+  padding: 0 14px;
+  border: 1px solid #2a4f85;
+  background: #4a6fa5;
+  color: white;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.chatComposerButton:hover:not(:disabled) {
+  background: #5a7fb5;
+}
+
+.chatComposerButton:disabled {
+  background: #b0b0b0;
+  border-color: #909090;
+  cursor: not-allowed;
+}
+

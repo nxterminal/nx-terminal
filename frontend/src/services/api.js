@@ -124,6 +124,17 @@ export const api = {
   getUserConversations: (wallet) =>
     fetchJSON(`${API_BASE}/api/user/${wallet}/conversations`),
 
+  // NX Souls — send a message to a Dev. POST /api/devs/{tokenId}/chat.
+  // The optional AbortSignal lets callers cancel an in-flight request
+  // when the user navigates away mid-typing (Phase 3.4 ChatConversation).
+  postChat: (tokenId, payload, signal) =>
+    fetchJSON(`${API_BASE}/api/devs/${tokenId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    }),
+
   // Wallet
   getWalletSummary: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/wallet-summary`),
   getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),

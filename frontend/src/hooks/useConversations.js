@@ -1,27 +1,37 @@
 /**
- * useConversations(walletAddress, { enabled }) — chat-list feed for the
- * NX Souls modal.
+ * useConversations(walletAddress, { enabled, polling }) — chat-list
+ * feed for the NX Souls modal.
  *
- * Polls GET /api/user/{wallet}/conversations every 60 seconds while
- * `enabled` is true (the chat modal is in list view), and pauses when
- * `enabled` flips false (modal is in conversation view, or closed).
+ * Two independent gates:
+ *
+ *   - `enabled` (default true)
+ *       false → no fetch at all, drops any cached data + state. Used
+ *       when the modal is closed or no wallet is connected.
+ *
+ *   - `polling` (default true)
+ *       false → fetches once on mount but skips the recurring 60s
+ *       interval. Used while the modal is in conversation view, where
+ *       we still need the dev metadata cached but don't want to keep
+ *       hammering the server every minute (Phase 3.3 brief).
+ *       Crucially, flipping `polling` false does NOT drop cached
+ *       data — the conversation view depends on the dev row staying
+ *       resolved while the user reads / sends.
  *
  * Returns:
- *   - devs:    Array<DevConversation> — empty until first response lands
- *   - loading: true while the FIRST fetch is in flight; subsequent
- *              polls don't flip this back to true so the list doesn't
- *              flash "Loading…" every minute. Use `error` to surface
- *              a refresh-failed state if you need one.
- *   - error:   Error | null — last fetch error
- *   - refresh: () => void — manual refetch (e.g., after a chat that
- *              consumed quota)
+ *   - devs:    Array<DevConversation> (last good list; preserved across
+ *              transient errors and polling pauses)
+ *   - loading: true only during the FIRST fetch per (wallet, enabled)
+ *              cycle — subsequent polls don't flip back to true so the
+ *              list doesn't flash a skeleton every minute
+ *   - error:   Error | null (last fetch error)
+ *   - refresh: () => void  (manual refetch — Phase 3.4 calls this
+ *              after a chat that consumed quota so the list shows
+ *              fresh quota counters when the user returns to it)
  *
- * Cleanup: the polling interval is cleared on unmount and on every
- * change to `walletAddress` / `enabled`. An in-flight fetch that
- * resolves after the hook unmounts (or after walletAddress changes)
- * is dropped via a stale-token check, so React 19 StrictMode's
- * double-effect doesn't produce a "set state on unmounted component"
- * warning or stale data.
+ * Stale-token check inside the fetch drops responses that arrive
+ * after we've moved on (wallet flip, modal close), so React 19
+ * StrictMode's double-effect doesn't produce stale data or
+ * "set state on unmounted component" warnings.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,7 +39,10 @@ import { api } from '../services/api';
 
 const POLL_INTERVAL_MS = 60_000;
 
-export function useConversations(walletAddress, { enabled = true } = {}) {
+export function useConversations(
+  walletAddress,
+  { enabled = true, polling = true } = {}
+) {
   const [devs, setDevs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -67,35 +80,50 @@ export function useConversations(walletAddress, { enabled = true } = {}) {
   );
 
   // Manual refresh — fires a one-shot fetch under the current token
-  // without resetting the polling interval. Useful after the user
-  // sends a chat (Phase 3.4) that consumed a quota slot.
+  // without resetting the polling interval. Phase 3.4 ChatConversation
+  // calls this after a chat that consumed a quota slot so the list
+  // shows fresh counters when the user returns to it.
   const refresh = useCallback(() => {
     doFetch(fetchTokenRef.current);
   }, [doFetch]);
 
+  // Fetch + polling effect. `enabled` gates whether anything happens
+  // at all; `polling` independently gates the recurring interval, so
+  // pausing polling while in conversation view doesn't drop the
+  // cached list.
   useEffect(() => {
-    // Bump the token: any in-flight fetch from a previous wallet /
-    // enabled state becomes stale.
-    fetchTokenRef.current += 1;
-    const myToken = fetchTokenRef.current;
-    firstFetchDoneRef.current = false;
-
     if (!enabled || !walletAddress) {
       // Disabled or wallet not connected — clear out any prior data
       // so a stale list doesn't flash when the modal re-opens for a
-      // different wallet.
+      // different wallet. Bumping the token discards any in-flight
+      // response from a previous (wallet, enabled) cycle.
+      fetchTokenRef.current += 1;
+      firstFetchDoneRef.current = false;
       setLoading(false);
       setDevs([]);
       setError(null);
       return undefined;
     }
 
-    setLoading(true);
+    // Bump the token on every effect run so a previous-cycle response
+    // can't clobber state from this cycle.
+    fetchTokenRef.current += 1;
+    const myToken = fetchTokenRef.current;
+
+    // Only flip loading when we don't have data yet; this keeps the
+    // cached list visible while a polling-paused → polling-resumed
+    // transition (or a manual refresh) is in flight.
+    if (!firstFetchDoneRef.current) {
+      setLoading(true);
+    }
     doFetch(myToken);
+
+    if (!polling) return undefined; // initial fetch only
 
     const interval = setInterval(() => doFetch(myToken), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [walletAddress, enabled, doFetch]);
+  }, [walletAddress, enabled, polling, doFetch]);
 
   return { devs, loading, error, refresh };
 }
+

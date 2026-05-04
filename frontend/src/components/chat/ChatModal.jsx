@@ -1,26 +1,30 @@
 /**
  * ChatModal — root of the NX Souls chat UI.
  *
- * Phase 3.2 scope: skeleton only. Renders a draggable, closable modal
- * with placeholder content. Real list / conversation rendering land
- * in Phase 3.3 / 3.4 respectively.
- *
  * Visibility chain (any one returning false → render null):
  *   1. ChatContext.isOpen must be true (someone called openChatModal)
  *   2. Wallet must be in the NX Souls beta allowlist (visibility-only
  *      gate; backend already enforces ownership + rate limits + quota)
  *
- * The view-state effect mirrors the context's `initialDevId` into
- * local view state every time it changes:
- *   - openChatModal()        → list view, no Dev selected
- *   - openChatModal(tokenId) → conversation view pre-loaded to that Dev
- * Phase 3.3 will add the in-modal navigation that flips view→list /
- * conversation via the back button + list-item click — the setView
- * calls in onBack/onClose are already in place for that.
+ * View / data ownership (Phase 3.4):
+ *   - useConversations lives here so the same `devs` array feeds both
+ *     <ChatList> (presentation) and <ChatConversation> (which needs
+ *     the selected Dev's full row for its header / avatar / status).
+ *   - `polling: view === 'list'` keeps the Phase 3.3 brief honoured —
+ *     the 60s interval only runs while the list is on screen — while
+ *     the cached `devs` array stays available in conversation view.
+ *   - selectedDev is looked up by token_id on every render so a poll
+ *     refresh keeps the conversation header in sync (e.g. status flip
+ *     from active → resting after a chat).
  *
- * The literal `.msn-title-bar` class on <ChatModalHeader> is what
- * Draggable's handle selector grabs; CSS Modules hash class names so
- * the literal class is added in addition to the module class.
+ * The view-state effect mirrors `initialDevId` from context into local
+ * state on every change so a second openChatModal(otherId) re-targets
+ * the conversation view.
+ *
+ * The literal `.msn-title-bar` class is the drag handle — added by
+ * <ChatModalHeader> in list view and by <ChatConversationHeader> in
+ * conversation view. Both must keep the literal class so Draggable's
+ * selector matches whichever header is currently rendered.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -28,8 +32,10 @@ import Draggable from 'react-draggable';
 
 import { useWallet } from '../../hooks/useWallet';
 import { useChatModal } from '../../contexts/ChatContext';
+import { useConversations } from '../../hooks/useConversations';
 import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import ChatList from './ChatList';
+import ChatConversation from './ChatConversation';
 import ChatModalHeader from './ChatModalHeader';
 import styles from './chat.module.css';
 
@@ -79,8 +85,26 @@ export default function ChatModal() {
   // findDOMNode warning that ships with the deprecated default path.
   const nodeRef = useRef(null);
 
+  // Conversations hook — fetches always while the modal is open;
+  // polls only in list view. Cached `devs` survives a polling pause
+  // so the conversation view can resolve the selected dev row.
+  const { devs, loading, error, refresh } = useConversations(address, {
+    enabled: isOpen,
+    polling: view === 'list',
+  });
+
   if (!isOpen) return null;
   if (!isInNXSoulsBeta(address)) return null;
+
+  // Resolve the selected Dev from the live `devs` array on every
+  // render. When polling refreshes the list, the selected Dev's
+  // status flags update too — useful while the user is in the
+  // conversation view if e.g. an admin freezes the Dev or quota
+  // resets at UTC midnight.
+  const selectedDev =
+    selectedDevId != null
+      ? devs.find((d) => d.token_id === selectedDevId) || null
+      : null;
 
   return (
     <Draggable
@@ -90,32 +114,58 @@ export default function ChatModal() {
       key={`${center.x}-${center.y}`}
     >
       <div ref={nodeRef} className={styles.msnModal}>
-        <ChatModalHeader
-          view={view}
-          selectedDevId={selectedDevId}
-          onBack={view === 'conversation' ? () => setView('list') : null}
-          onClose={closeChatModal}
-        />
-        <div className={styles.msnContent}>
-          {view === 'list' ? (
-            // Mounted only in list view → useConversations polls only
-            // here; switching to conversation view unmounts <ChatList>
-            // and clears the 60s interval (Phase 3.3 brief: pause
-            // polling when not in list view).
-            <ChatList
-              walletAddress={address}
-              onSelectDev={(devId) => {
-                setSelectedDevId(devId);
-                setView('conversation');
-              }}
+        {view === 'list' ? (
+          <>
+            <ChatModalHeader
+              view={view}
+              selectedDevId={selectedDevId}
+              onBack={null}
+              onClose={closeChatModal}
             />
-          ) : (
-            <div className={styles.msnPlaceholder}>
-              ChatConversation placeholder for token {selectedDevId} —
-              Phase 3.4 will render the chat
+            <div className={styles.msnContent}>
+              <ChatList
+                devs={devs}
+                loading={loading}
+                error={error}
+                onSelectDev={(devId) => {
+                  setSelectedDevId(devId);
+                  setView('conversation');
+                }}
+              />
             </div>
-          )}
-        </div>
+          </>
+        ) : selectedDev ? (
+          <ChatConversation
+            // Force a remount when the selected Dev changes so the
+            // local messages array resets cleanly; without this, a
+            // back→pick-different-Dev flow would carry the previous
+            // chat into the new one.
+            key={selectedDev.token_id}
+            dev={selectedDev}
+            walletAddress={address}
+            onBack={() => setView('list')}
+            onClose={closeChatModal}
+            refreshConversations={refresh}
+          />
+        ) : (
+          // Selected dev hasn't resolved yet — first fetch in flight,
+          // or the dev was removed from the wallet between selection
+          // and the next poll. Show a loading shell with the generic
+          // header so the user can still close / go back.
+          <>
+            <ChatModalHeader
+              view={view}
+              selectedDevId={selectedDevId}
+              onBack={() => setView('list')}
+              onClose={closeChatModal}
+            />
+            <div className={styles.msnContent}>
+              <div className={styles.msnPlaceholder}>
+                {loading ? 'Loading Dev…' : 'Dev not found in your wallet.'}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </Draggable>
   );

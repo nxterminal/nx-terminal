@@ -1,29 +1,30 @@
 /**
  * ChatList — scrollable list of every Dev the connected wallet owns.
- * Polls every 60s while mounted; the parent is responsible for only
- * mounting this when the modal is in list view (so polling stops in
- * conversation view per Phase 3.3 brief).
  *
- * States rendered:
- *   - loading skeleton  (first fetch, no data yet)
- *   - empty state       (fetch succeeded with zero Devs)
- *   - error state       (first fetch failed and we have nothing to show)
- *   - list              (success path; subsequent failed polls don't
- *                        clobber the list — the hook keeps the last
- *                        good `devs` array on error)
+ * Phase 3.4: this component is presentation-only. The conversations
+ * hook moved up to <ChatModal> so the same data also feeds the
+ * conversation header (we look up the selected dev by token_id from
+ * the same array). ChatList just receives `devs / loading / error`
+ * as props and renders one of four states.
+ *
+ * The Phase 3.3 polling-pause requirement still holds: <ChatModal>
+ * passes `polling: view === 'list'` to useConversations, so the
+ * recurring 60s fetch only runs while the list is on screen, while
+ * the cached `devs` array remains available for the conversation
+ * view.
  */
 
-import { useConversations } from '../../hooks/useConversations';
 import ChatListItem from './ChatListItem';
 import styles from './chat.module.css';
 
 const SKELETON_ROWS = 4;
 
-export default function ChatList({ walletAddress, onSelectDev }) {
-  const { devs, loading, error } = useConversations(walletAddress, {
-    enabled: true,
-  });
-
+export default function ChatList({
+  devs = [],
+  loading = false,
+  error = null,
+  onSelectDev,
+}) {
   if (loading && devs.length === 0) {
     return (
       <div className={styles.chatListScroll}>
