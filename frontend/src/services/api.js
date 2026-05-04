@@ -119,6 +119,11 @@ export const api = {
     body: JSON.stringify(data),
   }),
 
+  // NX Souls — chat list (per-wallet view of every Dev with quota /
+  // status / resting flags). Backed by GET /api/user/{wallet}/conversations.
+  getUserConversations: (wallet) =>
+    fetchJSON(`${API_BASE}/api/user/${wallet}/conversations`),
+
   // Wallet
   getWalletSummary: (wallet) => fetchJSON(`${API_BASE}/api/players/${wallet}/wallet-summary`),
   getBalanceHistory: (wallet, days = 30) => fetchJSON(`${API_BASE}/api/players/${wallet}/balance-history?days=${days}`),
