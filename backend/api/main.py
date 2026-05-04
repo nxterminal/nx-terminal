@@ -608,6 +608,60 @@ def _run_auto_migrations():
                     "CREATE INDEX IF NOT EXISTS idx_nx_souls_msg_token_time "
                     "ON nx_souls_messages_cache(token_id, created_at DESC)"
                 )
+                # ── NX Souls Phase 3.5.1: full-content message store ──
+                # Different from `nx_souls_messages_cache` (lengths-only
+                # observability log from Phase 1). This table stores the
+                # actual message text + role + flags so the chat UI can
+                # restore conversation history on re-open. 24h sliding-
+                # window TTL via `expires_at`; the chat endpoint resets
+                # it on every send so an active conversation never
+                # vanishes mid-session.
+                #
+                # Indexes deviate from the brief: the brief asked for
+                # partial indexes with `WHERE expires_at > NOW()` /
+                # `WHERE expires_at <= NOW()`, but Postgres rejects
+                # NOW() in partial-index predicates (must be IMMUTABLE).
+                # A plain (expires_at) index serves both the lazy
+                # `expires_at > NOW()` filter on reads and the
+                # `expires_at <= NOW()` filter on cleanup operations.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nx_souls_messages (
+                        id              BIGSERIAL PRIMARY KEY,
+                        token_id        INTEGER NOT NULL REFERENCES devs(token_id),
+                        wallet_address  VARCHAR(42) NOT NULL,
+                        role            VARCHAR(16) NOT NULL
+                                        CHECK (role IN (
+                                            'user',
+                                            'assistant',
+                                            'system_error',
+                                            'system_resting'
+                                        )),
+                        content         TEXT NOT NULL,
+                        is_climax       BOOLEAN NOT NULL DEFAULT FALSE,
+                        is_resting      BOOLEAN NOT NULL DEFAULT FALSE,
+                        provider_used   VARCHAR(32),
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        expires_at      TIMESTAMPTZ NOT NULL
+                    )
+                """)
+                # Compound index covers chat-history reads (filter by
+                # wallet + token, order by created_at DESC) and the
+                # active-chats CTE (PARTITION BY token_id ORDER BY
+                # created_at DESC).
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS "
+                    "idx_nx_souls_messages_wallet_token_time "
+                    "ON nx_souls_messages "
+                    "(wallet_address, token_id, created_at DESC)"
+                )
+                # Single-column index on expires_at — drives both the
+                # `expires_at > NOW()` lazy filter at read-time and
+                # the `expires_at <= NOW()` cleanup scan.
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS "
+                    "idx_nx_souls_messages_expires_at "
+                    "ON nx_souls_messages (expires_at)"
+                )
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")

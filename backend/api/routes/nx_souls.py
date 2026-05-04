@@ -57,6 +57,7 @@ from backend.api.rate_limit import (
 )
 from backend.services.nx_souls.exceptions import NXSoulsAllProvidersFailed
 from backend.services.nx_souls.llm_router import call_llm, is_climax_turn
+from backend.services.nx_souls.messages import insert_message_and_refresh_chat
 from backend.services.nx_souls.persona import build_persona
 from backend.services.nx_souls.quota import (
     QuotaState,
@@ -197,6 +198,52 @@ def _quota_response_payload(state: QuotaState) -> dict[str, Any]:
     }
 
 
+def _persist_chat_messages(
+    *,
+    wallet_address: str,
+    token_id: int,
+    user_message: str,
+    response_text: str,
+    response_role: str,
+    is_climax: bool,
+    is_resting: bool,
+    provider_used: str | None,
+) -> None:
+    """Best-effort write of the user message + assistant response to
+    `nx_souls_messages` (Phase 3.5.1 full-content store).
+
+    Wrapped in its own try/except so a transient DB failure here does
+    NOT block the chat reply or surface as an error to the user. The
+    write happens AFTER the LLM call has resolved + the metadata
+    event has been logged + the quota incremented, so a persistence
+    failure can't unwind those guaranteed-correct effects.
+
+    Two inserts in two separate transactions — sliding-window TTL
+    refresh inside `insert_message_and_refresh_chat` covers both.
+    """
+    try:
+        insert_message_and_refresh_chat(
+            wallet_address=wallet_address,
+            token_id=token_id,
+            role="user",
+            content=user_message,
+        )
+        insert_message_and_refresh_chat(
+            wallet_address=wallet_address,
+            token_id=token_id,
+            role=response_role,
+            content=response_text,
+            is_climax=is_climax,
+            is_resting=is_resting,
+            provider_used=provider_used,
+        )
+    except Exception as e:  # pragma: no cover — best-effort
+        log.warning(
+            f"NX Souls: persistence failed for token_id={token_id} "
+            f"wallet={wallet_address}: {e}"
+        )
+
+
 def _log_message_event(
     cur,
     *,
@@ -304,6 +351,19 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
                     log.warning(
                         f"NX Souls: failed to log rest event: {log_e}"
                     )
+                # Persist the user message + the in-character rest
+                # line (role='system_resting'). Best-effort; the
+                # response goes out either way.
+                _persist_chat_messages(
+                    wallet_address=wallet,
+                    token_id=token_id,
+                    user_message=req.message,
+                    response_text=resting_response,
+                    response_role="system_resting",
+                    is_climax=False,
+                    is_resting=True,
+                    provider_used="internal",
+                )
                 return {
                     "ok": True,
                     "response": resting_response,
@@ -382,6 +442,22 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
 
     final_state = QuotaState(
         used=new_used, limit=quota_state.limit, resets_at=quota_state.resets_at
+    )
+
+    # Persist the user message + the assistant response (role='assistant')
+    # to the full-content store. Sliding-window TTL inside the helper
+    # refreshes every still-active message in this chat. Best-effort;
+    # response shape returned to the client is unchanged (Phase 3.5.3
+    # will add the load-on-open behaviour).
+    _persist_chat_messages(
+        wallet_address=wallet,
+        token_id=token_id,
+        user_message=req.message,
+        response_text=response_text,
+        response_role="assistant",
+        is_climax=climax,
+        is_resting=False,
+        provider_used=provider_used,
     )
 
     return {
