@@ -90,7 +90,7 @@ class StubConn:
 
 
 def make_program(*, owner=OWNER, rarity="common", quota_used=0,
-                 status="active", token_exists=True):
+                 status="active", token_exists=True, archetype="INFLUENCER"):
     """Build a SQL fingerprint dispatcher for one fixture."""
     state = {"used": quota_used}
 
@@ -104,6 +104,7 @@ def make_program(*, owner=OWNER, rarity="common", quota_used=0,
                 "owner_address": owner,
                 "status": status,
                 "rarity_tier": rarity,
+                "archetype": archetype,
             }
         if "INTO nx_souls_quota" in sql:
             return {
@@ -121,7 +122,7 @@ def make_program(*, owner=OWNER, rarity="common", quota_used=0,
                 "token_id": TOKEN_ID,
                 "name": "LYNX-X0",
                 "species": "Bunny",
-                "archetype": "INFLUENCER",
+                "archetype": archetype,
                 "corporation": "ZUCK_LABS",
                 "rarity_tier": rarity,
                 "alignment": "Neutral Good",
@@ -138,6 +139,8 @@ def make_program(*, owner=OWNER, rarity="common", quota_used=0,
             }
         return None
 
+    # Expose state so individual tests can inspect quota_used after the fact.
+    program.state = state  # type: ignore[attr-defined]
     return program
 
 
@@ -157,11 +160,19 @@ def stub_db(monkeypatch):
     """Returns a setter the test calls with kwargs to control the
     program. After the test, get_db() returns a fresh StubConn each
     call so the route's multiple `with get_db()` contexts all see the
-    same shared state through the closure."""
+    same shared state through the closure.
+
+    The setter exposes `.state` which mirrors the program's mutable
+    state dict (`{"used": int}`) so tests can assert post-call quota
+    behaviour without re-reading the DB.
+    """
     program_holder = {"program": make_program()}
 
     def set_program(**kwargs):
         program_holder["program"] = make_program(**kwargs)
+        set_program.state = program_holder["program"].state  # type: ignore[attr-defined]
+
+    set_program.state = program_holder["program"].state  # type: ignore[attr-defined]
 
     def fake_get_db():
         return StubConn(program_holder["program"])
@@ -174,16 +185,30 @@ def stub_db(monkeypatch):
     return set_program
 
 
-@pytest.fixture
-def stub_llm(monkeypatch):
-    """Replace the cascade with a deterministic stub. Tests can override
-    by re-patching `call_llm` after the fixture runs."""
+class _LLMStub:
+    """Stand-in for `call_llm`. Records every invocation so tests can
+    assert the cascade was (or wasn't) reached."""
 
-    async def fake_call_llm(persona, session_messages, user_message, *, climax=None):
+    def __init__(self):
+        self.calls: list[dict] = []
+
+    async def __call__(self, persona, session_messages, user_message, *, climax=None):
+        self.calls.append({
+            "persona": persona,
+            "session_messages": list(session_messages),
+            "user_message": user_message,
+            "climax": climax,
+        })
         return ("stub reply", "groq")
 
-    monkeypatch.setattr(nx_souls_route, "call_llm", fake_call_llm)
-    return fake_call_llm
+
+@pytest.fixture
+def stub_llm(monkeypatch):
+    """Replace the cascade with a deterministic _LLMStub. Tests inspect
+    `stub_llm.calls` to verify whether the LLM was reached."""
+    stub = _LLMStub()
+    monkeypatch.setattr(nx_souls_route, "call_llm", stub)
+    return stub
 
 
 @pytest.fixture
@@ -237,36 +262,113 @@ def test_chat_success_uses_rarity_specific_limit(client, stub_db):
 # ─── Quota exhaustion ────────────────────────────────────────────────────
 
 
-def test_chat_quota_exceeded_returns_429_payload(client, stub_db, caplog):
-    stub_db(quota_used=30, rarity="common")
+def test_chat_quota_exhausted_returns_in_character_resting_message(
+    client, stub_db, caplog
+):
+    """Phase 2a — quota exhaustion is no longer a 429. The endpoint
+    returns 200 OK with the archetype's resting line and is_resting=true
+    so the frontend can disable the input without breaking immersion."""
+    stub_db(quota_used=30, rarity="common", archetype="INFLUENCER")
     with caplog.at_level(logging.INFO, logger="nx_api"):
         resp = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
-    assert resp.status_code == 429
-    detail = resp.json()["detail"]
-    assert detail["error"] == "quota_exceeded"
-    assert detail["limit"] == 30
-    assert detail["used"] == 30
-    assert "resets_at" in detail and detail["resets_at"].endswith("+00:00")
-    # Hardened logging — quota exhaustion logs INFO with token + wallet,
-    # never the message text.
-    quota_logs = [r for r in caplog.records if "quota exhausted" in r.message]
-    assert quota_logs, "expected an info log for quota exhaustion"
-    assert f"token_id={TOKEN_ID}" in quota_logs[0].message
-    assert f"wallet={OWNER}" in quota_logs[0].message
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["is_resting"] is True
+    assert body["provider_used"] == "internal"
+    # Influencer-flavoured phrasing must land — sanity check that the
+    # archetype's specific resting line was selected, not a sibling.
+    assert "💅" in body["response"] or "vibes" in body["response"].lower() \
+        or "algorithm" in body["response"].lower()
+    quota = body["quota"]
+    assert quota["used"] == 30
+    assert quota["limit"] == 30
+    assert quota["remaining"] == 0
+    assert quota["resets_at"].endswith("+00:00")
+    # New INFO log replaces the old "quota exhausted" line.
+    rest_logs = [r for r in caplog.records if "serving rest message" in r.message]
+    assert rest_logs, "expected info log when serving a rest message"
+    msg = rest_logs[0].message
+    assert f"token_id={TOKEN_ID}" in msg
+    assert f"wallet={OWNER}" in msg
+    assert "archetype=INFLUENCER" in msg
 
 
-def test_chat_does_not_increment_on_quota_reject(client, stub_db):
-    """A quota-rejected request must not advance the counter — that
-    would let an attacker push someone past their limit by spamming
-    rejected calls (the increment is in the success path only)."""
-    stub_db(quota_used=30, rarity="common")
+def test_chat_resting_does_not_call_llm(client, stub_db, stub_llm):
+    """Cost guard — when serving a resting reply we must NOT reach the
+    LLM cascade. The body comes from the static archetype map."""
+    stub_db(quota_used=30, rarity="common", archetype="DEGEN")
     resp = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
-    assert resp.status_code == 429
-    # Then a follow-up request still sees used=30 (program shared via
-    # closure, increment only fires on success path)
+    assert resp.status_code == 200
+    assert resp.json()["is_resting"] is True
+    assert stub_llm.calls == [], (
+        "LLM cascade was invoked while Dev was resting — "
+        "this defeats the cost-saving guarantee of the rest path"
+    )
+
+
+def test_chat_resting_does_not_increment_quota(client, stub_db):
+    """Quota counter is already at limit when resting; serving a rest
+    message must NOT push it higher. A follow-up call must still see
+    used == limit, not used > limit."""
+    stub_db(quota_used=30, rarity="common", archetype="LURKER")
+    resp1 = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
+    assert resp1.status_code == 200
+    assert resp1.json()["is_resting"] is True
+    assert stub_db.state["used"] == 30, "quota should not advance on rest"
+    # A follow-up still sees the same used count and the same
+    # is_resting=true response (not a 429, not a creep past limit).
     resp2 = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
-    assert resp2.status_code == 429
-    assert resp2.json()["detail"]["used"] == 30
+    assert resp2.status_code == 200
+    assert resp2.json()["is_resting"] is True
+    assert stub_db.state["used"] == 30
+
+
+def test_chat_resting_message_does_not_cross_talk_between_archetypes(
+    client, stub_db
+):
+    """The DEGEN rest line ('rekt all day') must NOT be served to a FED,
+    and the FED rest line ('operational hours') must NOT be served to a
+    DEGEN. Catches a future regression where the wrong archetype's
+    rest line is wired up."""
+    stub_db(quota_used=30, archetype="DEGEN")
+    degen_text = client.post(
+        f"/api/devs/{TOKEN_ID}/chat", json=_body()
+    ).json()["response"]
+    stub_db(quota_used=30, archetype="FED")
+    fed_text = client.post(
+        f"/api/devs/{TOKEN_ID}/chat", json=_body()
+    ).json()["response"]
+    # Each archetype has its own load-bearing phrase.
+    assert "rekt" in degen_text.lower()
+    assert "operational hours" in fed_text.lower()
+    # And neither leaks into the other.
+    assert "rekt" not in fed_text.lower()
+    assert "operational hours" not in degen_text.lower()
+
+
+def test_chat_resting_unknown_archetype_uses_fallback_line(
+    client, stub_db, stub_llm
+):
+    """A future archetype without an entry in
+    ARCHETYPE_RESTING_MESSAGES must still produce a coherent in-
+    character reply — never a system-message style refusal — and the
+    LLM still must not be called."""
+    stub_db(quota_used=30, rarity="common", archetype="QUANTUM_MAGE")
+    resp = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_resting"] is True
+    text = body["response"]
+    # The fallback line is the explicit `voices.get_resting_message`
+    # default. It must be non-empty and read as the Dev itself talking
+    # — no system-message tells like "rate limit" or "quota".
+    assert text and len(text) > 0
+    for tell in ("rate limit", "quota", "API", "error", "HTTP"):
+        assert tell.lower() not in text.lower(), (
+            f"fallback resting line leaked system-message tell: {tell!r}"
+        )
+    assert stub_llm.calls == []
 
 
 # ─── Combined session content cap ────────────────────────────────────────
