@@ -115,6 +115,25 @@ CLIMAX_CASCADE: tuple[ProviderSpec, ...] = (
 )
 
 
+# ─── Token budgets (anti-essay defence-in-depth) ──────────────────────────
+#
+# Phase 2a's prompt-level length discipline gets the model to deflect
+# essay requests verbally, but a casual-sized budget at the API layer
+# is the second wall: even when the deflection is honoured the model
+# can't accidentally over-comply by emitting 300+ words of "casual"
+# explanation. Phase 2b fix.
+#
+#   climax=False (default chat)  → MAX_TOKENS_CASUAL  (anti-essay budget)
+#   climax=True  (philosophical) → MAX_TOKENS_CLIMAX  (room for genuine
+#                                                     thoughtfulness)
+#
+# 200 tokens covers ~150 English words / 3-5 normal-length sentences,
+# which is the upper end of what `LENGTH DISCIPLINE` calls "casual".
+# 600 keeps the previous ceiling for deep / long replies.
+MAX_TOKENS_CASUAL = 200
+MAX_TOKENS_CLIMAX = 600
+
+
 # ─── Climax detection ─────────────────────────────────────────────────────
 
 # Words/phrases that flag a "deep" turn worth burning a Sonnet call on.
@@ -197,10 +216,15 @@ async def _call_provider(
     provider: ProviderSpec,
     messages: list[dict[str, str]],
     *,
-    max_tokens: int = 600,
+    max_tokens: int,
     temperature: float = 0.85,
 ) -> str:
     """Make one Chat-Completions call. Returns assistant text.
+
+    `max_tokens` is required (no default) so the budget is always an
+    explicit decision at the call site — the climax-vs-casual choice
+    is made in `call_llm` and threaded through here. Removing the
+    default catches any future caller that forgets to pass it.
 
     Raises `_RetryableProviderError` for any failure the cascade should
     treat as "try the next provider" — that includes 429 rate limits,
@@ -311,6 +335,11 @@ async def call_llm(
     if climax is None:
         climax = is_climax_turn(user_message, len(session_list))
     cascade = CLIMAX_CASCADE if climax else STANDARD_CASCADE
+    # Token budget mirrors the cascade choice. Casual turns get the
+    # anti-essay ceiling (200) so a Dev that already deflected at the
+    # prompt layer can't quietly over-comply with 300+ word output;
+    # climax turns get headroom (600) for genuine thoughtfulness.
+    max_tokens = MAX_TOKENS_CLIMAX if climax else MAX_TOKENS_CASUAL
 
     available = [p for p in cascade if _is_available(p)]
     if not available:
@@ -322,7 +351,9 @@ async def call_llm(
     async with httpx.AsyncClient() as client:
         for provider in available:
             try:
-                text = await _call_provider(client, provider, messages)
+                text = await _call_provider(
+                    client, provider, messages, max_tokens=max_tokens
+                )
             except _RetryableProviderError:
                 continue
             except NXSoulsProviderUnavailable:
