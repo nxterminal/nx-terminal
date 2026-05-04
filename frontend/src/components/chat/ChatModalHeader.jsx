@@ -26,8 +26,8 @@ export default function ChatModalHeader({
 }) {
   const title =
     view === 'conversation'
-      ? `Dev #${selectedDevId ?? '?'}`
-      : 'MSN Messenger - NX Terminal';
+      ? `NX CHAT — Dev #${selectedDevId ?? '?'}`
+      : 'NX CHAT';
 
   return (
     <div className={`${styles.msnTitleBar} msn-title-bar`}>
