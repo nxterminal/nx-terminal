@@ -63,6 +63,7 @@ from backend.services.nx_souls.quota import (
     get_quota_state,
     increment_quota,
 )
+from backend.services.nx_souls.voices import get_resting_message
 
 log = logging.getLogger("nx_api")
 
@@ -148,7 +149,7 @@ def _check_owner(
     leak the real owner address to a hostile probe.
     """
     cur.execute(
-        "SELECT token_id, name, owner_address, status, rarity_tier "
+        "SELECT token_id, name, owner_address, status, rarity_tier, archetype "
         "FROM devs WHERE token_id = %s",
         (token_id,),
     )
@@ -238,7 +239,9 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
       3. per-IP rate limits (3 tiers)
       4. per-(wallet, dev) cool-down
       5. ownership / frozen-status
-      6. per-token daily quota
+      6. per-token daily quota — EXCEEDED short-circuits to a 200 OK
+         with an in-character "resting" reply; the LLM is NOT called
+         and the quota counter is NOT incremented (it's already at max)
       7. persona build
       8. LLM cascade
       9. on success → atomic quota increment + metadata event log
@@ -271,24 +274,43 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
                 cur, token_id, dev_row.get("rarity_tier")
             )
             if quota_state.exceeded:
+                # Immersion preservation: instead of a 429 the user sees
+                # the Dev being tired in their own voice. The LLM is
+                # NOT called (saves cost) and the counter is NOT
+                # incremented (already at limit). is_resting=true tells
+                # the frontend to disable the input + render a
+                # "resting until UTC midnight" affordance.
+                resting_response = get_resting_message(
+                    dev_row.get("archetype") or ""
+                )
                 log.info(
-                    "NX Souls chat: quota exhausted "
+                    "NX Souls chat: serving rest message "
                     f"token_id={token_id} wallet={wallet} "
+                    f"archetype={dev_row.get('archetype')} "
                     f"used={quota_state.used} limit={quota_state.limit}"
                 )
-                raise HTTPException(
-                    status_code=429,
-                    detail={
-                        "error": "quota_exceeded",
-                        "limit": quota_state.limit,
-                        "used": quota_state.used,
-                        "resets_at": quota_state.resets_at.isoformat(),
-                        "message": (
-                            f"Daily quota of {quota_state.limit} messages "
-                            "reached. Resets at UTC midnight."
-                        ),
-                    },
-                )
+                try:
+                    _log_message_event(
+                        cur,
+                        token_id=token_id,
+                        wallet_address=wallet,
+                        user_message_len=len(req.message),
+                        response_len=len(resting_response),
+                        provider_used="internal",
+                        climax=False,
+                        duration_ms=0,
+                    )
+                except Exception as log_e:  # pragma: no cover — best-effort
+                    log.warning(
+                        f"NX Souls: failed to log rest event: {log_e}"
+                    )
+                return {
+                    "ok": True,
+                    "response": resting_response,
+                    "provider_used": "internal",
+                    "quota": _quota_response_payload(quota_state),
+                    "is_resting": True,
+                }
             persona = build_persona(cur, token_id)
 
     if persona is None:

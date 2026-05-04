@@ -178,3 +178,57 @@ def test_unknown_archetype_does_not_crash():
     row = _row_29572(archetype="QUANTUM_MAGE")
     p = _assemble_persona(row)
     assert "QUANTUM_MAGE" in p
+
+
+# ─── Phase 2a: LENGTH DISCIPLINE section ─────────────────────────────────
+
+
+def test_length_discipline_section_present_in_persona():
+    """The new section anchors anti-essay protection — it must appear
+    in every Dev's persona, between HOW YOU COMMUNICATE and
+    PHILOSOPHICAL MODE so the model reads the length rules before any
+    of its philosophical-mode license."""
+    p = _assemble_persona(_row_29572())
+    assert "LENGTH DISCIPLINE" in p
+    # Order: LENGTH DISCIPLINE must come before PHILOSOPHICAL MODE.
+    assert p.index("LENGTH DISCIPLINE") < p.index("PHILOSOPHICAL MODE")
+    # Pin the load-bearing rules so an accidental edit that removes
+    # them is caught.
+    for needle in (
+        "deflect",
+        "do NOT produce on-demand content",
+        "No essays",
+        "No code samples longer than 10 lines",
+    ):
+        assert needle.lower() in p.lower(), f"missing rule: {needle!r}"
+
+
+def test_length_discipline_inserts_archetype_deflection_line():
+    """The INFLUENCER deflection line ("vibes, not essays") must reach
+    LYNX-X0's persona; the DEGEN line ("wall of text") must NOT —
+    cross-talk between archetype deflection lines would defeat the
+    in-character feel."""
+    p = _assemble_persona(_row_29572(archetype="INFLUENCER"))
+    discipline_section = (
+        p.split("LENGTH DISCIPLINE")[1].split("PHILOSOPHICAL MODE")[0]
+    )
+    assert "vibes, not essays" in discipline_section
+    assert "wall of text" not in discipline_section
+    assert "ask a real chatbot" not in discipline_section
+
+
+def test_length_discipline_deflection_falls_back_for_unknown_archetype():
+    """A future archetype with no entry in ARCHETYPE_DEFLECTIONS must
+    still get *some* in-character deflection line in the persona — not
+    a literal `{archetype_deflection}` placeholder, not an empty
+    string, and not anything that reads as a system message."""
+    p = _assemble_persona(_row_29572(archetype="QUANTUM_MAGE"))
+    discipline_section = (
+        p.split("LENGTH DISCIPLINE")[1].split("PHILOSOPHICAL MODE")[0]
+    )
+    assert "{archetype_deflection}" not in discipline_section
+    # Generic in-character fallback from voices.get_archetype_deflection
+    assert "not what i'm here for" in discipline_section.lower()
+    # No system-message tells in the fallback.
+    for tell in ("rate limit", "quota", "as an ai", "i cannot"):
+        assert tell.lower() not in discipline_section.lower()
