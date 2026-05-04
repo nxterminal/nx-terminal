@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -554,6 +554,60 @@ def _run_auto_migrations():
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_rarity ON dev_canonical_traits(rarity)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_voice_tone ON dev_canonical_traits(voice_tone)")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_canonical_lore_faction ON dev_canonical_traits(lore_faction)")
+                # ── NX Souls Phase 1: chat infrastructure ─────────────
+                # Quota counters land in Phase 2 (this table is created
+                # now so the message-cache logger can join against it).
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nx_souls_quota (
+                        token_id        INTEGER PRIMARY KEY REFERENCES devs(token_id),
+                        quota_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+                        messages_today  INTEGER NOT NULL DEFAULT 0,
+                        last_message_at TIMESTAMPTZ,
+                        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_souls_quota_date "
+                    "ON nx_souls_quota(quota_date)"
+                )
+                # Sleep state — populated by Phase 2 when quota or
+                # provider cascade triggers a sleep transition.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nx_souls_sleep_state (
+                        token_id         INTEGER PRIMARY KEY REFERENCES devs(token_id),
+                        sleeping         BOOLEAN NOT NULL DEFAULT FALSE,
+                        sleep_reason     VARCHAR(50),
+                        sleep_started_at TIMESTAMPTZ,
+                        woken_at         TIMESTAMPTZ,
+                        wake_count       INTEGER NOT NULL DEFAULT 0,
+                        updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_souls_sleep_active "
+                    "ON nx_souls_sleep_state(sleeping) WHERE sleeping = TRUE"
+                )
+                # Metadata-only message log. NEVER store message text;
+                # only lengths, provider used, and timing for monitoring
+                # and abuse detection. Entries older than 24h are
+                # cleaned up by an engine job (Phase 4).
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nx_souls_messages_cache (
+                        id               BIGSERIAL PRIMARY KEY,
+                        token_id         INTEGER NOT NULL REFERENCES devs(token_id),
+                        wallet_address   VARCHAR(42) NOT NULL,
+                        user_message_len INTEGER NOT NULL,
+                        response_len     INTEGER,
+                        provider_used    VARCHAR(30),
+                        climax           BOOLEAN NOT NULL DEFAULT FALSE,
+                        duration_ms      INTEGER,
+                        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_souls_msg_token_time "
+                    "ON nx_souls_messages_cache(token_id, created_at DESC)"
+                )
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
@@ -698,6 +752,13 @@ async def lifespan(app: FastAPI):
     init_db_pool(minconn=5, maxconn=50)
     _run_auto_migrations()
     await init_redis()
+    # Surface NX Souls provider availability once at startup so the
+    # operator immediately sees which keys (if any) are missing.
+    try:
+        from backend.services.nx_souls.llm_router import log_router_status
+        log_router_status()
+    except Exception as e:  # pragma: no cover — never crash startup
+        log.warning(f"NX Souls router status check skipped: {e}")
     log.info("✅ NX Terminal API ready")
     yield
     log.info("🛑 NX Terminal API shutting down...")
@@ -787,6 +848,7 @@ app.include_router(streaks.router, prefix="/api/streak", tags=["Streak"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(nxmarket.router, prefix="/api/nxmarket", tags=["NXMARKET"])
+app.include_router(nx_souls.router, prefix="/api/devs", tags=["NX-Souls"])
 app.include_router(nxmarket.admin_router, prefix="/api/admin/nxmarket", tags=["NXMARKET-Admin"])
 app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])

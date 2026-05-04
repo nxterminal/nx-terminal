@@ -140,3 +140,25 @@ global_ip_limiter = SlidingWindowLimiter(
     window_seconds=60,
     namespace="global_ip",
 )
+
+# NX Souls chat endpoint — three layered IP-based caps. The chat
+# endpoint can drain real money on the OpenRouter paid tier, so we run
+# tighter limits than `global_ip_limiter` here on top of (not instead
+# of) the per-(wallet, dev) cool-down. Each window is its own limiter
+# so a burst of 5 within a minute followed by 5 more in the next minute
+# still trips the hour cap.
+souls_ip_per_minute = SlidingWindowLimiter(
+    max_requests=5,
+    window_seconds=60,
+    namespace="souls_chat_ip_min",
+)
+souls_ip_per_hour = SlidingWindowLimiter(
+    max_requests=60,
+    window_seconds=3600,
+    namespace="souls_chat_ip_hr",
+)
+souls_ip_per_day = SlidingWindowLimiter(
+    max_requests=200,
+    window_seconds=86400,
+    namespace="souls_chat_ip_day",
+)
