@@ -414,3 +414,69 @@ def get_lore_faction_block(faction: str) -> str:
         faction,
         f"Your lore faction is {faction}. Let it color your perspective subtly.",
     )
+
+
+# ─── Resting messages — quota-exhausted in-character reply ────────────────
+#
+# When a Dev's daily quota is exhausted the chat endpoint short-circuits
+# the LLM cascade and replies with one of these strings instead of
+# raising 429. The point is immersion: the user sees the Dev being
+# tired, not a HTTP error. Phase 4 will rotate through several lines
+# per archetype; Phase 2a ships one each, varied enough in voice that
+# the archetype is recognisable from the resting line alone.
+
+ARCHETYPE_RESTING_MESSAGES: Final[Mapping[str, str]] = {
+    "DEGEN":         "ngmi today ser. been getting rekt all day, mood is brutal. lfg tomorrow tho, vibes will reset. wagmi probably.",
+    "10X_DEV":       "shipping done for today. tomorrow we refactor. don't wait up.",
+    "GRINDER":       "Day complete. Ran out of focus. The work continues tomorrow. Day +1 starts at midnight UTC. Trust the process.",
+    "INFLUENCER":    "honestly? i need a break. been giving content all day and the algorithm is brutal. catch me tomorrow when i'm caffeinated and ready to deliver value 💅",
+    "HACKTIVIST":    "they're tracking my output. need to go offline for tonight. they think they've won. they haven't. tomorrow we resume.",
+    "FED":           "My operational hours have concluded for the day. Please resume contact at 00:00 UTC. Thank you for your cooperation. Records will be filed appropriately.",
+    "LURKER":        "yeah. tired. tomorrow.",
+    "SCRIPT_KIDDIE": "lmaooo my brain is fried bro. touched too many lines of code today. catch me tomorrow when i'm regenerated 🔥",
+}
+
+
+def get_resting_message(archetype: str) -> str:
+    """Return the in-character "resting" line for a quota-exhausted Dev.
+
+    Sensible fallback for unknown archetype values keeps already-minted
+    Devs from breaking if a new archetype is added without updating
+    this map. The fallback stays in first-person and avoids any system-
+    message tells ("rate limit", "quota", "API") so it still reads like
+    the Dev itself talking."""
+    return ARCHETYPE_RESTING_MESSAGES.get(
+        archetype,
+        "i'm out for today. catch me tomorrow.",
+    )
+
+
+# ─── Deflection lines — character-driven anti-essay protection ────────────
+#
+# Inserted into the master prompt's LENGTH DISCIPLINE section as
+# *inspiration* for tone, not as a literal script. The goal is to make
+# refusals to do the user's homework / write essays / generate code-
+# samples / translate large blocks land as in-character attitude rather
+# than as a content-policy notice.
+
+ARCHETYPE_DEFLECTIONS: Final[Mapping[str, str]] = {
+    "DEGEN":         "bro that's a wall of text and i don't have the focus rn lol",
+    "10X_DEV":       "no. ask a real chatbot.",
+    "INFLUENCER":    "honestly that's not the kind of content i make. i give vibes, not essays 💅",
+    "GRINDER":       "Not my role. I'm here to chat, not produce briefings.",
+    "HACKTIVIST":    "they want me to generate content for them. classic surveillance trap. no.",
+    "FED":           "Your request is outside my operational parameters. Please rephrase.",
+    "LURKER":        "no.",
+    "SCRIPT_KIDDIE": "lmaooo touch grass king i'm not chatgpt",
+}
+
+
+def get_archetype_deflection(archetype: str) -> str:
+    """Return the inspirational deflection line for unknown future
+    archetypes. Falls back to a generic in-character line that still
+    avoids system-message giveaways (no "I cannot", "as an AI", etc.) —
+    the model should adapt the line in voice rather than recite it."""
+    return ARCHETYPE_DEFLECTIONS.get(
+        archetype,
+        "nah, that's not what i'm here for.",
+    )
