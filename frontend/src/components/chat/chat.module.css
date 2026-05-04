@@ -1,0 +1,79 @@
+/* NX Souls chat modal — Phase 3.2 baseline.
+ *
+ * Just enough chrome to verify the modal renders and is draggable.
+ * Phase 3.5 owns the full MSN Messenger 2003 styling pass (gradients,
+ * Tahoma typography, status indicators, hover affordances, animation
+ * polish) — anything beyond what's strictly needed to drag-and-close
+ * a placeholder modal belongs in 3.5, not here.
+ */
+
+.msnModal {
+  width: 480px;
+  height: 640px;
+  background: #ffffff;
+  border: 2px solid #4a6fa5;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 11px;
+}
+
+.msnTitleBar {
+  height: 28px;
+  background: linear-gradient(to bottom, #6e9be0 0%, #4a6fa5 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  cursor: move;
+  user-select: none;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.msnTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msnTitleBarButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.msnTitleBarButton {
+  background: transparent;
+  color: white;
+  border: none;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.msnTitleBarButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.msnContent {
+  flex: 1;
+  overflow: hidden;
+}
+
+.msnPlaceholder {
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
