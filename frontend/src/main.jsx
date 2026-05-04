@@ -6,8 +6,10 @@ import { MegaProvider } from '@megaeth-labs/wallet-sdk-react';
 import { wagmiConfig } from './services/wagmi';
 import { DevsProvider } from './contexts/DevsContext';
 import { WalletSelectorProvider } from './contexts/WalletSelectorContext';
+import { ChatProvider } from './contexts/ChatContext';
 import WalletSelectorModal from './components/WalletSelectorModal';
 import WalletSelectorCancelOverlay from './components/WalletSelectorCancelOverlay';
+import ChatModal from './components/chat/ChatModal';
 import './index.css';
 import App from './App.jsx';
 import MossTest from './pages/MossTest.jsx';
@@ -46,7 +48,13 @@ createRoot(document.getElementById('root')).render(
       <WagmiProvider config={wagmiConfig}>
         <WalletSelectorProvider>
           <DevsProvider>
-            <Root />
+            <ChatProvider>
+              <Root />
+              {/* Floating chat modal — renders null until openChatModal()
+                  is called AND the connected wallet is in the NX Souls
+                  beta allowlist (see config/betaFeatures.js). */}
+              <ChatModal />
+            </ChatProvider>
           </DevsProvider>
           <WalletSelectorModal />
           <WalletSelectorCancelOverlay />
