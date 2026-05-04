@@ -43,8 +43,13 @@ import styles from './chat.module.css';
 // chat.module.css. Used to compute the centred default position so
 // react-draggable's transform-on-mount doesn't fight a CSS centering
 // translate. Update both places together.
-const MODAL_WIDTH_PX = 480;
-const MODAL_HEIGHT_PX = 640;
+//
+// Phase 3.5 bump: 480×640 → 520×720 because the original frame was
+// too cramped at the upgraded 13/14px body typography. The list rows
+// at 12px padding × 13px text fit comfortably in 520, the
+// conversation view's bubbles + composer sit comfortably at 720.
+const MODAL_WIDTH_PX = 520;
+const MODAL_HEIGHT_PX = 720;
 
 export default function ChatModal() {
   const { address } = useWallet();

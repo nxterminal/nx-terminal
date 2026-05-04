@@ -35,7 +35,8 @@ export default function ChatList({
             aria-hidden="true"
           >
             <div
-              className={`${styles.chatListAvatar} ${styles.chatListSkeletonBlock}`}
+              className={`${styles.chatAvatarFrame} ${styles.chatListSkeletonBlock}`}
+              style={{ width: 48, height: 48 }}
             />
             <div className={styles.chatListMeta}>
               <div
