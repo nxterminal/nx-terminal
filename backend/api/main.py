@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -849,6 +849,7 @@ app.include_router(achievements.router, prefix="/api/achievements", tags=["Achie
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(nxmarket.router, prefix="/api/nxmarket", tags=["NXMARKET"])
 app.include_router(nx_souls.router, prefix="/api/devs", tags=["NX-Souls"])
+app.include_router(user.router, prefix="/api/user", tags=["User"])
 app.include_router(nxmarket.admin_router, prefix="/api/admin/nxmarket", tags=["NXMARKET-Admin"])
 app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])
