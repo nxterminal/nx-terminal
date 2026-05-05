@@ -26,7 +26,14 @@
   --msn-text-muted:   #666666;
 
   position: fixed;
-  bottom: 16px;
+  /* Phase 4.2.1 — clear the Win98 taskbar safe area. The taskbar
+   * sits at bottom: 0 with 34-40px height; wallet-error popups
+   * anchor at bottom: 42px above it. The shared
+   * --sprkls-safe-bottom-px variable (defined in index.css :root)
+   * gives every sprkl surface a single source of truth — when
+   * Phase 4.3 lands the graffiti layer can reference the same
+   * value without duplicating the math. */
+  bottom: var(--sprkls-safe-bottom-px, 90px);
   right: 16px;
   z-index: 9500;
   display: flex;
