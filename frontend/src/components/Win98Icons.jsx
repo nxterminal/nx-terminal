@@ -1053,6 +1053,51 @@ function IconCatOther({ size = 24 }) {
   );
 }
 
+// MSN Messenger 2003 buddy icon — green-gradient body + head with
+// a small speech bubble carrying three dots. Used by the NX CHAT
+// desktop entry shipped in Phase 3.6 to launch the NX Souls modal.
+function IconNXChat({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="msnBuddyBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7dd070" />
+          <stop offset="50%" stopColor="#5dbc56" />
+          <stop offset="100%" stopColor="#3a8a37" />
+        </linearGradient>
+        <radialGradient id="msnBuddyHead" cx="40%" cy="35%">
+          <stop offset="0%" stopColor="#a0e090" />
+          <stop offset="60%" stopColor="#5dbc56" />
+          <stop offset="100%" stopColor="#3a8a37" />
+        </radialGradient>
+        <linearGradient id="msnBubble" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e0e0e0" />
+        </linearGradient>
+      </defs>
+      {/* Speech bubble background — small, top-right */}
+      <ellipse cx="24" cy="9" rx="6" ry="4" fill="url(#msnBubble)" stroke="#888" strokeWidth="0.5" />
+      <path d="M20 12 L19 14 L21.5 12.5 Z" fill="url(#msnBubble)" stroke="#888" strokeWidth="0.5" />
+      <circle cx="22" cy="9" r="0.7" fill="#666" />
+      <circle cx="24" cy="9" r="0.7" fill="#666" />
+      <circle cx="26" cy="9" r="0.7" fill="#666" />
+      {/* Buddy body — rounded, MSN classic */}
+      <ellipse cx="13" cy="22" rx="8" ry="7" fill="url(#msnBuddyBody)" stroke="#2a6a27" strokeWidth="0.6" />
+      {/* Buddy head — round, slightly forward */}
+      <circle cx="13" cy="14" r="6.5" fill="url(#msnBuddyHead)" stroke="#2a6a27" strokeWidth="0.6" />
+      {/* Eyes */}
+      <circle cx="11" cy="13" r="1.1" fill="#1a1a1a" />
+      <circle cx="15" cy="13" r="1.1" fill="#1a1a1a" />
+      <circle cx="11.3" cy="12.6" r="0.4" fill="#ffffff" />
+      <circle cx="15.3" cy="12.6" r="0.4" fill="#ffffff" />
+      {/* Smile */}
+      <path d="M10 16 Q13 18.5 16 16" fill="none" stroke="#1a1a1a" strokeWidth="0.8" strokeLinecap="round" />
+      {/* Highlight */}
+      <ellipse cx="11" cy="11" rx="1.5" ry="1" fill="rgba(255,255,255,0.4)" />
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -1087,6 +1132,7 @@ export const ICON_MAP = {
   'cat-politics': IconCatPolitics,
   'cat-entertainment': IconCatEntertainment,
   'cat-other': IconCatOther,
+  'nxchat': IconNXChat,
 };
 
 export function Win98Icon({ id, size = 32 }) {

@@ -46,6 +46,8 @@ import Screensaver from './Screensaver';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
 import { useWallet } from '../hooks/useWallet';
+import { useChatModal } from '../contexts/ChatContext';
+import { isInNXSoulsBeta } from '../config/betaFeatures';
 import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
@@ -180,6 +182,11 @@ export default function Desktop() {
 
   const { devCount, tier, nextTier } = useDevCount();
   const { address, isConnected } = useWallet();
+  // Phase 3.6 — NX CHAT desktop icon (beta-gated). Calling
+  // openChatModal() with no args triggers the auto-select of the
+  // most recent active chat (Phase 3.5.2.7), or the empty-state UI
+  // if the wallet has none yet.
+  const { openChatModal } = useChatModal();
 
   const [wallpaperStyle, setWallpaperStyle] = useState(getWallpaperStyle);
   const [wallpaperOverlay, setWallpaperOverlay] = useState(getWallpaperOverlay);
@@ -351,6 +358,22 @@ export default function Desktop() {
             unreadCount={item.id === 'inbox' ? unreadCount : 0}
           />
         ))}
+        {/* Phase 3.6 — NX CHAT entry, beta-gated. Sits in the same
+            grid as every other desktop icon so the layout stays
+            uniform; rendered outside DESKTOP_ICONS because it opens
+            the floating chat modal (via openChatModal) instead of a
+            window-managed view. Non-beta wallets never see this. */}
+        {isInNXSoulsBeta(address) && (
+          <DesktopIcon
+            id="nxchat"
+            label="NX CHAT"
+            desc="Chat with your Devs"
+            iconSize={iconScale === 'small' ? 24 : iconScale === 'large' ? 48 : 32}
+            onOpen={() => openChatModal()}
+            tooltipsEnabled={tooltipsEnabled}
+            clickMode={clickMode}
+          />
+        )}
       </div>
 
       {/* Rank sticky note — top-right */}

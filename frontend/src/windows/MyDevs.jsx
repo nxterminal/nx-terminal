@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { formatUnits } from 'viem';
 import { useWallet } from '../hooks/useWallet';
+import { useChatModal } from '../contexts/ChatContext';
 import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
+import { isInNXSoulsBeta } from '../config/betaFeatures';
 import { NXT_TOKEN_ADDRESS, TREASURY_ADDRESS, ERC20_TRANSFER_ABI } from '../services/contract';
 import { playSpendSound, playGainSound, playActionSound } from '../utils/sound';
 
@@ -464,6 +466,11 @@ function DevImageModal({ dev, onClose }) {
 function QuickPrompt({ devId, devName, address }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
+  // Phase 3.6 — beta-gated NX Souls chat button. The button is
+  // ADDITIVE to the existing "Give orders" input below; non-beta
+  // wallets see the original UX unchanged.
+  const { openChatModal } = useChatModal();
+  const inBeta = isInNXSoulsBeta(address);
 
   const handleSend = (e) => {
     e.stopPropagation();
@@ -489,10 +496,32 @@ function QuickPrompt({ devId, devName, address }) {
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
-        display: 'flex', gap: '3px', alignItems: 'center',
+        display: 'flex', flexDirection: 'column', gap: '3px',
         marginTop: '3px', position: 'relative',
       }}
     >
+      {inBeta && (
+        // Phase 3.6 — full-width StoneBtn matches the COFFEE / FEED
+        // / HACK aesthetic already in use across MyDevs. openChatModal
+        // with the dev's tokenId triggers Phase 3.5.2's
+        // initialDevId path so the modal opens directly into THIS
+        // Dev's conversation (with persisted history loaded).
+        <StoneBtn
+          emoji={'💬'}
+          label={`CHAT WITH ${devName}`}
+          onClick={(e) => {
+            e?.stopPropagation?.();
+            openChatModal(devId);
+          }}
+          title={`Chat with ${devName}`}
+        />
+      )}
+      <div
+        style={{
+          display: 'flex', gap: '3px', alignItems: 'center',
+          position: 'relative',
+        }}
+      >
       {status === 'sent' ? (
         <span style={{
           fontSize: 'var(--text-xs)', color: 'var(--terminal-green, #33ff33)',
@@ -537,6 +566,7 @@ function QuickPrompt({ devId, devName, address }) {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
