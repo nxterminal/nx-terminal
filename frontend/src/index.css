@@ -30,6 +30,19 @@
   --text-primary: #000000;
   --text-secondary: #444444;
   --text-muted: #555555;
+
+  /* Sprkls Phase 4.2.1 — safe-area above the Win98 taskbar.
+   * The taskbar (.taskbar in App.css) sits at bottom: 0 with a
+   * 34px height (40px on the ≥2560px breakpoint). Wallet-error
+   * popups in Taskbar.jsx anchor at bottom: 42px so they float
+   * just above the taskbar; 90px gives sprkls comfortable
+   * clearance from BOTH the bare taskbar and any taskbar-anchored
+   * popups, so the toast layer + Phase 4.3 graffiti layer can
+   * reference one variable instead of duplicating the math.
+   *
+   * Bumping this affects every sprkl surface; keep it ≥ taskbar
+   * height + 56px to stay clear of taskbar-attached popups. */
+  --sprkls-safe-bottom-px: 90px;
 }
 
 /* ── UI Text Scale ─────────────────────────────────────────
