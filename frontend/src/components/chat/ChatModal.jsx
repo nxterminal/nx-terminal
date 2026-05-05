@@ -142,9 +142,23 @@ export default function ChatModal() {
       didAutoSelectRef.current = true;
       return;
     }
-    // First fetch still in flight — wait before deciding so the user
-    // doesn't briefly see the picker before the chats load.
-    if (chatsLoading && activeChats.length === 0) return;
+    // Wait for the first fetch to fully resolve before deciding.
+    //
+    // Phase 3.5.2 had `chatsLoading && activeChats.length === 0` here,
+    // which raced: useActiveChats flips loading=false inside the
+    // finally-block of doFetch, but the success branch updates the
+    // devs array via setDevs(). React batches both setStates from the
+    // same task, but a strict-mode double-effect can still observe
+    // the brief render where loading=false AND activeChats=[]. The
+    // effect interpreted that as "no chats" and called
+    // openNewChatPicker() — and didAutoSelectRef latched it for the
+    // open cycle, so the spurious picker stuck around.
+    //
+    // The bare `if (chatsLoading) return` removes the race: the hook
+    // only flips loading=false after the response (success OR error)
+    // has been processed, so once we proceed past this guard,
+    // activeChats reflects an actual server snapshot.
+    if (chatsLoading) return;
 
     if (activeChats.length > 0) {
       selectChat(activeChats[0].token_id);
