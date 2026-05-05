@@ -44,7 +44,15 @@ export function useConversations(
   { enabled = true, polling = true } = {}
 ) {
   const [devs, setDevs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Initial state is TRUE for the same reason as useActiveChats: the
+  // hook fires its first fetch synchronously on mount, so any
+  // consumer guarding on `loading` should observe "loading" until
+  // the first response lands. Initialising false would briefly
+  // expose `loading=false && devs=[]` on the very first render,
+  // which a consumer could misinterpret as "fetch completed empty"
+  // (the Phase 3.5.2 spurious-picker bug, applied symmetrically
+  // here so a future caller doesn't repeat it).
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Bumped on every (walletAddress, enabled) change. In-flight fetches

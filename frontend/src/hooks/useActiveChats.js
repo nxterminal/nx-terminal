@@ -31,7 +31,15 @@ const POLL_INTERVAL_MS = 60_000;
 
 export function useActiveChats(walletAddress, { enabled = true } = {}) {
   const [activeChats, setActiveChats] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Initial state is TRUE because the hook fires its first fetch
+  // synchronously on mount. Initialising as false would let the
+  // first render observe `loading=false && activeChats=[]`, which
+  // any consumer guarding on `loading` would interpret as "fetch
+  // completed with no results" — exactly the failure mode that
+  // caused the spurious NewChatPicker open at modal-mount in
+  // Phase 3.5.2 (fixed in 3.5.2.2 for the in-flight branch and
+  // here in 3.5.2.3 for the pre-flight branch).
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Bumped on every (wallet, enabled) change. In-flight fetches
