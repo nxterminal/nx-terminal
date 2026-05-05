@@ -1,6 +1,13 @@
 """Tests for backend.services.sprkls.scheduler — eligibility,
 cooldown, generation, and cleanup. Cursor / connection are stubbed
-so the SQL contract is pinned without a live Postgres."""
+so the SQL contract is pinned without a live Postgres.
+
+Phase 4.1.1 hardening: the StubConn enforces that the caller passes
+`cursor_factory=psycopg2.extras.RealDictCursor` to conn.cursor() —
+without this, a future regression that drops the explicit factory
+would silently work in tests (mocks return dicts regardless) and
+crash in production where engine/engine.py:get_db() returns a
+tuple-cursor connection."""
 
 from __future__ import annotations
 
@@ -9,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+import psycopg2.extras
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -65,10 +73,34 @@ class StubCursor:
 
 
 class StubConn:
+    """Phase 4.1.1: enforces `cursor_factory=RealDictCursor` is
+    passed.
+
+    The real production bug from Phase 4.1: scheduler called
+    `conn.cursor()` with no factory, which on the engine's
+    tuple-default connection produced tuples — but then iterated
+    over rows as if they were dicts (`r.get(...)`). Tests passed
+    because mocks return dicts regardless of cursor_factory.
+
+    By making the stub raise when called without RealDictCursor, a
+    future regression that drops the explicit factory now fails at
+    test time instead of in production. `cursor_factory` is also
+    recorded so a dedicated regression test can read it back."""
+
     def __init__(self, cur):
         self._cur = cur
+        self.cursor_calls: list[type | None] = []
 
-    def cursor(self):
+    def cursor(self, *, cursor_factory=None):
+        self.cursor_calls.append(cursor_factory)
+        if cursor_factory is not psycopg2.extras.RealDictCursor:
+            raise AssertionError(
+                "scheduler must request RealDictCursor explicitly — "
+                f"got cursor_factory={cursor_factory!r}. The engine's "
+                "get_db() returns a tuple-default connection; without "
+                "the explicit factory, dict accesses (r.get / r[...]) "
+                "crash in production while passing in tests."
+            )
         return self._cur
 
 
@@ -302,3 +334,57 @@ def test_cleanup_returns_zero_when_nothing_expired():
     cur.execute = execute_with_rowcount
     conn = StubConn(cur)
     assert scheduler_module.cleanup_expired_posts(conn) == 0
+
+
+# ─── Phase 4.1.1 regression: cursor factory contract ─────────────────
+
+
+def test_run_sprkls_tick_requests_real_dict_cursor():
+    """Pin that the scheduler asks for RealDictCursor explicitly.
+
+    The original production bug: conn.cursor() with no factory on the
+    engine's tuple-default connection returned tuples, but the
+    scheduler iterated as if rows were dicts. Tests passed because
+    StubCursor returned dicts regardless of factory.
+
+    The reinforced StubConn now raises if cursor_factory isn't
+    RealDictCursor; this test exercises run_sprkls_tick in full and
+    asserts the factory was recorded — both layers of defence.
+    """
+    cur = StubCursor()
+    cur.push_fetchall([])  # no eligible wallets — short, clean path
+    conn = StubConn(cur)
+
+    inserted = scheduler_module.run_sprkls_tick(conn)
+    assert inserted == 0
+    assert conn.cursor_calls == [psycopg2.extras.RealDictCursor]
+
+
+def test_cleanup_expired_posts_requests_real_dict_cursor():
+    """Same regression contract for the cleanup helper. Even though
+    cleanup doesn't read row dicts today, a future SELECT here would
+    expose the bug if the factory were dropped — pin the contract
+    consistently."""
+    cur = StubCursor()
+    original = cur.execute
+
+    def execute_with_rowcount(sql, params=None):
+        original(sql, params)
+        cur.rowcount = 0
+
+    cur.execute = execute_with_rowcount
+    conn = StubConn(cur)
+    scheduler_module.cleanup_expired_posts(conn)
+    assert conn.cursor_calls == [psycopg2.extras.RealDictCursor]
+
+
+def test_stub_conn_rejects_default_cursor():
+    """Self-test: the hardened StubConn must raise when a caller
+    passes the wrong (or missing) cursor_factory. If this test ever
+    starts passing-by-not-raising, the StubConn's enforcement has
+    degraded and the regression catch is gone."""
+    conn = StubConn(StubCursor())
+    with pytest.raises(AssertionError, match="RealDictCursor"):
+        conn.cursor()  # default factory — must reject
+    with pytest.raises(AssertionError, match="RealDictCursor"):
+        conn.cursor(cursor_factory=tuple)  # wrong type — must reject
