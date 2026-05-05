@@ -722,12 +722,34 @@
 .chatEmptyRightPane {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   color: var(--msn-text-muted);
   font-style: italic;
   padding: 24px;
   text-align: center;
+}
+
+/* Phase 3.5.2.7 — prominent empty-state when the wallet has zero
+ * active chats. The auto-open picker was removed in this phase, so
+ * this is now the only signal that points the user toward the
+ * "+ New chat" button. Title is bigger / non-italic to read as a
+ * heading, subtitle stays muted and explanatory. */
+.chatEmptyTitle {
+  font-size: 14px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--msn-text);
+}
+
+.chatEmptySubtitle {
+  font-size: 12px;
+  font-style: normal;
+  color: var(--msn-text-muted);
+  max-width: 320px;
+  line-height: 1.4;
 }
 
 /* ── Active-chats list extras ─────────────────────────────────────────
