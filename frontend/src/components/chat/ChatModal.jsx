@@ -46,6 +46,7 @@ import Draggable from 'react-draggable';
 import { useWallet } from '../../hooks/useWallet';
 import { useChatModal } from '../../contexts/ChatContext';
 import { useActiveChats } from '../../hooks/useActiveChats';
+import { useConversations } from '../../hooks/useConversations';
 import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
@@ -103,6 +104,22 @@ export default function ChatModal() {
   // pane and the right-pane dev lookup.
   const { activeChats, loading: chatsLoading, error: chatsError, refresh: refreshChats } =
     useActiveChats(address, { enabled: isOpen });
+
+  // All-Devs fallback for the right pane. Phase 3.5.2 looked up the
+  // selected Dev only in `activeChats`, which broke the
+  // NewChatPicker flow: picking a Dev with no active conversation
+  // yet would set `selectedTokenId` but the right pane stayed on
+  // the empty-state placeholder (the row didn't exist in
+  // activeChats yet). NewChatPicker already uses this same hook
+  // internally; mounting it here too is harmless because both
+  // instances share the in-flight request via the React Query-style
+  // poll dedup the hook isn't doing — they DO each fire a request,
+  // but it's two GETs to the same endpoint at most every 60s and
+  // the picker only mounts when the overlay is open. Acceptable
+  // cost; the alternative would be lifting useConversations to
+  // ChatModal and threading `devs` down to NewChatPicker, which
+  // would entangle two surfaces that are otherwise independent.
+  const { devs: ownedDevs } = useConversations(address, { enabled: isOpen });
 
   // Default-to-most-recent / open-picker logic. Fires ONCE per open
   // cycle — tracked via the ref below — so on mobile a user who
@@ -165,12 +182,25 @@ export default function ChatModal() {
   if (!isOpen) return null;
   if (!isInNXSoulsBeta(address)) return null;
 
-  // Resolve the selected Dev from the live activeChats array on every
-  // render. When the 60s poll refreshes the list, the right pane's
-  // status / quota / preview update for free.
+  // Resolve the selected Dev. Prefer the active-chats row because
+  // it carries the freshest signal (last_message preview, current
+  // quota state from the join). Fall back to the all-Devs list when
+  // a NewChatPicker selection lands on a Dev that hasn't sent a
+  // first message yet — until the picker→send→poll cycle completes
+  // (~60s, or sooner via refreshChats), the Dev only exists in
+  // `ownedDevs`. Without this fallback the right pane would render
+  // its empty-state placeholder instead of the chosen conversation.
+  //
+  // The two arrays may briefly carry slightly different shapes for
+  // the same token_id (active-chats has last_message; ownedDevs
+  // doesn't). ChatConversation only reads name / archetype /
+  // ipfs_image / status / quota / token_id, all of which exist on
+  // both shapes.
   const selectedDev =
     selectedTokenId != null
-      ? activeChats.find((c) => c.token_id === selectedTokenId) || null
+      ? activeChats.find((c) => c.token_id === selectedTokenId)
+        || ownedDevs.find((d) => d.token_id === selectedTokenId)
+        || null
       : null;
 
   // Mobile: full-screen toggle layout. selectedTokenId is the
