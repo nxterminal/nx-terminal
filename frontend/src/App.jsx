@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import BootScreen from './components/BootScreen';
 import Desktop from './components/Desktop';
+import SprklsLayer from './components/sprkls/SprklsLayer';
 import './App.css';
 
 function App() {
@@ -14,7 +15,16 @@ function App() {
     return <BootScreen onComplete={handleBootComplete} />;
   }
 
-  return <Desktop />;
+  // SprklsLayer is mounted unconditionally as a sibling of Desktop:
+  // the beta gate + walletAddress check live INSIDE the component
+  // (returns null when the user shouldn't see toasts), so non-beta
+  // wallets pay zero render cost and the polling never starts.
+  return (
+    <>
+      <Desktop />
+      <SprklsLayer />
+    </>
+  );
 }
 
 export default App;
