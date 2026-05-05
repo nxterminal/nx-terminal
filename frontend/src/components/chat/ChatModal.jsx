@@ -127,9 +127,38 @@ export default function ChatModal() {
   // doesn't get yanked back into the most-recent chat by the next
   // re-render. The ref resets when the modal closes so the next
   // open re-runs the logic from scratch.
+  // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+  // Random per-mount id so we can spot if ChatModal is being remounted
+  // unexpectedly (which would reset didAutoSelectRef and re-fire the
+  // auto-select branch).
+  const mountIdRef = useRef(Math.random().toString(36).slice(2, 8));
+  useEffect(() => {
+    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+    console.log('[ChatModal] MOUNTED', { mountId: mountIdRef.current });
+    return () => {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] UNMOUNTED', { mountId: mountIdRef.current });
+    };
+  }, []);
+
   const didAutoSelectRef = useRef(false);
   useEffect(() => {
+    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+    console.log('[ChatModal] auto-select effect run', {
+      mountId: mountIdRef.current,
+      isOpen,
+      address,
+      initialDevId,
+      chatsLoading,
+      activeChatsLength: activeChats.length,
+      didAutoSelected: didAutoSelectRef.current,
+    });
+
     if (!isOpen) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: not open, resetting ref', {
+        mountId: mountIdRef.current,
+      });
       didAutoSelectRef.current = false;
       return;
     }
@@ -141,12 +170,29 @@ export default function ChatModal() {
     // the NewChatPicker before the wallet ever lands. The hooks
     // themselves now keep `loading=true` while waiting for the
     // wallet (defense in depth), but this guard is the second line.
-    if (!address) return;
-    if (didAutoSelectRef.current) return;
+    if (!address) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: no address yet, return', {
+        mountId: mountIdRef.current,
+      });
+      return;
+    }
+    if (didAutoSelectRef.current) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: already auto-selected, return', {
+        mountId: mountIdRef.current,
+      });
+      return;
+    }
 
     // Phase 3.6 entry: openChatModal(tokenId) → reflect into context
     // selection. Wins over default-to-most-recent.
     if (initialDevId) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: initialDevId path', {
+        mountId: mountIdRef.current,
+        initialDevId,
+      });
       selectChat(initialDevId);
       didAutoSelectRef.current = true;
       return;
@@ -167,11 +213,26 @@ export default function ChatModal() {
     // only flips loading=false after the response (success OR error)
     // has been processed, so once we proceed past this guard,
     // activeChats reflects an actual server snapshot.
-    if (chatsLoading) return;
+    if (chatsLoading) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: still loading, return', {
+        mountId: mountIdRef.current,
+      });
+      return;
+    }
 
     if (activeChats.length > 0) {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: selecting most recent', {
+        mountId: mountIdRef.current,
+        token_id: activeChats[0].token_id,
+      });
       selectChat(activeChats[0].token_id);
     } else {
+      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
+      console.log('[ChatModal] effect: NO active chats, opening picker', {
+        mountId: mountIdRef.current,
+      });
       openNewChatPicker();
     }
     didAutoSelectRef.current = true;

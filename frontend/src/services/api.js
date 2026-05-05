@@ -127,8 +127,22 @@ export const api = {
   // NX Souls — active chats (only Devs with non-expired persisted
   // messages). Backed by GET /api/user/{wallet}/active-chats. Phase
   // 3.5.2 left-pane data source.
-  getActiveChats: (wallet) =>
-    fetchJSON(`${API_BASE}/api/user/${wallet}/active-chats`),
+  // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7 — async wrapper
+  // surfaces the wire-level result so we can correlate the hook's
+  // observed activeChats=[] state with what the server actually
+  // returned.
+  getActiveChats: async (wallet) => {
+    console.log('[api] getActiveChats START', { wallet });
+    const result = await fetchJSON(
+      `${API_BASE}/api/user/${wallet}/active-chats`
+    );
+    console.log('[api] getActiveChats RESULT', {
+      wallet,
+      activeChatsLength: result?.active_chats?.length || 0,
+      raw: result,
+    });
+    return result;
+  },
 
   // NX Souls — full message history for one Dev's chat. Phase 3.5.3
   // will wire ChatConversation to this on open; Phase 3.5.2 just
