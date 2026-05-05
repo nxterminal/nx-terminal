@@ -770,3 +770,608 @@
    * here, but documenting the intent so a future hot-spot tweak
    * (e.g. centering the tip on mousePos) lands here, not in JSX. */
 }
+
+/* ── Phase 4.5b — viewport-takeover surfaces ──────────────────────── */
+
+/* Screensaver layer wrapper. The component itself is fullscreen-
+ * fixed and handles its own fade animations; the layer wrapper is
+ * here to give the parent a single mount point and to keep the
+ * z-index value documented next to the rest of the ladder.
+ *
+ * 9600 sits between cursor_prank fake-cursor (9700) and the toast
+ * stack (9500). The screensaver covers everything sprkl-related
+ * (toasts / graffiti / popups / desktop_files), but if a cursor
+ * prank is active the fake cursor stays painted on top — that's
+ * fine; the screensaver is dismissed by mousemove anyway, so the
+ * cursor's wiggle is the dismiss gesture. */
+.sprklsScreensaverLayer {
+  /* No own positioning — children are fixed. Empty class still
+   * gives SprklsLayer a stable wrapper for future per-layer
+   * styling (e.g. theme overrides). */
+}
+
+/* Wallpaper layer wrapper. z-index 50 places it above the desktop
+ * surface (typically z-index 0 / auto) but below windows + taskbar
+ * + every sprkl surface + the chat modal. pointer-events: none on
+ * the wrapper keeps the desktop fully interactive — the only
+ * clickable element in the wallpaper is the Restore button, which
+ * has its own high z-index + pointer-events: auto. */
+.sprklsWallpaperLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ── Screensaver: shared frame + fade ─────────────────────────────── */
+
+/* Base screensaver wrapper. Each archetype variant supplies its
+ * own background via a modifier class; this base sets the
+ * full-viewport stage + the fade-in animation that runs on mount.
+ *
+ * The wrapper uses pointer-events: auto so click-anywhere-to-
+ * dismiss works (SprklScreensaver listens on window for click, but
+ * the listener still needs the cursor to be over a surface that
+ * accepts the click — pointer-events: none on the layer above
+ * would let the click sail through to the desktop and skip the
+ * dismiss). */
+.sprklScreensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  overflow: hidden;
+  pointer-events: auto;
+  cursor: pointer;
+  color: #ffffff;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  animation: sprklScreensaverFadeIn 1000ms ease-out forwards;
+  /* user-select: none across the takeover so a stray click-drag
+   * doesn't leave an awkward selection highlight on dismiss. */
+  user-select: none;
+}
+
+@keyframes sprklScreensaverFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sprklScreensaver_fadingOut {
+  animation: sprklScreensaverFadeOut 500ms ease-in forwards;
+}
+
+@keyframes sprklScreensaverFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Dismiss-affordance hint anchored bottom-right. Low contrast on
+ * purpose — the takeover effect should dominate visually; the hint
+ * is just a safety rail for users who don't know the gesture. */
+.sprklScreensaverHint {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+}
+
+/* ── Screensaver: DEGEN — green candles + MOON SOON marquee ──────── */
+
+.sprklScreensaver_degen {
+  background:
+    radial-gradient(circle at 50% 30%, #052e0f 0%, #000000 70%);
+}
+
+.sprklScreensaverDegenCandles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sprklScreensaverDegenCandle {
+  position: absolute;
+  bottom: -40px;
+  width: 14px;
+  height: 40px;
+  background: linear-gradient(
+    to bottom,
+    #22c55e 0%,
+    #22c55e 30%,
+    #16a34a 30%,
+    #16a34a 100%
+  );
+  /* Pixel-art outline so the candle reads as game-y rather than
+   * smooth-vector. The 0 0 inset makes the inner highlight feel
+   * like a Win98 "raised" bevel. */
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.5);
+  animation: sprklScreensaverDegenRise 4s linear infinite;
+}
+
+@keyframes sprklScreensaverDegenRise {
+  from {
+    bottom: -50px;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  to {
+    bottom: 110%;
+    opacity: 0;
+  }
+}
+
+.sprklScreensaverDegenMarquee {
+  position: absolute;
+  bottom: 40%;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 72px;
+  font-weight: 900;
+  color: #22c55e;
+  text-shadow:
+    0 0 20px #22c55e,
+    0 0 40px rgba(34, 197, 94, 0.4);
+  letter-spacing: 0.05em;
+  font-family: 'Courier New', 'Consolas', monospace;
+  /* The inner span gets translated; the outer overflow:hidden gives
+   * the classic "infinite scroll" illusion. */
+}
+
+.sprklScreensaverDegenMarquee > span {
+  display: inline-block;
+  animation: sprklScreensaverDegenScroll 12s linear infinite;
+}
+
+@keyframes sprklScreensaverDegenScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ── Screensaver: INFLUENCER — pink BE THAT GIRL ─────────────────── */
+
+.sprklScreensaver_influencer {
+  background:
+    radial-gradient(circle at 30% 30%, #ffcce5 0%, #ff66b2 50%, #ff4d8f 100%);
+}
+
+.sprklScreensaverInfluencerStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklScreensaverInfluencerText {
+  font-size: 96px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow:
+    0 4px 0 rgba(233, 30, 99, 0.6),
+    0 0 30px rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.05em;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  /* Slow continuous rotation — slow enough not to be nauseating
+   * on a 30s screensaver. */
+  animation: sprklScreensaverInfluencerSpin 12s linear infinite;
+}
+
+@keyframes sprklScreensaverInfluencerSpin {
+  from { transform: rotate(0deg);    }
+  to   { transform: rotate(360deg);  }
+}
+
+/* ── Screensaver: 10X_DEV — green-on-black autoplaying code ──────── */
+
+.sprklScreensaver_dev {
+  background: #050a05;
+}
+
+.sprklScreensaverDevStage {
+  position: absolute;
+  inset: 0;
+  padding: 48px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.sprklScreensaverDevCode {
+  margin: 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 22px;
+  line-height: 1.6;
+  color: #22c55e;
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.sprklScreensaverDevLine {
+  display: block;
+  opacity: 0;
+  /* Each line types in via opacity step + delay; cleaner than
+   * width-animating each line individually and good enough for a
+   * "build log" feel. */
+  animation: sprklScreensaverDevTypeIn 600ms ease-out forwards;
+}
+
+@keyframes sprklScreensaverDevTypeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sprklScreensaverDevPrompt {
+  margin-top: auto;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 28px;
+  color: #22c55e;
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+  /* Cursor-blink sentinel: the trailing block is drawn via ::after
+   * so we don't need a second JSX node. */
+}
+
+.sprklScreensaverDevPrompt::after {
+  content: '_';
+  margin-left: 4px;
+  animation: sprklScreensaverDevBlink 1s steps(1) infinite;
+}
+
+@keyframes sprklScreensaverDevBlink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ── Screensaver: FED — surveillance grid + RECORDING ───────────── */
+
+.sprklScreensaver_fed {
+  background: #0a0000;
+}
+
+.sprklScreensaverFedStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklScreensaverFedGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 96px);
+  grid-template-rows: repeat(3, 96px);
+  gap: 32px;
+}
+
+.sprklScreensaverFedLens {
+  width: 96px;
+  height: 96px;
+  animation: sprklScreensaverFedRotate linear infinite;
+  /* animation-duration is set inline per-lens so the grid feels
+   * organic instead of marching in lockstep. */
+}
+
+@keyframes sprklScreensaverFedRotate {
+  from { transform: rotate(0deg);    }
+  to   { transform: rotate(360deg);  }
+}
+
+.sprklScreensaverFedRecording {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  font-weight: 900;
+  color: #dc2626;
+  letter-spacing: 0.3em;
+  font-family: 'Courier New', monospace;
+  animation: sprklScreensaverFedPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sprklScreensaverFedPulse {
+  0%, 100% { opacity: 1;   }
+  50%      { opacity: 0.3; }
+}
+
+/* ── Screensaver: SCRIPT_KIDDIE — hex dump + fake progress ──────── */
+
+.sprklScreensaver_scriptKiddie {
+  background: #000800;
+}
+
+.sprklScreensaverKiddieStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklScreensaverKiddieHex {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 16px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #00ff66;
+  opacity: 0.35;
+  white-space: pre;
+  overflow: hidden;
+  /* Scroll the hex pane upward continuously to suggest streaming
+   * payload data. */
+  animation: sprklScreensaverKiddieScroll 8s linear infinite;
+}
+
+@keyframes sprklScreensaverKiddieScroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+.sprklScreensaverKiddiePanel {
+  position: relative;
+  background: #000000;
+  border: 2px solid #00ff66;
+  padding: 32px 48px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: #00ff66;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
+  box-shadow: 0 0 40px rgba(0, 255, 102, 0.3);
+  min-width: 360px;
+  text-align: center;
+}
+
+.sprklScreensaverKiddieLabel {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  letter-spacing: 0.1em;
+}
+
+.sprklScreensaverKiddieBar {
+  height: 16px;
+  background: #002211;
+  border: 1px solid #00ff66;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.sprklScreensaverKiddieBarFill {
+  width: 47%;
+  height: 100%;
+  background: #00ff66;
+  /* Subtle stripe motion to suggest "still working" — width is
+   * frozen at 47% but the stripes scroll, matching the joke that
+   * the install never actually completes. */
+  background-image: linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.25) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.25) 50%,
+    rgba(0, 0, 0, 0.25) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 16px 16px;
+  animation: sprklScreensaverKiddieStripe 1s linear infinite;
+}
+
+@keyframes sprklScreensaverKiddieStripe {
+  from { background-position: 0 0;    }
+  to   { background-position: 16px 0; }
+}
+
+.sprklScreensaverKiddiePct {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+/* ── Screensaver: GRINDER — HUSTLE NEVER STOPS ──────────────────── */
+
+.sprklScreensaver_grinder {
+  background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
+}
+
+.sprklScreensaverGrinderStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklScreensaverGrinderText {
+  font-size: 80px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  text-align: center;
+  text-shadow:
+    0 0 8px #3b82f6,
+    0 0 24px rgba(59, 130, 246, 0.6),
+    2px 2px 0 #1d4ed8;
+  /* Pulsing scale + slight blur on the offbeat reads as motion
+   * blur without an actual blur filter (which is expensive to
+   * animate on lower-end GPUs). */
+  animation: sprklScreensaverGrinderPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes sprklScreensaverGrinderPulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 8px #3b82f6,
+      0 0 24px rgba(59, 130, 246, 0.6),
+      2px 2px 0 #1d4ed8;
+  }
+  50% {
+    transform: scale(1.06);
+    text-shadow:
+      0 0 12px #60a5fa,
+      0 0 36px rgba(96, 165, 250, 0.9),
+      3px 3px 0 #2563eb;
+  }
+}
+
+/* ── Wallpaper: shared frame + fade ──────────────────────────────── */
+
+/* The Bg element is fullscreen-fixed; the layer wrapper is
+ * pointer-events: none so this also receives no clicks (clicks
+ * must reach the desktop underneath). The Restore button is the
+ * only interactive element in the wallpaper subtree. */
+.sprklWallpaperBg {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  animation: sprklWallpaperFadeIn 1500ms ease-out forwards;
+}
+
+@keyframes sprklWallpaperFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sprklWallpaper_fadingOut {
+  animation: sprklWallpaperFadeOut 1000ms ease-in forwards;
+}
+
+@keyframes sprklWallpaperFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Restore button: top-right corner, well above the wallpaper but
+ * below the chat modal. pointer-events: auto re-enables clicks
+ * for THIS button only. The Win98 bevel matches our other chrome
+ * buttons. */
+.sprklWallpaperRestore {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9600;
+  pointer-events: auto;
+  background: linear-gradient(to bottom, #f5f5f5 0%, #d4d0c8 100%);
+  border: 1px solid #919b9c;
+  box-shadow:
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #6e6e6e,
+    2px 2px 0 rgba(0, 0, 0, 0.2);
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #000000;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.sprklWallpaperRestore:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #e0dcd0 100%);
+}
+
+.sprklWallpaperRestore:active {
+  box-shadow:
+    inset -1px -1px 0 #ffffff,
+    inset 1px 1px 0 #6e6e6e;
+}
+
+/* ── Wallpaper: per-archetype patterns ───────────────────────────── */
+
+/* DEGEN — green matrix/binary pattern. Repeating SVG data URI keeps
+ * the pattern lightweight; the radial gradient gives a vignette so
+ * the corners don't fight with desktop icons there. */
+.sprklWallpaper_degen {
+  background-color: #001a05;
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.4) 100%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(34, 197, 94, 0.08) 0px,
+      rgba(34, 197, 94, 0.08) 2px,
+      transparent 2px,
+      transparent 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(34, 197, 94, 0.05) 0px,
+      rgba(34, 197, 94, 0.05) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+}
+
+/* INFLUENCER — pink aesthetic gradient with sparkle dots. */
+.sprklWallpaper_influencer {
+  background-color: #ffcce5;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.5) 0%, transparent 8%),
+    radial-gradient(circle at 70% 40%, rgba(255, 255, 255, 0.4) 0%, transparent 6%),
+    radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.5) 0%, transparent 7%),
+    radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.4) 0%, transparent 5%),
+    linear-gradient(135deg, #ffd6eb 0%, #ff66b2 100%);
+}
+
+/* 10X_DEV — dark blue with code-like vertical line pattern. */
+.sprklWallpaper_dev {
+  background-color: #0a0f1f;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 14px,
+      rgba(96, 165, 250, 0.08) 14px,
+      rgba(96, 165, 250, 0.08) 16px
+    ),
+    linear-gradient(180deg, #0a0f1f 0%, #050810 100%);
+}
+
+/* FED — repeating surveillance camera grid. SVG data URI inlined so
+ * the pattern is self-contained; the data URI uses single-quoted
+ * attributes so we don't have to escape internal quotes. */
+.sprklWallpaper_fed {
+  background-color: #1a0000;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><circle cx='40' cy='40' r='20' fill='none' stroke='%23dc2626' stroke-width='2' opacity='0.4'/><circle cx='40' cy='40' r='10' fill='none' stroke='%23dc2626' stroke-width='1' opacity='0.4'/><circle cx='40' cy='40' r='3' fill='%23dc2626' opacity='0.5'/></svg>");
+  background-size: 80px 80px;
+}
+
+/* SCRIPT_KIDDIE — neon green skull pattern on black. */
+.sprklWallpaper_scriptKiddie {
+  background-color: #000000;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><g fill='none' stroke='%2300ff66' stroke-width='1.5' opacity='0.5'><circle cx='50' cy='40' r='18'/><rect x='42' y='55' width='16' height='10'/><circle cx='44' cy='38' r='3' fill='%2300ff66'/><circle cx='56' cy='38' r='3' fill='%2300ff66'/><line x1='50' y1='44' x2='50' y2='50'/></g></svg>");
+  background-size: 100px 100px;
+}
+
+/* GRINDER — repeating "HUSTLE" diagonal text pattern. */
+.sprklWallpaper_grinder {
+  background-color: #1a1a1a;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0px,
+      transparent 60px,
+      rgba(59, 130, 246, 0.08) 60px,
+      rgba(59, 130, 246, 0.08) 62px
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><text x='10' y='60' font-family='Tahoma,sans-serif' font-size='28' font-weight='900' fill='%233b82f6' opacity='0.18' transform='rotate(-20 120 80)'>HUSTLE</text><text x='40' y='130' font-family='Tahoma,sans-serif' font-size='28' font-weight='900' fill='%231d4ed8' opacity='0.18' transform='rotate(-20 120 80)'>GRIND</text></svg>");
+  background-size: auto, 240px 160px;
+}
