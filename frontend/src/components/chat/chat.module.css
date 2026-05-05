@@ -379,6 +379,100 @@
   font-size: 13px;
 }
 
+/* Phase 3.5.3 — history-load placeholder. Three rows that mimic
+ * the dev/user/dev bubble cadence so the conversation pane has
+ * shape from the moment it opens. Reuses the same `chatListShimmer`
+ * keyframe as the chat-list skeleton above, so a future theme tweak
+ * in one place picks up the other for free. The rows are visually
+ * inert (pointer-events: none) and the wrapper is aria-hidden in
+ * the JSX. */
+.chatHistorySkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.chatHistorySkeletonRow {
+  /* Compose with .chatMessageDev / .chatMessageUser in the JSX so
+   * left/right alignment matches a real bubble row; this rule just
+   * tones down opacity so the skeleton reads as placeholder. */
+  opacity: 0.85;
+}
+
+.chatHistorySkeletonAvatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: chatListShimmer 1.4s linear infinite;
+}
+
+.chatHistorySkeletonBubble {
+  height: 36px;
+  width: 60%;
+  max-width: 280px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ececec 25%, #f6f6f6 50%, #ececec 75%);
+  background-size: 200% 100%;
+  animation: chatListShimmer 1.4s linear infinite;
+  border: 1px solid #d8d8d8;
+}
+
+/* User-side skeleton bubble: tints toward the blue palette so the
+ * left/right rhythm reads at a glance, matching real user bubbles. */
+.chatHistorySkeletonBubbleUser {
+  width: 45%;
+  background: linear-gradient(90deg, #d4e3f7 25%, #e6efff 50%, #d4e3f7 75%);
+  background-size: 200% 100%;
+  border-color: #aac9f0;
+}
+
+/* History-load failure surface. Stays inline above the composer so
+ * the user can keep sending new messages even if the history fetch
+ * died — the chat path doesn't depend on history hydration. */
+.chatHistoryError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  margin: 8px auto;
+  background: #fff4f4;
+  border: 1px solid #f0c0c0;
+  border-radius: 4px;
+  color: #b04040;
+  font-size: 12px;
+  text-align: center;
+  max-width: 380px;
+}
+
+.chatHistoryRetry {
+  padding: 4px 14px;
+  border: 1px solid var(--msn-gray-border);
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d4d0c8 100%);
+  color: var(--msn-text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: all 0.1s ease;
+}
+
+.chatHistoryRetry:hover {
+  background: linear-gradient(to bottom, #fafafa 0%, #dfdcd2 100%);
+  border-color: var(--msn-blue-dark);
+}
+
+.chatHistoryRetry:active {
+  background: linear-gradient(to top, #f0f0f0 0%, #d4d0c8 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+}
+
 /* New-message slide-in. Transform is on every wrapper that carries
  * .chatMessage; we do it on the outer wrapper so the bubble + avatar
  * + timestamp animate together. */
