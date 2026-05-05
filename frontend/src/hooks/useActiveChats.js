@@ -42,14 +42,6 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-  console.log('[Hook useActiveChats] render', {
-    walletAddress,
-    enabled,
-    currentLoading: loading,
-    currentLength: activeChats.length,
-  });
-
   // Bumped on every (wallet, enabled) change. In-flight fetches
   // compare against the captured value at request time and bail if
   // the ref no longer matches.
@@ -62,29 +54,9 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
   const doFetch = useCallback(
     async (myToken) => {
       if (!walletAddress) return;
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[Hook useActiveChats] doFetch START', {
-        walletAddress,
-        myToken,
-      });
       try {
         const res = await api.getActiveChats(walletAddress);
-        if (myToken !== fetchTokenRef.current) {
-          // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-          console.log('[Hook useActiveChats] doFetch STALE — dropping result', {
-            walletAddress,
-            myToken,
-            currentToken: fetchTokenRef.current,
-          });
-          return; // stale
-        }
-        // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-        console.log('[Hook useActiveChats] doFetch SUCCESS', {
-          walletAddress,
-          myToken,
-          activeChatsLength: res?.active_chats?.length || 0,
-          stale: false,
-        });
+        if (myToken !== fetchTokenRef.current) return; // stale
         // Backend returns snake_case `active_chats`; expose as
         // camelCase to match JS convention without forcing every
         // consumer to know the wire shape.
@@ -92,30 +64,11 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
         setError(null);
       } catch (e) {
         if (myToken !== fetchTokenRef.current) return;
-        // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-        console.log('[Hook useActiveChats] doFetch ERROR', {
-          walletAddress,
-          myToken,
-          errorMessage: e?.message,
-        });
         setError(e);
       } finally {
         if (myToken === fetchTokenRef.current) {
-          // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-          console.log('[Hook useActiveChats] doFetch FINALLY, setting loading=false', {
-            walletAddress,
-            myToken,
-            stale: false,
-          });
           firstFetchDoneRef.current = true;
           setLoading(false);
-        } else {
-          // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-          console.log('[Hook useActiveChats] doFetch FINALLY (stale, not flipping loading)', {
-            walletAddress,
-            myToken,
-            currentToken: fetchTokenRef.current,
-          });
         }
       }
     },
@@ -131,16 +84,7 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
     const myToken = fetchTokenRef.current;
     firstFetchDoneRef.current = false;
 
-    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-    console.log('[Hook useActiveChats] effect run', {
-      walletAddress,
-      enabled,
-      fetchToken: fetchTokenRef.current,
-    });
-
     if (!enabled) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[Hook useActiveChats] DISABLED branch — clearing state');
       // Explicitly disabled by consumer (modal closed) — settle to a
       // clean idle state so a subsequent re-enable starts fresh.
       setLoading(false);
@@ -149,8 +93,6 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
       return undefined;
     }
     if (!walletAddress) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[Hook useActiveChats] WAITING FOR WALLET — keeping loading=true');
       // Waiting for the wallet to resolve (wagmi hasn't returned an
       // address yet on cold load). Keep `loading=true` so the
       // ChatModal auto-select effect doesn't mis-interpret the
@@ -162,23 +104,11 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
       return undefined;
     }
 
-    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-    console.log('[Hook useActiveChats] STARTING fetch, setLoading(true)', {
-      walletAddress,
-      myToken,
-    });
     setLoading(true);
     doFetch(myToken);
 
     const interval = setInterval(() => doFetch(myToken), POLL_INTERVAL_MS);
-    return () => {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[Hook useActiveChats] cleanup — clearing interval', {
-        walletAddress,
-        myToken,
-      });
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [walletAddress, enabled, doFetch]);
 
   return { activeChats, loading, error, refresh };

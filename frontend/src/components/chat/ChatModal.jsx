@@ -26,13 +26,16 @@
  *     <NewChatPicker>; the picker only mounts when isNewChatPickerOpen
  *     is true so it doesn't compete with the active-chats poll.
  *
- * Default-to-most-recent on open:
+ * Default-to-most-recent on open (Phase 3.5.2.7):
  *   - If openChatModal(tokenId) was called → selectChat(tokenId).
  *   - Else if user has 1+ active chats → select the freshest (the
  *     backend returns them sorted by last_message_at DESC, so [0]).
- *   - Else (no active chats yet) → openNewChatPicker() so the user
- *     immediately sees the picker instead of staring at an empty
- *     right pane.
+ *   - Else (no active chats yet) → leave selection null. The right
+ *     pane renders an empty-state with a prominent pointer to
+ *     "+ New chat"; the user opens the picker manually. Earlier
+ *     phases auto-opened the picker here, but a stubborn timing
+ *     race (3.5.2.1 through 3.5.2.6) made that path unreliable.
+ *     Removing the auto-open eliminates the bug class entirely.
  *
  * Drag handle: literal `.msn-title-bar` class on <ChatModalHeader>.
  * <ChatConversationHeader> intentionally does NOT carry the class —
@@ -127,38 +130,9 @@ export default function ChatModal() {
   // doesn't get yanked back into the most-recent chat by the next
   // re-render. The ref resets when the modal closes so the next
   // open re-runs the logic from scratch.
-  // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-  // Random per-mount id so we can spot if ChatModal is being remounted
-  // unexpectedly (which would reset didAutoSelectRef and re-fire the
-  // auto-select branch).
-  const mountIdRef = useRef(Math.random().toString(36).slice(2, 8));
-  useEffect(() => {
-    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-    console.log('[ChatModal] MOUNTED', { mountId: mountIdRef.current });
-    return () => {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] UNMOUNTED', { mountId: mountIdRef.current });
-    };
-  }, []);
-
   const didAutoSelectRef = useRef(false);
   useEffect(() => {
-    // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-    console.log('[ChatModal] auto-select effect run', {
-      mountId: mountIdRef.current,
-      isOpen,
-      address,
-      initialDevId,
-      chatsLoading,
-      activeChatsLength: activeChats.length,
-      didAutoSelected: didAutoSelectRef.current,
-    });
-
     if (!isOpen) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: not open, resetting ref', {
-        mountId: mountIdRef.current,
-      });
       didAutoSelectRef.current = false;
       return;
     }
@@ -167,73 +141,36 @@ export default function ChatModal() {
     // first render after a cold load; without this guard the
     // auto-select effect would observe `chatsLoading=false` (from
     // the hooks' pre-wallet branch) and `activeChats=[]` and pop
-    // the NewChatPicker before the wallet ever lands. The hooks
-    // themselves now keep `loading=true` while waiting for the
-    // wallet (defense in depth), but this guard is the second line.
-    if (!address) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: no address yet, return', {
-        mountId: mountIdRef.current,
-      });
-      return;
-    }
-    if (didAutoSelectRef.current) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: already auto-selected, return', {
-        mountId: mountIdRef.current,
-      });
-      return;
-    }
+    // the NewChatPicker before the wallet ever lands.
+    if (!address) return;
+    if (didAutoSelectRef.current) return;
 
     // Phase 3.6 entry: openChatModal(tokenId) → reflect into context
     // selection. Wins over default-to-most-recent.
     if (initialDevId) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: initialDevId path', {
-        mountId: mountIdRef.current,
-        initialDevId,
-      });
       selectChat(initialDevId);
       didAutoSelectRef.current = true;
       return;
     }
     // Wait for the first fetch to fully resolve before deciding.
-    //
-    // Phase 3.5.2 had `chatsLoading && activeChats.length === 0` here,
-    // which raced: useActiveChats flips loading=false inside the
-    // finally-block of doFetch, but the success branch updates the
-    // devs array via setDevs(). React batches both setStates from the
-    // same task, but a strict-mode double-effect can still observe
-    // the brief render where loading=false AND activeChats=[]. The
-    // effect interpreted that as "no chats" and called
-    // openNewChatPicker() — and didAutoSelectRef latched it for the
-    // open cycle, so the spurious picker stuck around.
-    //
-    // The bare `if (chatsLoading) return` removes the race: the hook
-    // only flips loading=false after the response (success OR error)
-    // has been processed, so once we proceed past this guard,
-    // activeChats reflects an actual server snapshot.
-    if (chatsLoading) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: still loading, return', {
-        mountId: mountIdRef.current,
-      });
-      return;
-    }
+    if (chatsLoading) return;
 
+    // Phase 3.5.2.7 — auto-SELECT only. The "else open picker" branch
+    // that lived here through 3.5.2.6 was the source of a stubborn
+    // bug class: even after fixing the pre-wallet race (.5), the
+    // initial-loading state (.3), and the in-flight loading flicker
+    // (.2), production still reproduced the spurious picker on
+    // modal open. The .6 diagnostics confirmed the auto-select
+    // effect was firing the `else` branch despite the fetch
+    // eventually returning chats successfully.
+    //
+    // Rather than chase the timing further, we removed the
+    // auto-open entirely. The user opens the picker explicitly via
+    // "+ New chat" in the left-pane footer; the empty-state UI in
+    // the right pane (handled in the JSX below) tells them how.
+    // This eliminates the bug class — nothing opens automatically.
     if (activeChats.length > 0) {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: selecting most recent', {
-        mountId: mountIdRef.current,
-        token_id: activeChats[0].token_id,
-      });
       selectChat(activeChats[0].token_id);
-    } else {
-      // [PHASE 3.5.2.6 DIAGNOSTIC] remove in 3.5.2.7
-      console.log('[ChatModal] effect: NO active chats, opening picker', {
-        mountId: mountIdRef.current,
-      });
-      openNewChatPicker();
     }
     didAutoSelectRef.current = true;
   }, [
@@ -383,11 +320,30 @@ export default function ChatModal() {
                 onBack={null}
                 onAfterSend={refreshChats}
               />
-            ) : (
+            ) : chatsLoading ? (
               <div className={styles.chatEmptyRightPane}>
-                {chatsLoading
-                  ? 'Loading your chats…'
-                  : 'Select a chat or click + New chat'}
+                Loading your chats…
+              </div>
+            ) : activeChats.length === 0 ? (
+              // Empty wallet — Phase 3.5.2.7 no longer auto-opens
+              // the picker, so the right pane needs to tell the user
+              // exactly what to do. The bold "+ New chat" matches
+              // the literal label of the footer button on the left
+              // pane so users associate the two.
+              <div className={styles.chatEmptyRightPane}>
+                <div className={styles.chatEmptyTitle}>
+                  No active chats yet
+                </div>
+                <div className={styles.chatEmptySubtitle}>
+                  Click <strong>+ New chat</strong> to start a
+                  conversation with one of your Devs.
+                </div>
+              </div>
+            ) : (
+              // Has chats but none selected (rare — auto-select
+              // picks activeChats[0] when the modal opens).
+              <div className={styles.chatEmptyRightPane}>
+                Select a chat from the list
               </div>
             )}
           </div>
