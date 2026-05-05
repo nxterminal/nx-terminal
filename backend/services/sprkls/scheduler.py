@@ -40,6 +40,8 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import psycopg2.extras
+
 from backend.services.sprkls.beta import is_in_sprkls_beta
 from backend.services.sprkls.content import generate_sprkl_content
 from backend.services.sprkls.templates import get_archetype_action_weights
@@ -254,11 +256,20 @@ def run_sprkls_tick(conn) -> int:
     abort the whole tick. The transaction commits at the end of the
     `with conn.cursor()` block per the project's connection-pool
     convention.
+
+    Cursor factory: explicitly RealDictCursor. The API connection
+    pool (deps.init_db_pool) sets RealDictCursor as the default, but
+    the engine's own get_db() in backend/engine/engine.py opens a
+    raw psycopg2.connect() with NO factory — `conn.cursor()` there
+    defaults to tuples, which breaks the dict accesses below
+    (`r.get("owner_address")` etc.). Phase 4.1.1 fix: ask for the
+    factory explicitly so the helper works regardless of which
+    pool / connection the caller hands in.
     """
     now = datetime.now(timezone.utc)
     inserted = 0
 
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         wallets = _eligible_wallets_with_devs(cur)
         for wallet, devs in wallets:
             try:
@@ -285,8 +296,13 @@ def cleanup_expired_posts(conn) -> int:
     when something goes wrong with TTL math — better to have them
     around for a day after they should have vanished than to lose
     forensic context.
+
+    Cursor factory: same RealDictCursor reasoning as run_sprkls_tick
+    (the cleanup doesn't read row dicts, but using the same factory
+    everywhere keeps the helper resilient to a future code change
+    that adds a SELECT here).
     """
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             """
             DELETE FROM nx_posts
