@@ -48,6 +48,7 @@ import { useDevCount } from '../hooks/useDevCount';
 import { useWallet } from '../hooks/useWallet';
 import { useChatModal } from '../contexts/ChatContext';
 import { isInNXSoulsBeta } from '../config/betaFeatures';
+import { SPRKLS_OPEN_WINDOW_EVENT } from './sprkls/SprklWindow';
 import { api } from '../services/api';
 
 const DESKTOP_ICONS = [
@@ -328,6 +329,25 @@ export default function Desktop() {
     }
     openWindow(id, extraProps);
   }, [openWindow]);
+
+  // Sprkls Phase 4.4 — listen for `sprkls:open-window` CustomEvents
+  // dispatched by <SprklWindow> in the SprklsLayer (sibling of
+  // Desktop in App.jsx). The bridge keeps useWindowManager's
+  // openWindow component-local without lifting state up. SprklWindow
+  // already validates `id` against an allowlist before dispatching,
+  // so this handler trusts the payload — but we still guard against
+  // missing detail in case a future surface dispatches the event
+  // without going through SprklWindow.
+  useEffect(() => {
+    const handler = (e) => {
+      const id = e?.detail?.id;
+      if (!id || typeof id !== 'string') return;
+      openWindowWithBSOD(id);
+    };
+    window.addEventListener(SPRKLS_OPEN_WINDOW_EVENT, handler);
+    return () =>
+      window.removeEventListener(SPRKLS_OPEN_WINDOW_EVENT, handler);
+  }, [openWindowWithBSOD]);
 
   const handleTaskbarClick = (id) => {
     const win = windows.find(w => w.id === id);
