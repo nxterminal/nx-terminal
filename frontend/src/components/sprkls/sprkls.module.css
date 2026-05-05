@@ -227,3 +227,102 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ── Phase 4.3 — graffiti layer ──────────────────────────────────────
+ *
+ * Fullscreen overlay that hosts every graffiti sprkl. Z-index 9300
+ * sits above Desktop / WindowManager (≤ 100s) but below the toast
+ * layer (9500) so a fresh notification still pops over a graffiti-
+ * busy desktop.
+ *
+ * pointer-events: none on the layer wrapper means clicks pass
+ * through to anything behind UNLESS they hit a graffiti element
+ * (which re-enables pointer events for itself). User can keep
+ * interacting with the desktop while the graffiti decoration sits
+ * on top.
+ */
+
+.sprklsGraffitiLayer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Phase 4.3 (post-Phase-4.2.1 rebase): bottom-bound the layer at
+   * the same safe-area variable the toast layer uses. Graffiti
+   * positions are %-of-layer in SprklGraffiti.jsx, so shrinking
+   * the layer's bottom edge automatically pushes max y_pct up by
+   * the safe-area amount — no backend change needed (existing
+   * _GRAFFITI_Y_RANGE = (12, 75) in services/sprkls/visuals.py
+   * stays as-is, more conservative than the brief's proposed 80%
+   * cap and now applied against a frame that already excludes the
+   * taskbar). */
+  bottom: var(--sprkls-safe-bottom-px, 90px);
+  z-index: 9300;
+  pointer-events: none;
+  /* The layer itself is a click-through canvas; each graffiti sets
+   * its own pointer-events: auto so only the painted text catches
+   * clicks. Without this, the layer would intercept every click
+   * across the entire viewport. */
+}
+
+/* Individual graffiti — a styled <button> positioned absolutely
+ * within the layer. Inline styles (set in SprklGraffiti.jsx) carry
+ * the per-piece variability: color / fontSize / fontFamily /
+ * left% / top% / rotation. This rule provides the structural
+ * baseline. */
+.sprklGraffiti {
+  position: absolute;
+  pointer-events: auto;
+  /* button reset — the surrounding desktop has no <button> baseline
+   * so we strip everything explicitly rather than rely on user-agent
+   * defaults. */
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  /* Whitespace + word-wrap behaviour: graffiti templates are short
+   * single-line slogans. nowrap keeps the rotation from awkwardly
+   * wrapping to 2 lines if a slightly long line lands near the edge
+   * (backend bounds keep x_pct ≤ 80 so we have room). */
+  white-space: nowrap;
+  user-select: none;
+  /* font-weight is part of the handwriting-font's identity; declare
+   * normal so a future global stylesheet doesn't accidentally bold
+   * the spray-paint text. */
+  font-weight: normal;
+  /* Anchor the rotation to the top-left so x_pct/y_pct describes
+   * the corner we're placing — predictable + simple. */
+  transform-origin: top left;
+  /* Smooth dismiss feel — when state drops the element it fades
+   * out via the next render, but a hover gives a small lift hint
+   * that the text is interactive. */
+  transition: filter 120ms ease, transform 120ms ease;
+  /* Subtle entry: graffiti pops on without sliding (it's spray
+   * paint, not a notification). */
+  animation: sprklGraffitiPop 220ms ease-out;
+}
+
+.sprklGraffiti:hover {
+  filter: brightness(1.08);
+}
+
+.sprklGraffiti:focus-visible {
+  outline: 2px dashed currentColor;
+  outline-offset: 4px;
+}
+
+.sprklGraffiti:active {
+  /* Press effect: tiny shrink so dismissal feels physical. */
+  filter: brightness(0.92);
+}
+
+/* Opacity-only entry. The inline `transform: rotate(...)` set by
+ * SprklGraffiti.jsx wins for the entire animation duration because
+ * we never touch `transform` here — avoids the snap that would
+ * happen if a keyframe `to` re-set the transform to identity and
+ * then the final inline style fired the actual rotation. */
+@keyframes sprklGraffitiPop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
