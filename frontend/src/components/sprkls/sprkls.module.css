@@ -1,0 +1,222 @@
+/* Sprkls — Phase 4.2 toast styling.
+ *
+ * MSN/Win98 frame matching chat.module.css from NX Souls Phase 3.5.
+ * The palette tokens live on .sprklsLayer so each toast inside
+ * inherits them without re-declaring; future Phase 4.3-4.5
+ * components in this folder pick them up the same way.
+ *
+ * Z-index sits at 9500: above Desktop/WindowManager (≤100s), below
+ * the NX Souls chat modal (9999) so the modal cleanly covers a
+ * toast when the user clicks it.
+ */
+
+/* ── Layer container (fixed bottom-right) ─────────────────────────── */
+
+.sprklsLayer {
+  /* Match NX Souls chat module palette so the layer reads as part
+   * of the same visual language. Re-declared here to keep the
+   * component self-contained (no global selector dependency). */
+  --msn-blue-light:   #d4e3f7;
+  --msn-blue-mid:     #aac9f0;
+  --msn-blue-dark:    #4a6fa5;
+  --msn-blue-darker:  #2a4a7d;
+  --msn-gray-bg:      #ece9d8;
+  --msn-gray-border:  #919b9c;
+  --msn-text:         #000000;
+  --msn-text-muted:   #666666;
+
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 9500;
+  display: flex;
+  /* column-reverse anchors freshest toast at the BOTTOM of the
+   * stack, growing upward — natural for a bottom-right corner. */
+  flex-direction: column-reverse;
+  gap: 8px;
+
+  /* The container itself shouldn't intercept clicks (it covers a
+   * tall column on the right). Each toast re-enables pointer
+   * events for itself so the user can hover / click them. */
+  pointer-events: none;
+}
+
+/* ── Toast frame ──────────────────────────────────────────────────── */
+
+.sprklToast {
+  pointer-events: auto;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid var(--msn-blue-darker);
+  /* XP Luna chrome — same inset white edge + 4px drop as the chat
+   * modal so the two surfaces feel like siblings. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    4px 4px 0 rgba(0, 0, 0, 0.2);
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: var(--msn-text);
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+  animation: sprklSlideIn 300ms ease-out;
+}
+
+.sprklToast:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    5px 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+.sprklToast:focus-visible {
+  outline: 2px solid var(--msn-blue-dark);
+  outline-offset: 2px;
+}
+
+@keyframes sprklSlideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Title bar ────────────────────────────────────────────────────── */
+
+.sprklTitleBar {
+  height: 24px;
+  background: linear-gradient(to bottom, #6e9be0 0%, #4a6fa5 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 8px;
+  font-weight: 700;
+  font-size: 11px;
+  user-select: none;
+}
+
+.sprklTitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprklCloseBtn {
+  background: transparent;
+  color: white;
+  border: none;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 2px;
+  flex-shrink: 0;
+  transition: background 80ms ease;
+}
+
+.sprklCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sprklCloseBtn:active {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+
+.sprklBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+/* PFP zoom — lighter than the 2.2× chat-list zoom because the toast
+ * is small and a heavy zoom makes the dev's face ambiguous. 1.5×
+ * with center origin keeps the head + shoulders in frame. */
+.sprklAvatarWrap {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  overflow: hidden;
+  border: 1px solid #888;
+  background: #f0f0f0;
+  border-radius: 2px;
+}
+
+.sprklAvatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  transform: scale(1.5);
+  transform-origin: center;
+  display: block;
+}
+
+.sprklAvatarFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 11px;
+  color: #555;
+  background: #c8d4e8;
+}
+
+.sprklContentColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sprklNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sprklName {
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sprklArchetype {
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--msn-text-muted);
+  padding: 1px 5px;
+  border: 1px solid var(--msn-gray-border);
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sprklContent {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--msn-text);
+  word-wrap: break-word;
+  /* Multi-line clamp — sprkls are short by template (≤280 chars)
+   * but a dense one shouldn't push the toast taller than ~5 lines.
+   * Standard line-clamp + the older webkit prefix for broader
+   * support. */
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -136,6 +136,20 @@ export const api = {
   getMessages: (wallet, tokenId) =>
     fetchJSON(`${API_BASE}/api/user/${wallet}/messages?token_id=${tokenId}`),
 
+  // Sprkls — toast feed (Phase 4.2). Backed by GET /api/user/{wallet}/sprkls/recent.
+  // The backend filters to non-dismissed, non-expired, last-24h
+  // sprkls + joins to nx.devs for the rendering metadata.
+  getSprkls: (wallet) =>
+    fetchJSON(`${API_BASE}/api/user/${wallet}/sprkls/recent`),
+
+  // Sprkls — dismiss one. POST /api/user/{wallet}/sprkls/dismiss/{post_id}.
+  // Idempotent server-side (UPDATE includes a dismissed_at IS NULL
+  // guard). 404 for cross-wallet probes.
+  dismissSprkl: (wallet, postId) =>
+    fetchJSON(`${API_BASE}/api/user/${wallet}/sprkls/dismiss/${postId}`, {
+      method: 'POST',
+    }),
+
   // NX Souls — send a message to a Dev. POST /api/devs/{tokenId}/chat.
   // The optional AbortSignal lets callers cancel an in-flight request
   // when the user navigates away mid-typing (Phase 3.4 ChatConversation).
