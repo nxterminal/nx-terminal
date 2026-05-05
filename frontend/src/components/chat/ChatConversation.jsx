@@ -80,6 +80,11 @@ export default function ChatConversation({
   onBack,
   onClose,
   refreshConversations,
+  // Phase 3.5.2 — fires after every successful send (including the
+  // resting reply path) so the parent can refresh the active-chats
+  // list. The list's last-message preview / time / quota update
+  // immediately instead of waiting for the next 60s poll.
+  onAfterSend,
 }) {
   const [messages, setMessages] = useState([]);
   const [isResting, setIsResting] = useState(Boolean(dev?.is_resting));
@@ -150,6 +155,15 @@ export default function ChatConversation({
       // fresh when the user goes back.
       if (typeof refreshConversations === 'function') {
         refreshConversations();
+      }
+      // Phase 3.5.2 — refresh the split-view's active-chats list so
+      // the row's last-message preview / relative time / quota
+      // update immediately. Distinct from refreshConversations
+      // (which targets the all-Devs /conversations endpoint used by
+      // NewChatPicker) — both can be passed independently and both
+      // are best-effort.
+      if (typeof onAfterSend === 'function') {
+        onAfterSend();
       }
     } catch (err) {
       const systemContent = mapErrorToSystemMessage(err, dev?.name ?? 'Dev');

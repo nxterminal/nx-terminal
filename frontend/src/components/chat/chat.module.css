@@ -232,12 +232,20 @@
 
 .chatListItem {
   display: flex;
-  align-items: center;
+  /* Phase 3.5.2: items align top so the avatar lines up with the
+   * Dev's name when the meta column has a 2nd / 3rd line (archetype
+   * + last-message preview). The side stack (status + time) anchors
+   * to the same top. Old single-line layout still works because the
+   * tallest column (meta) determines row height. */
+  align-items: flex-start;
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
   background: transparent;
   border: none;
+  /* Reserve a 3px slot for the selected-state border-left so a row
+   * doesn't shift horizontally when it becomes selected. */
+  border-left: 3px solid transparent;
   border-bottom: 1px solid #e6e6e6;
   text-align: left;
   font-family: inherit;
@@ -595,4 +603,322 @@
   border-color: #c0c0c0;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+/* ── Phase 3.5.2 — split-view layout ──────────────────────────────────
+ *
+ * Desktop (>= MOBILE_BREAKPOINT_PX): .msnModalSplit replaces the
+ * single-column .msnModal. Header at top + body that splits into a
+ * 280px left pane (active-chats list) and a flex-1 right pane
+ * (selected conversation OR empty state).
+ *
+ * Mobile (< MOBILE_BREAKPOINT_PX): .msnModalMobile fills the
+ * viewport. Drag handle still exists but is visually inert because
+ * there's nowhere to move to.
+ *
+ * Modal-frame size MUST match MODAL_WIDTH_DESKTOP /
+ * MODAL_HEIGHT_DESKTOP in ChatModal.jsx — change both together.
+ */
+
+.msnModalSplit {
+  /* Inherit the palette + chrome from .msnModal — the variables sit
+   * on .msnModal in the original Phase 3.5 rule, so we re-declare
+   * them here to keep the picker / split body able to read them.
+   * Phase 4 may consolidate via :root if more chat surfaces share
+   * the palette. */
+  --msn-blue-light:   #d4e3f7;
+  --msn-blue-mid:     #aac9f0;
+  --msn-blue-dark:    #4a6fa5;
+  --msn-blue-darker:  #2a4a7d;
+  --msn-gray-bg:      #ece9d8;
+  --msn-gray-border:  #919b9c;
+  --msn-gray-light:   #f0f0f0;
+  --msn-text:         #000000;
+  --msn-text-muted:   #666666;
+
+  width: 880px;
+  height: 640px;
+  background: var(--msn-gray-bg);
+  border: 1px solid var(--msn-blue-darker);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    4px 4px 0 rgba(0, 0, 0, 0.2);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--msn-text);
+}
+
+.msnModalMobile {
+  /* Same palette inheritance as .msnModalSplit — these are the only
+   * two top-level chat-modal surfaces in Phase 3.5.2. */
+  --msn-blue-light:   #d4e3f7;
+  --msn-blue-mid:     #aac9f0;
+  --msn-blue-dark:    #4a6fa5;
+  --msn-blue-darker:  #2a4a7d;
+  --msn-gray-bg:      #ece9d8;
+  --msn-gray-border:  #919b9c;
+  --msn-gray-light:   #f0f0f0;
+  --msn-text:         #000000;
+  --msn-text-muted:   #666666;
+
+  /* Full-screen on mobile. The Draggable wrapper is harmless here —
+   * react-draggable still attaches its mouse listeners but with the
+   * modal filling the viewport there's nowhere meaningful to move
+   * to. The title bar gets cursor:auto via the override below so
+   * users don't get a misleading "move" cursor. */
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  position: fixed;
+  z-index: 9999;
+  background: var(--msn-gray-bg);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--msn-text);
+}
+
+/* Title bar on mobile: drop the move cursor since the full-screen
+ * layout makes dragging meaningless. The literal `.msn-title-bar`
+ * selector still matches Draggable's handle prop so we don't change
+ * any JS — just the visual affordance. */
+.msnModalMobile .msnTitleBar {
+  cursor: default;
+}
+
+.msnSplitBody {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+}
+
+.msnSplitLeft {
+  width: 280px;
+  min-width: 280px;
+  border-right: 1px solid var(--msn-gray-border);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.msnSplitRight {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.chatEmptyRightPane {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--msn-text-muted);
+  font-style: italic;
+  padding: 24px;
+  text-align: center;
+}
+
+/* ── Active-chats list extras ─────────────────────────────────────────
+ *
+ * Existing .chatListItem (above) covers the row frame. These add the
+ * selected-state highlight, the preview text, the side stack
+ * (status + time), and the footer with the "+ New chat" button.
+ */
+
+.chatListItemSelected {
+  background: var(--msn-blue-light);
+  border-left-color: var(--msn-blue-dark);
+}
+
+.chatListItemSelected:hover {
+  background: var(--msn-blue-light);
+}
+
+.chatListPreview {
+  font-size: 12px;
+  color: var(--msn-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Cap matches the meta column's natural width inside a 280px left
+   * pane minus the 48px avatar, the side-stack column, and the
+   * gap/padding. Slightly defensive — overflow:hidden guarantees
+   * truncation either way. */
+  max-width: 180px;
+}
+
+.chatListSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.chatListTime {
+  font-size: 10px;
+  color: var(--msn-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.chatListFooter {
+  border-top: 1px solid var(--msn-gray-border);
+  padding: 8px;
+  background: var(--msn-gray-bg);
+}
+
+/* "+ New chat" button — reuse the Send-button bevel pattern so the
+ * primary chat actions feel consistent. Width:100% so the button
+ * spans the full footer (the left pane is narrow enough that a
+ * partial-width button would look orphaned). */
+.newChatButton {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--msn-gray-border);
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d4d0c8 100%);
+  color: var(--msn-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: all 0.1s ease;
+}
+
+.newChatButton:hover {
+  background: linear-gradient(to bottom, #fafafa 0%, #dfdcd2 100%);
+  border-color: var(--msn-blue-dark);
+}
+
+.newChatButton:active {
+  background: linear-gradient(to top, #f0f0f0 0%, #d4d0c8 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+  border-color: var(--msn-blue-darker);
+}
+
+/* ── Conversation in-pane info strip ─────────────────────────────────
+ *
+ * Phase 3.5 had ChatConversationHeader as the modal's title bar with
+ * the .msn-title-bar drag-handle class. Phase 3.5.2 demoted it to a
+ * slim Dev-context strip at the top of the conversation pane. The
+ * literal class is removed in JSX so clicking the strip doesn't drag
+ * the modal; the modal-level <ChatModalHeader> still owns the drag
+ * handle.
+ */
+.chatConversationStrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--msn-gray-bg);
+  border-bottom: 1px solid var(--msn-gray-border);
+  flex-shrink: 0;
+}
+
+.chatConversationStripBack {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--msn-text);
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.1s ease;
+}
+
+.chatConversationStripBack:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: var(--msn-gray-border);
+}
+
+/* ── NewChatPicker overlay ────────────────────────────────────────────
+ *
+ * Sits on top of <ChatModal> at z-index 10001 so it covers the modal
+ * (9999) and the floating debug button (10000). Backdrop is a faint
+ * dim so the user understands the picker is a nested action they
+ * can cancel.
+ */
+
+.newChatPickerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Override the chat modal's default cursor in case the overlay
+   * intercepts a stray click outside the picker frame. */
+  cursor: default;
+}
+
+.newChatPicker {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  height: 600px;
+  max-height: calc(100vh - 32px);
+  background: var(--msn-gray-bg, #ece9d8);
+  border: 1px solid var(--msn-blue-darker, #2a4a7d);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    4px 4px 0 rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+/* Picker header reuses the .msnTitleBar gradient via JSX class
+ * concatenation; this rule layers any picker-specific tweaks. The
+ * literal `.msn-title-bar` class is intentionally NOT applied here
+ * — the picker isn't draggable on its own; it sits on the overlay. */
+.newChatPickerHeader {
+  cursor: default;
+}
+
+.newChatPickerSubtitle {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--msn-text-muted, #666);
+  border-bottom: 1px solid var(--msn-gray-border, #919b9c);
+}
+
+.newChatPickerList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  background: #ffffff;
+}
+
+.newChatPickerCancel {
+  border-top: 1px solid var(--msn-gray-border, #919b9c);
+  padding: 8px;
+  background: var(--msn-gray-bg, #ece9d8);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.newChatPickerCancel .chatComposerButton {
+  align-self: auto;
+  min-width: 100px;
 }

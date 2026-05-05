@@ -1,25 +1,35 @@
 /**
  * ChatContext — open/close + initial-Dev state for the NX Souls
- * chat modal, plus the Phase 3.5 chat-sounds toggle.
+ * chat modal, plus Phase 3.5 chat-sounds + Phase 3.5.2 split-view
+ * selection / picker state.
  *
- * Why a context, not local state in <ChatModal>: Phase 3.6 will wire
- * two entry points (per-Dev "💬 CHAT" button on each card + a global
- * "💬 MESSAGES" button in the header). Both need to flip a single
- * shared switch that's read by the floating modal mounted near the
- * root of the tree, so a single context is the minimum-friction way
- * to keep the trigger sites and the modal decoupled.
+ * Why a context, not local state in <ChatModal>: Phase 3.6 wires two
+ * entry points (per-Dev "💬 CHAT" button on each card + a global
+ * "💬 MESSAGES" button in the header). Both flip a single shared
+ * switch read by the floating modal mounted near the root of the
+ * tree, so a single context keeps the trigger sites and the modal
+ * decoupled.
  *
- * `initialDevId` is the dev to *open into* — null means "show the
- * conversation list", a token_id means "skip the list and open the
- * conversation with that Dev directly". The modal resets its internal
- * view state to match whenever this changes.
+ * Phase 3.5.2 additions (split-view layout):
+ *   - selectedTokenId / selectChat / clearSelectedChat
+ *       Which chat is shown in the right pane (desktop) or the
+ *       active conversation view (mobile). Reset to null when the
+ *       modal closes so each fresh open re-runs ChatModal's
+ *       "default to most recent active chat" logic.
+ *   - isNewChatPickerOpen / openNewChatPicker / closeNewChatPicker
+ *       The nested picker overlay used to start a chat with a Dev
+ *       not yet in the active list.
  *
- * `chatSoundsEnabled` defaults to true on every portal load. We do
- * NOT persist this to localStorage — the artifact spec for this
- * project rules out browser storage, and Phase 3.5 inherits that
- * constraint. Trade-off documented in the PR description: each fresh
- * portal session starts with sounds on; if a user dislikes the ding
- * they have to flip it once per session via the title-bar toggle.
+ * Backwards compat preserved:
+ *   - openChatModal(devId?) still exists and behaves identically
+ *     for Phase 3.6's per-Dev "💬 CHAT" entry: passing a tokenId
+ *     populates initialDevId, which ChatModal mirrors into
+ *     selectedTokenId on mount.
+ *
+ * Persistence: nothing in this context touches localStorage
+ * (artifact spec rules out browser storage). Each fresh portal
+ * load starts with isOpen=false, selectedTokenId=null,
+ * chatSoundsEnabled=true.
  */
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
@@ -31,6 +41,10 @@ export function ChatProvider({ children }) {
   const [initialDevId, setInitialDevId] = useState(null);
   const [chatSoundsEnabled, setChatSoundsEnabled] = useState(true);
 
+  // Phase 3.5.2 — split-view selection + nested picker state.
+  const [selectedTokenId, setSelectedTokenId] = useState(null);
+  const [isNewChatPickerOpen, setIsNewChatPickerOpen] = useState(false);
+
   const openChatModal = useCallback((devId = null) => {
     setInitialDevId(devId);
     setIsOpen(true);
@@ -39,10 +53,32 @@ export function ChatProvider({ children }) {
   const closeChatModal = useCallback(() => {
     setIsOpen(false);
     setInitialDevId(null);
+    // Reset selection + picker on close so a subsequent open runs the
+    // "default to most recent" logic from a clean slate. Without this,
+    // a user who closed the modal mid-conversation would reopen into
+    // the same chat regardless of which one is freshest now.
+    setSelectedTokenId(null);
+    setIsNewChatPickerOpen(false);
   }, []);
 
   const toggleChatSounds = useCallback(() => {
     setChatSoundsEnabled((prev) => !prev);
+  }, []);
+
+  const selectChat = useCallback((tokenId) => {
+    setSelectedTokenId(tokenId);
+  }, []);
+
+  const clearSelectedChat = useCallback(() => {
+    setSelectedTokenId(null);
+  }, []);
+
+  const openNewChatPicker = useCallback(() => {
+    setIsNewChatPickerOpen(true);
+  }, []);
+
+  const closeNewChatPicker = useCallback(() => {
+    setIsNewChatPickerOpen(false);
   }, []);
 
   const value = useMemo(
@@ -53,6 +89,12 @@ export function ChatProvider({ children }) {
       closeChatModal,
       chatSoundsEnabled,
       toggleChatSounds,
+      selectedTokenId,
+      selectChat,
+      clearSelectedChat,
+      isNewChatPickerOpen,
+      openNewChatPicker,
+      closeNewChatPicker,
     }),
     [
       isOpen,
@@ -61,6 +103,12 @@ export function ChatProvider({ children }) {
       closeChatModal,
       chatSoundsEnabled,
       toggleChatSounds,
+      selectedTokenId,
+      selectChat,
+      clearSelectedChat,
+      isNewChatPickerOpen,
+      openNewChatPicker,
+      closeNewChatPicker,
     ]
   );
 
@@ -74,4 +122,3 @@ export function useChatModal() {
   }
   return ctx;
 }
-
