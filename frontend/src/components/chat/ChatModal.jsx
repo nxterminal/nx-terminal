@@ -129,15 +129,32 @@ export default function ChatModal() {
   // open re-runs the logic from scratch.
   const didAutoSelectRef = useRef(false);
   useEffect(() => {
+    // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+    console.log('[ChatModal] auto-select effect run', {
+      isOpen,
+      initialDevId,
+      chatsLoading,
+      activeChatsLength: activeChats.length,
+      didAutoSelected: didAutoSelectRef.current,
+    });
+
     if (!isOpen) {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log('[ChatModal] effect: not open, resetting ref');
       didAutoSelectRef.current = false;
       return;
     }
-    if (didAutoSelectRef.current) return;
+    if (didAutoSelectRef.current) {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log('[ChatModal] effect: already auto-selected, return');
+      return;
+    }
 
     // Phase 3.6 entry: openChatModal(tokenId) → reflect into context
     // selection. Wins over default-to-most-recent.
     if (initialDevId) {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log('[ChatModal] effect: initialDevId path', initialDevId);
       selectChat(initialDevId);
       didAutoSelectRef.current = true;
       return;
@@ -158,11 +175,22 @@ export default function ChatModal() {
     // only flips loading=false after the response (success OR error)
     // has been processed, so once we proceed past this guard,
     // activeChats reflects an actual server snapshot.
-    if (chatsLoading) return;
+    if (chatsLoading) {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log('[ChatModal] effect: still loading, return');
+      return;
+    }
 
     if (activeChats.length > 0) {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log(
+        '[ChatModal] effect: selecting most recent',
+        activeChats[0].token_id
+      );
       selectChat(activeChats[0].token_id);
     } else {
+      // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
+      console.log('[ChatModal] effect: NO active chats, opening picker');
       openNewChatPicker();
     }
     didAutoSelectRef.current = true;
