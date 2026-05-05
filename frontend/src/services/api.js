@@ -124,6 +124,18 @@ export const api = {
   getUserConversations: (wallet) =>
     fetchJSON(`${API_BASE}/api/user/${wallet}/conversations`),
 
+  // NX Souls — active chats (only Devs with non-expired persisted
+  // messages). Backed by GET /api/user/{wallet}/active-chats. Phase
+  // 3.5.2 left-pane data source.
+  getActiveChats: (wallet) =>
+    fetchJSON(`${API_BASE}/api/user/${wallet}/active-chats`),
+
+  // NX Souls — full message history for one Dev's chat. Phase 3.5.3
+  // will wire ChatConversation to this on open; Phase 3.5.2 just
+  // makes the wrapper available.
+  getMessages: (wallet, tokenId) =>
+    fetchJSON(`${API_BASE}/api/user/${wallet}/messages?token_id=${tokenId}`),
+
   // NX Souls — send a message to a Dev. POST /api/devs/{tokenId}/chat.
   // The optional AbortSignal lets callers cancel an in-flight request
   // when the user navigates away mid-typing (Phase 3.4 ChatConversation).

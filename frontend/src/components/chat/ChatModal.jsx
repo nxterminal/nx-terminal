@@ -1,30 +1,43 @@
 /**
- * ChatModal — root of the NX Souls chat UI.
+ * ChatModal — root of the NX Souls chat UI (Phase 3.5.2 split view).
  *
  * Visibility chain (any one returning false → render null):
  *   1. ChatContext.isOpen must be true (someone called openChatModal)
  *   2. Wallet must be in the NX Souls beta allowlist (visibility-only
  *      gate; backend already enforces ownership + rate limits + quota)
  *
- * View / data ownership (Phase 3.4):
- *   - useConversations lives here so the same `devs` array feeds both
- *     <ChatList> (presentation) and <ChatConversation> (which needs
- *     the selected Dev's full row for its header / avatar / status).
- *   - `polling: view === 'list'` keeps the Phase 3.3 brief honoured —
- *     the 60s interval only runs while the list is on screen — while
- *     the cached `devs` array stays available in conversation view.
- *   - selectedDev is looked up by token_id on every render so a poll
- *     refresh keeps the conversation header in sync (e.g. status flip
- *     from active → resting after a chat).
+ * Layout:
+ *   - Desktop (≥ MOBILE_BREAKPOINT_PX): split view. Header at top
+ *     (drag handle, sound, close). Below: left pane (active-chats
+ *     list) + right pane (selected conversation OR empty state).
+ *   - Mobile (< MOBILE_BREAKPOINT_PX): full-screen toggle. Header
+ *     stays at top with optional back arrow when in conversation
+ *     view. Body switches between <ChatList> and <ChatConversation>
+ *     based on selectedTokenId from context.
  *
- * The view-state effect mirrors `initialDevId` from context into local
- * state on every change so a second openChatModal(otherId) re-targets
- * the conversation view.
+ * Data ownership:
+ *   - useActiveChats lives here so the same array feeds both
+ *     <ChatList> (rows) and the right-pane lookup
+ *     `activeChats.find(c => c.token_id === selectedTokenId)`.
+ *   - refresh() is threaded into <ChatConversation> as `onAfterSend`
+ *     so a successful chat updates the row's preview / time / quota
+ *     immediately instead of at the next 60s poll.
+ *   - useConversations (the all-Devs hook) is owned by
+ *     <NewChatPicker>; the picker only mounts when isNewChatPickerOpen
+ *     is true so it doesn't compete with the active-chats poll.
  *
- * The literal `.msn-title-bar` class is the drag handle — added by
- * <ChatModalHeader> in list view and by <ChatConversationHeader> in
- * conversation view. Both must keep the literal class so Draggable's
- * selector matches whichever header is currently rendered.
+ * Default-to-most-recent on open:
+ *   - If openChatModal(tokenId) was called → selectChat(tokenId).
+ *   - Else if user has 1+ active chats → select the freshest (the
+ *     backend returns them sorted by last_message_at DESC, so [0]).
+ *   - Else (no active chats yet) → openNewChatPicker() so the user
+ *     immediately sees the picker instead of staring at an empty
+ *     right pane.
+ *
+ * Drag handle: literal `.msn-title-bar` class on <ChatModalHeader>.
+ * <ChatConversationHeader> intentionally does NOT carry the class —
+ * Phase 3.5.2 collapsed it from "title bar" to "in-pane info strip"
+ * so clicking the strip doesn't drag the modal.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -32,145 +45,249 @@ import Draggable from 'react-draggable';
 
 import { useWallet } from '../../hooks/useWallet';
 import { useChatModal } from '../../contexts/ChatContext';
-import { useConversations } from '../../hooks/useConversations';
+import { useActiveChats } from '../../hooks/useActiveChats';
 import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
 import ChatModalHeader from './ChatModalHeader';
+import NewChatPicker from './NewChatPicker';
 import styles from './chat.module.css';
 
-// Modal frame size — must match `.msnModal` width / height in
-// chat.module.css. Used to compute the centred default position so
-// react-draggable's transform-on-mount doesn't fight a CSS centering
-// translate. Update both places together.
-//
-// Phase 3.5 bump: 480×640 → 520×720 because the original frame was
-// too cramped at the upgraded 13/14px body typography. The list rows
-// at 12px padding × 13px text fit comfortably in 520, the
-// conversation view's bubbles + composer sit comfortably at 720.
-const MODAL_WIDTH_PX = 520;
-const MODAL_HEIGHT_PX = 720;
+// Modal frame size — must match `.msnModalSplit` width / height in
+// chat.module.css. Phase 3.5.2 expanded the desktop frame to fit the
+// split layout: 280px left pane + ~580px conversation pane = 880px,
+// 640px tall keeps the bubbles + composer comfortable without
+// dwarfing smaller laptops. Update both places together.
+const MODAL_WIDTH_DESKTOP = 880;
+const MODAL_HEIGHT_DESKTOP = 640;
+const MOBILE_BREAKPOINT_PX = 768;
+
+// Tiny inline media-query hook — avoids adding a dependency for one
+// boolean. Initial state reads window.innerWidth synchronously so the
+// first paint matches the final layout (no flash of the wrong
+// breakpoint). Resize listener keeps the layout responsive while the
+// modal is open (e.g. user rotating a tablet, dragging a window).
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= MOBILE_BREAKPOINT_PX;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onResize = () => {
+      setIsDesktop(window.innerWidth >= MOBILE_BREAKPOINT_PX);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isDesktop;
+}
 
 export default function ChatModal() {
   const { address } = useWallet();
-  const { isOpen, initialDevId, closeChatModal } = useChatModal();
+  const {
+    isOpen,
+    initialDevId,
+    closeChatModal,
+    selectedTokenId,
+    selectChat,
+    clearSelectedChat,
+    isNewChatPickerOpen,
+    openNewChatPicker,
+    closeNewChatPicker,
+  } = useChatModal();
 
-  const [view, setView] = useState('list');
-  const [selectedDevId, setSelectedDevId] = useState(null);
+  const isDesktop = useIsDesktop();
 
-  // Mirror the context's `initialDevId` into local view state. Runs on
-  // every change so a second openChatModal(otherId) while the modal
-  // is already open re-targets the conversation view.
+  // Lift the active-chats hook up: same data feeds both the left
+  // pane and the right-pane dev lookup.
+  const { activeChats, loading: chatsLoading, error: chatsError, refresh: refreshChats } =
+    useActiveChats(address, { enabled: isOpen });
+
+  // Default-to-most-recent / open-picker logic. Fires ONCE per open
+  // cycle — tracked via the ref below — so on mobile a user who
+  // taps "back" out of a conversation (clearSelectedChat → null)
+  // doesn't get yanked back into the most-recent chat by the next
+  // re-render. The ref resets when the modal closes so the next
+  // open re-runs the logic from scratch.
+  const didAutoSelectRef = useRef(false);
   useEffect(() => {
-    if (initialDevId) {
-      setView('conversation');
-      setSelectedDevId(initialDevId);
-    } else {
-      setView('list');
-      setSelectedDevId(null);
+    if (!isOpen) {
+      didAutoSelectRef.current = false;
+      return;
     }
-  }, [initialDevId]);
+    if (didAutoSelectRef.current) return;
 
-  // Initial centring. react-draggable v4 sets element.style.transform
-  // directly on mount, which would override any CSS-based centering
-  // translate. So the modal anchors at top:0/left:0 (see
-  // chat.module.css) and we feed Draggable an explicit
-  // defaultPosition. Center starts at (0,0) and is set on mount;
-  // because Draggable only reads defaultPosition on its initial
-  // mount, the `key` below forces a remount once the real centre is
-  // computed, picking up the new defaultPosition.
+    // Phase 3.6 entry: openChatModal(tokenId) → reflect into context
+    // selection. Wins over default-to-most-recent.
+    if (initialDevId) {
+      selectChat(initialDevId);
+      didAutoSelectRef.current = true;
+      return;
+    }
+    // First fetch still in flight — wait before deciding so the user
+    // doesn't briefly see the picker before the chats load.
+    if (chatsLoading && activeChats.length === 0) return;
+
+    if (activeChats.length > 0) {
+      selectChat(activeChats[0].token_id);
+    } else {
+      openNewChatPicker();
+    }
+    didAutoSelectRef.current = true;
+  }, [
+    isOpen,
+    initialDevId,
+    chatsLoading,
+    activeChats,
+    selectChat,
+    openNewChatPicker,
+  ]);
+
+  // Initial centring (desktop only — mobile is full-screen). Same
+  // pattern as Phase 3.5: anchor at top:0/left:0 in CSS, feed
+  // Draggable an explicit defaultPosition; key forces a remount once
+  // the real centre is computed because Draggable only reads
+  // defaultPosition on initial mount.
   const [center, setCenter] = useState({ x: 0, y: 0 });
   useEffect(() => {
-    const x = Math.max(0, (window.innerWidth - MODAL_WIDTH_PX) / 2);
-    const y = Math.max(0, (window.innerHeight - MODAL_HEIGHT_PX) / 2);
+    if (!isDesktop) {
+      setCenter({ x: 0, y: 0 });
+      return;
+    }
+    const x = Math.max(0, (window.innerWidth - MODAL_WIDTH_DESKTOP) / 2);
+    const y = Math.max(0, (window.innerHeight - MODAL_HEIGHT_DESKTOP) / 2);
     setCenter({ x, y });
-  }, []);
+  }, [isDesktop]);
 
-  // react-draggable v4 + React 19 StrictMode: nodeRef avoids the
-  // findDOMNode warning that ships with the deprecated default path.
   const nodeRef = useRef(null);
-
-  // Conversations hook — fetches always while the modal is open;
-  // polls only in list view. Cached `devs` survives a polling pause
-  // so the conversation view can resolve the selected dev row.
-  const { devs, loading, error, refresh } = useConversations(address, {
-    enabled: isOpen,
-    polling: view === 'list',
-  });
 
   if (!isOpen) return null;
   if (!isInNXSoulsBeta(address)) return null;
 
-  // Resolve the selected Dev from the live `devs` array on every
-  // render. When polling refreshes the list, the selected Dev's
-  // status flags update too — useful while the user is in the
-  // conversation view if e.g. an admin freezes the Dev or quota
-  // resets at UTC midnight.
+  // Resolve the selected Dev from the live activeChats array on every
+  // render. When the 60s poll refreshes the list, the right pane's
+  // status / quota / preview update for free.
   const selectedDev =
-    selectedDevId != null
-      ? devs.find((d) => d.token_id === selectedDevId) || null
+    selectedTokenId != null
+      ? activeChats.find((c) => c.token_id === selectedTokenId) || null
       : null;
 
+  // Mobile: full-screen toggle layout. selectedTokenId is the
+  // implicit "view" — null = list, set = conversation.
+  if (!isDesktop) {
+    return (
+      // Wrapping in Draggable on mobile is a no-op visually because
+      // the modal fills the viewport, but it keeps the drag-handle
+      // selector consistent and avoids a conditional Draggable mount
+      // that would lose its node ref between layouts.
+      <Draggable
+        handle=".msn-title-bar"
+        nodeRef={nodeRef}
+        defaultPosition={{ x: 0, y: 0 }}
+        key="mobile"
+      >
+        <div ref={nodeRef} className={styles.msnModalMobile}>
+          <ChatModalHeader
+            view={selectedTokenId ? 'conversation' : 'list'}
+            selectedDevId={selectedTokenId}
+            onBack={selectedTokenId ? clearSelectedChat : null}
+            onClose={closeChatModal}
+          />
+          <div className={styles.msnContent}>
+            {selectedTokenId && selectedDev ? (
+              <ChatConversation
+                key={selectedDev.token_id}
+                dev={selectedDev}
+                walletAddress={address}
+                onBack={clearSelectedChat}
+                onAfterSend={refreshChats}
+              />
+            ) : (
+              <ChatList
+                activeChats={activeChats}
+                loading={chatsLoading}
+                error={chatsError}
+                selectedTokenId={selectedTokenId}
+                onSelectChat={selectChat}
+                onOpenPicker={openNewChatPicker}
+              />
+            )}
+          </div>
+          {isNewChatPickerOpen ? (
+            <NewChatPicker
+              walletAddress={address}
+              activeChats={activeChats}
+              onSelectDev={(tokenId) => {
+                selectChat(tokenId);
+                closeNewChatPicker();
+              }}
+              onCancel={closeNewChatPicker}
+            />
+          ) : null}
+        </div>
+      </Draggable>
+    );
+  }
+
+  // Desktop: split view. Both panes always visible.
   return (
     <Draggable
       handle=".msn-title-bar"
       nodeRef={nodeRef}
       defaultPosition={center}
-      key={`${center.x}-${center.y}`}
+      key={`desktop-${center.x}-${center.y}`}
     >
-      <div ref={nodeRef} className={styles.msnModal}>
-        {view === 'list' ? (
-          <>
-            <ChatModalHeader
-              view={view}
-              selectedDevId={selectedDevId}
-              onBack={null}
-              onClose={closeChatModal}
+      <div ref={nodeRef} className={styles.msnModalSplit}>
+        <ChatModalHeader
+          view="list"
+          selectedDevId={null}
+          onBack={null}
+          onClose={closeChatModal}
+        />
+        <div className={styles.msnSplitBody}>
+          <div className={styles.msnSplitLeft}>
+            <ChatList
+              activeChats={activeChats}
+              loading={chatsLoading}
+              error={chatsError}
+              selectedTokenId={selectedTokenId}
+              onSelectChat={selectChat}
+              onOpenPicker={openNewChatPicker}
             />
-            <div className={styles.msnContent}>
-              <ChatList
-                devs={devs}
-                loading={loading}
-                error={error}
-                onSelectDev={(devId) => {
-                  setSelectedDevId(devId);
-                  setView('conversation');
-                }}
+          </div>
+          <div className={styles.msnSplitRight}>
+            {selectedDev ? (
+              <ChatConversation
+                key={selectedDev.token_id}
+                dev={selectedDev}
+                walletAddress={address}
+                // Desktop has the list always visible — there's
+                // nowhere to go "back" to, so no back arrow in the
+                // conversation strip.
+                onBack={null}
+                onAfterSend={refreshChats}
               />
-            </div>
-          </>
-        ) : selectedDev ? (
-          <ChatConversation
-            // Force a remount when the selected Dev changes so the
-            // local messages array resets cleanly; without this, a
-            // back→pick-different-Dev flow would carry the previous
-            // chat into the new one.
-            key={selectedDev.token_id}
-            dev={selectedDev}
-            walletAddress={address}
-            onBack={() => setView('list')}
-            onClose={closeChatModal}
-            refreshConversations={refresh}
-          />
-        ) : (
-          // Selected dev hasn't resolved yet — first fetch in flight,
-          // or the dev was removed from the wallet between selection
-          // and the next poll. Show a loading shell with the generic
-          // header so the user can still close / go back.
-          <>
-            <ChatModalHeader
-              view={view}
-              selectedDevId={selectedDevId}
-              onBack={() => setView('list')}
-              onClose={closeChatModal}
-            />
-            <div className={styles.msnContent}>
-              <div className={styles.msnPlaceholder}>
-                {loading ? 'Loading Dev…' : 'Dev not found in your wallet.'}
+            ) : (
+              <div className={styles.chatEmptyRightPane}>
+                {chatsLoading
+                  ? 'Loading your chats…'
+                  : 'Select a chat or click + New chat'}
               </div>
-            </div>
-          </>
-        )}
+            )}
+          </div>
+        </div>
+        {isNewChatPickerOpen ? (
+          <NewChatPicker
+            walletAddress={address}
+            activeChats={activeChats}
+            onSelectDev={(tokenId) => {
+              selectChat(tokenId);
+              closeNewChatPicker();
+            }}
+            onCancel={closeNewChatPicker}
+          />
+        ) : null}
       </div>
     </Draggable>
   );
