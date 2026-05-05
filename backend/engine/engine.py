@@ -1940,6 +1940,11 @@ def run_engine():
     # Timeouts are 30-day decisions — hourly cadence is plenty. The
     # job internally bounds its batch to 100 rows per run.
     nxmarket_timeout_interval = timedelta(hours=1)
+    # Sprkls Phase 4.1 — tick every 5min checks each beta wallet's
+    # cooldown and inserts a sprkl if due. Cleanup runs hourly and
+    # hard-deletes posts whose expires_at passed >24h ago.
+    sprkls_tick_interval = timedelta(minutes=5)
+    sprkls_cleanup_interval = timedelta(hours=1)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2034,6 +2039,11 @@ def run_engine():
     # any market that expired while the engine was down).
     last_nxmarket_close = datetime.now(timezone.utc) - nxmarket_close_interval
     last_nxmarket_timeout = datetime.now(timezone.utc) - nxmarket_timeout_interval
+    # Run sprkls tick + cleanup on the first loop pass too. The tick
+    # is cheap when no wallet is due (single SELECT), and the cleanup
+    # noop's when there's nothing past expires_at + 24h.
+    last_sprkls_tick = datetime.now(timezone.utc) - sprkls_tick_interval
+    last_sprkls_cleanup = datetime.now(timezone.utc) - sprkls_cleanup_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2101,6 +2111,27 @@ def run_engine():
                     except Exception as e:
                         log.error(f"auto_timeout_invalid_markets error: {e}")
                     last_nxmarket_timeout = now
+
+                # Sprkls tick — generate auto-posts for beta wallets
+                # whose cooldown has elapsed. Runs every 5 min; the
+                # function internally bails if no wallet is due.
+                if now - last_sprkls_tick >= sprkls_tick_interval:
+                    try:
+                        from backend.services.sprkls import run_sprkls_tick
+                        run_sprkls_tick(conn)
+                    except Exception as e:
+                        log.error(f"run_sprkls_tick error: {e}")
+                    last_sprkls_tick = now
+
+                # Sprkls cleanup — hard-delete posts past expires_at
+                # + grace window. Hourly cadence.
+                if now - last_sprkls_cleanup >= sprkls_cleanup_interval:
+                    try:
+                        from backend.services.sprkls import cleanup_expired_posts
+                        cleanup_expired_posts(conn)
+                    except Exception as e:
+                        log.error(f"cleanup_expired_posts error: {e}")
+                    last_sprkls_cleanup = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)

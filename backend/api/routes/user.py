@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.api.deps import fetch_all, validate_wallet
+from backend.api.deps import execute, fetch_all, fetch_one, validate_wallet
 from backend.services.nx_souls.messages import get_chat_history
 from backend.services.nx_souls.quota import (
     DEFAULT_QUOTA,
@@ -300,3 +300,128 @@ async def list_active_chats(wallet_address: str):
         })
 
     return {"ok": True, "active_chats": active_chats}
+
+
+# ── Sprkls Phase 4.1 — wallet-scoped endpoints ────────────────────────
+#
+# Sprkls are auto-generated posts (source='sprkl') from the
+# services/sprkls scheduler. The frontend SprklsLayer (Phase 4.2)
+# polls /sprkls/recent for the per-wallet feed of toasts, graffiti,
+# etc. that haven't been dismissed; user dismissals POST to
+# /sprkls/dismiss/{post_id}.
+
+# Recent-window for the SprklsLayer feed. 24h chosen so a sprkl from
+# late last night still appears the next morning (the user might
+# want to dismiss it). Posts older than 24h are dropped from this
+# endpoint regardless of expires_at.
+_RECENT_SPRKLS_WINDOW_HOURS = 24
+# Hard cap to avoid pathological responses if a wallet somehow
+# accumulates hundreds of pending sprkls.
+_RECENT_SPRKLS_MAX = 50
+
+
+@router.get("/{wallet_address}/sprkls/recent")
+async def list_recent_sprkls(wallet_address: str):
+    """Return non-dismissed sprkls from the last 24h for this wallet.
+
+    Joins to `nx.devs` for the rendering metadata the frontend needs
+    (name + archetype + ipfs_image + status). Filters out dismissed
+    rows server-side so the frontend doesn't have to. ORDER BY
+    created_at DESC — newest first, the SprklsLayer renders in that
+    order.
+    """
+    addr = validate_wallet(wallet_address)
+    rows = fetch_all(
+        """
+        SELECT
+            p.id,
+            p.token_id,
+            p.content,
+            p.action_type,
+            p.visual_metadata,
+            p.created_at,
+            p.expires_at,
+            d.name,
+            d.archetype,
+            d.ipfs_hash,
+            d.status
+        FROM nx_posts p
+        JOIN devs d ON d.token_id = p.token_id
+        WHERE p.wallet_address = %s
+          AND p.source = 'sprkl'
+          AND p.dismissed_at IS NULL
+          AND p.expires_at > NOW()
+          AND p.created_at >= NOW() - INTERVAL %s
+        ORDER BY p.created_at DESC
+        LIMIT %s
+        """,
+        (
+            addr,
+            f"{_RECENT_SPRKLS_WINDOW_HOURS} hours",
+            _RECENT_SPRKLS_MAX,
+        ),
+    )
+
+    sprkls: list[dict] = []
+    for r in rows:
+        sprkls.append({
+            "id":              r["id"],
+            "token_id":        r["token_id"],
+            "name":            r["name"],
+            "archetype":       r["archetype"],
+            "ipfs_image":      _ipfs_image(r.get("ipfs_hash")),
+            "status":          r.get("status"),
+            "content":         r["content"],
+            "action_type":     r.get("action_type"),
+            "visual_metadata": r.get("visual_metadata") or {},
+            "created_at":      r["created_at"].isoformat(),
+            "expires_at":      r["expires_at"].isoformat(),
+        })
+    return {"ok": True, "sprkls": sprkls}
+
+
+@router.post("/{wallet_address}/sprkls/dismiss/{post_id}")
+async def dismiss_sprkl(wallet_address: str, post_id: int):
+    """Mark a sprkl dismissed for this wallet. Idempotent — a second
+    dismiss is a no-op (the WHERE clause includes dismissed_at IS
+    NULL so the second UPDATE matches zero rows).
+
+    Wallet ownership of the row is enforced — a probe with a wrong
+    wallet returns 404 even if the post_id exists, so the endpoint
+    doesn't leak the existence of other wallets' sprkls."""
+    addr = validate_wallet(wallet_address)
+    if not isinstance(post_id, int) or post_id < 0:
+        raise HTTPException(400, "Invalid post_id")
+
+    # Verify the post exists for this wallet first. Returning the
+    # row in the same call lets us short-circuit the UPDATE when it's
+    # already dismissed (idempotent fast path).
+    row = fetch_one(
+        """
+        SELECT id, dismissed_at, source
+        FROM nx_posts
+        WHERE id = %s AND wallet_address = %s
+        """,
+        (post_id, addr),
+    )
+    if not row:
+        raise HTTPException(404, "Sprkl not found")
+    if row.get("source") != "sprkl":
+        # Manual posts (Phase 5) don't dismiss the same way. Guard
+        # the API surface against accidental cross-source dismissal.
+        raise HTTPException(400, "Only sprkl posts can be dismissed")
+
+    if row.get("dismissed_at") is not None:
+        return {"ok": True, "post_id": post_id, "already_dismissed": True}
+
+    execute(
+        """
+        UPDATE nx_posts
+        SET dismissed_at = NOW()
+        WHERE id = %s
+          AND wallet_address = %s
+          AND dismissed_at IS NULL
+        """,
+        (post_id, addr),
+    )
+    return {"ok": True, "post_id": post_id}
