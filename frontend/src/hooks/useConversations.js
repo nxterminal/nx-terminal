@@ -100,15 +100,29 @@ export function useConversations(
   // pausing polling while in conversation view doesn't drop the
   // cached list.
   useEffect(() => {
-    if (!enabled || !walletAddress) {
-      // Disabled or wallet not connected — clear out any prior data
-      // so a stale list doesn't flash when the modal re-opens for a
-      // different wallet. Bumping the token discards any in-flight
-      // response from a previous (wallet, enabled) cycle.
+    if (!enabled) {
+      // Explicitly disabled by consumer — settle to a clean idle
+      // state so a subsequent re-enable starts fresh. Bump the
+      // fetch token so any in-flight response from the previous
+      // cycle becomes stale.
       fetchTokenRef.current += 1;
       firstFetchDoneRef.current = false;
       setLoading(false);
       setDevs([]);
+      setError(null);
+      return undefined;
+    }
+    if (!walletAddress) {
+      // Waiting for the wallet to resolve (wagmi hasn't returned an
+      // address yet on cold load). Keep `loading=true` so the
+      // ChatModal auto-select effect doesn't mis-interpret the
+      // pre-fetch render as "fetch completed empty" and pop the
+      // NewChatPicker (the bug Phase 3.5.2.4 diagnostics confirmed
+      // for the parallel useActiveChats hook). Don't reset devs
+      // either — a brief wallet=undefined during a reconnect would
+      // otherwise wipe a populated list.
+      fetchTokenRef.current += 1;
+      firstFetchDoneRef.current = false;
       setError(null);
       return undefined;
     }
