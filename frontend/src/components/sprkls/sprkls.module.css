@@ -326,3 +326,440 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ── Phase 4.5a — fake_popup layer ───────────────────────────────────
+ *
+ * Centered Win98-style modal dialog. The layer wrapper is
+ * fullscreen-fixed with pointer-events: none so an idle state
+ * doesn't intercept clicks across the desktop; the popup itself
+ * re-enables pointer events for its own surface.
+ *
+ * Layer z-index 9400 sits between graffiti (9300) and the toast
+ * stack (9500): a fresh notification still pops over a popup, but
+ * the popup is above the desktop scribbles.
+ */
+
+.sprklsFakePopupLayer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9400;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklFakePopup {
+  pointer-events: auto;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--msn-gray-bg, #ece9d8);
+  border: 1px solid var(--msn-blue-darker, #2a4a7d);
+  /* XP Luna chrome — same recipe as the toast frame so the two
+   * surfaces feel like siblings. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    4px 4px 0 rgba(0, 0, 0, 0.25);
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: var(--msn-text, #000000);
+  /* Subtle bounce-in: drop from above with a small overshoot so it
+   * reads as "the system slammed a dialog at you". 240ms keeps it
+   * snappy. */
+  animation: sprklFakePopupBounceIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes sprklFakePopupBounceIn {
+  0%   { transform: translateY(-32px); opacity: 0; }
+  60%  { transform: translateY(4px);   opacity: 1; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+
+.sprklFakePopupTitleBar {
+  height: 24px;
+  /* Default = same MSN blue gradient as the toast title bar. The
+   * `_error` modifier below swaps it for a red gradient when icon
+   * === 'error', because a red title bar is the unmistakable Win98
+   * "system has done something bad" signal. */
+  background: linear-gradient(to bottom, #6e9be0 0%, #4a6fa5 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 8px;
+  font-weight: 700;
+  font-size: 11px;
+  user-select: none;
+}
+
+.sprklFakePopupTitleBar_error {
+  background: linear-gradient(to bottom, #d96666 0%, #a32d2d 100%);
+}
+
+.sprklFakePopupTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprklFakePopupClose {
+  background: transparent;
+  color: white;
+  border: none;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 2px;
+  flex-shrink: 0;
+  transition: background 80ms ease;
+}
+
+.sprklFakePopupClose:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sprklFakePopupBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: var(--msn-gray-bg, #ece9d8);
+}
+
+.sprklFakePopupIcon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sprklFakePopupMessage {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--msn-text, #000);
+  word-wrap: break-word;
+}
+
+.sprklFakePopupButtons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 14px 16px;
+  background: var(--msn-gray-bg, #ece9d8);
+}
+
+/* Win98 button: light vertical gradient, 1px gray border, inset
+ * white highlight. Hover brightens, active inverts (pressed feel).
+ * Mirrors the existing chatComposerButton recipe in the chat module
+ * so both phase 3 and phase 4 buttons read as the same OS chrome. */
+.sprklFakePopupButton {
+  min-width: 80px;
+  padding: 4px 14px;
+  border: 1px solid var(--msn-gray-border, #919b9c);
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d4d0c8 100%);
+  color: var(--msn-text, #000);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: all 0.1s ease;
+}
+
+.sprklFakePopupButton:hover {
+  background: linear-gradient(to bottom, #fafafa 0%, #dfdcd2 100%);
+  border-color: var(--msn-blue-dark, #4a6fa5);
+}
+
+.sprklFakePopupButton:active {
+  background: linear-gradient(to top, #f0f0f0 0%, #d4d0c8 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+  border-color: var(--msn-blue-darker, #2a4a7d);
+}
+
+/* ── Phase 4.5a — desktop_file layer ─────────────────────────────────
+ *
+ * Fullscreen overlay (with the same safe-bottom respect as the
+ * graffiti layer) hosting the file-icon "drops". File icons are
+ * positioned absolutely inside the layer via inline left/top.
+ * Layer z-index 9200 sits below graffiti (9300) so files feel like
+ * they're ON the desktop, with graffiti painted on top.
+ */
+
+.sprklsDesktopFileLayer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--sprkls-safe-bottom-px, 90px);
+  z-index: 9200;
+  pointer-events: none;
+}
+
+.sprklDesktopFile {
+  position: absolute;
+  /* The wrapper is sized by its children (icon + label). Anchor at
+   * top-left of the position so x_pct/y_pct describes the corner.
+   * Inline left/top supply the actual coordinates. */
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* Subtle pop-in so the file feels like it just landed. */
+  animation: sprklDesktopFilePop 240ms ease-out;
+}
+
+@keyframes sprklDesktopFilePop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.sprklDesktopFileIcon {
+  /* Button reset; the icon is a clickable surface. */
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-radius: 2px;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.sprklDesktopFileIcon:hover {
+  /* Faint Win98 selection highlight on hover. */
+  background: rgba(0, 0, 128, 0.10);
+  border-color: rgba(0, 0, 128, 0.20);
+}
+
+.sprklDesktopFileIcon:focus-visible {
+  outline: 1px dotted #ffffff;
+  outline-offset: -2px;
+  background: rgba(0, 0, 128, 0.18);
+  border-color: rgba(0, 0, 128, 0.30);
+}
+
+.sprklDesktopFileSvg {
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+
+.sprklDesktopFileLabel {
+  /* Same wrap rules as real desktop icon labels: short, centered,
+   * white text shadow so it reads on the teal desktop. */
+  max-width: 100px;
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  font-size: 11px;
+  color: #ffffff;
+  text-align: center;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+  line-height: 1.2;
+  word-wrap: break-word;
+  /* Clip after 2 lines so a long filename doesn't push into other
+   * desktop content. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sprklDesktopFileDismiss {
+  /* Tiny X badge in the corner. The brief asked for an explicit
+   * dismiss affordance separate from "open preview"; this is the
+   * smallest visible UI for it. */
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--msn-gray-border, #919b9c);
+  background: var(--msn-gray-bg, #ece9d8);
+  color: var(--msn-text, #000);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  /* Hidden by default, shown on hover/focus of the wrapping
+   * .sprklDesktopFile so casual interaction (just admiring the
+   * file) doesn't surface the dismiss control. */
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sprklDesktopFile:hover .sprklDesktopFileDismiss,
+.sprklDesktopFileDismiss:focus-visible {
+  opacity: 1;
+}
+
+/* Preview modal — separate from the icon. Backdrop catches clicks
+ * outside the dialog (closes preview); the dialog itself stops
+ * propagation to keep clicks inside it from closing.
+ *
+ * Z-index 9420 sits ABOVE the fake_popup layer (9400) so a preview
+ * opened on top of a file always wins over a coincidentally active
+ * fake popup. Both are below the toast stack (9500). */
+
+.sprklDesktopFilePreviewBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9420;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprklDesktopFilePreview {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  background: var(--msn-gray-bg, #ece9d8);
+  border: 1px solid var(--msn-blue-darker, #2a4a7d);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    4px 4px 0 rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+}
+
+.sprklDesktopFilePreviewTitleBar {
+  height: 24px;
+  background: linear-gradient(to bottom, #6e9be0 0%, #4a6fa5 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 8px;
+  font-weight: 700;
+  font-size: 11px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.sprklDesktopFilePreviewTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprklDesktopFilePreviewClose {
+  background: transparent;
+  color: white;
+  border: none;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 2px;
+}
+
+.sprklDesktopFilePreviewClose:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sprklDesktopFilePreviewBody {
+  /* Use a monospace stack so the multi-line preview reads like a
+   * real .txt — most desktop_file flavor text is structured / list-
+   * shaped. white-space: pre-wrap preserves line breaks from the
+   * backend's preview field. */
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--msn-gray-border, #919b9c);
+  margin: 12px;
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--msn-text, #000);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-y: auto;
+}
+
+.sprklDesktopFilePreviewButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px 12px 12px;
+  background: var(--msn-gray-bg, #ece9d8);
+}
+
+.sprklDesktopFilePreviewButton {
+  min-width: 80px;
+  padding: 4px 14px;
+  border: 1px solid var(--msn-gray-border, #919b9c);
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d4d0c8 100%);
+  color: var(--msn-text, #000);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: all 0.1s ease;
+}
+
+.sprklDesktopFilePreviewButton:hover {
+  background: linear-gradient(to bottom, #fafafa 0%, #dfdcd2 100%);
+  border-color: var(--msn-blue-dark, #4a6fa5);
+}
+
+.sprklDesktopFilePreviewButton:active {
+  background: linear-gradient(to top, #f0f0f0 0%, #d4d0c8 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Phase 4.5a — cursor_prank fake cursor ───────────────────────────
+ *
+ * The component sets `body { cursor: none }` directly via JS for
+ * the duration of the prank (CSS class with cursor: none on a
+ * pointer-events: none overlay would have no effect — disabling
+ * pointer events also disables the cursor property). The fake
+ * cursor element below floats above the page following mousemove
+ * with a small randomised wiggle.
+ *
+ * pointer-events: none means clicks fall through to the actual
+ * desktop / windows / chat modal underneath; the wiggle is purely
+ * visual gaslighting.
+ *
+ * Z-index 9700 sits above the toast stack (9500) so the fake
+ * cursor stays visible over a notification, but BELOW the chat
+ * modal (9999) so opening the modal cleanly hides the fake cursor
+ * inside the modal area. Acceptable trade-off for a 2-second
+ * prank.
+ */
+
+.sprklCursorPrankFakeCursor {
+  position: fixed;
+  z-index: 9700;
+  pointer-events: none;
+  /* Smooth the visible wiggle: the JS updates state every 50ms; a
+   * matching CSS transition softens the per-tick jump so the
+   * cursor reads as "wobbly drunk" not "teleporting". */
+  transition: left 50ms linear, top 50ms linear;
+  /* Slight drop shadow so the fake cursor reads against any
+   * background (white windows, teal desktop, dark modals). */
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+  /* The svg's coordinate origin is its top-left; nothing to offset
+   * here, but documenting the intent so a future hot-spot tweak
+   * (e.g. centering the tip on mousePos) lands here, not in JSX. */
+}

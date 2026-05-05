@@ -12,34 +12,39 @@
  *      auto-dismiss after visual_metadata.duration_ms.
  *   2. Graffiti (Phase 4.3) — viewport overlay, absolutely
  *      positioned per visual_metadata.position. NO auto-dismiss.
- *   3. Window (Phase 4.4, this PR) — fires a CustomEvent that
- *      <Desktop> picks up and routes to openWindow. No visible
- *      element of its own; emits a brief companion toast so the
- *      user has context for "why did Calculator just open?"
+ *   3. Window (Phase 4.4) — fires a CustomEvent that <Desktop>
+ *      routes to openWindow. No visible element of its own; emits
+ *      a brief companion toast for context.
+ *   4. fake_popup (Phase 4.5a) — centered Win98 dialog. ONE at a
+ *      time; queue advances on dismiss. 12s auto-dismiss.
+ *   5. desktop_file (Phase 4.5a) — fake "file dropped" icon at
+ *      backend-provided position. Click → preview modal. NO
+ *      auto-dismiss; persists until explicit X / Delete.
+ *   6. cursor_prank (Phase 4.5a) — body-cursor swap + fake-cursor
+ *      wiggle. ONE at a time; queue advances on dismiss. Auto-
+ *      dismiss after duration_ms (default 2s).
  *
- * Other action types (screensaver / wallpaper / desktop_file /
- * cursor_prank / fake_popup) are silently skipped — Phase 4.5.
+ * Phase 4.5b will surface screensaver / wallpaper.
  *
  * Layer ordering (z-index):
  *   - Desktop / WindowManager: ≤ 100s
- *   - Graffiti layer: 9300
- *   - Toast layer:    9500
- *   - NX Souls modal: 9999
- *   - NewChatPicker:  10001
+ *   - desktop_file layer: 9200
+ *   - graffiti layer:     9300
+ *   - fake_popup layer:   9400
+ *   - toast layer:        9500
+ *   - cursor_prank fake:  9700
+ *   - NX Souls modal:     9999
+ *   - NewChatPicker:     10001
  *
- * Phase 4.4 defensive UX:
- *   - At most ONE window sprkl fires per polling cycle (60s).
- *     Prevents the "user offline 4h, comes back, 6 programs open
- *     uninvited" scenario.
- *   - Window sprkls older than 24h are auto-dismissed without
- *     opening — the moment has passed; popping Calculator at 9am
- *     because of a 1am sprkl is just confusing.
- *   - When a window sprkl DOES fire, an ephemeral local toast
- *     spawns alongside it ("STORM-11 opened Calculator") so the
- *     user has visible context for the action. The local toast
- *     lives only in this component's state — not persisted to the
- *     backend (it's already implied by the existing window sprkl
- *     row).
+ * Phase 4.4 / 4.5a defensive UX:
+ *   - Window: at most ONE per polling cycle (60s) + drop >24h.
+ *   - fake_popup, cursor_prank: ONE at a time on screen; the rest
+ *     queue silently and mount when the visible one dismisses.
+ *   - When any of {window, fake_popup, desktop_file, cursor_prank}
+ *     fires, an ephemeral local toast spawns alongside it so the
+ *     user has visible context for the action. The local toasts
+ *     live only in this component's state and never round-trip to
+ *     the backend.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -51,6 +56,9 @@ import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import SprklToast from './SprklToast';
 import SprklGraffiti from './SprklGraffiti';
 import SprklWindow from './SprklWindow';
+import SprklFakePopup from './SprklFakePopup';
+import SprklDesktopFile from './SprklDesktopFile';
+import SprklCursorPrank from './SprklCursorPrank';
 import styles from './sprkls.module.css';
 
 const MAX_VISIBLE_TOASTS = 3;
@@ -82,11 +90,28 @@ const COMPANION_TOAST_BY_TARGET = {
   'recycle-bin':        (n) => `${n} is rooting through the Recycle Bin`,
 };
 
-function composeCompanionToastContent(devName, target) {
+// Phase 4.5a — companion-toast wording per non-window action_type.
+// The fake_popup / desktop_file / cursor_prank surfaces are largely
+// self-narrating (the popup's title, the filename, the wiggling
+// cursor) but a brief contextual toast tells the user WHICH Dev did
+// it, matching the pattern Phase 4.4 set for window actions.
+const COMPANION_TOAST_BY_ACTION = {
+  fake_popup:    (n) => `${n} is throwing system errors at you`,
+  desktop_file:  (n) => `${n} just dropped a file on your desktop`,
+  cursor_prank:  (n) => `${n} is messing with your cursor`,
+};
+
+function composeWindowCompanionContent(devName, target) {
   const fn = COMPANION_TOAST_BY_TARGET[target];
   const name = devName || 'A Dev';
   if (fn) return fn(name);
   return `${name} opened ${target}`;
+}
+
+function composeActionCompanionContent(devName, actionType) {
+  const fn = COMPANION_TOAST_BY_ACTION[actionType];
+  const name = devName || 'A Dev';
+  return fn ? fn(name) : `${name} did something`;
 }
 
 function ageMs(sprkl) {
@@ -123,8 +148,8 @@ export default function SprklsLayer() {
   }, []);
 
   // Bucket the feed by action_type. Other types (screensaver /
-  // wallpaper / desktop_file / cursor_prank / fake_popup) pass
-  // through unchanged but render nothing here — Phase 4.5.
+  // wallpaper) pass through unchanged but render nothing here —
+  // Phase 4.5b.
   const toastSprkls = useMemo(
     () => sprkls.filter((s) => s.action_type === 'toast'),
     [sprkls]
@@ -135,6 +160,18 @@ export default function SprklsLayer() {
   );
   const windowSprkls = useMemo(
     () => sprkls.filter((s) => s.action_type === 'window'),
+    [sprkls]
+  );
+  const fakePopupSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'fake_popup'),
+    [sprkls]
+  );
+  const desktopFileSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'desktop_file'),
+    [sprkls]
+  );
+  const cursorPrankSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'cursor_prank'),
     [sprkls]
   );
 
@@ -169,6 +206,37 @@ export default function SprklsLayer() {
     );
   }, [windowSprkls]);
 
+  // Phase 4.5a — queue selection for one-at-a-time surfaces. The
+  // backend returns the feed sorted by created_at DESC, so [0] is
+  // always the freshest. When the visible row dismisses, the
+  // optimistic-remove in useSprkls drops it from local state and
+  // [1] becomes the new [0] on the next render — natural FIFO of
+  // newest-first.
+  const visibleFakePopup = fakePopupSprkls[0] || null;
+  const visibleCursorPrank = cursorPrankSprkls[0] || null;
+
+  // ── Companion-toast helpers ───────────────────────────────────────
+
+  // Append an ephemeral local toast. Used by the on-mount callbacks
+  // of SprklWindow / SprklFakePopup / SprklDesktopFile /
+  // SprklCursorPrank to add the contextual "X did something" line.
+  const appendLocalToast = useCallback((sprkl, content) => {
+    setLocalToasts((prev) => [
+      {
+        id: `local-${sprkl.action_type}-${sprkl.id}-${Date.now()}`,
+        token_id: sprkl.token_id,
+        name: sprkl.name,
+        archetype: sprkl.archetype,
+        ipfs_image: sprkl.ipfs_image,
+        content,
+        action_type: 'toast',
+        visual_metadata: { duration_ms: COMPANION_TOAST_DURATION_MS },
+        _ephemeral: true,
+      },
+      ...prev,
+    ]);
+  }, []);
+
   // Called by SprklWindow's onDismiss — also seeds the companion
   // toast and stamps the rate-limit ref so subsequent renders
   // within the next 60s skip new windows.
@@ -177,41 +245,55 @@ export default function SprklsLayer() {
       lastWindowFiredAtRef.current = Date.now();
       const target =
         sprkl.visual_metadata?.target || 'an unknown program';
-      const content = composeCompanionToastContent(sprkl.name, target);
-      setLocalToasts((prev) => [
-        // newest first; SprklsLayer's column-reverse flex puts it at
-        // the BOTTOM of the visible stack so freshly-fired toasts
-        // anchor to the active corner.
-        {
-          id: `local-window-${sprkl.id}-${Date.now()}`,
-          token_id: sprkl.token_id,
-          name: sprkl.name,
-          archetype: sprkl.archetype,
-          ipfs_image: sprkl.ipfs_image,
-          content,
-          action_type: 'toast',
-          visual_metadata: { duration_ms: COMPANION_TOAST_DURATION_MS },
-          _ephemeral: true,
-        },
-        ...prev,
-      ]);
-      // The window sprkl has done its job — clear the row.
+      const content = composeWindowCompanionContent(sprkl.name, target);
+      appendLocalToast(sprkl, content);
       dismiss(sprkl.id);
     },
-    [dismiss]
+    [appendLocalToast, dismiss]
+  );
+
+  // Phase 4.5a — generic onMount handler for the three new
+  // surfaces. Each child component fires this once on mount (gated
+  // by its own hasFiredRef so StrictMode's double-invoke doesn't
+  // produce duplicate toasts). Identity is stable because
+  // appendLocalToast is memoised.
+  const handleNonWindowMount = useCallback(
+    (sprkl) => {
+      const content = composeActionCompanionContent(
+        sprkl.name,
+        sprkl.action_type
+      );
+      appendLocalToast(sprkl, content);
+    },
+    [appendLocalToast]
   );
 
   if (!isBeta || !address) return null;
 
   // Toast stack: ephemeral local toasts FIRST so they're visually
-  // co-located with the window action that spawned them; backend
-  // toasts after. MAX_VISIBLE_TOASTS caps the on-screen stack
-  // overall; older ones queue silently.
+  // co-located with the action that spawned them; backend toasts
+  // after. MAX_VISIBLE_TOASTS caps the on-screen stack overall;
+  // older ones queue silently.
   const allToasts = [...localToasts, ...toastSprkls];
   const visibleToasts = allToasts.slice(0, MAX_VISIBLE_TOASTS);
 
   return (
     <>
+      {/* desktop_file layer — z-index 9200, BELOW graffiti so files
+          read as "stuck to the desktop" and graffiti reads as
+          "painted on the surface above". Layer respects the
+          taskbar safe-area like the graffiti layer. */}
+      <div className={styles.sprklsDesktopFileLayer}>
+        {desktopFileSprkls.map((sprkl) => (
+          <SprklDesktopFile
+            key={sprkl.id}
+            sprkl={sprkl}
+            onDismiss={() => dismiss(sprkl.id)}
+            onMount={handleNonWindowMount}
+          />
+        ))}
+      </div>
+
       <div className={styles.sprklsGraffitiLayer}>
         {graffitiSprkls.map((sprkl) => (
           <SprklGraffiti
@@ -221,6 +303,22 @@ export default function SprklsLayer() {
           />
         ))}
       </div>
+
+      {/* fake_popup layer — z-index 9400, between graffiti (9300)
+          and toasts (9500). Layer is fixed-fullscreen with
+          pointer-events: none; the popup itself sits centered and
+          re-enables pointer events for its own surface. */}
+      <div className={styles.sprklsFakePopupLayer}>
+        {visibleFakePopup && (
+          <SprklFakePopup
+            key={visibleFakePopup.id}
+            sprkl={visibleFakePopup}
+            onDismiss={() => dismiss(visibleFakePopup.id)}
+            onMount={handleNonWindowMount}
+          />
+        )}
+      </div>
+
       <div className={styles.sprklsLayer}>
         {visibleToasts.map((sprkl) => {
           const isEphemeral = sprkl._ephemeral === true;
@@ -244,6 +342,7 @@ export default function SprklsLayer() {
           );
         })}
       </div>
+
       {/* Window-action dispatcher. Renders no UI; mounting it fires
           a CustomEvent that <Desktop> routes to openWindow. Only
           one is ever mounted per cycle; the rate limit on
@@ -253,6 +352,21 @@ export default function SprklsLayer() {
           key={windowToFire.id}
           sprkl={windowToFire}
           onDismiss={() => handleWindowFired(windowToFire)}
+        />
+      )}
+
+      {/* cursor_prank — fake cursor + body-cursor swap. The fake
+          cursor element handles its own z-index; this surface
+          renders only when there's a prank to run, so an idle
+          state has zero footprint. ONE at a time on purpose: two
+          overlapping pranks would double the wiggle and stack the
+          body-cursor: none overrides. */}
+      {visibleCursorPrank && (
+        <SprklCursorPrank
+          key={visibleCursorPrank.id}
+          sprkl={visibleCursorPrank}
+          onDismiss={() => dismiss(visibleCursorPrank.id)}
+          onMount={handleNonWindowMount}
         />
       )}
     </>
