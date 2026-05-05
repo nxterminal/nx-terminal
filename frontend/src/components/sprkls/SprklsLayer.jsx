@@ -23,28 +23,39 @@
  *   6. cursor_prank (Phase 4.5a) — body-cursor swap + fake-cursor
  *      wiggle. ONE at a time; queue advances on dismiss. Auto-
  *      dismiss after duration_ms (default 2s).
- *
- * Phase 4.5b will surface screensaver / wallpaper.
+ *   7. wallpaper (Phase 4.5b) — fullscreen background swap. ONE at
+ *      a time; pointer-events: none on the layer so windows /
+ *      taskbar / sprkls stay interactive. Restore button anchored
+ *      top-right is the explicit dismiss affordance.
+ *   8. screensaver (Phase 4.5b) — fullscreen archetype-themed
+ *      takeover. ONE at a time; mousemove (after 500ms grace),
+ *      click, or Escape dismisses. Defensive: if the NX Souls
+ *      chat modal is open the screensaver is silently dropped —
+ *      we never want to interrupt an in-progress conversation.
  *
  * Layer ordering (z-index):
  *   - Desktop / WindowManager: ≤ 100s
+ *   - wallpaper layer:    50  (above desktop, below windows)
  *   - desktop_file layer: 9200
  *   - graffiti layer:     9300
  *   - fake_popup layer:   9400
  *   - toast layer:        9500
+ *   - screensaver layer:  9600
  *   - cursor_prank fake:  9700
  *   - NX Souls modal:     9999
  *   - NewChatPicker:     10001
  *
- * Phase 4.4 / 4.5a defensive UX:
+ * Phase 4.4 / 4.5a / 4.5b defensive UX:
  *   - Window: at most ONE per polling cycle (60s) + drop >24h.
- *   - fake_popup, cursor_prank: ONE at a time on screen; the rest
- *     queue silently and mount when the visible one dismisses.
- *   - When any of {window, fake_popup, desktop_file, cursor_prank}
- *     fires, an ephemeral local toast spawns alongside it so the
- *     user has visible context for the action. The local toasts
- *     live only in this component's state and never round-trip to
- *     the backend.
+ *   - fake_popup, cursor_prank, screensaver, wallpaper: ONE at a
+ *     time on screen; the rest queue silently and mount when the
+ *     visible one dismisses.
+ *   - Screensaver is silently dropped when the chat modal is open.
+ *   - When any of {window, fake_popup, desktop_file, cursor_prank,
+ *     screensaver, wallpaper} fires, an ephemeral local toast
+ *     spawns alongside it so the user has visible context for the
+ *     action. The local toasts live only in this component's state
+ *     and never round-trip to the backend.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -59,6 +70,8 @@ import SprklWindow from './SprklWindow';
 import SprklFakePopup from './SprklFakePopup';
 import SprklDesktopFile from './SprklDesktopFile';
 import SprklCursorPrank from './SprklCursorPrank';
+import SprklScreensaver from './SprklScreensaver';
+import SprklWallpaper from './SprklWallpaper';
 import styles from './sprkls.module.css';
 
 const MAX_VISIBLE_TOASTS = 3;
@@ -99,6 +112,8 @@ const COMPANION_TOAST_BY_ACTION = {
   fake_popup:    (n) => `${n} is throwing system errors at you`,
   desktop_file:  (n) => `${n} just dropped a file on your desktop`,
   cursor_prank:  (n) => `${n} is messing with your cursor`,
+  screensaver:   (n) => `${n} took over your screen`,
+  wallpaper:     (n) => `${n} changed your wallpaper`,
 };
 
 function composeWindowCompanionContent(devName, target) {
@@ -127,7 +142,7 @@ function ageMs(sprkl) {
 
 export default function SprklsLayer() {
   const { address } = useWallet();
-  const { openChatModal } = useChatModal();
+  const { openChatModal, isOpen: isChatOpen } = useChatModal();
   const isBeta = isInNXSoulsBeta(address);
 
   const { sprkls, dismiss } = useSprkls(address, { enabled: isBeta });
@@ -174,6 +189,14 @@ export default function SprklsLayer() {
     () => sprkls.filter((s) => s.action_type === 'cursor_prank'),
     [sprkls]
   );
+  const screensaverSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'screensaver'),
+    [sprkls]
+  );
+  const wallpaperSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'wallpaper'),
+    [sprkls]
+  );
 
   // Stale-dismissal pass. Runs whenever the window-sprkl set
   // changes; any row older than the threshold gets dismissed
@@ -214,6 +237,25 @@ export default function SprklsLayer() {
   // newest-first.
   const visibleFakePopup = fakePopupSprkls[0] || null;
   const visibleCursorPrank = cursorPrankSprkls[0] || null;
+  // Phase 4.5b — screensaver is silently dropped while the chat
+  // modal is open (defensive UX: never interrupt a conversation).
+  // When chat is closed, the freshest screensaver in the queue
+  // takes over. The dismiss-on-chat-open path is the useEffect
+  // below; visibleScreensaver here gates rendering.
+  const visibleScreensaver = isChatOpen ? null : screensaverSprkls[0] || null;
+  const visibleWallpaper = wallpaperSprkls[0] || null;
+
+  // Defensive: while the chat modal is open, dismiss any pending
+  // screensaver server-side without ever rendering it. The
+  // moment passed; firing it later would feel stale and could
+  // hide an active reply. Best-effort dismiss — if the POST fails
+  // the next poll re-surfaces the row and we try again.
+  useEffect(() => {
+    if (!isChatOpen) return;
+    for (const s of screensaverSprkls) {
+      dismiss(s.id);
+    }
+  }, [isChatOpen, screensaverSprkls, dismiss]);
 
   // ── Companion-toast helpers ───────────────────────────────────────
 
@@ -279,6 +321,23 @@ export default function SprklsLayer() {
 
   return (
     <>
+      {/* wallpaper layer — z-index 50, sits above the desktop
+          background but below windows / taskbar / sprkls / chat
+          modal. Rendered FIRST in JSX order so a future sibling
+          can rely on it not being the top of the React tree. The
+          layer wrapper is pointer-events: none; the Restore button
+          inside re-enables for itself only. */}
+      <div className={styles.sprklsWallpaperLayer}>
+        {visibleWallpaper && (
+          <SprklWallpaper
+            key={visibleWallpaper.id}
+            sprkl={visibleWallpaper}
+            onDismiss={() => dismiss(visibleWallpaper.id)}
+            onMount={handleNonWindowMount}
+          />
+        )}
+      </div>
+
       {/* desktop_file layer — z-index 9200, BELOW graffiti so files
           read as "stuck to the desktop" and graffiti reads as
           "painted on the surface above". Layer respects the
@@ -354,6 +413,24 @@ export default function SprklsLayer() {
           onDismiss={() => handleWindowFired(windowToFire)}
         />
       )}
+
+      {/* screensaver layer — z-index 9600, above the toast stack
+          but below cursor_prank (9700) and the chat modal (9999).
+          ONE at a time on purpose: overlapping fullscreen
+          takeovers would visually conflict. Defensive dismiss-
+          while-chat-open is handled in the useEffect above; here
+          we just gate the render on visibleScreensaver, which
+          returns null when chat is open. */}
+      <div className={styles.sprklsScreensaverLayer}>
+        {visibleScreensaver && (
+          <SprklScreensaver
+            key={visibleScreensaver.id}
+            sprkl={visibleScreensaver}
+            onDismiss={() => dismiss(visibleScreensaver.id)}
+            onMount={handleNonWindowMount}
+          />
+        )}
+      </div>
 
       {/* cursor_prank — fake cursor + body-cursor swap. The fake
           cursor element handles its own z-index; this surface
