@@ -84,9 +84,22 @@ export function useActiveChats(walletAddress, { enabled = true } = {}) {
     const myToken = fetchTokenRef.current;
     firstFetchDoneRef.current = false;
 
-    if (!enabled || !walletAddress) {
+    if (!enabled) {
+      // Explicitly disabled by consumer (modal closed) — settle to a
+      // clean idle state so a subsequent re-enable starts fresh.
       setLoading(false);
       setActiveChats([]);
+      setError(null);
+      return undefined;
+    }
+    if (!walletAddress) {
+      // Waiting for the wallet to resolve (wagmi hasn't returned an
+      // address yet on cold load). Keep `loading=true` so the
+      // ChatModal auto-select effect doesn't mis-interpret the
+      // pre-fetch render as "fetch completed empty" and pop the
+      // NewChatPicker (the bug Phase 3.5.2.4 diagnostics confirmed).
+      // Don't reset activeChats either — a brief wallet=undefined
+      // during a reconnect would otherwise wipe a populated list.
       setError(null);
       return undefined;
     }

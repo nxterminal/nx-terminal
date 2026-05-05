@@ -46,15 +46,11 @@ export function ChatProvider({ children }) {
   const [isNewChatPickerOpen, setIsNewChatPickerOpen] = useState(false);
 
   const openChatModal = useCallback((devId = null) => {
-    // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
-    console.log('[ChatContext] openChatModal', { devId });
     setInitialDevId(devId);
     setIsOpen(true);
   }, []);
 
   const closeChatModal = useCallback(() => {
-    // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
-    console.log('[ChatContext] closeChatModal');
     setIsOpen(false);
     setInitialDevId(null);
     // Reset selection + picker on close so a subsequent open runs the
@@ -78,19 +74,10 @@ export function ChatProvider({ children }) {
   }, []);
 
   const openNewChatPicker = useCallback(() => {
-    // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
-    // Stack trace identifies the caller — auto-select effect vs.
-    // user click on the "+ New chat" button vs. anything else.
-    console.log(
-      '[ChatContext] openNewChatPicker called from:',
-      new Error().stack
-    );
     setIsNewChatPickerOpen(true);
   }, []);
 
   const closeNewChatPicker = useCallback(() => {
-    // [PHASE 3.5.2.4 DIAGNOSTIC] remove in 3.5.2.5
-    console.log('[ChatContext] closeNewChatPicker');
     setIsNewChatPickerOpen(false);
   }, []);
 
