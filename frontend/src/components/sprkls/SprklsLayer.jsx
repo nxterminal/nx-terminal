@@ -6,32 +6,43 @@
  * user shouldn't see anything — non-beta wallets pay zero render
  * cost and the polling never starts.
  *
- * Two visual surfaces, one hook (so a single `dismiss` set is
- * authoritative across both):
+ * Visual surfaces (one hook, one authoritative `dismiss`):
  *
  *   1. Toasts (Phase 4.2) — bottom-right column, MAX 3 visible,
  *      auto-dismiss after visual_metadata.duration_ms.
- *   2. Graffiti (Phase 4.3, this PR) — viewport overlay,
- *      absolutely positioned per visual_metadata.position. NO auto-
- *      dismiss; the user clicks the text to clear it.
+ *   2. Graffiti (Phase 4.3) — viewport overlay, absolutely
+ *      positioned per visual_metadata.position. NO auto-dismiss.
+ *   3. Window (Phase 4.4, this PR) — fires a CustomEvent that
+ *      <Desktop> picks up and routes to openWindow. No visible
+ *      element of its own; emits a brief companion toast so the
+ *      user has context for "why did Calculator just open?"
  *
- * Other action types (window / screensaver / wallpaper /
- * desktop_file / cursor_prank / fake_popup) are silently skipped
- * here and will land in Phases 4.4-4.5. The hook still returns
- * the full feed so future surfaces can subscribe alongside without
- * forcing a hook refactor.
+ * Other action types (screensaver / wallpaper / desktop_file /
+ * cursor_prank / fake_popup) are silently skipped — Phase 4.5.
  *
  * Layer ordering (z-index):
  *   - Desktop / WindowManager: ≤ 100s
- *   - Graffiti layer: 9300                 ← Phase 4.3
+ *   - Graffiti layer: 9300
  *   - Toast layer:    9500
  *   - NX Souls modal: 9999
  *   - NewChatPicker:  10001
  *
- * Graffiti sits BELOW toasts so a fresh notification still pops
- * over a busy desktop — the toast is the more time-sensitive
- * surface and shouldn't get visually drowned by stacked graffiti.
+ * Phase 4.4 defensive UX:
+ *   - At most ONE window sprkl fires per polling cycle (60s).
+ *     Prevents the "user offline 4h, comes back, 6 programs open
+ *     uninvited" scenario.
+ *   - Window sprkls older than 24h are auto-dismissed without
+ *     opening — the moment has passed; popping Calculator at 9am
+ *     because of a 1am sprkl is just confusing.
+ *   - When a window sprkl DOES fire, an ephemeral local toast
+ *     spawns alongside it ("STORM-11 opened Calculator") so the
+ *     user has visible context for the action. The local toast
+ *     lives only in this component's state — not persisted to the
+ *     backend (it's already implied by the existing window sprkl
+ *     row).
  */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWallet } from '../../hooks/useWallet';
 import { useChatModal } from '../../contexts/ChatContext';
@@ -39,29 +50,165 @@ import { useSprkls } from '../../hooks/useSprkls';
 import { isInNXSoulsBeta } from '../../config/betaFeatures';
 import SprklToast from './SprklToast';
 import SprklGraffiti from './SprklGraffiti';
+import SprklWindow from './SprklWindow';
 import styles from './sprkls.module.css';
 
 const MAX_VISIBLE_TOASTS = 3;
+
+// Phase 4.4 rate-limit + staleness rules. The polling cycle is 60s
+// (POLL_INTERVAL_MS in useSprkls); the rate limit matches that
+// interval so each cycle has the chance to fire at most one window
+// action. STALE_THRESHOLD covers the most common abuse / glitch
+// scenario: user offline overnight, comes back, the queue is full
+// of stale window sprkls that should NOT pop programs hours later.
+const WINDOW_RATE_LIMIT_MS = 60_000;
+const WINDOW_STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
+const COMPANION_TOAST_DURATION_MS = 5_000;
+
+// Companion-toast wording per target. Keys match KNOWN_TARGETS in
+// SprklWindow.jsx. Anything outside this map falls back to a
+// generic "{name} opened {target}" line below.
+const COMPANION_TOAST_BY_TARGET = {
+  notepad:              (n) => `${n} opened Notepad — write something down`,
+  'protocol-solitaire': (n) => `${n} opened Solitaire to take a break`,
+  'bug-sweeper':        (n) => `${n} hijacked Bug Sweeper`,
+  'nxt-wallet':         (n) => `${n} opened your NXT Wallet`,
+  'protocol-market':    (n) => `${n} is checking the Protocol Market`,
+  nxmarket:             (n) => `${n} pulled up NX Market`,
+  'nx-terminal':        (n) => `${n} opened the terminal`,
+  'dev-camp':           (n) => `${n} opened Dev Camp`,
+  inbox:                (n) => `${n} is reading your inbox`,
+  netwatch:             (n) => `${n} fired up MegaWatch`,
+  'recycle-bin':        (n) => `${n} is rooting through the Recycle Bin`,
+};
+
+function composeCompanionToastContent(devName, target) {
+  const fn = COMPANION_TOAST_BY_TARGET[target];
+  const name = devName || 'A Dev';
+  if (fn) return fn(name);
+  return `${name} opened ${target}`;
+}
+
+function ageMs(sprkl) {
+  // created_at comes back from the backend as an ISO string. Date
+  // accepts both ISO and ms-numbers; defensive parse so a
+  // malformed or missing field treats the row as fresh (we'd
+  // rather pop the program than auto-dismiss a brand-new sprkl
+  // because of a parsing edge case).
+  const t = sprkl?.created_at ? new Date(sprkl.created_at).getTime() : Date.now();
+  if (Number.isNaN(t)) return 0;
+  return Date.now() - t;
+}
 
 export default function SprklsLayer() {
   const { address } = useWallet();
   const { openChatModal } = useChatModal();
   const isBeta = isInNXSoulsBeta(address);
 
-  // Polling only runs while enabled — non-beta wallets don't even
-  // hit /sprkls/recent. Disconnected wallet is handled by the hook's
-  // !walletAddress branch (loading=true, no fetch).
   const { sprkls, dismiss } = useSprkls(address, { enabled: isBeta });
+
+  // Phase 4.4 — rate-limit + ephemeral toast queue.
+  // lastWindowFiredAtRef is a Date.now() timestamp; 0 means "never
+  // fired this session". Survives re-renders without retriggering
+  // useEffects — we just read/write it directly.
+  const lastWindowFiredAtRef = useRef(0);
+  const [localToasts, setLocalToasts] = useState([]);
+
+  // Stable callback for the ephemeral-toast dismiss path. Different
+  // identity from the hook's `dismiss` so SprklToast can route
+  // dismissal through the right channel without inspecting the
+  // sprkl shape itself.
+  const dismissEphemeralToast = useCallback((localId) => {
+    setLocalToasts((prev) => prev.filter((t) => t.id !== localId));
+  }, []);
+
+  // Bucket the feed by action_type. Other types (screensaver /
+  // wallpaper / desktop_file / cursor_prank / fake_popup) pass
+  // through unchanged but render nothing here — Phase 4.5.
+  const toastSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'toast'),
+    [sprkls]
+  );
+  const graffitiSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'graffiti'),
+    [sprkls]
+  );
+  const windowSprkls = useMemo(
+    () => sprkls.filter((s) => s.action_type === 'window'),
+    [sprkls]
+  );
+
+  // Stale-dismissal pass. Runs whenever the window-sprkl set
+  // changes; any row older than the threshold gets dismissed
+  // server-side WITHOUT opening the program. Best-effort — if the
+  // dismiss POST fails, the next poll re-surfaces the row and we
+  // try again.
+  useEffect(() => {
+    for (const s of windowSprkls) {
+      if (ageMs(s) > WINDOW_STALE_THRESHOLD_MS) {
+        // eslint-disable-next-line no-console
+        console.info(
+          '[SprklsLayer] dropping stale window sprkl',
+          { id: s.id, age_hours: Math.round(ageMs(s) / 3_600_000) }
+        );
+        dismiss(s.id);
+      }
+    }
+  }, [windowSprkls, dismiss]);
+
+  // Pick the next non-stale window sprkl to fire, respecting the
+  // 60s rate limit. Returning null means "skip this render"; the
+  // next poll cycle (or the next dismiss-driven re-render) will
+  // re-evaluate.
+  const windowToFire = useMemo(() => {
+    if (Date.now() - lastWindowFiredAtRef.current < WINDOW_RATE_LIMIT_MS) {
+      return null;
+    }
+    return (
+      windowSprkls.find((s) => ageMs(s) <= WINDOW_STALE_THRESHOLD_MS) || null
+    );
+  }, [windowSprkls]);
+
+  // Called by SprklWindow's onDismiss — also seeds the companion
+  // toast and stamps the rate-limit ref so subsequent renders
+  // within the next 60s skip new windows.
+  const handleWindowFired = useCallback(
+    (sprkl) => {
+      lastWindowFiredAtRef.current = Date.now();
+      const target =
+        sprkl.visual_metadata?.target || 'an unknown program';
+      const content = composeCompanionToastContent(sprkl.name, target);
+      setLocalToasts((prev) => [
+        // newest first; SprklsLayer's column-reverse flex puts it at
+        // the BOTTOM of the visible stack so freshly-fired toasts
+        // anchor to the active corner.
+        {
+          id: `local-window-${sprkl.id}-${Date.now()}`,
+          token_id: sprkl.token_id,
+          name: sprkl.name,
+          archetype: sprkl.archetype,
+          ipfs_image: sprkl.ipfs_image,
+          content,
+          action_type: 'toast',
+          visual_metadata: { duration_ms: COMPANION_TOAST_DURATION_MS },
+          _ephemeral: true,
+        },
+        ...prev,
+      ]);
+      // The window sprkl has done its job — clear the row.
+      dismiss(sprkl.id);
+    },
+    [dismiss]
+  );
 
   if (!isBeta || !address) return null;
 
-  // Phase 4.2 + 4.3 only render toast and graffiti. The filters are
-  // the entire opt-in surface for these PRs — other action types
-  // pass straight through the hook's array but render nothing here.
-  const toastSprkls = sprkls.filter((s) => s.action_type === 'toast');
-  const graffitiSprkls = sprkls.filter((s) => s.action_type === 'graffiti');
-
-  const visibleToasts = toastSprkls.slice(0, MAX_VISIBLE_TOASTS);
+  // Toast stack: ephemeral local toasts FIRST so they're visually
+  // co-located with the window action that spawned them; backend
+  // toasts after. MAX_VISIBLE_TOASTS caps the on-screen stack
+  // overall; older ones queue silently.
+  const allToasts = [...localToasts, ...toastSprkls];
+  const visibleToasts = allToasts.slice(0, MAX_VISIBLE_TOASTS);
 
   return (
     <>
@@ -71,23 +218,43 @@ export default function SprklsLayer() {
             key={sprkl.id}
             sprkl={sprkl}
             onDismiss={() => dismiss(sprkl.id)}
-            // No onClick passed — graffiti dismisses on click per the
-            // Phase 4.3 brief. If a future variant wants click-to-open-
-            // chat, pass `onClick={() => openChatModal(sprkl.token_id)}`
-            // and SprklGraffiti will honour it.
           />
         ))}
       </div>
       <div className={styles.sprklsLayer}>
-        {visibleToasts.map((sprkl) => (
-          <SprklToast
-            key={sprkl.id}
-            sprkl={sprkl}
-            onDismiss={() => dismiss(sprkl.id)}
-            onClick={() => openChatModal(sprkl.token_id)}
-          />
-        ))}
+        {visibleToasts.map((sprkl) => {
+          const isEphemeral = sprkl._ephemeral === true;
+          return (
+            <SprklToast
+              key={sprkl.id}
+              sprkl={sprkl}
+              onDismiss={
+                isEphemeral
+                  ? () => dismissEphemeralToast(sprkl.id)
+                  : () => dismiss(sprkl.id)
+              }
+              onClick={
+                // Clicking an ephemeral toast still opens the chat
+                // with the Dev that triggered it (token_id was
+                // copied at spawn time). Same UX as a real toast —
+                // makes the companion notification feel cohesive.
+                () => openChatModal(sprkl.token_id)
+              }
+            />
+          );
+        })}
       </div>
+      {/* Window-action dispatcher. Renders no UI; mounting it fires
+          a CustomEvent that <Desktop> routes to openWindow. Only
+          one is ever mounted per cycle; the rate limit on
+          windowToFire above is the gate. */}
+      {windowToFire && (
+        <SprklWindow
+          key={windowToFire.id}
+          sprkl={windowToFire}
+          onDismiss={() => handleWindowFired(windowToFire)}
+        />
+      )}
     </>
   );
 }
