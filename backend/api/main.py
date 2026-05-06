@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user, posts, posts_feed
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user, posts, posts_feed, llm_usage
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -897,6 +897,39 @@ def _run_auto_migrations():
                     FOR EACH ROW
                     EXECUTE FUNCTION nx_post_reply_count_sync();
                 """)
+
+                # ── Phase 5.1.1: LLM cost tracking table ─────────────
+                # Defense-in-depth on top of Anthropic's hard spend
+                # cap. Each successful LLM call increments the row
+                # for (date, service, model); the engine + API check
+                # this table before making the next call and fall
+                # through to template fallback if the daily USD
+                # ceiling is hit. Free-tier providers (Groq /
+                # Cerebras / Gemini) are tracked at $0 cost so the
+                # admin endpoint surfaces total call volume across
+                # the whole cascade, not just paid calls.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS llm_usage_daily (
+                        id                  BIGSERIAL PRIMARY KEY,
+                        date                DATE NOT NULL,
+                        service             VARCHAR(32) NOT NULL,
+                        model               VARCHAR(64) NOT NULL,
+                        call_count          INTEGER NOT NULL DEFAULT 0,
+                        input_tokens        BIGINT NOT NULL DEFAULT 0,
+                        output_tokens       BIGINT NOT NULL DEFAULT 0,
+                        estimated_cost_usd  NUMERIC(10, 4) NOT NULL DEFAULT 0,
+                        last_call_at        TIMESTAMPTZ,
+                        UNIQUE (date, service, model)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_llm_usage_date "
+                    "ON llm_usage_daily (date DESC)"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_llm_usage_service "
+                    "ON llm_usage_daily (service)"
+                )
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
@@ -1147,6 +1180,9 @@ app.include_router(posts.router, prefix="/api/posts", tags=["NX-POST"])
 # converter on the dynamic path additionally prevents accidental
 # capture of /trending or /feed-stats.
 app.include_router(posts_feed.router, prefix="/api/posts", tags=["NX-POST"])
+# Phase 5.1.1 — LLM cost tracking admin endpoints. Read-only; sees
+# call counts + estimated cost per service. No auth gate in MVP.
+app.include_router(llm_usage.router, prefix="/api/admin/llm-usage", tags=["Admin"])
 app.include_router(nxmarket.admin_router, prefix="/api/admin/nxmarket", tags=["NXMARKET-Admin"])
 app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])

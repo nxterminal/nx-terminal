@@ -301,6 +301,10 @@ async def _llm_generate_async(
                 session_messages=[],
                 user_message=user_message,
                 climax=False,
+                # Phase 5.1.1: cost tracking. Falls through to the
+                # deterministic _fallback_content path when today's
+                # posts_feed budget is hit.
+                service="posts_feed",
             ),
             timeout=LLM_TIMEOUT_SECONDS,
         )

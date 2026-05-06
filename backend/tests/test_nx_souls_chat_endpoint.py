@@ -192,12 +192,19 @@ class _LLMStub:
     def __init__(self):
         self.calls: list[dict] = []
 
-    async def __call__(self, persona, session_messages, user_message, *, climax=None):
+    async def __call__(
+        self, persona, session_messages, user_message,
+        *, climax=None, service=None,
+    ):
+        # `service` kwarg added Phase 5.1.1 for cost tracking. Stub
+        # records it so a test can assert the route passes the
+        # right key, but otherwise behaviour is unchanged.
         self.calls.append({
             "persona": persona,
             "session_messages": list(session_messages),
             "user_message": user_message,
             "climax": climax,
+            "service": service,
         })
         return ("stub reply", "groq")
 

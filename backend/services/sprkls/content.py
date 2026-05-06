@@ -116,6 +116,9 @@ async def _llm_rewrite_async(text: str, archetype: str) -> str | None:
                 session_messages=[],
                 user_message=user_message,
                 climax=False,
+                # Phase 5.1.1: cost tracking. Falls through to the
+                # filled template when today's sprkls budget is hit.
+                service="sprkls",
             ),
             timeout=LLM_TIMEOUT_SECONDS,
         )

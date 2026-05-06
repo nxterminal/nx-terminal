@@ -389,6 +389,12 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
             session_messages=session_msgs,
             user_message=req.message,
             climax=climax,
+            # Phase 5.1.1: cost tracking. When the daily ceiling is
+            # hit the cascade raises NXSoulsAllProvidersFailed
+            # ("daily_limit_exceeded"), which the existing handler
+            # below catches and turns into the standard "I'm tired"
+            # response — same UX as a real cascade outage.
+            service="nx_souls",
         )
     except NXSoulsAllProvidersFailed as e:
         duration_ms = int((time.monotonic() - started) * 1000)

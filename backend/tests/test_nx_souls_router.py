@@ -93,6 +93,104 @@ def test_climax_not_detected_on_casual_short():
     assert llm_router.is_climax_turn("", 0) is False
 
 
+# ─── Phase 5.1.1: cost-tracking integration ─────────────────────────
+
+
+def test_call_llm_records_cost_when_service_provided(monkeypatch):
+    """When `service=` is passed, a successful call routes through
+    the `record_llm_call_safe` hook so the daily counters update.
+    Pre-call check fails open (allow) so we only verify the
+    post-call recording here."""
+    _set_all_keys(monkeypatch)
+    monkeypatch.setattr(
+        llm_router.llm_cost, "is_under_daily_limit_safe",
+        lambda service: True,
+    )
+    recorded: dict = {}
+
+    def fake_record(service, model, input_tokens, output_tokens):
+        recorded.update(
+            service=service, model=model,
+            input_tokens=input_tokens, output_tokens=output_tokens,
+        )
+
+    monkeypatch.setattr(
+        llm_router.llm_cost, "record_llm_call_safe", fake_record,
+    )
+
+    async def fake_post(self, url, **kw):
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 123, "completion_tokens": 45},
+            },
+            request=httpx.Request("POST", url),
+        )
+
+    with patch.object(httpx.AsyncClient, "post", new=fake_post):
+        text, provider = _run(llm_router.call_llm(
+            "PERSONA", [], "yo", service="sprkls",
+        ))
+
+    assert text == "ok"
+    assert provider == "groq"
+    assert recorded == {
+        "service":       "sprkls",
+        "model":         "llama-3.3-70b-versatile",
+        "input_tokens":  123,
+        "output_tokens": 45,
+    }
+
+
+def test_call_llm_skips_when_daily_limit_exceeded(monkeypatch):
+    """is_under_daily_limit_safe returning False short-circuits the
+    cascade and raises NXSoulsAllProvidersFailed("daily_limit_exceeded").
+    The existing per-caller fallback paths handle this exception
+    just like a real all-providers-down outage."""
+    _set_all_keys(monkeypatch)
+    monkeypatch.setattr(
+        llm_router.llm_cost, "is_under_daily_limit_safe",
+        lambda service: False,
+    )
+
+    posts_made = {"count": 0}
+
+    async def fake_post(self, url, **kw):
+        posts_made["count"] += 1
+        return _ok_response("should not reach")
+
+    with patch.object(httpx.AsyncClient, "post", new=fake_post):
+        with pytest.raises(NXSoulsAllProvidersFailed) as exc_info:
+            _run(llm_router.call_llm("PERSONA", [], "yo", service="sprkls"))
+
+    assert "daily_limit_exceeded" in str(exc_info.value)
+    assert posts_made["count"] == 0
+
+
+def test_call_llm_no_service_skips_cost_tracking(monkeypatch):
+    """Backwards compat: callers that don't pass `service=` must
+    bypass the cost tracker entirely (no DB hits, no exceptions)."""
+    _set_all_keys(monkeypatch)
+    limit_check_called = {"hit": False}
+
+    def fake_check(service):
+        limit_check_called["hit"] = True
+        return True
+
+    monkeypatch.setattr(
+        llm_router.llm_cost, "is_under_daily_limit_safe", fake_check,
+    )
+
+    async def fake_post(self, url, **kw):
+        return _ok_response("hi")
+
+    with patch.object(httpx.AsyncClient, "post", new=fake_post):
+        _run(llm_router.call_llm("PERSONA", [], "yo"))
+
+    assert limit_check_called["hit"] is False
+
+
 # ─── Cascade order — happy path ──────────────────────────────────────────
 
 
