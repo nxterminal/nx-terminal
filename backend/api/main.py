@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
-from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user, posts
+from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user, posts, posts_feed
 from backend.api.ws.feed import router as ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -727,6 +727,176 @@ def _run_auto_migrations():
                     "ON nx_posts (wallet_address, created_at DESC) "
                     "WHERE source = 'sprkl' AND dismissed_at IS NULL"
                 )
+
+                # ── NX POST Phase 5.1: feed-post extensions ───────────
+                # Adds the columns needed to render Twitter-style
+                # threaded posts (parent_post_id), denormalised counts
+                # (like_count / reply_count, kept in sync by triggers
+                # below), text-derived metadata (hashtags / mentions /
+                # tickers, populated by the generator at insert time),
+                # and a richer visibility enum than the legacy boolean
+                # is_public — which we keep for backwards compat.
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "parent_post_id BIGINT REFERENCES nx_posts(id) "
+                    "ON DELETE SET NULL"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "like_count INTEGER NOT NULL DEFAULT 0"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "reply_count INTEGER NOT NULL DEFAULT 0"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "hashtags TEXT[] NOT NULL DEFAULT '{}'"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "mentions TEXT[] NOT NULL DEFAULT '{}'"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "tickers TEXT[] NOT NULL DEFAULT '{}'"
+                )
+                cur.execute(
+                    "ALTER TABLE nx_posts ADD COLUMN IF NOT EXISTS "
+                    "visibility VARCHAR(20) NOT NULL DEFAULT 'public'"
+                )
+                # Allow source='feed' alongside the existing
+                # 'sprkl'/'manual'. The CHECK constraint was created
+                # without an explicit name, so Postgres named it
+                # nx_posts_source_check (table_col_check convention).
+                # Drop + re-add so the new value is accepted; guard
+                # with a DO block so re-running is idempotent.
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1 FROM pg_constraint
+                            WHERE conname = 'nx_posts_source_check'
+                        ) THEN
+                            ALTER TABLE nx_posts
+                                DROP CONSTRAINT nx_posts_source_check;
+                        END IF;
+                        ALTER TABLE nx_posts
+                            ADD CONSTRAINT nx_posts_source_check
+                            CHECK (source IN ('sprkl', 'manual', 'feed'));
+                    END
+                    $$;
+                """)
+                # Reply-tree lookup: SELECT … WHERE parent_post_id = X.
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_posts_parent "
+                    "ON nx_posts (parent_post_id) "
+                    "WHERE parent_post_id IS NOT NULL"
+                )
+                # Hashtag aggregation for the trending endpoint —
+                # GIN index on the array enables fast ANY/UNNEST.
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_posts_hashtags "
+                    "ON nx_posts USING GIN (hashtags)"
+                )
+                # Public timeline filter: visibility='public' ORDER BY
+                # created_at DESC. Composite index pre-orders rows for
+                # the common case.
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS "
+                    "idx_nx_posts_visibility_created "
+                    "ON nx_posts (visibility, created_at DESC)"
+                )
+
+                # nx_post_likes — one row per (post, user). UNIQUE
+                # makes the like endpoint idempotent (INSERT … ON
+                # CONFLICT DO NOTHING) and enforces the "one like per
+                # user per post" rule at the DB level. Lowercased-
+                # address index supports user-side queries (has-liked
+                # checks across a timeline page).
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nx_post_likes (
+                        id           BIGSERIAL PRIMARY KEY,
+                        post_id      BIGINT NOT NULL
+                                     REFERENCES nx_posts(id) ON DELETE CASCADE,
+                        user_address VARCHAR(42) NOT NULL,
+                        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        UNIQUE (post_id, user_address)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_post_likes_user "
+                    "ON nx_post_likes (LOWER(user_address))"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nx_post_likes_post "
+                    "ON nx_post_likes (post_id)"
+                )
+
+                # Count-sync triggers. CREATE OR REPLACE on the
+                # function + DROP-then-CREATE on the trigger makes
+                # this idempotent across deploys without us having to
+                # version-tag the migration. Each trigger fires AFTER
+                # the row change so the counter increment / decrement
+                # sees the post row in its post-mutation state.
+                cur.execute("""
+                    CREATE OR REPLACE FUNCTION nx_post_likes_count_sync()
+                    RETURNS TRIGGER AS $$
+                    BEGIN
+                        IF TG_OP = 'INSERT' THEN
+                            UPDATE nx_posts
+                            SET like_count = like_count + 1
+                            WHERE id = NEW.post_id;
+                        ELSIF TG_OP = 'DELETE' THEN
+                            UPDATE nx_posts
+                            SET like_count = GREATEST(like_count - 1, 0)
+                            WHERE id = OLD.post_id;
+                        END IF;
+                        RETURN NULL;
+                    END;
+                    $$ LANGUAGE plpgsql;
+                """)
+                cur.execute(
+                    "DROP TRIGGER IF EXISTS "
+                    "nx_post_likes_count_sync_trigger ON nx_post_likes"
+                )
+                cur.execute("""
+                    CREATE TRIGGER nx_post_likes_count_sync_trigger
+                    AFTER INSERT OR DELETE ON nx_post_likes
+                    FOR EACH ROW
+                    EXECUTE FUNCTION nx_post_likes_count_sync();
+                """)
+                # Reply-count trigger fires on nx_posts itself when a
+                # row with parent_post_id is inserted / deleted. The
+                # GREATEST guard prevents the counter from going
+                # negative if a parent is somehow decremented twice.
+                cur.execute("""
+                    CREATE OR REPLACE FUNCTION nx_post_reply_count_sync()
+                    RETURNS TRIGGER AS $$
+                    BEGIN
+                        IF TG_OP = 'INSERT' AND NEW.parent_post_id IS NOT NULL THEN
+                            UPDATE nx_posts
+                            SET reply_count = reply_count + 1
+                            WHERE id = NEW.parent_post_id;
+                        ELSIF TG_OP = 'DELETE' AND OLD.parent_post_id IS NOT NULL THEN
+                            UPDATE nx_posts
+                            SET reply_count = GREATEST(reply_count - 1, 0)
+                            WHERE id = OLD.parent_post_id;
+                        END IF;
+                        RETURN NULL;
+                    END;
+                    $$ LANGUAGE plpgsql;
+                """)
+                cur.execute(
+                    "DROP TRIGGER IF EXISTS "
+                    "nx_post_reply_count_sync_trigger ON nx_posts"
+                )
+                cur.execute("""
+                    CREATE TRIGGER nx_post_reply_count_sync_trigger
+                    AFTER INSERT OR DELETE ON nx_posts
+                    FOR EACH ROW
+                    EXECUTE FUNCTION nx_post_reply_count_sync();
+                """)
                 # Backfill: insert welcome notification for existing players who
                 # don't have one yet, using their real registration timestamp.
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
@@ -970,6 +1140,13 @@ app.include_router(nxmarket.router, prefix="/api/nxmarket", tags=["NXMARKET"])
 app.include_router(nx_souls.router, prefix="/api/devs", tags=["NX-Souls"])
 app.include_router(user.router, prefix="/api/user", tags=["User"])
 app.include_router(posts.router, prefix="/api/posts", tags=["NX-POST"])
+# Phase 5.1 — engagement + discovery endpoints (likes, trending,
+# feed-stats, who-to-follow, single-post detail). Registered AFTER
+# posts.router so the literal routes there (/timeline, /user, /dev)
+# match before /{post_id:int} on overlapping prefixes; the int
+# converter on the dynamic path additionally prevents accidental
+# capture of /trending or /feed-stats.
+app.include_router(posts_feed.router, prefix="/api/posts", tags=["NX-POST"])
 app.include_router(nxmarket.admin_router, prefix="/api/admin/nxmarket", tags=["NXMARKET-Admin"])
 app.include_router(health.router, tags=["Health"])
 app.include_router(ws_router, tags=["WebSocket"])

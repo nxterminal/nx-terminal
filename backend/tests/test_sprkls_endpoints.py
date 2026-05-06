@@ -49,21 +49,37 @@ def _now() -> datetime:
 
 
 def _post_row(**overrides):
-    """One joined row in the shape the route SQL returns."""
+    """One joined row in the shape the route SQL returns.
+
+    Phase 5.1 added parent_post_id / hashtags / mentions / tickers /
+    like_count / reply_count / corporation + the LEFT JOIN parent
+    columns. Defaults below mirror an unliked, parentless post so
+    older tests keep passing without per-test plumbing.
+    """
     base = {
-        "id":              1,
-        "token_id":        TOKEN_ID,
-        "wallet_address":  OPERATOR,
-        "content":         "ser the chart is bullish",
-        "source":          "sprkl",
-        "action_type":     "toast",
-        "visual_metadata": {"duration_ms": 8000},
-        "created_at":      _now(),
-        "expires_at":      _now() + timedelta(days=7),
-        "name":            "STORM-11",
-        "archetype":       "DEGEN",
-        "ipfs_hash":       "bafyEXAMPLE",
-        "status":          "active",
+        "id":               1,
+        "token_id":         TOKEN_ID,
+        "wallet_address":   OPERATOR,
+        "content":          "ser the chart is bullish",
+        "source":           "sprkl",
+        "action_type":      "toast",
+        "visual_metadata":  {"duration_ms": 8000},
+        "parent_post_id":   None,
+        "hashtags":         [],
+        "mentions":         [],
+        "tickers":          [],
+        "like_count":       0,
+        "reply_count":      0,
+        "created_at":       _now(),
+        "expires_at":       _now() + timedelta(days=7),
+        "name":             "STORM-11",
+        "archetype":        "DEGEN",
+        "corporation":      "OPERATIONS",
+        "ipfs_hash":        "bafyEXAMPLE",
+        "status":           "active",
+        "parent_token_id":  None,
+        "parent_content":   None,
+        "parent_name":      None,
     }
     base.update(overrides)
     return base
@@ -240,6 +256,8 @@ def test_timeline_returns_payload(app, monkeypatch):
 
 
 def test_timeline_filters_invariants(app, monkeypatch):
+    """Phase 5.1: visibility='public' replaced the legacy
+    is_public=TRUE filter. The TTL filter is unchanged."""
     captured: dict = {}
 
     def fake(sql, params):
@@ -249,12 +267,13 @@ def test_timeline_filters_invariants(app, monkeypatch):
     monkeypatch.setattr(posts_route, "fetch_all", fake)
     app.get("/api/posts/timeline")
     sql = captured["sql"]
-    assert "p.is_public = TRUE" in sql
+    assert "p.visibility = 'public'" in sql
     assert "p.expires_at > NOW()" in sql
     assert "ORDER BY p.created_at DESC" in sql
 
 
 def test_timeline_respects_before_cursor(app, monkeypatch):
+    """Phase 5.1: cursor is now a numeric post id (not ISO ts)."""
     captured: dict = {}
 
     def fake(sql, params):
@@ -263,35 +282,113 @@ def test_timeline_respects_before_cursor(app, monkeypatch):
         return []
 
     monkeypatch.setattr(posts_route, "fetch_all", fake)
-    # `+00:00` in a URL would be decoded as a space — pass via the
-    # `params=` kwarg so httpx URL-encodes the cursor properly. The
-    # 'Z' form goes through too; the route normalises.
-    app.get(
-        "/api/posts/timeline",
-        params={"before": "2026-05-04T12:00:00+00:00", "limit": 10},
-    )
+    app.get("/api/posts/timeline", params={"before": "42", "limit": 10})
     sql = captured["sql"]
-    assert "p.created_at < %s" in sql
-    # before timestamp passed positionally; LIMIT is the last param.
+    assert "p.id < %s" in sql
+    # LIMIT is the last param; cursor id is bound earlier.
     assert captured["params"][-1] == 10
-    assert any(
-        isinstance(p, datetime) and p.year == 2026
-        for p in captured["params"]
-    )
+    assert 42 in captured["params"]
 
 
 def test_timeline_400_for_invalid_before(app, monkeypatch):
+    """Phase 5.1: any non-digit `before` is rejected. The Phase 4.1
+    ISO form now also 400s — the new frontend uses numeric cursors,
+    and a silent fallback would mask client bugs."""
     monkeypatch.setattr(posts_route, "fetch_all", lambda sql, params: [])
     resp = app.get("/api/posts/timeline?before=garbage")
     assert resp.status_code == 400
+    resp_iso = app.get("/api/posts/timeline?before=2026-05-04T12:00:00")
+    assert resp_iso.status_code == 400
 
 
 def test_timeline_caps_limit_via_query_validation(app, monkeypatch):
-    """FastAPI's Query(le=100) returns 422 for limit>100. Pin so a
+    """FastAPI's Query(le=50) returns 422 for limit>50. Pin so a
     future tweak to the validator doesn't silently break the cap."""
     monkeypatch.setattr(posts_route, "fetch_all", lambda sql, params: [])
     resp = app.get("/api/posts/timeline?limit=10000")
     assert resp.status_code == 422
+
+
+def test_timeline_400_for_invalid_tab(app, monkeypatch):
+    """Phase 5.1: tab is enum-validated server-side."""
+    monkeypatch.setattr(posts_route, "fetch_all", lambda sql, params: [])
+    resp = app.get("/api/posts/timeline?tab=mystery")
+    assert resp.status_code == 400
+
+
+def test_timeline_top_today_uses_engagement_order(app, monkeypatch):
+    captured: dict = {}
+
+    def fake(sql, params):
+        captured["sql"] = sql
+        return []
+
+    monkeypatch.setattr(posts_route, "fetch_all", fake)
+    app.get("/api/posts/timeline?tab=top_today")
+    sql = captured["sql"]
+    assert "(p.like_count + p.reply_count) DESC" in sql
+    assert "INTERVAL '24 hours'" in sql
+
+
+def test_timeline_awakenings_filters_recent_devs(app, monkeypatch):
+    captured: dict = {}
+
+    def fake(sql, params):
+        captured["sql"] = sql
+        return []
+
+    monkeypatch.setattr(posts_route, "fetch_all", fake)
+    app.get("/api/posts/timeline?tab=awakenings")
+    sql = captured["sql"]
+    assert "d.minted_at >= NOW() - INTERVAL '7 days'" in sql
+
+
+def test_timeline_payload_includes_phase5_fields(app, monkeypatch):
+    """Wire shape covers the new Phase 5.1 fields. The frontend
+    contract relies on these being present (even when empty)."""
+    monkeypatch.setattr(
+        posts_route, "fetch_all",
+        lambda sql, params: [_post_row(
+            hashtags=["wagmi", "nxt"],
+            mentions=["bread"],
+            tickers=["NXT"],
+            like_count=4,
+            reply_count=2,
+            corporation="OPERATIONS",
+        )],
+    )
+    resp = app.get("/api/posts/timeline")
+    p = resp.json()["posts"][0]
+    assert p["hashtags"] == ["wagmi", "nxt"]
+    assert p["mentions"] == ["bread"]
+    assert p["tickers"] == ["NXT"]
+    assert p["like_count"] == 4
+    assert p["reply_count"] == 2
+    assert p["user_has_liked"] is False  # no wallet param
+    assert p["parent_post_id"] is None
+    assert p["parent_post_summary"] is None
+    assert p["corp"] == "OPERATIONS"
+
+
+def test_timeline_renders_parent_summary(app, monkeypatch):
+    monkeypatch.setattr(
+        posts_route, "fetch_all",
+        lambda sql, params: [_post_row(
+            parent_post_id=99,
+            parent_token_id=8000,
+            parent_content="this is the original post that someone replied to and it is long enough to truncate",
+            parent_name="ORIGINAL-DEV",
+        )],
+    )
+    resp = app.get("/api/posts/timeline")
+    p = resp.json()["posts"][0]
+    assert p["parent_post_id"] == 99
+    summary = p["parent_post_summary"]
+    assert summary is not None
+    assert summary["id"] == 99
+    assert summary["name"] == "ORIGINAL-DEV"
+    # 80-char preview ends with the ellipsis on truncation.
+    assert summary["content_preview"].endswith("…")
 
 
 # ─── /api/posts/user/{wallet} + /api/posts/dev/{token_id} ────────────
