@@ -37,6 +37,7 @@ from backend.services.nx_souls.exceptions import (
     NXSoulsAllProvidersFailed,
     NXSoulsProviderUnavailable,
 )
+from backend.services import llm_cost
 
 log = logging.getLogger("nx_api")
 
@@ -218,8 +219,15 @@ async def _call_provider(
     *,
     max_tokens: int,
     temperature: float = 0.85,
-) -> str:
-    """Make one Chat-Completions call. Returns assistant text.
+) -> tuple[str, int, int]:
+    """Make one Chat-Completions call. Returns
+    (assistant_text, input_tokens, output_tokens).
+
+    Token counts come from the OpenAI-compat `usage` block; if
+    a provider omits the field (some pre-release endpoints do)
+    we return zeros and the cost tracker books $0 for that call.
+    Better than refusing to record at all — call_count + zero
+    cost is still observability.
 
     `max_tokens` is required (no default) so the budget is always an
     explicit decision at the call site — the climax-vs-casual choice
@@ -293,7 +301,18 @@ async def _call_provider(
         # gets a chance instead of returning a blank reply to the user.
         raise _RetryableProviderError("empty_response")
 
-    return text.strip()
+    # Extract token counts from the OpenAI-compat `usage` block. All
+    # current cascade providers populate it; defensive .get/0 keeps
+    # us robust against a future provider that omits the field.
+    usage = data.get("usage") or {}
+    try:
+        input_tokens = int(usage.get("prompt_tokens") or 0)
+        output_tokens = int(usage.get("completion_tokens") or 0)
+    except (TypeError, ValueError):
+        input_tokens = 0
+        output_tokens = 0
+
+    return text.strip(), input_tokens, output_tokens
 
 
 # ─── Cascade ──────────────────────────────────────────────────────────────
@@ -323,14 +342,38 @@ async def call_llm(
     user_message: str,
     *,
     climax: bool | None = None,
+    service: str | None = None,
 ) -> tuple[str, str]:
     """Run the cascade. Returns (assistant_text, provider_name_used).
 
-    Raises NXSoulsAllProvidersFailed when no provider succeeds.
+    Raises NXSoulsAllProvidersFailed when no provider succeeds, OR
+    `NXSoulsAllProvidersFailed("daily_limit_exceeded")` when the
+    cost-tracker reports `service` has spent past its daily ceiling.
+    The exception lets the existing per-caller fallback paths
+    (template content / "I'm tired" replies) handle the outage in
+    their natural way; we don't need a separate signal channel.
 
-    `climax` overrides automatic detection. Pass None (default) to use
-    `is_climax_turn(user_message, len(session_messages))`.
+    `climax` overrides automatic detection. Pass None (default) to
+    use `is_climax_turn(user_message, len(session_messages))`.
+
+    `service` is the cost-tracking key — one of "sprkls",
+    "posts_feed", "nx_souls". When unset (None), cost tracking is
+    skipped entirely. This keeps the existing test harness (which
+    calls call_llm without a service kwarg) working without
+    changes, and lets new callers opt in by passing the kwarg.
     """
+    # Phase 5.1.1 pre-call cost gate. is_under_daily_limit_safe
+    # opens its own short-lived conn + swallows every exception, so
+    # a cost-tracker outage degrades to "always allow" rather than
+    # blocking LLM calls. That's the right failure mode — Anthropic's
+    # console hard cap is the absolute backstop.
+    if service is not None and not llm_cost.is_under_daily_limit_safe(service):
+        log.warning(
+            "NX Souls router: %s daily LLM cost limit exceeded — "
+            "falling through to template", service,
+        )
+        raise NXSoulsAllProvidersFailed("daily_limit_exceeded")
+
     session_list = list(session_messages)
     if climax is None:
         climax = is_climax_turn(user_message, len(session_list))
@@ -351,13 +394,20 @@ async def call_llm(
     async with httpx.AsyncClient() as client:
         for provider in available:
             try:
-                text = await _call_provider(
+                text, input_tokens, output_tokens = await _call_provider(
                     client, provider, messages, max_tokens=max_tokens
                 )
             except _RetryableProviderError:
                 continue
             except NXSoulsProviderUnavailable:
                 continue
+            # Record cost AFTER success. Fire-and-forget semantics
+            # via the safe wrapper — never raises, never blocks the
+            # response on a tracking failure.
+            if service is not None:
+                llm_cost.record_llm_call_safe(
+                    service, provider.model, input_tokens, output_tokens,
+                )
             return text, provider.name
 
     raise NXSoulsAllProvidersFailed("all_providers_exhausted")
