@@ -10,12 +10,23 @@
  * whose id > the previously-rendered first id is flagged as
  * "newly arrived" for one render cycle, triggering the slide-down
  * + yellow flash CSS animation.
+ *
+ * Phase 5.3 lite — scroll-to-parent. Each PostCard tags its root
+ * with data-post-id; PostInReplyTo's clickable @name calls back
+ * up here with the parent id. We do a global querySelector (post
+ * ids are globally unique — BIGSERIAL — so there's no ambiguity
+ * even if multiple NX POST windows are open). If the parent isn't
+ * currently in the DOM (different tab, paginated off, expired) we
+ * silently no-op rather than fetching — the brief explicitly says
+ * no fetch.
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import styles from './nxposts.module.css';
 import PostCard from './PostCard';
 import PostNewBanner from './PostNewBanner';
+
+const FLASH_DURATION_MS = 1500;
 
 export default function PostTimeline({
   posts,
@@ -40,6 +51,83 @@ export default function PostTimeline({
   useEffect(() => {
     if (posts.length > 0) lastHeadIdRef.current = posts[0].id;
   }, [posts]);
+
+  // Active flash timeouts, keyed by postId. Used to:
+  //   1. Cancel a still-running flash when the user clicks the
+  //      same parent again (rapid re-clicks would otherwise stack
+  //      timers and double-fire classList.remove).
+  //   2. Clear all pending timers on unmount so a Win98 window
+  //      close mid-flash doesn't leave callbacks holding refs to
+  //      detached DOM nodes.
+  const flashTimeoutsRef = useRef(new Map());
+
+  /**
+   * Phase 5.3 lite — scroll the feed to a parent post by id and
+   * apply a brief flash highlight. Silently no-ops when the parent
+   * isn't in the DOM (different tab, paginated off, expired); the
+   * brief explicitly forbids fetching.
+   *
+   * Implementation notes:
+   *   - querySelector is global because post ids are BIGSERIAL —
+   *     globally unique even if multiple NX POST windows are open.
+   *   - scrollIntoView walks up to the nearest scrollable ancestor
+   *     (.postTimeline) so we don't have to pin a scrollable ref.
+   *   - Flash class is added via classList.add and removed on
+   *     setTimeout. If React re-renders the row during the 1.5s
+   *     window the flash ends early — acceptable; the user got
+   *     the location signal, which is what mattered.
+   *   - styles.postCard_flash is a CSS Modules hashed name; we
+   *     read it from the imported `styles` map, not as a literal.
+   *   - Per-parent timeout tracking via flashTimeoutsRef lets a
+   *     rapid re-click cancel the previous flash and start fresh
+   *     without a doubled animation; unmount cleanup below clears
+   *     any pending timers so the callback never runs against a
+   *     detached element.
+   */
+  const scrollToParent = useCallback((parentId) => {
+    if (parentId == null) return;
+    const el = document.querySelector(`[data-post-id="${parentId}"]`);
+    if (!el) return; // parent not in DOM — silent no-op per brief
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const flashClass = styles.postCard_flash;
+    if (!flashClass) return;
+
+    // Cancel an in-flight flash on the same parent (rapid re-click)
+    // so we don't end up with two timers racing to remove the class.
+    const existing = flashTimeoutsRef.current.get(parentId);
+    if (existing != null) {
+      clearTimeout(existing);
+      // The class is already on the element; remove + re-add so the
+      // CSS animation restarts from frame 0 instead of finishing
+      // whatever fraction of the previous run was still playing.
+      el.classList.remove(flashClass);
+      // Force a reflow so the browser registers the removal before
+      // we re-add — without this, the class toggle in the same
+      // microtask is a no-op and the animation doesn't restart.
+      // void el.offsetWidth is the canonical force-reflow trick.
+      // eslint-disable-next-line no-unused-expressions
+      void el.offsetWidth;
+    }
+
+    el.classList.add(flashClass);
+    const timeoutId = setTimeout(() => {
+      el.classList.remove(flashClass);
+      flashTimeoutsRef.current.delete(parentId);
+    }, FLASH_DURATION_MS);
+    flashTimeoutsRef.current.set(parentId, timeoutId);
+  }, []);
+
+  // Cleanup on unmount — clear any pending flash timers so their
+  // closures don't keep references to detached DOM nodes after a
+  // window close. The Map itself goes with the component; we just
+  // need to cancel the OS-level timers.
+  useEffect(() => {
+    const timers = flashTimeoutsRef.current;
+    return () => {
+      timers.forEach((id) => clearTimeout(id));
+      timers.clear();
+    };
+  }, []);
 
   if (loading && posts.length === 0) {
     return (
@@ -101,6 +189,7 @@ export default function PostTimeline({
               onLike={onLike}
               onReply={onReply}
               onOpenDevChat={onOpenDevChat}
+              onParentClick={scrollToParent}
               isLiking={isLiking?.has?.(post.id) === true}
               isAwakening={isAwakening}
               isNewArrival={isNewArrival}
