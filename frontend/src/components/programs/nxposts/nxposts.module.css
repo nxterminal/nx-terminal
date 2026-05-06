@@ -477,18 +477,21 @@
 }
 
 /* IPFS images are real photos — disable pixelation just for them
- * so the smooth source isn't jaggy. Phase 5.2.1: also apply the
- * 1.5× face-crop zoom that components/sprkls/sprkls.module.css
- * uses for .sprklAvatar so PFPs in the timeline match the rest of
- * the portal (sprkl toasts, NX Souls chat list). The wrapper
- * (.postAvatar / .postAvatarBtn) already has overflow: hidden so
- * the scaled-up image is cropped to the 48×48 frame. object-fit:
- * cover preserves aspect ratio when the source isn't square. */
+ * so the smooth source isn't jaggy. Phase 5.2.2: match the MyDevs
+ * GifImage zoom (the canonical Dev PFP framing across the portal —
+ * grid thumbnails, LiveFeed avatars, profile cards). The 32%
+ * transform-origin from-top is critical: it pins the anchor where
+ * the bunny/zombie/robot head lands in the source image so the
+ * face stays centered in the 48×48 frame. scale(1.5) center (the
+ * Phase 5.2.1 sprkls match) cropped too softly; scale(2.2) center
+ * 32% lands the face in the same spot users see in MyDevs. The
+ * wrapper (.postAvatar / .postAvatarBtn) keeps overflow: hidden
+ * so the scaled-up image is cropped to the frame. */
 .postAvatarImg {
-  image-rendering: auto;
+  image-rendering: pixelated;
   object-fit: cover;
-  transform: scale(1.5);
-  transform-origin: center;
+  transform: scale(2.2);
+  transform-origin: center 32%;
 }
 
 /* Pixel-art SVG fallback is already rendered at the right scale
