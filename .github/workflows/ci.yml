@@ -2,10 +2,13 @@
 #
 # Two parallel jobs verify every push to main and every PR targeting main:
 #
-#   backend  — pytest over the unit-test subset of backend/tests/
+#   backend  — pytest over the FULL suite, against a real Postgres 15
+#              service container that mirrors the dev/test convention
+#              (nxtest:nxtest @ localhost / nxtest_db). Tests bootstrap
+#              their own schemas in module-scoped fixtures.
 #   frontend — npm install + vite build + eslint
 #
-# What this workflow deliberately does NOT do (matches the v1 CI brief):
+# What this workflow deliberately does NOT do:
 #   - No deployment. Render handles deploy on push to main; CI is for
 #     verification only.
 #   - No matrix builds across multiple Python / Node versions. One
@@ -14,15 +17,6 @@
 #     setting the operator can flip later when comfortable.
 #   - No concurrency cancellation, no advanced caching beyond what
 #     setup-python / setup-node give us by default. Boring and predictable.
-#
-# Backend test scope: 28 of 52 test files require a live Postgres at
-# module-collection time (each bootstraps its own MINIMAL_SCHEMA against
-# nxtest:nxtest@localhost/nxtest_db). Those are integration tests with
-# no working CI fixture path today; this workflow ignores them
-# explicitly via --ignore=. A future CI iteration can spin up a postgres
-# service + bootstrap routine and run them in a separate job. The 24
-# remaining test files cover ~349 unit tests that have been the green
-# baseline through Phases 4–5.
 
 name: CI
 
@@ -36,6 +30,33 @@ jobs:
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+
+    services:
+      # Tests use individual NX_DB_* env vars (DATABASE_URL is popped
+      # at module load), with os.environ.setdefault defaults of:
+      #   host=localhost  port=5432  db=nxtest_db  user=nxtest  pass=nxtest
+      # Configuring the service to match those defaults means tests
+      # need zero extra env wiring — the setdefault calls are no-ops
+      # against the GitHub Actions environment and our service params
+      # provide the matching backend.
+      #
+      # Tests do `DROP SCHEMA IF EXISTS nx CASCADE; CREATE SCHEMA nx;`
+      # in their fixtures, so the user needs schema-creation privileges.
+      # POSTGRES_USER on a fresh container is a superuser by default —
+      # nothing extra to grant.
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nxtest
+          POSTGRES_PASSWORD: nxtest
+          POSTGRES_DB: nxtest_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
 
     steps:
       - uses: actions/checkout@v4
@@ -51,58 +72,47 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        # pytest is not in requirements.txt (Phase 5.1.1 audit confirmed)
-        # despite 50+ test files using it. We install it inline rather
-        # than adding a requirements-dev.txt to keep the diff small —
-        # that file can land in a separate PR if it grows.
+        # pytest is not in requirements.txt despite 50+ test files
+        # using it. Installed inline rather than introducing a
+        # requirements-dev.txt this round; that file can land in a
+        # separate PR if it grows.
         run: |
           pip install -r backend/requirements.txt
           pip install pytest
 
-      - name: Run unit tests
+      - name: Run full backend test suite
         # PYTHONPATH mirrors render.yaml: the backend code uses
-        # `from backend.services... import ...` style, so the project
-        # root needs to be on sys.path. GitHub's $GITHUB_WORKSPACE is
-        # the repo root after checkout — equivalent to render's
+        # `from backend.services... import ...`, so the project root
+        # needs to be on sys.path. GitHub's $GITHUB_WORKSPACE is the
+        # repo root after checkout — equivalent to render's
         # /opt/render/project/src.
         #
-        # --ignore list: 28 test files require a live Postgres at
-        # collection time. They're integration tests that bootstrap
-        # their own MINIMAL_SCHEMA against nxtest:nxtest@localhost.
-        # Wiring a postgres service to make them pass is a separate
-        # follow-up; documenting the skip here keeps the rest green.
-        run: |
-          python -m pytest backend/tests/ \
-            --ignore=backend/tests/test_achievements_claim_safety.py \
-            --ignore=backend/tests/test_admin_log.py \
-            --ignore=backend/tests/test_admin_pending_funds.py \
-            --ignore=backend/tests/test_admin_summary.py \
-            --ignore=backend/tests/test_admin_tickets.py \
-            --ignore=backend/tests/test_claim_sync_auth.py \
-            --ignore=backend/tests/test_fix_c_antiorphan.py \
-            --ignore=backend/tests/test_fund_dev_latency_fix.py \
-            --ignore=backend/tests/test_hack_raid_concurrency.py \
-            --ignore=backend/tests/test_ledger.py \
-            --ignore=backend/tests/test_ledger_claims_shadow.py \
-            --ignore=backend/tests/test_ledger_engine_shadow.py \
-            --ignore=backend/tests/test_ledger_shop_shadow.py \
-            --ignore=backend/tests/test_nxmarket_auto_close.py \
-            --ignore=backend/tests/test_nxmarket_cap.py \
-            --ignore=backend/tests/test_nxmarket_comments.py \
-            --ignore=backend/tests/test_nxmarket_foundation.py \
-            --ignore=backend/tests/test_nxmarket_invalid_resolve.py \
-            --ignore=backend/tests/test_nxmarket_leaderboard.py \
-            --ignore=backend/tests/test_nxmarket_resolve.py \
-            --ignore=backend/tests/test_nxmarket_timeout.py \
-            --ignore=backend/tests/test_nxmarket_trading.py \
-            --ignore=backend/tests/test_nxt_claimed_listener.py \
-            --ignore=backend/tests/test_orphan_scanner_disambig.py \
-            --ignore=backend/tests/test_record_claim.py \
-            --ignore=backend/tests/test_streak_cycle.py \
-            --ignore=backend/tests/test_two_phase_sync.py \
-            --ignore=backend/tests/test_wallet_activity_endpoint.py
+        # No --ignore= flags: every test file runs. Two known-failing
+        # tests carry @pytest.mark.skip with category-C reason strings
+        # documenting the application bugs they reveal — un-skip once
+        # those bugs are fixed in follow-up PRs:
+        #   - test_fund_dev_latency_fix::test_admin_summary_reports_stuck_pending_alert
+        #     (NUMERIC → str JSON serialisation regression)
+        #   - test_hack_raid_concurrency::test_concurrent_hack_raids_do_not_inflate_nxt
+        #     (schema.sql out of sync with main.py auto-migrations +
+        #      real concurrency race in HACK_RAID)
+        #
+        # Local validation against postgres:15 with these markers in
+        # place: 616 passed, 16 skipped (14 pre-existing + the 2 above).
+        run: python -m pytest backend/tests/ -q
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # Tests pop DATABASE_URL at module load; we don't set it.
+          # NX_DB_* defaults via os.environ.setdefault align with the
+          # postgres service config, but we set them explicitly here
+          # too so a future test that drops the setdefault layer still
+          # finds the connection.
+          NX_DB_HOST: localhost
+          NX_DB_PORT: 5432
+          NX_DB_NAME: nxtest_db
+          NX_DB_USER: nxtest
+          NX_DB_PASS: nxtest
+          NX_DB_SCHEMA: nx
 
   frontend:
     name: Frontend build
@@ -127,13 +137,11 @@ jobs:
 
       - name: Install dependencies
         # `npm install` (not `npm ci`) because there's no committed
-        # lockfile. If the package-lock.json gets committed in a future
-        # PR, switch this to `npm ci` for reproducibility. Known risk:
-        # @megaeth-labs/wallet-sdk@0.1.8 may live on a private
-        # registry — if install fails with 401/403, the operator needs
-        # to add an NPM_TOKEN repo secret + an .npmrc step. That's
-        # deliberately not pre-scaffolded here; let the failure surface
-        # the requirement first.
+        # lockfile. Known risk: @megaeth-labs/wallet-sdk@0.1.8 may
+        # live on a private registry — if install fails with 401/403,
+        # the operator needs to add an NPM_TOKEN repo secret + an
+        # .npmrc step. That's deliberately not pre-scaffolded; let
+        # the failure surface the requirement first.
         run: npm install
         working-directory: ./frontend
 
