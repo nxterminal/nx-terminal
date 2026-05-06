@@ -10,12 +10,23 @@
  * whose id > the previously-rendered first id is flagged as
  * "newly arrived" for one render cycle, triggering the slide-down
  * + yellow flash CSS animation.
+ *
+ * Phase 5.3 lite — scroll-to-parent. Each PostCard tags its root
+ * with data-post-id; PostInReplyTo's clickable @name calls back
+ * up here with the parent id. We do a global querySelector (post
+ * ids are globally unique — BIGSERIAL — so there's no ambiguity
+ * even if multiple NX POST windows are open). If the parent isn't
+ * currently in the DOM (different tab, paginated off, expired) we
+ * silently no-op rather than fetching — the brief explicitly says
+ * no fetch.
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import styles from './nxposts.module.css';
 import PostCard from './PostCard';
 import PostNewBanner from './PostNewBanner';
+
+const FLASH_DURATION_MS = 1500;
 
 export default function PostTimeline({
   posts,
@@ -40,6 +51,36 @@ export default function PostTimeline({
   useEffect(() => {
     if (posts.length > 0) lastHeadIdRef.current = posts[0].id;
   }, [posts]);
+
+  /**
+   * Phase 5.3 lite — scroll the feed to a parent post by id and
+   * apply a brief flash highlight. Silently no-ops when the parent
+   * isn't in the DOM (different tab, paginated off, expired); the
+   * brief explicitly forbids fetching.
+   *
+   * Implementation notes:
+   *   - querySelector is global because post ids are BIGSERIAL —
+   *     globally unique even if multiple NX POST windows are open.
+   *   - scrollIntoView walks up to the nearest scrollable ancestor
+   *     (.postTimeline) so we don't have to pin a scrollable ref.
+   *   - Flash class is added via classList.add and removed on
+   *     setTimeout. If React re-renders the row during the 1.5s
+   *     window the flash ends early — acceptable; the user got
+   *     the location signal, which is what mattered.
+   *   - styles.postCard_flash is a CSS Modules hashed name; we
+   *     read it from the imported `styles` map, not as a literal.
+   */
+  const scrollToParent = useCallback((parentId) => {
+    if (parentId == null) return;
+    const el = document.querySelector(`[data-post-id="${parentId}"]`);
+    if (!el) return; // parent not in DOM — silent no-op per brief
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const flashClass = styles.postCard_flash;
+    if (flashClass) {
+      el.classList.add(flashClass);
+      setTimeout(() => el.classList.remove(flashClass), FLASH_DURATION_MS);
+    }
+  }, []);
 
   if (loading && posts.length === 0) {
     return (
@@ -101,6 +142,7 @@ export default function PostTimeline({
               onLike={onLike}
               onReply={onReply}
               onOpenDevChat={onOpenDevChat}
+              onParentClick={scrollToParent}
               isLiking={isLiking?.has?.(post.id) === true}
               isAwakening={isAwakening}
               isNewArrival={isNewArrival}

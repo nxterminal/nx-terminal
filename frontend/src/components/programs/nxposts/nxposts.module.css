@@ -235,6 +235,33 @@
   }
 }
 
+/* Phase 5.3 lite — scroll-to-parent flash. Added imperatively via
+ * classList.add by PostTimeline.scrollToParent and removed on a
+ * 1.5s setTimeout. Animation length must match the JS timeout
+ * constant (FLASH_DURATION_MS) — both are 1500ms. The blue inset
+ * tint reuses --tw-blue-link at low alpha so the hue stays in
+ * the program's palette rather than competing with the yellow
+ * arrival flash above. !important on the background-color
+ * isolates this from the .postCard:hover rule (which would
+ * otherwise overwrite mid-flash if the user hovered). */
+.postCard_flash {
+  animation: postCardFlash 1500ms ease-out;
+}
+
+@keyframes postCardFlash {
+  0% {
+    background-color: rgba(36, 132, 198, 0.35) !important;
+    box-shadow: inset 0 0 0 2px var(--tw-blue);
+  }
+  60% {
+    background-color: rgba(36, 132, 198, 0.18) !important;
+    box-shadow: inset 0 0 0 1px var(--tw-blue);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
 .postCardAvatarCol {
   display: flex;
   justify-content: center;
@@ -362,6 +389,34 @@
 .postInReplyToName {
   color: var(--tw-blue-link);
   font-weight: 600;
+}
+
+/* Phase 5.3 lite — clickable variant. Applied alongside
+ * .postInReplyToName when the parent renders a <button> (i.e.
+ * onParentClick is supplied). Kept as a separate class rather
+ * than universally styling the base so the non-clickable fallback
+ * (single-post / search views) still reads as plain text. */
+.postInReplyToName_clickable {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.postInReplyToName_clickable:hover {
+  color: #14507a;
+  text-decoration: underline;
+}
+
+.postInReplyToName_clickable:focus-visible {
+  outline: 1px dotted var(--tw-blue-link);
+  outline-offset: 1px;
 }
 
 /* Footer: timestamp + via-source */

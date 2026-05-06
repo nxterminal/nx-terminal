@@ -151,6 +151,7 @@ export default function PostCard({
   onLike,
   onReply,
   onOpenDevChat,
+  onParentClick,
   isLiking = false,
   isAwakening = false,
   isNewArrival = false,
@@ -202,7 +203,11 @@ export default function PostCard({
   ].filter(Boolean).join(' ');
 
   return (
-    <article className={cardClass}>
+    // data-post-id is the scroll-to-parent target. Used by
+    // PostTimeline.scrollToParent (Phase 5.3 lite) — global
+    // querySelector finds the row by id and scrolls it into view.
+    // Stays a string-coerced number to keep selector semantics simple.
+    <article className={cardClass} data-post-id={post.id}>
       <div className={styles.postCardAvatarCol}>
         <PostAvatar
           ipfsImage={post.ipfs_image}
@@ -237,7 +242,10 @@ export default function PostCard({
           <span className={styles.postCardHandle}>{handle}</span>
         </header>
 
-        <PostInReplyTo summary={post.parent_post_summary} />
+        <PostInReplyTo
+          summary={post.parent_post_summary}
+          onParentClick={onParentClick}
+        />
 
         <div className={styles.postCardContent}>{contentNodes}</div>
 
