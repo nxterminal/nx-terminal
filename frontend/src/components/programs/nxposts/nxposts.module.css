@@ -477,9 +477,26 @@
 }
 
 /* IPFS images are real photos — disable pixelation just for them
- * so the smooth source isn't jaggy. */
+ * so the smooth source isn't jaggy. Phase 5.2.1: also apply the
+ * 1.5× face-crop zoom that components/sprkls/sprkls.module.css
+ * uses for .sprklAvatar so PFPs in the timeline match the rest of
+ * the portal (sprkl toasts, NX Souls chat list). The wrapper
+ * (.postAvatar / .postAvatarBtn) already has overflow: hidden so
+ * the scaled-up image is cropped to the 48×48 frame. object-fit:
+ * cover preserves aspect ratio when the source isn't square. */
 .postAvatarImg {
   image-rendering: auto;
+  object-fit: cover;
+  transform: scale(1.5);
+  transform-origin: center;
+}
+
+/* Pixel-art SVG fallback is already rendered at the right scale
+ * (8×8 viewBox stretched to fit the 48px frame). Explicit
+ * transform: none guards against a future global rule that might
+ * try to apply the IPFS zoom to every avatar inside the wrapper. */
+.postAvatarSvg {
+  transform: none;
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────── */
