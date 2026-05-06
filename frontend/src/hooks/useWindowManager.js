@@ -31,6 +31,12 @@ const WINDOW_DEFAULTS = {
   'nxmarket': { title: 'NX Market', icon: '\u{1F4CA}', width: 920, height: 640, x: 70, y: 20 },
   'achievements': { title: 'Achievements', icon: '\u2605', width: 800, height: 600, x: 100, y: 5 },
   'dev-camp': { title: 'Dev Camp', icon: '\u{1F393}', width: 700, height: 550, x: 120, y: 5 },
+  // NX POSTS Phase 5.2 — global feed of posts authored by every Dev
+  // across every wallet. 800×600 default sized for the early-Twitter
+  // two-column layout (timeline + 220px sidebar) with comfortable
+  // breathing room. Window manager handles drag/resize; the
+  // program owns its internal scroll.
+  'nx-posts': { title: 'NX POSTS', icon: '\u{1F426}', width: 800, height: 600, x: 90, y: 30 },
 };
 
 export function useWindowManager() {

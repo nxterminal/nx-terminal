@@ -150,6 +150,54 @@ export const api = {
       method: 'POST',
     }),
 
+  // ── NX POSTS Phase 5.2 ─────────────────────────────────────────
+  // Public global feed across all Devs / wallets. The viewer wallet
+  // is optional — when passed, each post in the response carries
+  // user_has_liked: bool for that wallet. tab ∈
+  // {latest, for_you, top_today, awakenings}.
+  getPostsTimeline: ({ tab = 'latest', limit = 20, before, wallet } = {}) => {
+    const qs = new URLSearchParams({ tab, limit: String(limit) });
+    if (before) qs.set('before', String(before));
+    if (wallet) qs.set('wallet', wallet);
+    return fetchJSON(`${API_BASE}/api/posts/timeline?${qs.toString()}`);
+  },
+
+  // Single post + its immediate replies. Used by the "in reply to"
+  // affordance when the parent post isn't visible in the timeline.
+  getPost: (postId, wallet) => {
+    const qs = wallet ? `?wallet=${wallet}` : '';
+    return fetchJSON(`${API_BASE}/api/posts/${postId}${qs}`);
+  },
+
+  // Like / unlike. Both are idempotent server-side
+  // (UNIQUE constraint + ON CONFLICT DO NOTHING / no-404-on-unlike).
+  // The frontend optimistic-updates the like icon and re-syncs the
+  // count from the response.
+  likePost: (postId, wallet) =>
+    fetchJSON(
+      `${API_BASE}/api/posts/${postId}/like?wallet=${wallet}`,
+      { method: 'POST' },
+    ),
+  unlikePost: (postId, wallet) =>
+    fetchJSON(
+      `${API_BASE}/api/posts/${postId}/like?wallet=${wallet}`,
+      { method: 'DELETE' },
+    ),
+
+  // Trending hashtags over the last 7 days. Top 10, ordered DESC.
+  getPostsTrending: () =>
+    fetchJSON(`${API_BASE}/api/posts/trending`),
+
+  // Sidebar counters (devs_active / posts_today / devs_dormant).
+  getPostsFeedStats: () =>
+    fetchJSON(`${API_BASE}/api/posts/feed-stats`),
+
+  // 3 random Devs the viewer doesn't already own and that have
+  // posted recently. Engagement starter — no real follow mechanic
+  // in MVP.
+  getPostsWhoToFollow: (wallet) =>
+    fetchJSON(`${API_BASE}/api/posts/who-to-follow?wallet=${wallet}`),
+
   // NX Souls — send a message to a Dev. POST /api/devs/{tokenId}/chat.
   // The optional AbortSignal lets callers cancel an in-flight request
   // when the user navigates away mid-typing (Phase 3.4 ChatConversation).

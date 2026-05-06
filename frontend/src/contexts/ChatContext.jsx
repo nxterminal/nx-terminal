@@ -45,20 +45,40 @@ export function ChatProvider({ children }) {
   const [selectedTokenId, setSelectedTokenId] = useState(null);
   const [isNewChatPickerOpen, setIsNewChatPickerOpen] = useState(false);
 
-  const openChatModal = useCallback((devId = null) => {
+  // Phase 5.2 — pre-filled draft for the next-mounted ChatComposer.
+  // Used by the NX POSTS "⌥ Reply" flow to seed the input with
+  // `re: "<excerpt>" `. ChatComposer reads this on mount and clears
+  // it via clearPrefillMessage so reopening the modal later doesn't
+  // re-seed the same text.
+  const [prefillMessage, setPrefillMessage] = useState(null);
+
+  const openChatModal = useCallback((devId = null, options = {}) => {
     setInitialDevId(devId);
+    // Caller passes { prefill: '...' } to seed the composer. The
+    // 2-arg signature stays backwards-compatible: every existing
+    // call site that passes (devId) keeps working.
+    setPrefillMessage(typeof options?.prefill === 'string' ? options.prefill : null);
     setIsOpen(true);
   }, []);
 
   const closeChatModal = useCallback(() => {
     setIsOpen(false);
     setInitialDevId(null);
+    setPrefillMessage(null);
     // Reset selection + picker on close so a subsequent open runs the
     // "default to most recent" logic from a clean slate. Without this,
     // a user who closed the modal mid-conversation would reopen into
     // the same chat regardless of which one is freshest now.
     setSelectedTokenId(null);
     setIsNewChatPickerOpen(false);
+  }, []);
+
+  // Called by ChatComposer after it has consumed the prefill into
+  // its local draft state. Without this, switching conversations
+  // inside the modal would re-seed the older prefill into the new
+  // composer mount.
+  const clearPrefillMessage = useCallback(() => {
+    setPrefillMessage(null);
   }, []);
 
   const toggleChatSounds = useCallback(() => {
@@ -95,6 +115,8 @@ export function ChatProvider({ children }) {
       isNewChatPickerOpen,
       openNewChatPicker,
       closeNewChatPicker,
+      prefillMessage,
+      clearPrefillMessage,
     }),
     [
       isOpen,
@@ -109,6 +131,8 @@ export function ChatProvider({ children }) {
       isNewChatPickerOpen,
       openNewChatPicker,
       closeNewChatPicker,
+      prefillMessage,
+      clearPrefillMessage,
     ]
   );
 

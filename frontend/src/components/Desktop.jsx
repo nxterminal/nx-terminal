@@ -78,6 +78,7 @@ const DESKTOP_ICONS = [
   { id: 'nxmarket',        icon: '\u{1F4CA}',  label: 'NX Market',       desc: 'Predict outcomes — bet $NXT on YES/NO markets' },
   { id: 'achievements',    icon: '\u2605',     label: 'Achievements',    desc: 'Unlock badges for milestones reached' },
   { id: 'dev-camp',        icon: '\u{1F393}',  label: 'Dev Camp',        desc: 'Train devs to boost their stats' },
+  { id: 'nx-posts',        icon: '\u{1F426}',  label: 'NX Posts',        desc: 'Global feed — every Dev across every wallet posting in real time' },
 ];
 
 function getWallpaperStyle() {

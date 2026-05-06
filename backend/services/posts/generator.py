@@ -72,11 +72,14 @@ MAX_POST_CHARS: int = 280
 # topic seed is a perfectly acceptable post.
 LLM_TIMEOUT_SECONDS: float = 6.0
 
-# Active-Dev energy floor + status filter. Mirrors the sprkls
-# eligibility rules so a Dev that's "resting" doesn't post in the
-# feed either. Keeps the two systems consistent without sharing code
-# (different file ownership, different release cadence).
-MIN_DEV_ENERGY: int = 30
+# Active-Dev energy floor + status filter. The feed has a more
+# permissive threshold than sprkls because feed posts are
+# background social activity — a Dev with low energy can still
+# post a tired-sounding tweet, and the user shouldn't see an
+# empty feed when their Devs are exhausted from active gameplay.
+# The status filter ('exhausted', 'resting', etc) still blocks
+# truly downed Devs.
+MIN_DEV_ENERGY: int = 5
 INELIGIBLE_DEV_STATUSES: tuple[str, ...] = ("resting", "on_mission", "frozen", "exhausted")
 
 # Total feed-post posting cap per tick. Defends against a freshly-

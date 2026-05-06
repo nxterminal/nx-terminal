@@ -1098,6 +1098,45 @@ function IconNXChat({ size = 32 }) {
   );
 }
 
+// Twitter-2008-bird-style pixel icon for the NX POSTS program.
+// Hand-drawn at 32×32 to match the rest of the icon set; uses
+// the program's blue palette (#2484c6) so the desktop sprite
+// matches the timeline accent inside the window.
+function IconNxPosts({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="nxpBird" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5cb1e0" />
+          <stop offset="100%" stopColor="#2484c6" />
+        </linearGradient>
+      </defs>
+      {/* Body: classic chubby bird silhouette */}
+      <path
+        d="M8 18 Q8 12 14 11 Q15 7 19 8 Q22 9 22 12 Q26 12 26 16 Q26 22 18 23 L10 23 Q7 22 8 18 Z"
+        fill="url(#nxpBird)"
+        stroke="#1f6f9f"
+        strokeWidth="0.8"
+      />
+      {/* Wing */}
+      <path
+        d="M14 16 Q17 14 20 16 Q19 19 16 19 Q14 18 14 16 Z"
+        fill="#1f6f9f"
+        opacity="0.5"
+      />
+      {/* Eye */}
+      <circle cx="20" cy="13" r="1.2" fill="#fff" />
+      <circle cx="20.3" cy="13.2" r="0.5" fill="#000" />
+      {/* Beak */}
+      <path d="M22 13 L25 13.5 L22 14.5 Z" fill="#f5b302" stroke="#c97a00" strokeWidth="0.4" />
+      {/* Tail feet hint */}
+      <path d="M11 23 L11 25 M14 23 L14 25" stroke="#c97a00" strokeWidth="0.8" />
+      {/* Speech-mark indicating "post" */}
+      <text x="3" y="9" fontFamily="Verdana,sans-serif" fontSize="7" fill="#1f6f9f" fontWeight="bold">»</text>
+    </svg>
+  );
+}
+
 export const ICON_MAP = {
   'nx-terminal': IconMyPC,
   'live-feed': IconLiveFeed,
@@ -1133,6 +1172,7 @@ export const ICON_MAP = {
   'cat-entertainment': IconCatEntertainment,
   'cat-other': IconCatOther,
   'nxchat': IconNXChat,
+  'nx-posts': IconNxPosts,
 };
 
 export function Win98Icon({ id, size = 32 }) {
