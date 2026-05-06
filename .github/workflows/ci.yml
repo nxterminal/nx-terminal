@@ -1,0 +1,146 @@
+# NX Terminal — Continuous Integration
+#
+# Two parallel jobs verify every push to main and every PR targeting main:
+#
+#   backend  — pytest over the unit-test subset of backend/tests/
+#   frontend — npm install + vite build + eslint
+#
+# What this workflow deliberately does NOT do (matches the v1 CI brief):
+#   - No deployment. Render handles deploy on push to main; CI is for
+#     verification only.
+#   - No matrix builds across multiple Python / Node versions. One
+#     prod-matched version per language, period.
+#   - No required-status-checks branch protection. That's a manual repo
+#     setting the operator can flip later when comfortable.
+#   - No concurrency cancellation, no advanced caching beyond what
+#     setup-python / setup-node give us by default. Boring and predictable.
+#
+# Backend test scope: 28 of 52 test files require a live Postgres at
+# module-collection time (each bootstraps its own MINIMAL_SCHEMA against
+# nxtest:nxtest@localhost/nxtest_db). Those are integration tests with
+# no working CI fixture path today; this workflow ignores them
+# explicitly via --ignore=. A future CI iteration can spin up a postgres
+# service + bootstrap routine and run them in a separate job. The 24
+# remaining test files cover ~349 unit tests that have been the green
+# baseline through Phases 4–5.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11.11
+        uses: actions/setup-python@v5
+        with:
+          # Pinned to runtime.txt (UTF-16-encoded "python-3.11.11").
+          # Matching prod exactly avoids surprises like a stdlib
+          # behaviour change between minor versions.
+          python-version: '3.11.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        # pytest is not in requirements.txt (Phase 5.1.1 audit confirmed)
+        # despite 50+ test files using it. We install it inline rather
+        # than adding a requirements-dev.txt to keep the diff small —
+        # that file can land in a separate PR if it grows.
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      - name: Run unit tests
+        # PYTHONPATH mirrors render.yaml: the backend code uses
+        # `from backend.services... import ...` style, so the project
+        # root needs to be on sys.path. GitHub's $GITHUB_WORKSPACE is
+        # the repo root after checkout — equivalent to render's
+        # /opt/render/project/src.
+        #
+        # --ignore list: 28 test files require a live Postgres at
+        # collection time. They're integration tests that bootstrap
+        # their own MINIMAL_SCHEMA against nxtest:nxtest@localhost.
+        # Wiring a postgres service to make them pass is a separate
+        # follow-up; documenting the skip here keeps the rest green.
+        run: |
+          python -m pytest backend/tests/ \
+            --ignore=backend/tests/test_achievements_claim_safety.py \
+            --ignore=backend/tests/test_admin_log.py \
+            --ignore=backend/tests/test_admin_pending_funds.py \
+            --ignore=backend/tests/test_admin_summary.py \
+            --ignore=backend/tests/test_admin_tickets.py \
+            --ignore=backend/tests/test_claim_sync_auth.py \
+            --ignore=backend/tests/test_fix_c_antiorphan.py \
+            --ignore=backend/tests/test_fund_dev_latency_fix.py \
+            --ignore=backend/tests/test_hack_raid_concurrency.py \
+            --ignore=backend/tests/test_ledger.py \
+            --ignore=backend/tests/test_ledger_claims_shadow.py \
+            --ignore=backend/tests/test_ledger_engine_shadow.py \
+            --ignore=backend/tests/test_ledger_shop_shadow.py \
+            --ignore=backend/tests/test_nxmarket_auto_close.py \
+            --ignore=backend/tests/test_nxmarket_cap.py \
+            --ignore=backend/tests/test_nxmarket_comments.py \
+            --ignore=backend/tests/test_nxmarket_foundation.py \
+            --ignore=backend/tests/test_nxmarket_invalid_resolve.py \
+            --ignore=backend/tests/test_nxmarket_leaderboard.py \
+            --ignore=backend/tests/test_nxmarket_resolve.py \
+            --ignore=backend/tests/test_nxmarket_timeout.py \
+            --ignore=backend/tests/test_nxmarket_trading.py \
+            --ignore=backend/tests/test_nxt_claimed_listener.py \
+            --ignore=backend/tests/test_orphan_scanner_disambig.py \
+            --ignore=backend/tests/test_record_claim.py \
+            --ignore=backend/tests/test_streak_cycle.py \
+            --ignore=backend/tests/test_two_phase_sync.py \
+            --ignore=backend/tests/test_wallet_activity_endpoint.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          # Node 22 LTS — vite 7 + react 19 are well-supported here.
+          # No engines field in package.json; pin to LTS rather than
+          # latest so CI doesn't drift unexpectedly when Node releases
+          # a new major.
+          node-version: '22'
+          # No lockfile committed → cache key falls back to
+          # package.json hash. setup-node figures this out automatically;
+          # we just point at the manifest.
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        # `npm install` (not `npm ci`) because there's no committed
+        # lockfile. If the package-lock.json gets committed in a future
+        # PR, switch this to `npm ci` for reproducibility. Known risk:
+        # @megaeth-labs/wallet-sdk@0.1.8 may live on a private
+        # registry — if install fails with 401/403, the operator needs
+        # to add an NPM_TOKEN repo secret + an .npmrc step. That's
+        # deliberately not pre-scaffolded here; let the failure surface
+        # the requirement first.
+        run: npm install
+        working-directory: ./frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: ./frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: ./frontend
