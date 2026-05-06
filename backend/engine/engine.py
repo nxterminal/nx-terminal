@@ -1945,6 +1945,11 @@ def run_engine():
     # hard-deletes posts whose expires_at passed >24h ago.
     sprkls_tick_interval = timedelta(minutes=5)
     sprkls_cleanup_interval = timedelta(hours=1)
+    # Posts feed Phase 5.1 — tick every hour iterates all eligible
+    # Devs and probabilistically generates one post per Dev (capped
+    # to 1/day per Dev internally). Idempotency comes from the
+    # per-Dev daily cap; running this twice within an hour is safe.
+    posts_feed_tick_interval = timedelta(hours=1)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2044,6 +2049,10 @@ def run_engine():
     # noop's when there's nothing past expires_at + 24h.
     last_sprkls_tick = datetime.now(timezone.utc) - sprkls_tick_interval
     last_sprkls_cleanup = datetime.now(timezone.utc) - sprkls_cleanup_interval
+    # Run posts-feed tick on the first loop pass too — the function
+    # internally bails when no Dev rolls a post this tick, so the
+    # cost of an early run is bounded.
+    last_posts_feed_tick = datetime.now(timezone.utc) - posts_feed_tick_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2132,6 +2141,18 @@ def run_engine():
                     except Exception as e:
                         log.error(f"cleanup_expired_posts error: {e}")
                     last_sprkls_cleanup = now
+
+                # NX POST feed tick — iterate all eligible Devs and
+                # generate at most one feed post per Dev per UTC day
+                # (probabilistic). Hourly cadence; the function
+                # internally bails fast when no Dev rolls a post.
+                if now - last_posts_feed_tick >= posts_feed_tick_interval:
+                    try:
+                        from backend.services.posts import run_feed_generation_tick
+                        run_feed_generation_tick(conn)
+                    except Exception as e:
+                        log.error(f"run_feed_generation_tick error: {e}")
+                    last_posts_feed_tick = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
