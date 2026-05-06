@@ -31,6 +31,7 @@ import MissionControl from './programs/mission-control/MissionControl';
 import Achievements from '../windows/Achievements';
 import DevCamp from '../windows/DevCamp';
 import NXMarket from '../windows/NXMarket';
+import NXPosts from './programs/nxposts/NXPosts';
 
 const WINDOW_COMPONENTS = {
   'live-feed': LiveFeed,
@@ -61,6 +62,7 @@ const WINDOW_COMPONENTS = {
   'achievements': Achievements,
   'dev-camp': DevCamp,
   'nxmarket': NXMarket,
+  'nx-posts': NXPosts,
 };
 
 export default function WindowManager({

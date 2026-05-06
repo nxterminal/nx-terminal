@@ -28,8 +28,9 @@
  * lose THAT text on a naive setDraft(originalDraft).
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './chat.module.css';
+import { useChatModal } from '../../contexts/ChatContext';
 
 const MAX_MESSAGE_LEN = 1000;
 
@@ -39,8 +40,36 @@ export default function ChatComposer({
   isResting = false,
   devName = 'Dev',
 }) {
-  const [draft, setDraft] = useState('');
+  // Phase 5.2 — NX POSTS "⌥ Reply" seeds prefillMessage in the
+  // ChatContext. We read it here (rather than as a prop) so the
+  // posts → chat handoff doesn't have to thread through ChatModal
+  // + ChatConversation. Consume-once semantics: copy into draft
+  // then clear the context so reopening the modal later doesn't
+  // re-seed the same text.
+  const { prefillMessage, clearPrefillMessage } = useChatModal();
+
+  const [draft, setDraft] = useState(() =>
+    typeof prefillMessage === 'string' ? prefillMessage : ''
+  );
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof prefillMessage !== 'string' || prefillMessage.length === 0) return;
+    // Only seed if the user hasn't started typing — a stale prefill
+    // arriving mid-typing shouldn't clobber the in-progress draft.
+    setDraft((current) => (current ? current : prefillMessage));
+    clearPrefillMessage();
+    // Move caret to the end so the user can keep typing after the
+    // prefilled "re: " excerpt.
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        const end = el.value.length;
+        el.setSelectionRange(end, end);
+      }
+    });
+  }, [prefillMessage, clearPrefillMessage]);
 
   const disabled = isTyping || isResting;
   const trimmed = draft.trim();

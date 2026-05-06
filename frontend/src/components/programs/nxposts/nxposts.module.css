@@ -1,0 +1,653 @@
+/* NX POSTS — early-Twitter-2008 visual style inside a Win98 window.
+ *
+ * Palette + diagonal-line page pattern from the prototype brief.
+ * The whole program is scoped under .nxpostsRoot so the tokens
+ * here don't leak to other components in the window manager.
+ *
+ * Layout:
+ *   .nxpostsRoot       grid of [tabs row] / [body row]
+ *   .nxpostsBody       flex: timeline (1fr) + sidebar (220px)
+ *   .postTimeline      vertical scroll, internal padding
+ *   .sidebar           static-ish blocks, no scroll
+ *
+ * Pixel avatars: image-rendering: pixelated keeps the 8×8 SVG
+ * crisp at the 48px display size. The mirrored construction in
+ * PostAvatar.generatePixelGrid produces face-like silhouettes.
+ */
+
+.nxpostsRoot {
+  /* Tokens (scoped to the program) */
+  --tw-blue:        #2484c6;
+  --tw-blue-link:   #1f6f9f;
+  --tw-page-bg:     #c0deed;
+  --tw-page-pattern:#b0d3e8;
+  --tw-content-bg:  #ffffff;
+  --tw-border:      #c4cdd2;
+  --tw-text:        #333333;
+  --tw-text-soft:   #999999;
+  --tw-yellow-bg:   #fffbcc;
+  --tw-yellow-deep: #d4b800;
+
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--tw-page-bg);
+  /* Subtle diagonal stripe pattern matching the prototype. The 1px
+   * line on 8px spacing reads as "old social-network" texture
+   * without overwhelming the foreground. */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--tw-page-pattern) 0,
+    var(--tw-page-pattern) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  font-family: 'Lucida Grande', 'Lucida Sans Unicode', Verdana, Arial, sans-serif;
+  font-size: 12px;
+  color: var(--tw-text);
+}
+
+.nxpostsBody {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────── */
+
+.postTabs {
+  display: flex;
+  gap: 0;
+  padding: 6px 12px 0 12px;
+  border-bottom: 1px solid var(--tw-border);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.postTab {
+  appearance: none;
+  border: 1px solid var(--tw-border);
+  border-bottom: none;
+  background: #cee3ee;
+  color: var(--tw-text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 14px;
+  margin-right: 2px;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.postTab:hover {
+  background: #d8eaf3;
+}
+
+.postTab_active {
+  background: var(--tw-content-bg);
+  /* Sit 1px below the bottom border so the tab "merges" with the
+   * content background — classic early-Twitter pattern. */
+  margin-bottom: -1px;
+  font-weight: 700;
+}
+
+.postTabBadge {
+  background: var(--tw-blue);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 14px;
+}
+
+/* ── Timeline ──────────────────────────────────────────────────── */
+
+.postTimeline {
+  background: var(--tw-content-bg);
+  border: 1px solid var(--tw-border);
+  overflow-y: auto;
+  min-height: 0;
+  /* Inset shadow so the timeline reads as a card on the page
+   * pattern. Matches the prototype's content-bg framing. */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.postTimelineList {
+  display: flex;
+  flex-direction: column;
+}
+
+.postTimelineEmpty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--tw-text-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.postTimelineEmptyDots {
+  font-size: 18px;
+  letter-spacing: 4px;
+}
+
+.postTimelineHint {
+  font-size: 11px;
+  color: var(--tw-text-soft);
+}
+
+/* ── New-posts banner ─────────────────────────────────────────── */
+
+.postNewBanner {
+  appearance: none;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--tw-yellow-deep);
+  background: var(--tw-yellow-bg);
+  color: var(--tw-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.postNewBanner:hover {
+  background: #fff7a3;
+}
+
+.postNewBannerArrow {
+  font-size: 14px;
+  color: var(--tw-yellow-deep);
+}
+
+.postNewBannerLabel {
+  /* Slight emphasis */
+}
+
+.postNewBannerHint {
+  color: var(--tw-text-soft);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+/* ── Post card ─────────────────────────────────────────────────── */
+
+.postCard {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--tw-border);
+  position: relative;
+  background: var(--tw-content-bg);
+  transition: background 120ms ease;
+}
+
+.postCard:hover {
+  background: #f8fbfd;
+}
+
+/* Awakening row: yellow gradient + thin border emphasis. The
+ * label sits inside the body column; see .postCardAwakeningTag. */
+.postCard_awakening {
+  background: linear-gradient(90deg, #fff7b3 0%, #fffce8 100%);
+}
+
+.postCard_awakening:hover {
+  background: linear-gradient(90deg, #fff19a 0%, #fff7d0 100%);
+}
+
+/* New-arrival animation: slide down + yellow flash that fades.
+ * Plays once on mount; React's keyed list ensures each newly-
+ * inserted row gets its own animation cycle. */
+.postCard_newArrival {
+  animation: postCardArrive 700ms ease-out;
+}
+
+@keyframes postCardArrive {
+  0% {
+    transform: translateY(-8px);
+    background-color: var(--tw-yellow-bg);
+    opacity: 0.5;
+  }
+  20% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    background-color: var(--tw-content-bg);
+  }
+}
+
+.postCardAvatarCol {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.postCardBody {
+  min-width: 0; /* enables text-overflow on children */
+}
+
+.postCardAwakeningTag {
+  display: inline-block;
+  background: var(--tw-yellow-deep);
+  color: #2a2400;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.postCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.postCardName {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tw-text);
+  cursor: pointer;
+}
+
+.postCardName:hover {
+  color: var(--tw-blue-link);
+  text-decoration: underline;
+}
+
+.postCardCorpBadge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+/* Per-corp badge colors. Backend sends full enum names; PostCard
+ * maps them to these short class suffixes. */
+.corpMISA { background: #8a4dba; }
+.corpCLSD { background: #c97a00; }
+.corpSHLO { background: #cc4488; }
+.corpZUCK { background: #4a7ec4; }
+.corpYAI  { background: #c9333a; }
+.corpMIST { background: #c9772a; }
+.corpUnknown { background: #888; }
+
+.postCardHandle {
+  font-size: 11px;
+  color: var(--tw-text-soft);
+}
+
+.postCardContent {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tw-text);
+  margin: 4px 0;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Inline parse spans rendered as buttons so they get focus + a11y
+ * for free. The `appearance: none` strips OS chrome so they read
+ * as text + colour, not as buttons. */
+.postContentHashtag,
+.postContentMention,
+.postContentTicker {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  color: var(--tw-blue-link);
+}
+
+.postContentHashtag:hover,
+.postContentMention:hover,
+.postContentTicker:hover {
+  text-decoration: underline;
+}
+
+.postContentTicker {
+  font-weight: 700;
+  /* Tickers get a slightly warmer hue so $TOKEN reads as
+   * different-from-mention at a glance. */
+  color: #c97a00;
+}
+
+/* In-reply-to affordance — small, soft, above the content. */
+.postInReplyTo {
+  font-size: 11px;
+  color: var(--tw-text-soft);
+  margin-bottom: 4px;
+}
+
+.postInReplyToLabel {
+  /* Plain label — no emphasis */
+}
+
+.postInReplyToName {
+  color: var(--tw-blue-link);
+  font-weight: 600;
+}
+
+/* Footer: timestamp + via-source */
+.postCardMeta {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--tw-text-soft);
+  display: flex;
+  gap: 6px;
+}
+
+.postCardTime {
+  /* primary; no extra style */
+}
+
+.postCardSource {
+  /* secondary */
+}
+
+/* Action row: revealed on card hover so the timeline reads cleanly
+ * at rest. focus-within keeps the row visible during keyboard nav. */
+.postCardActions {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.postCard:hover .postCardActions,
+.postCard:focus-within .postCardActions {
+  opacity: 1;
+}
+
+.postCardActionBtn {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--tw-text-soft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.postCardActionBtn:hover {
+  color: var(--tw-blue-link);
+}
+
+.postCardActionBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.postCardActionBtn_liked {
+  color: var(--tw-yellow-deep);
+}
+
+.postCardActionBtn_liked:hover {
+  color: #b89a00;
+}
+
+.postCardActionIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.postCardActionLabel {
+  /* Hidden on narrow widths — the icon alone is enough. The
+   * timeline always shows it for now; if we ever need to compact
+   * the row, add an @media here. */
+}
+
+.postCardActionCount {
+  font-weight: 600;
+}
+
+/* ── Avatar (pixel SVG + IPFS img) ──────────────────────────────── */
+
+.postAvatar,
+.postAvatarBtn {
+  display: inline-block;
+  border: 1px solid var(--tw-border);
+  background: #f0f0f0;
+  /* Crisp pixel rendering for the SVG fallback. The IPFS img is
+   * a real PNG/JPEG so this property is ignored for it (pixelated
+   * on a smooth photo would look chunky-bad). */
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.postAvatarBtn {
+  appearance: none;
+  padding: 0;
+  cursor: pointer;
+  /* Reset button defaults */
+}
+
+.postAvatarBtn:hover {
+  border-color: var(--tw-blue-link);
+}
+
+.postAvatarSvg,
+.postAvatarImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* IPFS images are real photos — disable pixelation just for them
+ * so the smooth source isn't jaggy. */
+.postAvatarImg {
+  image-rendering: auto;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebarBlock {
+  background: var(--tw-content-bg);
+  border: 1px solid var(--tw-border);
+}
+
+.sidebarBlockTitle {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--tw-blue);
+  letter-spacing: 0.02em;
+}
+
+.sidebarBlockBody {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--tw-text);
+}
+
+.sidebarMuted {
+  color: var(--tw-text-soft);
+  font-style: italic;
+}
+
+.sidebarUser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarUserDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #50c878;
+  display: inline-block;
+}
+
+.sidebarUserAddr {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--tw-text);
+}
+
+.sidebarList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebarListItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebarRank {
+  color: var(--tw-text-soft);
+  font-weight: 700;
+  width: 18px;
+}
+
+.sidebarTag {
+  flex: 1;
+  color: var(--tw-blue-link);
+  font-weight: 600;
+  cursor: default;
+}
+
+.sidebarCount {
+  color: var(--tw-text-soft);
+  font-size: 10px;
+}
+
+.sidebarFollowRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--tw-border);
+}
+
+.sidebarFollowRow:last-child {
+  border-bottom: none;
+}
+
+.sidebarFollowMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebarFollowName {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tw-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebarFollowName:hover {
+  color: var(--tw-blue-link);
+  text-decoration: underline;
+}
+
+.sidebarFollowSub {
+  font-size: 10px;
+  color: var(--tw-text-soft);
+}
+
+.sidebarStats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebarStats li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.sidebarStatLabel {
+  color: var(--tw-text-soft);
+  font-size: 11px;
+}
+
+.sidebarStatValue {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--tw-text);
+}
+
+/* ── Narrow-window adaptation ─────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .nxpostsBody {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    /* Below ~720px we stack the sidebar BELOW the timeline; the
+     * Win98 window can be resized that small if the user really
+     * wants to. */
+    order: 2;
+  }
+}
