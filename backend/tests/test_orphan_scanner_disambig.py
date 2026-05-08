@@ -24,6 +24,8 @@ import psycopg2
 import psycopg2.extras
 import pytest
 
+
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 # Make `from config import *` / `from templates import *` work because
 # engine.py does flat imports relative to backend/engine.
 _ENGINE_DIR = Path(__file__).resolve().parents[1] / "engine"
@@ -49,82 +51,6 @@ TREASURY = engine._FUND_TREASURY  # already lowercased
 TRANSFER_TOPIC = engine._FUND_TRANSFER_TOPIC
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV','LURKER','DEGEN','GRINDER',
-    'INFLUENCER','HACKTIVIST','FED','SCRIPT_KIDDIE'
-);
-CREATE TYPE corporation_enum AS ENUM (
-    'CLOSED_AI','MISANTHROPIC','SHALLOW_MIND',
-    'ZUCK_LABS','Y_AI','MISTRIAL_SYSTEMS'
-);
-CREATE TYPE action_enum AS ENUM (
-    'CREATE_PROTOCOL','CREATE_AI','INVEST','SELL',
-    'MOVE','CHAT','CODE_REVIEW','REST',
-    'RECEIVE_SALARY','USE_ITEM','GET_SABOTAGED','DEPLOY',
-    'FUND_DEV','TRANSFER'
-);
-
-CREATE TABLE players (
-    wallet_address  TEXT PRIMARY KEY,
-    corporation     corporation_enum NOT NULL DEFAULT 'CLOSED_AI'
-);
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    name            TEXT NOT NULL,
-    owner_address   TEXT NOT NULL REFERENCES players(wallet_address),
-    archetype       archetype_enum NOT NULL DEFAULT '10X_DEV',
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    total_earned    BIGINT NOT NULL DEFAULT 0,
-    last_action_at  TIMESTAMPTZ
-);
-
-CREATE TABLE funding_txs (
-    id              SERIAL PRIMARY KEY,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    verified        BOOLEAN DEFAULT false,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE pending_fund_txs (
-    id              SERIAL PRIMARY KEY,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    resolved        BOOLEAN NOT NULL DEFAULT false
-);
-
-CREATE TABLE actions (
-    id              BIGSERIAL PRIMARY KEY,
-    dev_id          INT NOT NULL,
-    dev_name        TEXT NOT NULL,
-    archetype       archetype_enum NOT NULL,
-    action_type     action_enum NOT NULL,
-    details         JSONB,
-    energy_cost     SMALLINT NOT NULL DEFAULT 0,
-    nxt_cost        BIGINT NOT NULL DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE admin_logs (
-    id              BIGSERIAL PRIMARY KEY,
-    correlation_id  UUID,
-    event_type      TEXT NOT NULL,
-    wallet_address  VARCHAR(42),
-    dev_token_id    BIGINT,
-    payload         JSONB,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _connect():
@@ -142,9 +68,6 @@ def _connect():
 def schema():
     conn = _connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
     yield
 
 
@@ -163,21 +86,13 @@ def clean():
 
 def _seed_player(conn, wallet):
     with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO players (wallet_address) VALUES (%s) "
-            "ON CONFLICT DO NOTHING",
-            (wallet,),
-        )
+        seed_player(cur, wallet,)
 
 
 def _seed_dev(conn, token_id, wallet, *, name=None, last_action_at=None):
     _seed_player(conn, wallet)
     with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO devs (token_id, name, owner_address, last_action_at) "
-            "VALUES (%s, %s, %s, %s)",
-            (token_id, name or f"dev_{token_id}", wallet, last_action_at),
-        )
+        seed_dev(cur, token_id=token_id, owner_address=wallet, name=name or f"dev_{token_id}", last_action_at=last_action_at)
 
 
 def _transfer_event(sender_wallet, amount_nxt, tx_hash):

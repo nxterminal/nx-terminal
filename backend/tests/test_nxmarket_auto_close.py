@@ -32,41 +32,6 @@ ADMIN_WALLET = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
 USER_A = "0x" + "aa" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE admin_logs (
-    id               BIGSERIAL PRIMARY KEY,
-    correlation_id   UUID,
-    event_type       TEXT NOT NULL,
-    wallet_address   VARCHAR(42),
-    dev_token_id     BIGINT,
-    payload          JSONB,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxmarket_markets (
-    id                   BIGSERIAL PRIMARY KEY,
-    question             TEXT NOT NULL,
-    category             VARCHAR(40),
-    market_type          VARCHAR(20) NOT NULL,
-    created_by           VARCHAR(42) NOT NULL,
-    creator_fee_percent  NUMERIC(5,2) NOT NULL DEFAULT 0,
-    seed_nxt             NUMERIC(20,2) NOT NULL,
-    shares_yes           NUMERIC(30,8) NOT NULL,
-    shares_no            NUMERIC(30,8) NOT NULL,
-    liquidity_b          NUMERIC(20,2) NOT NULL,
-    status               VARCHAR(20) NOT NULL DEFAULT 'active',
-    outcome              VARCHAR(10),
-    close_at             TIMESTAMPTZ NOT NULL,
-    resolved_at          TIMESTAMPTZ,
-    resolved_by          VARCHAR(42),
-    total_volume_nxt     NUMERIC(20,2) NOT NULL DEFAULT 0,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -83,9 +48,6 @@ def _raw_connect():
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
         yield

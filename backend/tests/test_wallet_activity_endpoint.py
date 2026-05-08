@@ -34,6 +34,7 @@ os.environ.setdefault("NX_DB_NAME", "nxtest_db")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import players as players_route  # noqa: E402
 
 
@@ -41,51 +42,6 @@ WALLET_A = "0x" + "a" * 40
 WALLET_B = "0x" + "b" * 40
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV','LURKER','DEGEN','GRINDER',
-    'INFLUENCER','HACKTIVIST','FED','SCRIPT_KIDDIE'
-);
-CREATE TYPE corporation_enum AS ENUM (
-    'CLOSED_AI','MISANTHROPIC','SHALLOW_MIND',
-    'ZUCK_LABS','Y_AI','MISTRIAL_SYSTEMS'
-);
-CREATE TYPE action_enum AS ENUM (
-    'CREATE_PROTOCOL','CREATE_AI','INVEST','SELL',
-    'MOVE','CHAT','CODE_REVIEW','REST',
-    'RECEIVE_SALARY','USE_ITEM','GET_SABOTAGED','DEPLOY',
-    'FUND_DEV','TRANSFER'
-);
-
-CREATE TABLE players (
-    wallet_address TEXT PRIMARY KEY,
-    corporation corporation_enum NOT NULL DEFAULT 'CLOSED_AI'
-);
-
-CREATE TABLE devs (
-    token_id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    owner_address TEXT NOT NULL REFERENCES players(wallet_address),
-    archetype archetype_enum NOT NULL DEFAULT '10X_DEV',
-    balance_nxt BIGINT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE actions (
-    id BIGSERIAL PRIMARY KEY,
-    dev_id INT NOT NULL,
-    dev_name TEXT NOT NULL,
-    archetype archetype_enum NOT NULL,
-    action_type action_enum NOT NULL,
-    details JSONB,
-    energy_cost SMALLINT NOT NULL DEFAULT 0,
-    nxt_cost BIGINT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _direct_connect():
@@ -103,9 +59,6 @@ def _direct_connect():
 def schema_and_pool():
     conn = _direct_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.DB_HOST = os.environ["NX_DB_HOST"]
     deps.DB_PORT = int(os.environ["NX_DB_PORT"])
@@ -132,10 +85,7 @@ def _seed_player(wallet):
     conn = _direct_connect()
     conn.autocommit = True
     with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO players (wallet_address) VALUES (%s) ON CONFLICT DO NOTHING",
-            (wallet,),
-        )
+        seed_player(cur, wallet)
     conn.close()
 
 
@@ -144,10 +94,7 @@ def _seed_dev(token_id, wallet, name=None):
     conn = _direct_connect()
     conn.autocommit = True
     with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO devs (token_id, name, owner_address) VALUES (%s, %s, %s)",
-            (token_id, name or f"dev_{token_id}", wallet),
-        )
+        seed_dev(cur, token_id=token_id, owner_address=wallet, name=name or f"dev_{token_id}")
     conn.close()
 
 

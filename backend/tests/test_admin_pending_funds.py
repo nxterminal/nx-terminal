@@ -46,45 +46,6 @@ TX_B = "0x" + "b2" * 32
 TX_UNKNOWN = "0x" + "cc" * 32
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE pending_fund_txs (
-    id              SERIAL PRIMARY KEY,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    resolved        BOOLEAN NOT NULL DEFAULT false,
-    resolved_at     TIMESTAMPTZ,
-    attempts        INT NOT NULL DEFAULT 0,
-    last_attempt_at TIMESTAMPTZ,
-    last_error      TEXT
-);
-
-CREATE TABLE funding_txs (
-    id              SERIAL PRIMARY KEY,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    verified        BOOLEAN DEFAULT false,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE admin_logs (
-    id              BIGSERIAL PRIMARY KEY,
-    correlation_id  UUID,
-    event_type      TEXT NOT NULL,
-    wallet_address  VARCHAR(42),
-    dev_token_id    BIGINT,
-    payload         JSONB,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _direct_connect():
@@ -109,9 +70,6 @@ class _FakeRequest:
 def schema_and_pool():
     conn = _direct_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     # Wire the app's connection pool to the test database.
     deps.DB_HOST = os.environ["NX_DB_HOST"]

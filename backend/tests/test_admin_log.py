@@ -53,21 +53,6 @@ def _raw_connect():
     )
 
 
-ADMIN_LOGS_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE admin_logs (
-    id               BIGSERIAL PRIMARY KEY,
-    correlation_id   UUID,
-    event_type       TEXT NOT NULL,
-    wallet_address   VARCHAR(42),
-    dev_token_id     BIGINT,
-    payload          JSONB,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 @pytest.fixture(scope="module")
@@ -75,9 +60,6 @@ def db_pool():
     """Minimal admin_logs schema + connection pool for the tests."""
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(ADMIN_LOGS_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
@@ -90,7 +72,7 @@ def db_pool():
 def truncate(db_pool):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE admin_logs RESTART IDENTITY")
+            cur.execute("TRUNCATE admin_logs RESTART IDENTITY CASCADE")
 
 
 @pytest.fixture()

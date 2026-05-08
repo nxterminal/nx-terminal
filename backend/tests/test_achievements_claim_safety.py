@@ -34,6 +34,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import achievements as achievements_mod  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
@@ -41,50 +42,6 @@ from fastapi import HTTPException  # noqa: E402
 WALLET = "0x" + "a1" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV', 'LURKER', 'DEGEN', 'GRINDER',
-    'INFLUENCER', 'HACKTIVIST', 'FED', 'SCRIPT_KIDDIE'
-);
-
-CREATE TABLE players (
-    wallet_address VARCHAR(42) PRIMARY KEY
-);
-
-CREATE TABLE devs (
-    token_id      INTEGER PRIMARY KEY,
-    name          TEXT NOT NULL,
-    owner_address VARCHAR(42) NOT NULL,
-    archetype     archetype_enum NOT NULL,
-    balance_nxt   BIGINT NOT NULL DEFAULT 0,
-    total_earned  BIGINT NOT NULL DEFAULT 0,
-    status        VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE achievements (
-    id                VARCHAR(40) PRIMARY KEY,
-    title             VARCHAR(80) NOT NULL,
-    description       TEXT NOT NULL,
-    category          VARCHAR(30) NOT NULL,
-    icon              VARCHAR(10) NOT NULL DEFAULT '?',
-    reward_nxt        INTEGER NOT NULL DEFAULT 0,
-    requirement_type  VARCHAR(40) NOT NULL,
-    requirement_value INTEGER NOT NULL DEFAULT 1,
-    rarity            VARCHAR(20) NOT NULL DEFAULT 'common'
-);
-
-CREATE TABLE player_achievements (
-    wallet_address  VARCHAR(42) NOT NULL,
-    achievement_id  VARCHAR(40) NOT NULL REFERENCES achievements(id),
-    unlocked_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    claimed         BOOLEAN NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (wallet_address, achievement_id)
-);
-"""
 
 
 def _raw_connect():
@@ -101,9 +58,6 @@ def _raw_connect():
 def db_pool():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
         yield
@@ -135,21 +89,19 @@ def _seed_achievement(ach_id="first_mint", reward_nxt=100, title="First Mint"):
 def _seed_player(wallet=WALLET):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO players (wallet_address) VALUES (%s) "
-                "ON CONFLICT DO NOTHING",
-                (wallet,),
-            )
+            seed_player(cur, wallet,)
 
 
 def _seed_dev(token_id=1, owner=WALLET, status="active"):
     _seed_player(owner)
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO devs (token_id, name, owner_address, archetype, status) "
-                "VALUES (%s, %s, %s, '10X_DEV', %s)",
-                (token_id, f"dev{token_id}", owner, status),
+            seed_dev(
+                cur,
+                token_id=token_id,
+                owner_address=owner,
+                name=f"dev{token_id}",
+                status=status,
             )
 
 

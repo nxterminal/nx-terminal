@@ -49,6 +49,7 @@ os.environ["LEDGER_SHADOW_WRITE"] = "false"
 
 import engine  # noqa: E402
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import admin as admin_route  # noqa: E402
 
 
@@ -57,96 +58,6 @@ TREASURY = engine._FUND_TREASURY  # lowercased hex
 TRANSFER_TOPIC = engine._FUND_TRANSFER_TOPIC
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV','LURKER','DEGEN','GRINDER',
-    'INFLUENCER','HACKTIVIST','FED','SCRIPT_KIDDIE'
-);
-CREATE TYPE corporation_enum AS ENUM (
-    'CLOSED_AI','MISANTHROPIC','SHALLOW_MIND',
-    'ZUCK_LABS','Y_AI','MISTRIAL_SYSTEMS'
-);
-CREATE TYPE action_enum AS ENUM (
-    'CREATE_PROTOCOL','CREATE_AI','INVEST','SELL',
-    'MOVE','CHAT','CODE_REVIEW','REST',
-    'RECEIVE_SALARY','USE_ITEM','GET_SABOTAGED','DEPLOY',
-    'FUND_DEV','TRANSFER'
-);
-
-CREATE TABLE players (
-    wallet_address  TEXT PRIMARY KEY,
-    corporation     corporation_enum NOT NULL DEFAULT 'CLOSED_AI'
-);
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    name            TEXT NOT NULL,
-    owner_address   TEXT NOT NULL REFERENCES players(wallet_address),
-    archetype       archetype_enum NOT NULL DEFAULT '10X_DEV',
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    total_earned    BIGINT NOT NULL DEFAULT 0,
-    status          TEXT NOT NULL DEFAULT 'active',
-    last_action_at  TIMESTAMPTZ
-);
-
-CREATE TABLE funding_txs (
-    id              SERIAL PRIMARY KEY,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    verified        BOOLEAN DEFAULT false,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE pending_fund_txs (
-    id              SERIAL PRIMARY KEY,
-    tx_hash         TEXT UNIQUE NOT NULL,
-    wallet_address  TEXT NOT NULL,
-    dev_token_id    INT NOT NULL,
-    amount_nxt      NUMERIC NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    resolved        BOOLEAN NOT NULL DEFAULT false,
-    resolved_at     TIMESTAMPTZ,
-    attempts        INT NOT NULL DEFAULT 0,
-    last_attempt_at TIMESTAMPTZ,
-    last_error      TEXT,
-    next_retry_at   TIMESTAMPTZ
-);
-
-CREATE TABLE actions (
-    id              BIGSERIAL PRIMARY KEY,
-    dev_id          INT NOT NULL,
-    dev_name        TEXT NOT NULL,
-    archetype       archetype_enum NOT NULL,
-    action_type     action_enum NOT NULL,
-    details         JSONB,
-    energy_cost     SMALLINT NOT NULL DEFAULT 0,
-    nxt_cost        BIGINT NOT NULL DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE admin_logs (
-    id              BIGSERIAL PRIMARY KEY,
-    correlation_id  UUID,
-    event_type      TEXT NOT NULL,
-    wallet_address  VARCHAR(42),
-    dev_token_id    BIGINT,
-    payload         JSONB,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE claim_history (
-    id              BIGSERIAL PRIMARY KEY,
-    wallet_address  TEXT NOT NULL,
-    amount_net      BIGINT NOT NULL DEFAULT 0,
-    claimed_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _direct_connect():
@@ -169,9 +80,6 @@ class _FakeRequest:
 def schema_and_pool():
     conn = _direct_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.DB_HOST = os.environ["NX_DB_HOST"]
     deps.DB_PORT = int(os.environ["NX_DB_PORT"])
@@ -227,14 +135,8 @@ def _seed_dev(token_id, wallet, *, name=None):
     conn = _direct_connect()
     conn.autocommit = True
     with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO players (wallet_address) VALUES (%s) ON CONFLICT DO NOTHING",
-            (wallet,),
-        )
-        cur.execute(
-            "INSERT INTO devs (token_id, name, owner_address) VALUES (%s, %s, %s)",
-            (token_id, name or f"dev_{token_id}", wallet),
-        )
+        seed_player(cur, wallet)
+        seed_dev(cur, token_id=token_id, owner_address=wallet, name=name or f"dev_{token_id}")
     conn.close()
 
 

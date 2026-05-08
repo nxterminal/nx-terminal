@@ -45,53 +45,6 @@ USER_B = "0x" + "bb" * 20
 USER_C = "0x" + "cc" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE nxmarket_markets (
-    id                   BIGSERIAL PRIMARY KEY,
-    question             TEXT NOT NULL,
-    category             VARCHAR(40),
-    market_type          VARCHAR(20) NOT NULL
-                          CHECK (market_type IN ('official', 'user')),
-    created_by           VARCHAR(42) NOT NULL,
-    creator_fee_percent  NUMERIC(5,2) NOT NULL DEFAULT 0,
-    seed_nxt             NUMERIC(20,2) NOT NULL,
-    shares_yes           NUMERIC(30,8) NOT NULL,
-    shares_no            NUMERIC(30,8) NOT NULL,
-    liquidity_b          NUMERIC(20,2) NOT NULL,
-    status               VARCHAR(20) NOT NULL DEFAULT 'active'
-                          CHECK (status IN ('active', 'closed', 'resolved', 'invalid')),
-    outcome              VARCHAR(10),
-    close_at             TIMESTAMPTZ NOT NULL,
-    resolved_at          TIMESTAMPTZ,
-    resolved_by          VARCHAR(42),
-    total_volume_nxt     NUMERIC(20,2) NOT NULL DEFAULT 0,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxmarket_comments (
-    id              BIGSERIAL PRIMARY KEY,
-    market_id       BIGINT NOT NULL REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
-    wallet_address  VARCHAR(42) NOT NULL,
-    body            TEXT NOT NULL
-                      CHECK (char_length(body) > 0 AND char_length(body) <= 500),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at      TIMESTAMPTZ,
-    deleted_by      VARCHAR(42)
-);
-
-CREATE TABLE nxmarket_comment_votes (
-    id              BIGSERIAL PRIMARY KEY,
-    comment_id      BIGINT NOT NULL REFERENCES nxmarket_comments(id) ON DELETE CASCADE,
-    wallet_address  VARCHAR(42) NOT NULL,
-    vote_type       VARCHAR(10) NOT NULL CHECK (vote_type IN ('like', 'dislike')),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (comment_id, wallet_address)
-);
-"""
 
 
 def _raw_connect():
@@ -108,9 +61,6 @@ def _raw_connect():
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()

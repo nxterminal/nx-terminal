@@ -39,6 +39,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import shop  # noqa: E402
 
 
@@ -60,15 +61,9 @@ def _connect_raw():
 @pytest.fixture(scope="module")
 def db_pool():
     """Build the schema once and hand back a ready-to-use connection pool."""
-    schema_sql = (BACKEND_ROOT / "db" / "schema.sql").read_text()
-    migration_sql = (BACKEND_ROOT / "db" / "migration_mechanics.sql").read_text()
 
     conn = _connect_raw()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(schema_sql)
-        cur.execute(migration_sql)
-    conn.close()
 
     deps.init_db_pool(minconn=2, maxconn=6)
     try:
@@ -84,29 +79,27 @@ def _seed(target_balance: int) -> None:
                 "TRUNCATE devs, players, actions, shop_purchases, "
                 "notifications, world_events RESTART IDENTITY CASCADE"
             )
-            cur.executemany(
-                "INSERT INTO players (wallet_address, corporation) VALUES (%s, %s)",
-                [
-                    (ATTACKER_A_WALLET, "CLOSED_AI"),
-                    (ATTACKER_B_WALLET, "CLOSED_AI"),
-                    (VICTIM_WALLET, "MISANTHROPIC"),
-                ],
-            )
+            for w, c in [
+                (ATTACKER_A_WALLET, "CLOSED_AI"),
+                (ATTACKER_B_WALLET, "CLOSED_AI"),
+                (VICTIM_WALLET, "MISANTHROPIC"),
+            ]:
+                seed_player(cur, w, corporation=c)
             rows = [
                 (1, "attacker_one", ATTACKER_A_WALLET, "CLOSED_AI", 2000),
                 (2, "attacker_two", ATTACKER_B_WALLET, "CLOSED_AI", 2000),
                 (3, "victim_alpha", VICTIM_WALLET, "MISANTHROPIC", target_balance),
             ]
             for tid, name, owner, corp, bal in rows:
-                cur.execute(
-                    """
-                    INSERT INTO devs
-                      (token_id, name, owner_address, archetype, corporation,
-                       personality_seed, balance_nxt, status,
-                       stat_hacking, social_vitality)
-                    VALUES (%s, %s, %s, '10X_DEV', %s, 1, %s, 'active', 50, 50)
-                    """,
-                    (tid, name, owner, corp, bal),
+                seed_dev(
+                    cur,
+                    token_id=tid,
+                    owner_address=owner,
+                    name=name,
+                    corporation=corp,
+                    balance_nxt=bal,
+                    stat_hacking=50,
+                    social_vitality=50,
                 )
 
 

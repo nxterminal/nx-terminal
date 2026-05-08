@@ -37,6 +37,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import achievements as achievements_mod  # noqa: E402
 from backend.services.ledger import (  # noqa: E402
     LedgerSource,
@@ -49,50 +50,6 @@ WALLET_A = "0x" + "a1" * 20
 WALLET_B = "0x" + "b2" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE players (
-    wallet_address VARCHAR(42) PRIMARY KEY,
-    balance_claimed BIGINT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE devs (
-    token_id      INTEGER PRIMARY KEY,
-    name          TEXT NOT NULL,
-    owner_address VARCHAR(42) NOT NULL,
-    balance_nxt   BIGINT NOT NULL DEFAULT 0,
-    status        VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxt_ledger (
-    id              BIGSERIAL PRIMARY KEY,
-    wallet_address  VARCHAR(42) NOT NULL,
-    dev_token_id    BIGINT,
-    delta_nxt       BIGINT NOT NULL,
-    balance_after   BIGINT NOT NULL,
-    source          TEXT NOT NULL,
-    ref_table       TEXT,
-    ref_id          BIGINT,
-    idempotency_key TEXT NOT NULL UNIQUE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    correlation_id  UUID,
-    CHECK (delta_nxt != 0),
-    CHECK (balance_after >= 0)
-);
-"""
 
 
 def _raw_connect():
@@ -109,9 +66,6 @@ def _raw_connect():
 def db_pool():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
         yield
@@ -132,15 +86,13 @@ def _seed(rows: Iterable[tuple]):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             for tid, name, owner, bal in rows:
-                cur.execute(
-                    "INSERT INTO players (wallet_address) VALUES (%s) "
-                    "ON CONFLICT DO NOTHING",
-                    (owner,),
-                )
-                cur.execute(
-                    "INSERT INTO devs (token_id, name, owner_address, "
-                    "balance_nxt) VALUES (%s, %s, %s, %s)",
-                    (tid, name, owner, bal),
+                seed_player(cur, owner,)
+                seed_dev(
+                    cur,
+                    token_id=tid,
+                    owner_address=owner,
+                    name=name,
+                    balance_nxt=bal,
                 )
 
 

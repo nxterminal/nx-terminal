@@ -34,6 +34,7 @@ os.environ.setdefault("NX_DB_NAME", "nxtest_db")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import admin as admin_route  # noqa: E402
 from backend.api.routes.admin import _TicketReplyBody  # noqa: E402
 
@@ -44,55 +45,6 @@ TREASURY_ADMIN = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
 USER_WALLET = "0x" + "d" * 40
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE corporation_enum AS ENUM (
-    'CLOSED_AI','MISANTHROPIC','SHALLOW_MIND',
-    'ZUCK_LABS','Y_AI','MISTRIAL_SYSTEMS'
-);
-
-CREATE TABLE players (
-    wallet_address VARCHAR(42) PRIMARY KEY,
-    display_name   VARCHAR(30),
-    corporation    corporation_enum NOT NULL DEFAULT 'CLOSED_AI'
-);
-
-CREATE TABLE support_tickets (
-    id             SERIAL PRIMARY KEY,
-    player_address VARCHAR(42) NOT NULL,
-    subject        TEXT NOT NULL,
-    message        TEXT NOT NULL,
-    status         TEXT DEFAULT 'open',
-    reply_text     TEXT,
-    replied_by     VARCHAR(42),
-    replied_at     TIMESTAMPTZ,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE notifications (
-    id             BIGSERIAL PRIMARY KEY,
-    player_address VARCHAR(42) NOT NULL,
-    type           TEXT NOT NULL,
-    title          TEXT NOT NULL,
-    body           TEXT,
-    read           BOOLEAN NOT NULL DEFAULT false,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at     TIMESTAMPTZ
-);
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _direct_connect():
@@ -115,9 +67,6 @@ class _FakeRequest:
 def schema_and_pool():
     conn = _direct_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.DB_HOST = os.environ["NX_DB_HOST"]
     deps.DB_PORT = int(os.environ["NX_DB_PORT"])
@@ -155,11 +104,7 @@ def _insert_ticket(
     conn.autocommit = True
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         if display_name:
-            cur.execute(
-                "INSERT INTO players (wallet_address, display_name) "
-                "VALUES (%s, %s) ON CONFLICT (wallet_address) DO UPDATE SET display_name = EXCLUDED.display_name",
-                (player, display_name),
-            )
+            seed_player(cur, player, display_name=display_name)
         cur.execute(
             """
             INSERT INTO support_tickets (player_address, subject, message, status)

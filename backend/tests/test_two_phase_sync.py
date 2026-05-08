@@ -33,35 +33,11 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.engine import claim_sync  # noqa: E402
 from backend.engine import sync_reconciler  # noqa: E402
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    owner_address   VARCHAR(42) NOT NULL,
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    status          VARCHAR(20) NOT NULL DEFAULT 'active',
-    sync_status     TEXT,
-    sync_tx_hash    VARCHAR(66),
-    sync_started_at TIMESTAMPTZ
-);
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -78,9 +54,6 @@ def _raw_connect():
 def db_pool():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
@@ -93,7 +66,7 @@ def db_pool():
 def clean_db(db_pool):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE devs, admin_logs RESTART IDENTITY")
+            cur.execute("TRUNCATE devs, admin_logs RESTART IDENTITY CASCADE")
 
 
 def _seed(rows: Iterable[tuple]):
@@ -103,18 +76,25 @@ def _seed(rows: Iterable[tuple]):
             for row in rows:
                 if len(row) == 2:
                     tid, bal = row
-                    cur.execute(
-                        "INSERT INTO devs (token_id, owner_address, balance_nxt) "
-                        "VALUES (%s, %s, %s)",
-                        (tid, "0x" + "aa" * 20, bal),
-                    )
+                    seed_dev(cur, token_id=tid, owner_address="0x" + "aa" * 20, balance_nxt=bal)
                 else:
                     tid, bal, sstatus, stx, offset_s = row
+                    # `sync_started_at` is a server-side expression
+                    # (NOW() - interval), so seed_dev can't accept it
+                    # directly via kwargs. Insert the row first, then
+                    # UPDATE the timestamp column.
+                    seed_dev(
+                        cur,
+                        token_id=tid,
+                        owner_address="0x" + "aa" * 20,
+                        balance_nxt=bal,
+                        sync_status=sstatus,
+                        sync_tx_hash=stx,
+                    )
                     cur.execute(
-                        "INSERT INTO devs (token_id, owner_address, balance_nxt, "
-                        "sync_status, sync_tx_hash, sync_started_at) "
-                        "VALUES (%s, %s, %s, %s, %s, NOW() - make_interval(secs => %s))",
-                        (tid, "0x" + "aa" * 20, bal, sstatus, stx, offset_s),
+                        "UPDATE devs SET sync_started_at = "
+                        "NOW() - make_interval(secs => %s) WHERE token_id = %s",
+                        (offset_s, tid),
                     )
 
 

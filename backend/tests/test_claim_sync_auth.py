@@ -39,6 +39,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.middleware.correlation import CorrelationIdMiddleware  # noqa: E402
 from backend.api.routes import simulation as simulation_module  # noqa: E402
 
@@ -48,28 +49,6 @@ WALLET_B = "0x" + "b2" * 20
 ADMIN = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    owner_address   VARCHAR(42) NOT NULL,
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    status          VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -86,9 +65,6 @@ def _raw_connect():
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()
@@ -112,7 +88,7 @@ def clean(app, monkeypatch):
     """Wipe tables + stub sync_claimable_balances to a no-network return."""
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE devs, admin_logs RESTART IDENTITY")
+            cur.execute("TRUNCATE devs, admin_logs RESTART IDENTITY CASCADE")
 
     def _fake_sync(db_conn=None, filter_token_ids=None, wait_for_receipt=True):
         return {
@@ -131,11 +107,7 @@ def _seed(rows):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             for tid, owner, bal in rows:
-                cur.execute(
-                    "INSERT INTO devs (token_id, owner_address, balance_nxt) "
-                    "VALUES (%s, %s, %s)",
-                    (tid, owner, bal),
-                )
+                seed_dev(cur, token_id=tid, owner_address=owner, balance_nxt=bal)
 
 
 def _count(event_type: str) -> int:
