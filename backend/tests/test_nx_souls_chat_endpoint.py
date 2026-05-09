@@ -90,9 +90,17 @@ class StubConn:
 
 
 def make_program(*, owner=OWNER, rarity="common", quota_used=0,
-                 status="active", token_exists=True, archetype="INFLUENCER"):
-    """Build a SQL fingerprint dispatcher for one fixture."""
+                 status="active", token_exists=True, archetype="INFLUENCER",
+                 posts=None):
+    """Build a SQL fingerprint dispatcher for one fixture.
+
+    `posts` is an optional dict {post_id: {"token_id": int, "content": str}}
+    that wires the Phase 5.4 nx_posts lookup. Defaults to empty so any
+    referenced_post_id resolves to None and the chat proceeds without
+    injection (the documented "fail open" behaviour).
+    """
     state = {"used": quota_used}
+    posts_table = dict(posts or {})
 
     def program(sql, params):
         if "FROM devs WHERE token_id" in sql:
@@ -106,6 +114,10 @@ def make_program(*, owner=OWNER, rarity="common", quota_used=0,
                 "rarity_tier": rarity,
                 "archetype": archetype,
             }
+        if "FROM nx_posts" in sql and "id = %s" in sql:
+            # Phase 5.4 — referenced-post lookup. params == (post_id,).
+            post_id = params[0] if params else None
+            return posts_table.get(post_id)
         if "INTO nx_souls_quota" in sql:
             return {
                 "messages_today": state["used"],
@@ -194,17 +206,20 @@ class _LLMStub:
 
     async def __call__(
         self, persona, session_messages, user_message,
-        *, climax=None, service=None,
+        *, climax=None, service=None, referenced_post_content=None,
     ):
-        # `service` kwarg added Phase 5.1.1 for cost tracking. Stub
-        # records it so a test can assert the route passes the
-        # right key, but otherwise behaviour is unchanged.
+        # `service` kwarg added Phase 5.1.1 for cost tracking;
+        # `referenced_post_content` added Phase 5.4 for the chat↔post
+        # context bridge. Stub records both so tests can assert the
+        # route passes the right values, but otherwise behaviour is
+        # unchanged.
         self.calls.append({
             "persona": persona,
             "session_messages": list(session_messages),
             "user_message": user_message,
             "climax": climax,
             "service": service,
+            "referenced_post_content": referenced_post_content,
         })
         return ("stub reply", "groq")
 
@@ -230,12 +245,16 @@ def client(app):
     return TestClient(app)
 
 
-def _body(message="yo", session_messages=None, wallet=OWNER):
-    return {
+def _body(message="yo", session_messages=None, wallet=OWNER,
+          referenced_post_id=None):
+    body = {
         "message": message,
         "session_messages": session_messages or [],
         "wallet_address": wallet,
     }
+    if referenced_post_id is not None:
+        body["referenced_post_id"] = referenced_post_id
+    return body
 
 
 # ─── 200 success path ────────────────────────────────────────────────────
@@ -518,3 +537,144 @@ def test_chat_rejects_malformed_wallet(client, stub_db):
         json=_body(wallet="not-a-wallet"),
     )
     assert resp.status_code == 400
+
+
+# ─── Phase 5.4 — chat↔post context bridge ────────────────────────────────
+
+
+def test_chat_referenced_post_injects_synthetic_assistant_turn(
+    client, stub_db, stub_llm
+):
+    """When the body carries a valid referenced_post_id authored by
+    the SAME Dev being chatted with, the route resolves it to
+    nx_posts.content and forwards the text to call_llm via the new
+    `referenced_post_content=` kwarg. The router (covered separately)
+    is responsible for building the synthetic assistant turn — at the
+    route layer we only need to verify the content makes the trip."""
+    post_text = "shipped a thing today, brain still buzzing"
+    stub_db(posts={42: {"token_id": TOKEN_ID, "content": post_text}})
+    resp = client.post(
+        f"/api/devs/{TOKEN_ID}/chat",
+        json=_body(message="re: thing — what was it?", referenced_post_id=42),
+    )
+    assert resp.status_code == 200, resp.text
+    assert len(stub_llm.calls) == 1
+    assert stub_llm.calls[0]["referenced_post_content"] == post_text
+
+
+def test_chat_rejects_referenced_post_from_different_dev(
+    client, stub_db, stub_llm
+):
+    """GUARDRAIL: a post authored by a DIFFERENT Dev must be silently
+    rejected (call_llm receives None) so a hostile client can't make
+    Dev B respond as if it wrote Dev A's post. The chat itself still
+    succeeds — the reference is just dropped."""
+    other_token = TOKEN_ID + 1
+    stub_db(posts={
+        99: {"token_id": other_token, "content": "this is dev B's post"},
+    })
+    resp = client.post(
+        f"/api/devs/{TOKEN_ID}/chat",
+        json=_body(message="re: that post you wrote", referenced_post_id=99),
+    )
+    assert resp.status_code == 200, resp.text
+    assert len(stub_llm.calls) == 1
+    assert stub_llm.calls[0]["referenced_post_content"] is None
+
+
+def test_chat_referenced_post_truncated_to_500_chars(
+    client, stub_db, stub_llm
+):
+    """The route layer caps content at MAX_POST_REF_CHARS (500). Posts
+    today are <280 chars; the cap defends against a future schema
+    migration that lengthens them."""
+    long_post = "x" * 1500
+    stub_db(posts={7: {"token_id": TOKEN_ID, "content": long_post}})
+    resp = client.post(
+        f"/api/devs/{TOKEN_ID}/chat",
+        json=_body(message="ref", referenced_post_id=7),
+    )
+    assert resp.status_code == 200, resp.text
+    sent = stub_llm.calls[0]["referenced_post_content"]
+    assert sent is not None
+    assert len(sent) == 500
+    assert sent == "x" * 500
+
+
+def test_llm_router_no_double_injection_within_session():
+    """When the session_messages list already carries a synthetic
+    POST_REF turn from a prior call in the same chat, the router
+    must NOT inject a second one even if a new
+    `referenced_post_content` is supplied. The frontend clears the
+    id after the first send for the same reason; this is the
+    server-side safety net."""
+    from backend.services.nx_souls.llm_router import (
+        POST_REF_MARKER,
+        _build_messages,
+        _session_already_has_post_ref,
+    )
+
+    # The frontend's first send produced this synthetic turn and the
+    # session_messages snapshot now carries it for every subsequent
+    # turn in the same modal.
+    prior_session = [
+        {"role": "user", "content": "re: that thing"},
+        {"role": "assistant", "content": POST_REF_MARKER + "shipped a thing"},
+        {"role": "assistant", "content": "yeah, still buzzing"},
+    ]
+    assert _session_already_has_post_ref(prior_session) is True
+
+    # If the router believed the session was clean and built messages
+    # with another injection, we'd see TWO marker-prefixed assistant
+    # turns. The route+router together avoid that by feeding
+    # referenced_post_content=None whenever the prior session already
+    # carries a marker (call_llm guard).
+    msgs = _build_messages(
+        persona="sys",
+        session_messages=prior_session,
+        user_message="and now?",
+        referenced_post_content=None,  # what call_llm forwards on no-stack
+    )
+    marker_turns = [
+        m for m in msgs
+        if m["role"] == "assistant" and m["content"].startswith(POST_REF_MARKER)
+    ]
+    assert len(marker_turns) == 1, (
+        "no-stacking guard failed: a second synthetic post-ref turn was "
+        "injected on top of the one already in session_messages"
+    )
+
+
+def test_climax_turn_excludes_synthetic_post_turns():
+    """A short non-philosophical message must NOT tip onto the climax
+    cascade just because the session_messages snapshot now carries a
+    synthetic POST_REF assistant turn from a prior reply-via-chat
+    flow. is_climax_turn filters marker-prefixed turns out of the
+    depth count before applying the >= 5 threshold."""
+    from backend.services.nx_souls.llm_router import (
+        POST_REF_MARKER,
+        is_climax_turn,
+    )
+
+    # 4 real turns + 1 synthetic = 5 raw entries. Without the filter
+    # the depth-5 rule would tip this onto Sonnet; with the filter it
+    # stays at 4 and remains a casual turn.
+    session = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "hi"},
+        {"role": "user", "content": "what's up"},
+        {"role": "assistant", "content": POST_REF_MARKER + "shipped a thing"},
+        {"role": "user", "content": "cool"},
+    ]
+    assert is_climax_turn("ok", session) is False
+
+    # Sanity: 5 REAL non-synthetic turns DO tip the threshold, so the
+    # filter isn't accidentally suppressing the climax path entirely.
+    real_only = [
+        {"role": "user", "content": "a"},
+        {"role": "assistant", "content": "b"},
+        {"role": "user", "content": "c"},
+        {"role": "assistant", "content": "d"},
+        {"role": "user", "content": "e"},
+    ]
+    assert is_climax_turn("ok", real_only) is True

@@ -175,7 +175,7 @@ export default function ChatConversation({
   // emitter with no other state. We deliberately do NOT play on user
   // send (matches MSN behaviour); only the Dev reply triggers the
   // ding.
-  const { chatSoundsEnabled } = useChatModal();
+  const { chatSoundsEnabled, referencedPostId, clearReferencedPostId } = useChatModal();
   const { playMessageReceive } = useChatSounds(chatSoundsEnabled);
 
   // Auto-scroll to bottom on new local message / typing indicator.
@@ -218,8 +218,18 @@ export default function ChatConversation({
 
     setLocalMessages((prev) => [...prev, userMsg]);
 
+    // Phase 5.4 — attach referenced_post_id on the FIRST send only
+    // and clear immediately so subsequent turns in the same modal
+    // don't re-attach. The server also no-stacks defensively, but
+    // clearing here saves a wasted round-trip through validation.
+    const sendOptions = {};
+    if (referencedPostId) {
+      sendOptions.referencedPostId = referencedPostId;
+      clearReferencedPostId();
+    }
+
     try {
-      const res = await sendMessage(text, sessionHistory);
+      const res = await sendMessage(text, sessionHistory, sendOptions);
       if (!res) return; // aborted (unmount / superseded)
 
       const assistantMsg = {

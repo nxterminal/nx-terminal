@@ -52,12 +52,25 @@ export function ChatProvider({ children }) {
   // re-seed the same text.
   const [prefillMessage, setPrefillMessage] = useState(null);
 
+  // Phase 5.4 — chat↔post context bridge. When a user replies to a
+  // post via the chat modal, the post id rides alongside the prefill
+  // so the next outbound message can attach `referenced_post_id` for
+  // surgical context injection. ChatConversation consumes this on the
+  // FIRST send and immediately clears it via clearReferencedPostId so
+  // subsequent turns don't re-attach (no-stacking is also enforced
+  // server-side, but clearing on the client saves a wasted round-trip
+  // through the validator).
+  const [referencedPostId, setReferencedPostId] = useState(null);
+
   const openChatModal = useCallback((devId = null, options = {}) => {
     setInitialDevId(devId);
-    // Caller passes { prefill: '...' } to seed the composer. The
-    // 2-arg signature stays backwards-compatible: every existing
+    // Caller passes { prefill: '...', referencedPostId: 123 } to seed
+    // the composer + carry a post reference. Both options are optional;
+    // the 2-arg signature stays backwards-compatible: every existing
     // call site that passes (devId) keeps working.
     setPrefillMessage(typeof options?.prefill === 'string' ? options.prefill : null);
+    const ref = options?.referencedPostId;
+    setReferencedPostId(Number.isInteger(ref) && ref > 0 ? ref : null);
     setIsOpen(true);
   }, []);
 
@@ -65,6 +78,7 @@ export function ChatProvider({ children }) {
     setIsOpen(false);
     setInitialDevId(null);
     setPrefillMessage(null);
+    setReferencedPostId(null);
     // Reset selection + picker on close so a subsequent open runs the
     // "default to most recent" logic from a clean slate. Without this,
     // a user who closed the modal mid-conversation would reopen into
@@ -79,6 +93,13 @@ export function ChatProvider({ children }) {
   // composer mount.
   const clearPrefillMessage = useCallback(() => {
     setPrefillMessage(null);
+  }, []);
+
+  // Phase 5.4 — called by ChatConversation right after the first
+  // outbound send consumes the post reference. Subsequent turns in the
+  // same opened modal must NOT re-attach the same id.
+  const clearReferencedPostId = useCallback(() => {
+    setReferencedPostId(null);
   }, []);
 
   const toggleChatSounds = useCallback(() => {
@@ -117,6 +138,8 @@ export function ChatProvider({ children }) {
       closeNewChatPicker,
       prefillMessage,
       clearPrefillMessage,
+      referencedPostId,
+      clearReferencedPostId,
     }),
     [
       isOpen,
@@ -133,6 +156,8 @@ export function ChatProvider({ children }) {
       closeNewChatPicker,
       prefillMessage,
       clearPrefillMessage,
+      referencedPostId,
+      clearReferencedPostId,
     ]
   );
 

@@ -56,7 +56,11 @@ from backend.api.rate_limit import (
     souls_ip_per_minute,
 )
 from backend.services.nx_souls.exceptions import NXSoulsAllProvidersFailed
-from backend.services.nx_souls.llm_router import call_llm, is_climax_turn
+from backend.services.nx_souls.llm_router import (
+    MAX_POST_REF_CHARS,
+    call_llm,
+    is_climax_turn,
+)
 from backend.services.nx_souls.messages import insert_message_and_refresh_chat
 from backend.services.nx_souls.persona import build_persona
 from backend.services.nx_souls.quota import (
@@ -91,6 +95,13 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_LEN)
     session_messages: list[SessionMessage] = Field(default_factory=list)
     wallet_address: str = Field(...)
+    # Phase 5.4 — chat↔post context bridge. When set, the backend
+    # resolves the id to nx_posts.content, validates the post was
+    # authored by THIS Dev (no cross-Dev injection), and injects the
+    # text as a synthetic prior assistant turn so the Dev "remembers"
+    # writing it. Optional + ignored on shape mismatch (silent guard,
+    # documented in the route handler below).
+    referenced_post_id: int | None = Field(default=None, ge=1)
 
 
 def _client_ip(request: Request) -> str:
@@ -244,6 +255,48 @@ def _persist_chat_messages(
         )
 
 
+def _resolve_referenced_post(
+    cur,
+    *,
+    referenced_post_id: int,
+    dev_token_id: int,
+) -> str | None:
+    """Phase 5.4 — fetch a public post by id and return its content
+    only if the post was authored by the Dev being chatted with.
+
+    GUARDRAIL: a mismatch (post belongs to a different Dev) is silently
+    rejected — we return None and the chat proceeds without injection.
+    This prevents a hostile client from making Dev B "remember" writing
+    Dev A's post.
+
+    Output is hard-capped at MAX_POST_REF_CHARS. Posts today are
+    <280 chars; the cap defends against a future schema change that
+    lengthens them.
+
+    Returns None for: missing id, non-public post, author mismatch,
+    or empty content. The caller treats None as "no injection".
+    """
+    cur.execute(
+        "SELECT token_id, content FROM nx_posts "
+        "WHERE id = %s AND visibility = 'public'",
+        (referenced_post_id,),
+    )
+    row = cur.fetchone()
+    if row is None:
+        return None
+    if int(row.get("token_id") or 0) != dev_token_id:
+        log.info(
+            "NX Souls chat: referenced_post_id %s rejected — "
+            "author=%s != chatting_with=%s",
+            referenced_post_id, row.get("token_id"), dev_token_id,
+        )
+        return None
+    content = (row.get("content") or "").strip()
+    if not content:
+        return None
+    return content[:MAX_POST_REF_CHARS]
+
+
 def _log_message_event(
     cur,
     *,
@@ -372,6 +425,18 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
                     "is_resting": True,
                 }
             persona = build_persona(cur, token_id)
+            # Phase 5.4 — resolve the optional post reference on the
+            # same connection / snapshot we built the persona from.
+            # Returns None silently on author mismatch / missing /
+            # non-public; call_llm then runs without the synthetic
+            # turn, which is the right "fail open" behaviour.
+            referenced_post_content: str | None = None
+            if req.referenced_post_id is not None:
+                referenced_post_content = _resolve_referenced_post(
+                    cur,
+                    referenced_post_id=req.referenced_post_id,
+                    dev_token_id=token_id,
+                )
 
     if persona is None:
         # Should be unreachable — _check_owner already 404'd if the row
@@ -380,7 +445,11 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
         raise HTTPException(404, "Dev not found")
 
     session_msgs = [m.model_dump() for m in req.session_messages]
-    climax = is_climax_turn(req.message, len(session_msgs))
+    # Phase 5.4 — pass the list (not just count) so is_climax_turn can
+    # filter synthetic post-ref turns out of the depth check; otherwise
+    # a `re: <post>` injection from a prior turn would push borderline
+    # casual chats onto the paid Sonnet path.
+    climax = is_climax_turn(req.message, session_msgs)
 
     started = time.monotonic()
     try:
@@ -395,6 +464,10 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
             # below catches and turns into the standard "I'm tired"
             # response — same UX as a real cascade outage.
             service="nx_souls",
+            # Phase 5.4 — already None on author mismatch / missing
+            # post / non-public; call_llm also no-stacks if the
+            # session already carries a synthetic post-ref turn.
+            referenced_post_content=referenced_post_content,
         )
     except NXSoulsAllProvidersFailed as e:
         duration_ms = int((time.monotonic() - started) * 1000)
