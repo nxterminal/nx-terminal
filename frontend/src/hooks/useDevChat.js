@@ -44,7 +44,7 @@ export function useDevChat(walletAddress, tokenId) {
   const abortRef = useRef(null);
 
   const sendMessage = useCallback(
-    async (text, sessionMessages = []) => {
+    async (text, sessionMessages = [], options = {}) => {
       if (!walletAddress || !tokenId) {
         throw new Error('useDevChat: walletAddress and tokenId required');
       }
@@ -59,16 +59,21 @@ export function useDevChat(walletAddress, tokenId) {
       setIsTyping(true);
       setError(null);
 
+      // Phase 5.4 — only attach referenced_post_id when the caller
+      // actually passed one. Sending `null` would still pass Pydantic
+      // validation but adds a noisy field to every request body.
+      const refId = options?.referencedPostId;
+      const body = {
+        message: text,
+        session_messages: sessionMessages,
+        wallet_address: walletAddress,
+      };
+      if (Number.isInteger(refId) && refId > 0) {
+        body.referenced_post_id = refId;
+      }
+
       try {
-        const res = await api.postChat(
-          tokenId,
-          {
-            message: text,
-            session_messages: sessionMessages,
-            wallet_address: walletAddress,
-          },
-          controller.signal
-        );
+        const res = await api.postChat(tokenId, body, controller.signal);
         // Defensive: only commit if we're still the current request.
         // If a newer call superseded us between fetch resolution and
         // this line, the controller is no longer in abortRef.

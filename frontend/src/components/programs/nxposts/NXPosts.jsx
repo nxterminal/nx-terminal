@@ -71,8 +71,13 @@ export default function NXPosts() {
 
   const handleReply = useCallback((post) => {
     if (!post?.token_id) return;
+    // Phase 5.4 — pass post.id alongside the prefill so the FIRST
+    // outbound message attaches `referenced_post_id`. Backend resolves
+    // the id to post.content and injects it as a synthetic prior
+    // assistant turn so the Dev "remembers" writing it.
     openChatModal(post.token_id, {
       prefill: buildReplyPrefill(post),
+      referencedPostId: post?.id ?? null,
     });
   }, [openChatModal]);
 
