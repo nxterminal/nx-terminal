@@ -39,6 +39,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.engine import engine as engine_mod  # noqa: E402
 from backend.services import ledger as ledger_mod  # noqa: E402
 from backend.services.ledger import (  # noqa: E402
@@ -54,96 +55,6 @@ WALLET_B = "0x" + "b2" * 20
 
 
 # Schema is minimal but needs the enum types `pay_salaries` references.
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV', 'LURKER', 'DEGEN', 'GRINDER',
-    'INFLUENCER', 'HACKTIVIST', 'FED', 'SCRIPT_KIDDIE'
-);
-CREATE TYPE action_enum AS ENUM (
-    'CREATE_PROTOCOL', 'CREATE_AI', 'INVEST', 'SELL',
-    'MOVE', 'CHAT', 'CODE_REVIEW', 'REST',
-    'RECEIVE_SALARY', 'USE_ITEM', 'GET_SABOTAGED', 'DEPLOY',
-    'BUY_ITEM', 'FIX_BUG', 'TRAIN', 'HACK_RAID', 'HACK_MAINFRAME',
-    'MISSION_START', 'MISSION_COMPLETE', 'FUND_DEV', 'TRANSFER'
-);
-CREATE TYPE rarity_enum AS ENUM (
-    'common', 'uncommon', 'rare', 'legendary', 'mythic'
-);
-
-CREATE TABLE players (
-    wallet_address VARCHAR(42) PRIMARY KEY,
-    balance_claimed BIGINT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    name            TEXT NOT NULL,
-    owner_address   VARCHAR(42) NOT NULL,
-    archetype       archetype_enum NOT NULL,
-    rarity_tier     rarity_enum NOT NULL DEFAULT 'common',
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    total_earned    BIGINT NOT NULL DEFAULT 0,
-    energy          SMALLINT NOT NULL DEFAULT 10,
-    max_energy      SMALLINT NOT NULL DEFAULT 10,
-    status          VARCHAR(20) NOT NULL DEFAULT 'active',
-    pc_health       SMALLINT NOT NULL DEFAULT 100,
-    caffeine        SMALLINT NOT NULL DEFAULT 50,
-    social_vitality SMALLINT NOT NULL DEFAULT 50,
-    knowledge       SMALLINT NOT NULL DEFAULT 50,
-    bugs_shipped    INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE actions (
-    id           BIGSERIAL PRIMARY KEY,
-    dev_id       INTEGER NOT NULL,
-    dev_name     TEXT NOT NULL,
-    archetype    archetype_enum NOT NULL,
-    action_type  action_enum NOT NULL,
-    details      JSONB,
-    energy_cost  SMALLINT NOT NULL DEFAULT 0,
-    nxt_cost     BIGINT NOT NULL DEFAULT 0,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE world_events (
-    id          SERIAL PRIMARY KEY,
-    event_type  VARCHAR(30) NOT NULL,
-    effects     JSONB NOT NULL DEFAULT '{}'::jsonb,
-    starts_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    ends_at     TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
-    is_active   BOOLEAN NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxt_ledger (
-    id              BIGSERIAL PRIMARY KEY,
-    wallet_address  VARCHAR(42) NOT NULL,
-    dev_token_id    BIGINT,
-    delta_nxt       BIGINT NOT NULL,
-    balance_after   BIGINT NOT NULL,
-    source          TEXT NOT NULL,
-    ref_table       TEXT,
-    ref_id          BIGINT,
-    idempotency_key TEXT NOT NULL UNIQUE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    correlation_id  UUID,
-    CHECK (delta_nxt != 0),
-    CHECK (balance_after >= 0)
-);
-"""
 
 
 def _raw_connect():
@@ -160,9 +71,6 @@ def _raw_connect():
 def db_pool():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
     deps.init_db_pool(minconn=1, maxconn=4)
     try:
         yield
@@ -186,16 +94,8 @@ def _seed_devs(rows: Iterable[tuple]):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             for tid, name, owner, arch, bal in rows:
-                cur.execute(
-                    "INSERT INTO players (wallet_address) VALUES (%s) "
-                    "ON CONFLICT DO NOTHING",
-                    (owner,),
-                )
-                cur.execute(
-                    "INSERT INTO devs (token_id, name, owner_address, "
-                    "archetype, balance_nxt) VALUES (%s, %s, %s, %s, %s)",
-                    (tid, name, owner, arch, bal),
-                )
+                seed_player(cur, owner,)
+                seed_dev(cur, token_id=tid, owner_address=owner, name=name, archetype=arch, balance_nxt=bal)
 
 
 def _ledger_rows():

@@ -41,6 +41,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.middleware.correlation import CorrelationIdMiddleware  # noqa: E402
 from backend.api.routes import admin as admin_module  # noqa: E402
 
@@ -49,38 +50,6 @@ ADMIN_WALLET = "0x31d6e19aae43b5e2fbedb01b6ff82ad1e8b576dc"
 RANDOM_WALLET = "0x" + "99" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    owner_address   VARCHAR(42) NOT NULL,
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    status          VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE claim_history (
-    id              BIGSERIAL PRIMARY KEY,
-    player_address  VARCHAR(42) NOT NULL,
-    amount_gross    BIGINT NOT NULL,
-    amount_net      BIGINT NOT NULL,
-    fee_amount      BIGINT NOT NULL DEFAULT 0,
-    tx_hash         TEXT,
-    claimed_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE admin_logs (
-    id               BIGSERIAL PRIMARY KEY,
-    correlation_id   UUID,
-    event_type       TEXT NOT NULL,
-    wallet_address   VARCHAR(42),
-    dev_token_id     BIGINT,
-    payload          JSONB,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -107,9 +76,6 @@ def _default_signer_state() -> Dict[str, Any]:
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()
@@ -132,7 +98,7 @@ def clean_db(app):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "TRUNCATE devs, claim_history, admin_logs RESTART IDENTITY"
+                "TRUNCATE devs, claim_history, admin_logs RESTART IDENTITY CASCADE"
             )
 
 
@@ -156,11 +122,7 @@ def _seed_devs(rows):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             for tid, owner, bal, status in rows:
-                cur.execute(
-                    "INSERT INTO devs (token_id, owner_address, balance_nxt, status) "
-                    "VALUES (%s, %s, %s, %s)",
-                    (tid, owner, bal, status),
-                )
+                seed_dev(cur, token_id=tid, owner_address=owner, balance_nxt=bal, status=status)
 
 
 def _seed_admin_log(

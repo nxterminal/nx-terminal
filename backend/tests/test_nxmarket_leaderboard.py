@@ -45,25 +45,6 @@ USER_C = "0x" + "cc" * 20
 # strips the CHECK constraints on source / balance_after so the tests
 # can seed arbitrary ledger rows without touching the real money-moving
 # helpers.
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE nxt_ledger (
-    id              BIGSERIAL PRIMARY KEY,
-    wallet_address  VARCHAR(42) NOT NULL,
-    dev_token_id    BIGINT,
-    delta_nxt       BIGINT NOT NULL,
-    balance_after   BIGINT NOT NULL,
-    source          TEXT NOT NULL,
-    ref_table       TEXT,
-    ref_id          BIGINT,
-    idempotency_key TEXT NOT NULL UNIQUE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    correlation_id  UUID
-);
-"""
 
 
 def _raw_connect():
@@ -80,9 +61,6 @@ def _raw_connect():
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()
@@ -106,7 +84,7 @@ def client(app):
 def clean_db(app):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE nxt_ledger RESTART IDENTITY")
+            cur.execute("TRUNCATE nxt_ledger RESTART IDENTITY CASCADE")
 
 
 def _seed_ledger(wallet, delta, source, days_ago=0, key_suffix=""):

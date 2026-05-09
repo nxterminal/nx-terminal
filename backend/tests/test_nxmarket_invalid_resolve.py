@@ -29,6 +29,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.middleware.correlation import CorrelationIdMiddleware  # noqa: E402
 from backend.api.routes import nxmarket as nxmarket_module  # noqa: E402
 
@@ -41,92 +42,6 @@ USER_B = "0x" + "bb" * 20
 USER_C = "0x" + "dd" * 20
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE devs (
-    token_id        INTEGER PRIMARY KEY,
-    owner_address   VARCHAR(42) NOT NULL,
-    balance_nxt     BIGINT NOT NULL DEFAULT 0,
-    status          VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE nxt_ledger (
-    id              BIGSERIAL PRIMARY KEY,
-    wallet_address  VARCHAR(42) NOT NULL,
-    dev_token_id    BIGINT,
-    delta_nxt       BIGINT NOT NULL,
-    balance_after   BIGINT NOT NULL,
-    source          TEXT NOT NULL,
-    ref_table       TEXT,
-    ref_id          BIGINT,
-    idempotency_key TEXT NOT NULL UNIQUE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    correlation_id  UUID,
-    CHECK (delta_nxt != 0),
-    CHECK (balance_after >= 0)
-);
-
-CREATE TABLE admin_logs (
-    id               BIGSERIAL PRIMARY KEY,
-    correlation_id   UUID,
-    event_type       TEXT NOT NULL,
-    wallet_address   VARCHAR(42),
-    dev_token_id     BIGINT,
-    payload          JSONB,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxmarket_markets (
-    id                   BIGSERIAL PRIMARY KEY,
-    question             TEXT NOT NULL,
-    category             VARCHAR(40),
-    market_type          VARCHAR(20) NOT NULL
-                          CHECK (market_type IN ('official', 'user')),
-    created_by           VARCHAR(42) NOT NULL,
-    creator_fee_percent  NUMERIC(5,2) NOT NULL DEFAULT 0,
-    seed_nxt             NUMERIC(20,2) NOT NULL,
-    shares_yes           NUMERIC(30,8) NOT NULL,
-    shares_no            NUMERIC(30,8) NOT NULL,
-    liquidity_b          NUMERIC(20,2) NOT NULL,
-    status               VARCHAR(20) NOT NULL DEFAULT 'active'
-                          CHECK (status IN ('active', 'closed', 'resolved', 'invalid')),
-    outcome              VARCHAR(10)
-                          CHECK (outcome IS NULL OR outcome IN ('YES', 'NO', 'invalid')),
-    close_at             TIMESTAMPTZ NOT NULL,
-    resolved_at          TIMESTAMPTZ,
-    resolved_by          VARCHAR(42),
-    total_volume_nxt     NUMERIC(20,2) NOT NULL DEFAULT 0,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE nxmarket_positions (
-    id              BIGSERIAL PRIMARY KEY,
-    market_id       BIGINT NOT NULL REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
-    wallet_address  VARCHAR(42) NOT NULL,
-    outcome         VARCHAR(10) NOT NULL CHECK (outcome IN ('YES', 'NO')),
-    shares          NUMERIC(30,8) NOT NULL DEFAULT 0,
-    cost_basis      NUMERIC(20,2) NOT NULL DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (market_id, wallet_address, outcome)
-);
-
-CREATE TABLE nxmarket_trades (
-    id              BIGSERIAL PRIMARY KEY,
-    market_id       BIGINT NOT NULL REFERENCES nxmarket_markets(id) ON DELETE CASCADE,
-    wallet_address  VARCHAR(42) NOT NULL,
-    side            VARCHAR(10) NOT NULL CHECK (side IN ('buy', 'sell')),
-    outcome         VARCHAR(10) NOT NULL CHECK (outcome IN ('YES', 'NO')),
-    shares          NUMERIC(30,8) NOT NULL,
-    nxt_amount      NUMERIC(20,2) NOT NULL,
-    price           NUMERIC(10,6) NOT NULL,
-    penalty_nxt     NUMERIC(20,2) NOT NULL DEFAULT 0,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -143,9 +58,6 @@ def _raw_connect():
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()
@@ -185,11 +97,7 @@ def _seed_devs(rows):
         with conn.cursor() as cur:
             tid = 1
             for owner, bal in rows:
-                cur.execute(
-                    "INSERT INTO devs (token_id, owner_address, balance_nxt) "
-                    "VALUES (%s, %s, %s)",
-                    (tid, owner, bal),
-                )
+                seed_dev(cur, token_id=tid, owner_address=owner, balance_nxt=bal)
                 tid += 1
 
 

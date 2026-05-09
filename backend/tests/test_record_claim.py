@@ -35,6 +35,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_SCHEMA", "nx")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.middleware.correlation import CorrelationIdMiddleware  # noqa: E402
 from backend.api.routes import players as players_module  # noqa: E402
 from backend.services.event_parser import NXT_CLAIMED_TOPIC  # noqa: E402
@@ -47,41 +48,6 @@ TX_HASH = "0x" + "cd" * 32  # valid 66-char hash
 WEI = 10 ** 18
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TABLE players (
-    wallet_address VARCHAR(42) PRIMARY KEY
-);
-
-CREATE TABLE claim_history (
-    id             BIGSERIAL PRIMARY KEY,
-    player_address VARCHAR(42) NOT NULL REFERENCES players(wallet_address),
-    amount_gross   BIGINT NOT NULL,
-    amount_net     BIGINT NOT NULL,
-    fee_amount     BIGINT NOT NULL DEFAULT 0,
-    tx_hash        TEXT,
-    tx_block       BIGINT,
-    status         TEXT DEFAULT 'confirmed',
-    claimed_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX idx_claim_history_tx_hash_unique
-    ON claim_history(tx_hash)
-    WHERE tx_hash IS NOT NULL AND tx_hash <> '';
-
-CREATE TABLE admin_logs (
-    id             BIGSERIAL PRIMARY KEY,
-    correlation_id UUID,
-    event_type     TEXT NOT NULL,
-    wallet_address VARCHAR(42),
-    dev_token_id   BIGINT,
-    payload        JSONB,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 
 def _raw_connect():
@@ -130,9 +96,6 @@ def _receipt(*, status: str = "0x1", logs: Optional[List[Dict[str, Any]]] = None
 def app():
     conn = _raw_connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.init_db_pool(minconn=1, maxconn=4)
     fastapi_app = FastAPI()
@@ -155,8 +118,8 @@ def clean(app):
         with conn.cursor() as cur:
             cur.execute("TRUNCATE claim_history, admin_logs RESTART IDENTITY CASCADE")
             cur.execute("TRUNCATE players CASCADE")
-            cur.execute("INSERT INTO players (wallet_address) VALUES (%s), (%s)",
-                        (WALLET, OTHER_WALLET))
+            seed_player(cur, WALLET)
+            seed_player(cur, OTHER_WALLET)
 
 
 @pytest.fixture()

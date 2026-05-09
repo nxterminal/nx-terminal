@@ -30,6 +30,7 @@ os.environ.setdefault("NX_DB_PASS", "nxtest")
 os.environ.setdefault("NX_DB_NAME", "nxtest_db")
 
 from backend.api import deps  # noqa: E402
+from backend.tests._seed import seed_player, seed_dev  # noqa: E402
 from backend.api.routes import streaks as streaks_route  # noqa: E402
 from backend.api.routes.streaks import (  # noqa: E402
     CYCLE_LENGTH,
@@ -83,56 +84,6 @@ def test_reward_cycle_values():
 # ---------------------------------------------------------------------------
 
 
-MINIMAL_SCHEMA = """
-DROP SCHEMA IF EXISTS nx CASCADE;
-CREATE SCHEMA nx;
-SET search_path TO nx;
-
-CREATE TYPE archetype_enum AS ENUM (
-    '10X_DEV','LURKER','DEGEN','GRINDER',
-    'INFLUENCER','HACKTIVIST','FED','SCRIPT_KIDDIE'
-);
-CREATE TYPE corporation_enum AS ENUM (
-    'CLOSED_AI','MISANTHROPIC','SHALLOW_MIND',
-    'ZUCK_LABS','Y_AI','MISTRIAL_SYSTEMS'
-);
-CREATE TYPE dev_status_enum AS ENUM ('active','resting','frozen','on_mission');
-
-CREATE TABLE players (
-    wallet_address TEXT PRIMARY KEY,
-    corporation corporation_enum NOT NULL DEFAULT 'CLOSED_AI'
-);
-
-CREATE TABLE devs (
-    token_id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    owner_address TEXT NOT NULL REFERENCES players(wallet_address),
-    archetype archetype_enum NOT NULL DEFAULT '10X_DEV',
-    balance_nxt BIGINT NOT NULL DEFAULT 0,
-    total_earned BIGINT NOT NULL DEFAULT 0,
-    status dev_status_enum NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE login_streaks (
-    wallet_address VARCHAR(42) PRIMARY KEY,
-    current_streak INTEGER NOT NULL DEFAULT 0,
-    longest_streak INTEGER NOT NULL DEFAULT 0,
-    last_claim_at TIMESTAMPTZ,
-    total_claimed_nxt BIGINT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE notifications (
-    id BIGSERIAL PRIMARY KEY,
-    player_address TEXT NOT NULL,
-    type TEXT NOT NULL,
-    title TEXT NOT NULL,
-    body TEXT,
-    read BOOLEAN NOT NULL DEFAULT false,
-    dev_id INT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-"""
 
 
 WALLET = "0x" + "c" * 40
@@ -153,9 +104,6 @@ def _connect():
 def schema_and_pool():
     conn = _connect()
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(MINIMAL_SCHEMA)
-    conn.close()
 
     deps.DB_HOST = os.environ["NX_DB_HOST"]
     deps.DB_PORT = int(os.environ["NX_DB_PORT"])
@@ -177,13 +125,8 @@ def clean(monkeypatch):
             "TRUNCATE notifications, login_streaks, devs, players "
             "RESTART IDENTITY CASCADE"
         )
-        cur.execute(
-            "INSERT INTO players (wallet_address) VALUES (%s)", (WALLET,)
-        )
-        cur.execute(
-            "INSERT INTO devs (token_id, name, owner_address) VALUES (1, 'dev_a', %s)",
-            (WALLET,),
-        )
+        seed_player(cur, WALLET,)
+        seed_dev(cur, token_id=1, owner_address=WALLET, name="dev_a")
     conn.close()
     # Shadow-write path references nxt_ledger which isn't in our minimal schema.
     monkeypatch.setattr(streaks_route, "is_shadow_write_enabled", lambda: False)

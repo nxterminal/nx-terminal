@@ -662,6 +662,37 @@ def run_auto_migrations() -> None:
                         THEN ALTER TYPE action_enum ADD VALUE 'HACK_MAINFRAME'; END IF;
                     END $$;
                 """)
+                # Phase 5.3.5b — enum values that lived only in
+                # migration_mechanics.sql / migration_missions.sql and
+                # were never absorbed into auto-migration. Production
+                # has them via historical manual psql -f runs; a fresh
+                # DB built from migrate.py alone was missing them. Each
+                # is referenced from production code (verified by grep
+                # at PR time): 'HACK_RAID' in shop.py (raid INSERTs),
+                # 'on_mission' in missions/admin/achievements/shop/
+                # streaks/user/sprkls (status checks + transitions),
+                # 'MISSION_START' in missions.py.
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'HACK_RAID'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'action_enum'))
+                        THEN ALTER TYPE action_enum ADD VALUE 'HACK_RAID'; END IF;
+                    END $$;
+                """)
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MISSION_START'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'action_enum'))
+                        THEN ALTER TYPE action_enum ADD VALUE 'MISSION_START'; END IF;
+                    END $$;
+                """)
+                cur.execute("""
+                    DO $$ BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'on_mission'
+                                       AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'dev_status_enum'))
+                        THEN ALTER TYPE dev_status_enum ADD VALUE 'on_mission'; END IF;
+                    END $$;
+                """)
                 # Ensure location_enum has all values the engine might use
                 cur.execute("""
                     DO $$ BEGIN
