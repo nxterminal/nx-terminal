@@ -476,6 +476,16 @@ CREATE TABLE IF NOT EXISTS balance_snapshots (
     UNIQUE(wallet_address, snapshot_date)
 );
 
+-- Phase 5.5.2: existing production rows pre-date this column.
+-- The CREATE TABLE above is a no-op on a stale prod table that
+-- still lacks `snapshot_date`, so the CREATE INDEX below would
+-- fail with `UndefinedColumn` and abort the whole bootstrap
+-- transaction. This idempotent ADD COLUMN heals the legacy table.
+-- Stays NULLABLE — retroactively enforcing NOT NULL would require
+-- backfilling existing rows, which is out of scope for the fix.
+ALTER TABLE balance_snapshots
+    ADD COLUMN IF NOT EXISTS snapshot_date DATE;
+
 CREATE INDEX IF NOT EXISTS idx_snapshots_wallet ON balance_snapshots(wallet_address, snapshot_date DESC);
 
 -- ============================================================
@@ -599,13 +609,71 @@ ORDER BY a.weighted_votes DESC;
 # CREATE INDEX IF NOT EXISTS are all idempotent; CREATE TRIGGER is
 # guarded by DROP TRIGGER IF EXISTS.
 #
-# Two transactions (preserving the original main.py shape):
-#   1. Bootstrap + main migrations (this is where schema lives).
-#   2. Broadcast emails (operational backfills, kept separate so a
-#      broadcast failure doesn't roll back the schema).
+# Phase 5.5.2 transaction strategy (replaces the prior all-or-nothing
+# single transaction that caused three documented poisoning incidents):
 #
-# Both wrapped in try/except + log.warning so a startup failure
-# doesn't crash the API process.
+#   1. Bootstrap (single multi-statement SQL): its OWN transaction.
+#      Commits on success; rolls back + skips later phases on failure.
+#      Schema source-of-truth — partial-apply isn't safe here.
+#
+#   2. Per-phase migrations: run under `conn.autocommit = True` so
+#      each `cur.execute(...)` commits independently. Wrapped via the
+#      `_SafeCursorProxy` so a failure in step N logs a WARNING +
+#      continues to step N+1 instead of aborting the connection's
+#      transaction (which would have poisoned subsequent steps under
+#      the old design). Idempotency guards on every CREATE/ALTER make
+#      per-step independence safe.
+#
+#   3. Welcome notifications backfill: back to transactional mode
+#      because it reads `system_broadcasts` flag then conditionally
+#      writes the backfill — single commit boundary is the right
+#      shape.
+#
+# Outer try/except remains as a final safety net so a startup
+# migration disaster never crashes the API process.
+
+
+class _SafeCursorProxy:
+    """Cursor proxy used during the autocommit per-phase phase of
+    `run_auto_migrations`. Catches exceptions from `execute`, logs a
+    WARNING with an SQL excerpt, and appends to a shared warnings
+    list. fetchone/fetchall delegate to the real cursor.
+
+    Why a proxy instead of refactoring every `cur.execute(...)` call
+    to a helper function: keeps the structural change isolated. The
+    ~160 existing per-phase call sites stay verbatim; only their
+    failure-mode changes (continue past failures, surface in a
+    summary log). Read-side calls in the per-phase block are
+    write-internal (subqueries inside DML / DO blocks); the welcome
+    backfill section that does `SELECT ... fetchone()` runs on a
+    separate, unwrapped cursor where None-on-empty semantics are
+    important.
+    """
+
+    def __init__(self, real_cursor, warnings_list):
+        self._cur = real_cursor
+        self._warnings = warnings_list
+
+    def execute(self, sql, params=None):
+        try:
+            if params is None:
+                self._cur.execute(sql)
+            else:
+                self._cur.execute(sql, params)
+        except Exception as e:
+            excerpt = " ".join(str(sql).split())[:120]
+            log.warning(
+                "⚠️ Migration step failed (continuing): %s... — %s",
+                excerpt, e,
+            )
+            self._warnings.append((excerpt, str(e)))
+
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
 
 def run_auto_migrations() -> None:
     """Apply the bootstrap schema + every per-phase migration. Idempotent.
@@ -613,13 +681,35 @@ def run_auto_migrations() -> None:
     Uses `backend.api.deps.get_db()` internally — caller must have
     initialized the DB pool via `init_db_pool()` first.
     """
+    warnings_list: list[tuple[str, str]] = []
+
+    # ── Section 1: bootstrap (single transaction). ─────────────────
+    # The bootstrap is one multi-statement SQL string; if any
+    # statement inside fails, the whole bootstrap rolls back. That's
+    # the desired behaviour for the schema source-of-truth — a
+    # partially-bootstrapped DB is worse than an un-bootstrapped one.
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                # Step 1: bootstrap schema (formerly schema.sql).
                 cur.execute(_BOOTSTRAP_SQL)
+            conn.commit()
+        log.info("✅ Bootstrap schema applied")
+    except Exception as e:
+        log.warning(
+            "⚠️ Bootstrap failed; per-phase migrations skipped: %s", e,
+        )
+        return
 
-                # Step 2: per-phase migrations (verbatim from prior
+    # ── Sections 2 + 3: per-phase + welcome backfill on one conn. ──
+    try:
+        with get_db() as conn:
+            # Per-phase: autocommit so each step is its own
+            # transaction. A failure in step N is logged via the
+            # proxy but never poisons step N+1.
+            conn.autocommit = True
+            with conn.cursor() as _real_cur:
+                cur = _SafeCursorProxy(_real_cur, warnings_list)
+                # Per-phase migrations (verbatim from prior
                 # main.py:_run_auto_migrations body).
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS caffeine SMALLINT NOT NULL DEFAULT 50")
                 cur.execute("ALTER TABLE devs ADD COLUMN IF NOT EXISTS social_vitality SMALLINT NOT NULL DEFAULT 50")
@@ -1510,11 +1600,24 @@ def run_auto_migrations() -> None:
                     "CREATE INDEX IF NOT EXISTS idx_rate_limit_counters_expires "
                     "ON rate_limit_counters (expires_at)"
                 )
-                # Welcome notifications backfill. Phase 5.3.5: hoisted
-                # the system_broadcasts CREATE TABLE above the SELECT so
-                # a fresh DB doesn't abort the transaction on
-                # "relation does not exist". Production never hit this
-                # because earlier runs accumulated the table; tests do.
+                # End of per-phase migrations. The `_SafeCursorProxy`
+                # has captured any per-step failures in
+                # `warnings_list`; summary log happens after the
+                # welcome backfill below.
+
+            # ── Section 3: welcome notifications backfill. ─────────
+            # Back to transactional mode (autocommit=False) because
+            # this block reads the `system_broadcasts` flag and then
+            # conditionally writes both the backfill notifications
+            # AND the flag — single commit boundary keeps the two
+            # writes from drifting if a crash happens between them.
+            # Uses a fresh (unwrapped) cursor so `cur.fetchone()`
+            # returns rows naturally for the flag check.
+            conn.autocommit = False
+            with conn.cursor() as cur:
+                # Phase 5.3.5: hoisted the system_broadcasts CREATE
+                # TABLE above the SELECT so a fresh DB doesn't abort
+                # the transaction on "relation does not exist".
                 cur.execute("CREATE TABLE IF NOT EXISTS system_broadcasts (id VARCHAR(50) PRIMARY KEY, sent_at TIMESTAMPTZ DEFAULT NOW())")
                 cur.execute("SELECT 1 FROM system_broadcasts WHERE id = 'welcome_backfill'")
                 if not cur.fetchone():
@@ -1533,9 +1636,22 @@ def run_auto_migrations() -> None:
                     cur.execute("INSERT INTO system_broadcasts (id) VALUES ('welcome_backfill') ON CONFLICT DO NOTHING")
                     log.info("✅ Backfilled welcome notifications for existing players")
             conn.commit()
-        log.info("✅ Auto-migrations complete")
     except Exception as e:
+        # Outer safety net — covers anything unexpected outside the
+        # per-step / per-section handlers above. The Phase 5.5.2
+        # restructure means individual step failures land in
+        # `warnings_list` rather than here.
         log.warning(f"⚠️ Auto-migration warning: {e}")
+
+    # ── Final summary. ─────────────────────────────────────────────
+    if warnings_list:
+        log.info(
+            "✅ Auto-migrations complete — %d per-phase step(s) "
+            "logged a warning (see lines above)",
+            len(warnings_list),
+        )
+    else:
+        log.info("✅ Auto-migrations complete")
 
     # Broadcast emails (separate transaction so main migrations aren't affected)
     try:
