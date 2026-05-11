@@ -1488,6 +1488,28 @@ def run_auto_migrations() -> None:
                     "CREATE INDEX IF NOT EXISTS idx_llm_usage_service "
                     "ON llm_usage_daily (service)"
                 )
+                # Phase 5.5 (migration): Postgres-backed rate-limit
+                # counters. Replaces a Redis-only implementation that
+                # was silently fail-open in production (no Redis ever
+                # provisioned on Render). One row per (namespace, key);
+                # callers filter expired rows via WHERE expires_at >
+                # NOW() so the absence of a periodic cleanup job just
+                # means table bloat, not incorrect rate-limit
+                # decisions. Index on expires_at keeps a future cleanup
+                # job (DELETE WHERE expires_at < NOW()) cheap.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS rate_limit_counters (
+                        namespace   TEXT NOT NULL,
+                        key         TEXT NOT NULL,
+                        count       INTEGER NOT NULL DEFAULT 0,
+                        expires_at  TIMESTAMPTZ NOT NULL,
+                        PRIMARY KEY (namespace, key)
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_counters_expires "
+                    "ON rate_limit_counters (expires_at)"
+                )
                 # Welcome notifications backfill. Phase 5.3.5: hoisted
                 # the system_broadcasts CREATE TABLE above the SELECT so
                 # a fresh DB doesn't abort the transaction on

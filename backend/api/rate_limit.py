@@ -1,90 +1,148 @@
-"""Rate limiters backed by Redis.
+"""Rate limiters backed by Postgres.
 
-Every uvicorn worker reads and writes the same Redis keys, so
-"1 request per wallet per second" is a single system-wide budget —
-not a per-worker one multiplied by 8.
+Phase 5.5 migration (post PR #391): the previous Redis-backed
+implementation was silently fail-open in production because Redis
+was never provisioned on Render. Every limiter (per-IP nx_souls
+caps, per-(wallet, dev) cooldowns, shop limiter, global 120/min IP
+cap, the new per-wallet 30/day cap) had been a no-op since
+deployment. This module is the migration to the database that is
+provisioned, monitored, and reliable.
 
-Two shapes are preserved from the old in-memory implementation:
+The public API surface is unchanged so route handlers keep working
+without edits:
 
-- ``RateLimiter.check(key)`` — single-token cooldown, raises
-  ``HTTPException(429)`` on limit.
-- ``SlidingWindowLimiter.check(key)`` — N requests per window,
-  returns ``True``/``False``.
+  - ``RateLimiter(cooldown_seconds, namespace).check(key)`` —
+    single-token cooldown stamp; raises ``HTTPException(429)`` while
+    still in cooldown.
+  - ``SlidingWindowLimiter(max_requests, window_seconds, namespace)``
+    — N requests per fixed window per key; returns True/False.
 
-Each limiter is given a ``namespace`` at construction so two
-limiters hitting the same ``key`` don't collide in the shared Redis
-keyspace.
+    Note on the rename-without-rename: the previous Redis ZSET
+    implementation was a precise rolling-window counter. The
+    Postgres implementation is a fixed-window counter with the same
+    ``max_requests`` and ``window_seconds`` values — the class name
+    is kept so call sites don't churn, but the semantic shift is
+    worth knowing: a user can in the worst case feel ``2 ×
+    max_requests`` over a window boundary. For the limits in use
+    today (5/min, 60/hr, 200/day on chat; 120/min global IP) this
+    is acceptable headroom — the per-wallet daily cap and the
+    global $1/day LLM ceiling bound the real cost.
 
-If Redis is unreachable, both check() methods **fail open** (allow
-the request) so a Redis outage never bricks the API.
+  - ``peek_wallet_daily_count`` / ``increment_wallet_daily_count``
+    — UTC-day fixed counter keyed by ``wallet:YYYY-MM-DD`` for the
+    30/day per-wallet cap.
+
+Storage: every counter lives in the ``rate_limit_counters`` table
+(see backend/db/migrate.py). One row per ``(namespace, key)``,
+expires_at column carries the row's logical TTL; readers filter
+expired rows via ``WHERE expires_at > NOW()`` so the lack of a
+periodic cleanup job just causes table bloat, not incorrect
+decisions.
+
+Fail-safe behaviour: every method swallows DB errors and fails
+**open** (allows the request), matching the pre-migration Redis
+behaviour. A DB outage degrading rate-limits to "no limit" is the
+right failure mode — the global $1/day LLM cost ceiling
+(``llm_usage_daily`` table) is the absolute backstop.
 """
 
 from __future__ import annotations
 
 import logging
-import time
-import uuid
-from datetime import date, datetime, time as dt_time, timedelta, timezone
-from typing import Optional
 
 from fastapi import HTTPException
 
-from backend.api.deps import get_sync_redis
+from backend.api.deps import get_db
 
 
 log = logging.getLogger(__name__)
 
-KEY_PREFIX = "ratelimit"
-
-
-def _key(namespace: str, key: str) -> str:
-    return f"{KEY_PREFIX}:{namespace}:{key}"
-
 
 class RateLimiter:
     """Single-token cooldown per key. Raises 429 if the key was hit
-    within ``cooldown_seconds``."""
+    within ``cooldown_seconds``.
+
+    Postgres implementation: one row per (namespace, key). On a
+    fresh attempt we INSERT a row with ``expires_at = NOW() +
+    cooldown``. On an already-rate-limited attempt the ON CONFLICT
+    WHERE clause refuses the UPDATE (because the existing row's
+    expires_at is still in the future) and RETURNING comes back
+    empty — we recognise that as "still cooling down" and raise.
+    """
 
     def __init__(self, cooldown_seconds: float, namespace: str):
         self._cooldown = max(1, int(cooldown_seconds))
         self._namespace = namespace
 
     def check(self, key: str) -> None:
-        redis_client = get_sync_redis()
-        if redis_client is None:
-            return  # fail open
-
-        full = _key(self._namespace, key)
         try:
-            # SET NX EX is atomic: either we claim the cooldown slot
-            # or we bounce off an existing one.
-            ok = redis_client.set(full, "1", nx=True, ex=self._cooldown)
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    # Single atomic statement: INSERT a fresh
+                    # cooldown stamp if no row exists OR the existing
+                    # row has already expired. If a still-active row
+                    # exists, the WHERE clause makes the UPDATE a
+                    # no-op and RETURNING is empty — we fall through
+                    # to the "still in cooldown" branch below.
+                    cur.execute(
+                        """
+                        INSERT INTO rate_limit_counters
+                            (namespace, key, count, expires_at)
+                        VALUES (%s, %s, 1, NOW() + (%s * INTERVAL '1 second'))
+                        ON CONFLICT (namespace, key) DO UPDATE
+                            SET count = 1,
+                                expires_at = EXCLUDED.expires_at
+                            WHERE rate_limit_counters.expires_at <= NOW()
+                        RETURNING expires_at
+                        """,
+                        (self._namespace, key, self._cooldown),
+                    )
+                    claimed = cur.fetchone()
+                    if claimed is not None:
+                        return  # claimed the slot
+
+                    # Still in cooldown — read remaining TTL for the
+                    # 429 message. Same connection so we see the row
+                    # the previous statement bounced off.
+                    cur.execute(
+                        """
+                        SELECT EXTRACT(EPOCH FROM (expires_at - NOW())) AS ttl
+                          FROM rate_limit_counters
+                         WHERE namespace = %s AND key = %s
+                        """,
+                        (self._namespace, key),
+                    )
+                    row = cur.fetchone()
         except Exception as exc:  # noqa: BLE001
-            log.error("rate_limit.redis_error namespace=%s key=%s error=%s",
+            log.error("rate_limit.db_error namespace=%s key=%s error=%s",
                       self._namespace, key, exc)
             return  # fail open
 
-        if ok:
-            return
-
-        # Still in the cooldown window.
-        try:
-            ttl = redis_client.ttl(full)
-        except Exception:  # noqa: BLE001
-            ttl = self._cooldown
-        ttl = ttl if (isinstance(ttl, int) and ttl > 0) else self._cooldown
+        ttl = None
+        if row is not None:
+            try:
+                ttl = int(float(row["ttl"]))
+            except (TypeError, ValueError, KeyError):
+                ttl = None
+        ttl = ttl if (ttl is not None and ttl > 0) else self._cooldown
         raise HTTPException(429, f"Rate limited. Try again in {ttl}s.")
 
 
 class SlidingWindowLimiter:
-    """``max_requests`` per ``window_seconds`` per key. Returns True
-    if the request is allowed, False if over limit.
+    """``max_requests`` per ``window_seconds`` per key. Returns
+    True if the request is allowed, False if over limit.
 
-    Implementation: a Redis sorted set scored by timestamp. Each
-    request prunes old entries, counts what remains, adds itself,
-    and (if the post-add count is over limit) removes its own entry
-    as a rollback. The pipeline executes atomically on the Redis
-    side since Redis is single-threaded."""
+    Implementation note (Phase 5.5 migration): the previous Redis
+    ZSET implementation was a true rolling window. The Postgres
+    implementation is a fixed window with the same parameters —
+    when the first request lands the row's ``expires_at`` is set
+    to ``NOW() + window_seconds`` and subsequent requests in that
+    window INCR the counter. When the row expires the next request
+    resets it. Worst-case effective rate is ``2 × max_requests``
+    across a window boundary — acceptable for the limits in use
+    today (5/min, 60/hr, 200/day) because the per-(wallet, dev)
+    cooldown and the daily caps bound real cost.
+    """
 
     def __init__(self, max_requests: int, window_seconds: float, namespace: str):
         self._max = int(max_requests)
@@ -92,37 +150,169 @@ class SlidingWindowLimiter:
         self._namespace = namespace
 
     def check(self, key: str) -> bool:
-        redis_client = get_sync_redis()
-        if redis_client is None:
-            return True  # fail open
-
-        full = _key(self._namespace, key)
-        now = time.time()
-        cutoff = now - self._window
-        member = f"{now:.6f}:{uuid.uuid4().hex[:8]}"
-
         try:
-            pipe = redis_client.pipeline()
-            pipe.zremrangebyscore(full, 0, cutoff)
-            pipe.zcard(full)
-            pipe.zadd(full, {member: now})
-            pipe.expire(full, self._window + 10)
-            results = pipe.execute()
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    # Atomic INSERT-or-INCR within the current
+                    # fixed window. Two cases handled in one
+                    # statement:
+                    #   row missing or expired → reset to 1 with a
+                    #                            fresh expires_at
+                    #   row active             → increment, keep
+                    #                            expires_at
+                    cur.execute(
+                        """
+                        INSERT INTO rate_limit_counters
+                            (namespace, key, count, expires_at)
+                        VALUES (%s, %s, 1, NOW() + (%s * INTERVAL '1 second'))
+                        ON CONFLICT (namespace, key) DO UPDATE
+                            SET count = CASE
+                                    WHEN rate_limit_counters.expires_at <= NOW() THEN 1
+                                    ELSE rate_limit_counters.count + 1
+                                END,
+                                expires_at = CASE
+                                    WHEN rate_limit_counters.expires_at <= NOW() THEN EXCLUDED.expires_at
+                                    ELSE rate_limit_counters.expires_at
+                                END
+                        RETURNING count
+                        """,
+                        (self._namespace, key, self._window),
+                    )
+                    row = cur.fetchone()
+                    count = int(row["count"]) if row else 0
+                    if count > self._max:
+                        # Over limit. Roll back our own increment
+                        # so a long-running over-limit IP doesn't
+                        # keep climbing the counter (and so the row
+                        # caps at max + 1 visible during the moment
+                        # the request is rejected — easier to read
+                        # in logs).
+                        cur.execute(
+                            """
+                            UPDATE rate_limit_counters
+                               SET count = count - 1
+                             WHERE namespace = %s AND key = %s
+                            """,
+                            (self._namespace, key),
+                        )
+                        return False
+                    return True
         except Exception as exc:  # noqa: BLE001
-            log.error("rate_limit.redis_error namespace=%s key=%s error=%s",
+            log.error("rate_limit.db_error namespace=%s key=%s error=%s",
                       self._namespace, key, exc)
             return True  # fail open
 
-        count_before_add = int(results[1])
-        if count_before_add >= self._max:
-            # Over limit — roll back our add so it doesn't count
-            # against future requests.
-            try:
-                redis_client.zrem(full, member)
-            except Exception:  # noqa: BLE001
-                pass
-            return False
-        return True
+
+# ---------------------------------------------------------------------------
+# Per-wallet daily counter (Phase 5.5)
+# ---------------------------------------------------------------------------
+#
+# Layered on TOP of the per-IP caps below. Same wallet hitting from
+# multiple IPs still shares the 30/day budget; same IP rotating
+# wallets still hits the IP caps. Counter is keyed by wallet+UTC
+# date so it resets at UTC midnight — user-mental-model "daily
+# limit" rather than a sliding 24h window.
+#
+# Storage: same rate_limit_counters table; the date suffix on the
+# key means each new UTC day is a new row with its own expires_at.
+
+WALLET_DAILY_LIMIT: int = 30
+_WALLET_DAY_NS: str = "souls_chat_wallet_day"
+
+
+def _utc_today_str() -> str:
+    """Today's UTC date as YYYY-MM-DD. Kept as a separate helper so
+    tests can monkeypatch it for the daily-reset case."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _seconds_until_utc_midnight() -> int:
+    """Seconds remaining until the next UTC 00:00. Used as the TTL
+    on the per-wallet counter so the key auto-expires at day
+    rollover even when a cleanup job isn't running. Floored at 60s
+    so a request landing seconds before midnight doesn't end up
+    with a 1-second TTL that races the next request."""
+    from datetime import datetime, time as dt_time, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    tomorrow_midnight = datetime.combine(
+        (now + timedelta(days=1)).date(), dt_time.min, tzinfo=timezone.utc,
+    )
+    return max(int((tomorrow_midnight - now).total_seconds()), 60)
+
+
+def wallet_day_key(wallet: str, today: str | None = None) -> str:
+    """Build the Postgres key string for a wallet+UTC-date pair.
+    Exposed for tests that want to inspect / reset the counter
+    directly."""
+    if today is None:
+        today = _utc_today_str()
+    return f"{wallet.lower()}:{today}"
+
+
+def peek_wallet_daily_count(wallet: str, today: str | None = None) -> int:
+    """Return the current per-wallet daily count for the given UTC
+    date, or 0 on DB outage (fail-open consistent with the rest of
+    this module). Used by the chat route to short-circuit BEFORE
+    the LLM call when the wallet is already at limit."""
+    key = wallet_day_key(wallet, today)
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT count FROM rate_limit_counters
+                     WHERE namespace = %s AND key = %s
+                       AND expires_at > NOW()
+                    """,
+                    (_WALLET_DAY_NS, key),
+                )
+                row = cur.fetchone()
+                return int(row["count"]) if row else 0
+    except Exception as exc:  # noqa: BLE001
+        log.error("rate_limit.db_error namespace=%s wallet=%s error=%s",
+                  _WALLET_DAY_NS, wallet, exc)
+        return 0
+
+
+def increment_wallet_daily_count(wallet: str, today: str | None = None) -> int:
+    """Atomically increment and return the post-increment count.
+    On a fresh day this inserts a new row with expires_at anchored
+    to the next UTC midnight; subsequent increments within the day
+    advance the counter without resetting the TTL.
+
+    Fail-open: returns 0 on DB outage so a transient outage never
+    blocks chat. Real protection at scale is the IP rate limiter +
+    global LLM cost ceiling."""
+    key = wallet_day_key(wallet, today)
+    ttl = _seconds_until_utc_midnight()
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO rate_limit_counters
+                        (namespace, key, count, expires_at)
+                    VALUES (%s, %s, 1, NOW() + (%s * INTERVAL '1 second'))
+                    ON CONFLICT (namespace, key) DO UPDATE
+                        SET count = CASE
+                                WHEN rate_limit_counters.expires_at <= NOW() THEN 1
+                                ELSE rate_limit_counters.count + 1
+                            END,
+                            expires_at = CASE
+                                WHEN rate_limit_counters.expires_at <= NOW() THEN EXCLUDED.expires_at
+                                ELSE rate_limit_counters.expires_at
+                            END
+                    RETURNING count
+                    """,
+                    (_WALLET_DAY_NS, key, ttl),
+                )
+                row = cur.fetchone()
+                return int(row["count"]) if row else 0
+    except Exception as exc:  # noqa: BLE001
+        log.error("rate_limit.db_error namespace=%s wallet=%s error=%s",
+                  _WALLET_DAY_NS, wallet, exc)
+        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -135,129 +325,17 @@ chat_limiter = RateLimiter(cooldown_seconds=10, namespace="chat")          # 1 c
 shop_limiter = RateLimiter(cooldown_seconds=1, namespace="shop")           # 1 purchase per wallet per 1s
 comment_limiter = RateLimiter(cooldown_seconds=60, namespace="nxmarket_comment")  # 1 comment per wallet per 60s
 
-# Global per-IP rate limiter: 120 requests per 60 seconds
+# Global per-IP rate limiter: 120 requests per 60 seconds (fixed window)
 global_ip_limiter = SlidingWindowLimiter(
     max_requests=120,
     window_seconds=60,
     namespace="global_ip",
 )
 
-# ---------------------------------------------------------------------------
-# Per-wallet daily counter (Phase 5.5)
-# ---------------------------------------------------------------------------
-#
-# Layered on TOP of the per-IP caps below. Same wallet hitting from
-# multiple IPs still shares the 30/day budget; same IP rotating
-# wallets still hits the IP caps. Counter is keyed by wallet+UTC date
-# so it resets at UTC midnight — the user-mental-model "daily limit"
-# rather than a sliding 24h window.
-#
-# Redis INCR + EXPIRE keeps the bookkeeping in the same store the
-# rest of this module uses; no new DB table required (DB-backed
-# alternative would mean adding a wallet_quota table, which the
-# brief explicitly rejects).
-#
-# Returns the post-increment count from `increment_and_get`. Callers
-# compare against `WALLET_DAILY_LIMIT` themselves so the comparison
-# point is visible at the call site — easier to audit than "did this
-# function reject us or not".
-
-WALLET_DAILY_LIMIT: int = 30
-_WALLET_DAY_NS: str = "souls_chat_wallet_day"
-
-
-def _utc_today() -> date:
-    return datetime.now(timezone.utc).date()
-
-
-def _seconds_until_utc_midnight(now: datetime | None = None) -> int:
-    """Seconds remaining until the next UTC 00:00. Used as the TTL on
-    the per-wallet counter so the key auto-expires at day rollover
-    (instead of leaking forever per wallet). Adds a small floor of
-    60s so a request landing seconds before midnight doesn't end up
-    with a 1-second TTL that races the next request."""
-    if now is None:
-        now = datetime.now(timezone.utc)
-    tomorrow_midnight = datetime.combine(
-        (now + timedelta(days=1)).date(), dt_time.min, tzinfo=timezone.utc,
-    )
-    seconds = int((tomorrow_midnight - now).total_seconds())
-    return max(seconds, 60)
-
-
-def wallet_day_key(wallet: str, today: date | None = None) -> str:
-    """Build the Redis key for a wallet+UTC-date pair. Exposed for
-    tests that want to inspect / reset the counter directly."""
-    if today is None:
-        today = _utc_today()
-    return _key(_WALLET_DAY_NS, f"{wallet.lower()}:{today.isoformat()}")
-
-
-def peek_wallet_daily_count(wallet: str, today: date | None = None) -> int:
-    """Return the current count for the wallet's UTC day, or 0 on
-    Redis outage (fail-open consistent with the rest of this module).
-    Used by the chat route to short-circuit BEFORE the LLM call when
-    the wallet is already at limit."""
-    redis_client = get_sync_redis()
-    if redis_client is None:
-        return 0
-    try:
-        val = redis_client.get(wallet_day_key(wallet, today))
-    except Exception as exc:  # noqa: BLE001
-        log.error("rate_limit.redis_error namespace=%s wallet=%s error=%s",
-                  _WALLET_DAY_NS, wallet, exc)
-        return 0
-    try:
-        return int(val) if val is not None else 0
-    except (TypeError, ValueError):
-        return 0
-
-
-def increment_wallet_daily_count(wallet: str, today: date | None = None) -> int:
-    """Atomically increment and return the post-increment count.
-    Sets TTL to next-UTC-midnight on the first increment of the day
-    via SET-then-INCR pipeline; subsequent INCRs leave TTL alone so
-    the key still expires at the original midnight boundary.
-
-    Fail-open: returns 0 on Redis outage so a transient outage never
-    blocks chat. Real protection at scale is the IP rate limiter +
-    global LLM cost ceiling."""
-    redis_client = get_sync_redis()
-    if redis_client is None:
-        return 0
-    key = wallet_day_key(wallet, today)
-    ttl = _seconds_until_utc_midnight()
-    try:
-        # INCR first (atomic). If the key was missing, INCR creates
-        # it at 1 with no TTL — so we follow with EXPIRE NX (set TTL
-        # only if no TTL exists yet) to anchor it to UTC midnight.
-        # EXPIRE NX is Redis 7.0+; if unavailable, fall back to a
-        # plain EXPIRE (cheap to call repeatedly within the day —
-        # idempotent in effect).
-        new_count = int(redis_client.incr(key))
-        try:
-            redis_client.expire(key, ttl, nx=True)
-        except TypeError:
-            # Older redis-py without the nx= kwarg — plain EXPIRE is
-            # fine; resetting the TTL each day still lands at the
-            # same UTC-midnight target because we recompute ttl each
-            # request.
-            redis_client.expire(key, ttl)
-        return new_count
-    except Exception as exc:  # noqa: BLE001
-        log.error("rate_limit.redis_error namespace=%s wallet=%s error=%s",
-                  _WALLET_DAY_NS, wallet, exc)
-        return 0
-
-
-# ---------------------------------------------------------------------------
-# Per-IP sliding-window caps on the chat endpoint
-# ---------------------------------------------------------------------------
-
 # NX Souls chat endpoint — three layered IP-based caps. The chat
 # endpoint can drain real money on the OpenRouter paid tier, so we run
 # tighter limits than `global_ip_limiter` here on top of (not instead
-# of) the per-(wallet, dev) cool-down. Each window is its own limiter
+# of) the per-(wallet, dev) cool-down. Each window is its own counter
 # so a burst of 5 within a minute followed by 5 more in the next minute
 # still trips the hour cap.
 souls_ip_per_minute = SlidingWindowLimiter(

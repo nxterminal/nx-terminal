@@ -8,10 +8,12 @@ These cover the route-level wiring added in PR #350 follow-up:
   - per-wallet cooldown hit logs ip + wallet
   - successful chat carries the quota block
 
-DB is stubbed at the connection-pool boundary so no Postgres is
-needed. The LLM router is stubbed at module level so no HTTP is made.
-Rate limiters are bypassed (`get_sync_redis` returns None → fail-open)
-unless a test specifically wants to assert the cooldown log.
+DB is stubbed at the connection-pool boundary so the route's main
+SQL doesn't need a real Postgres. The LLM router is stubbed at
+module level so no HTTP is made. Rate limiters are Postgres-backed
+(Phase 5.5 migration); since this test's stub_db intercepts get_db()
+the rate-limit queries either no-op on the stub or are bypassed via
+per-test monkeypatching of the specific limiter being asserted.
 """
 
 from __future__ import annotations
@@ -29,8 +31,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from backend.api import deps as deps_module  # noqa: E402
-from backend.api import rate_limit as rate_limit_module  # noqa: E402
 from backend.api.routes import nx_souls as nx_souls_route  # noqa: E402
 from backend.services.nx_souls import llm_router as llm_router_module  # noqa: E402
 from backend.services.nx_souls import persona as persona_module  # noqa: E402
@@ -159,12 +159,34 @@ def make_program(*, owner=OWNER, rarity="common", quota_used=0,
 # ─── Fixtures ─────────────────────────────────────────────────────────────
 
 
+class _AllowAllRateLimiter:
+    """No-op stand-in for RateLimiter — check() always allows."""
+    def check(self, key):  # noqa: ARG002
+        return None
+
+
+class _AllowAllSlidingWindow:
+    """No-op stand-in for SlidingWindowLimiter — check() always allows."""
+    def check(self, key):  # noqa: ARG002
+        return True
+
+
 @pytest.fixture(autouse=True)
-def _patch_redis_off(monkeypatch):
-    """Force every rate-limiter to fail-open by reporting Redis as down,
-    so tests don't need a live Redis. Specific tests that want to assert
-    the cooldown log re-patch this on top."""
-    monkeypatch.setattr(deps_module, "get_sync_redis", lambda: None)
+def _bypass_rate_limits(monkeypatch):
+    """Phase 5.5 (migration) — the rate limiters live in Postgres now.
+    The route's `stub_db` only monkeypatches the route's `get_db`
+    binding, not `rate_limit.get_db`, so left alone the limiters
+    would race the real DB pool. Replace the shared limiter instances
+    + the per-wallet helper bindings with allow-all stubs so the
+    route runs cleanly. Tests that specifically want to ASSERT a
+    limit (cooldown log, IP-rate log, per-wallet cap) override the
+    relevant binding on top of this fixture."""
+    monkeypatch.setattr(nx_souls_route, "chat_limiter", _AllowAllRateLimiter())
+    monkeypatch.setattr(nx_souls_route, "souls_ip_per_minute", _AllowAllSlidingWindow())
+    monkeypatch.setattr(nx_souls_route, "souls_ip_per_hour", _AllowAllSlidingWindow())
+    monkeypatch.setattr(nx_souls_route, "souls_ip_per_day", _AllowAllSlidingWindow())
+    monkeypatch.setattr(nx_souls_route, "peek_wallet_daily_count", lambda _w: 0)
+    monkeypatch.setattr(nx_souls_route, "increment_wallet_daily_count", lambda _w: 1)
 
 
 @pytest.fixture
@@ -718,61 +740,55 @@ def test_chat_per_wallet_daily_limit_enforced(client, stub_db, stub_llm, monkeyp
     )
 
 
-class _FakeRedis:
-    """Minimal in-memory Redis stub for the per-wallet counter unit
-    tests. Implements just enough of the surface
-    (`incr`, `get`, `expire`) for `increment_wallet_daily_count` and
-    `peek_wallet_daily_count` to exercise their real code path."""
-
-    def __init__(self):
-        self.store: dict[str, int] = {}
-
-    def incr(self, key):
-        self.store[key] = int(self.store.get(key, 0)) + 1
-        return self.store[key]
-
-    def get(self, key):
-        val = self.store.get(key)
-        return None if val is None else str(val)
-
-    def expire(self, key, ttl, nx=None):  # noqa: ARG002 — match real sig
-        return True
-
-
-def test_chat_per_wallet_limit_resets_daily(monkeypatch):
+def test_chat_per_wallet_limit_resets_daily():
     """Counter is keyed by `wallet:UTC_date`, so advancing to a new
-    UTC day starts from zero. Tests the helpers directly — the chat
-    route uses these same functions, so verifying the keying scheme
-    here covers the route's reset behaviour without needing to mock
-    the clock end-to-end."""
+    UTC day starts from zero. Tests the helpers directly against the
+    real `rate_limit_counters` table — the chat route uses these
+    same functions, so verifying the keying scheme here covers the
+    route's reset behaviour without needing to mock the clock
+    end-to-end.
+
+    Uses a wallet address unique to this test so rows don't collide
+    with concurrent tests or stale state. The `today` parameter is
+    passed explicitly so we can test "tomorrow" without waiting."""
     from datetime import date, timedelta
-    from backend.api import rate_limit as rl_mod
+    from backend.api import deps
     from backend.api.rate_limit import (
         WALLET_DAILY_LIMIT,
         increment_wallet_daily_count,
         peek_wallet_daily_count,
     )
 
-    # `rate_limit` does `from backend.api.deps import get_sync_redis`
-    # at module load, so it has its own binding — patch the one
-    # `increment_wallet_daily_count` actually calls, not the deps one.
-    fake = _FakeRedis()
-    monkeypatch.setattr(rl_mod, "get_sync_redis", lambda: fake)
+    # The chat-endpoint test fixtures don't initialize the DB pool
+    # (the rest of the suite stubs get_db). This single test needs
+    # real DB access for the rate_limit_counters table, so it opens
+    # its own short-lived pool. The session-scoped schema bootstrap
+    # in conftest.py already ran the migration that creates the
+    # table, so we just need a live pool to query it.
+    pool_was_open = deps._pool is not None
+    if not pool_was_open:
+        deps.init_db_pool(minconn=1, maxconn=2)
+    try:
+        # Wallet unique to this test so its rows don't intersect
+        # with other test runs' counters in the same DB.
+        wallet = "0x" + "f1" * 20
+        today = date(2026, 5, 11).isoformat()
+        tomorrow = (date(2026, 5, 11) + timedelta(days=1)).isoformat()
 
-    wallet = "0x" + "f" * 40
-    today = date(2026, 5, 11)
-    tomorrow = today + timedelta(days=1)
+        # Burn the day's allowance.
+        for i in range(WALLET_DAILY_LIMIT):
+            n = increment_wallet_daily_count(wallet, today=today)
+            assert n == i + 1
+        assert peek_wallet_daily_count(wallet, today=today) == WALLET_DAILY_LIMIT
 
-    # Burn the day's allowance.
-    for i in range(WALLET_DAILY_LIMIT):
-        n = increment_wallet_daily_count(wallet, today=today)
-        assert n == i + 1
-    assert peek_wallet_daily_count(wallet, today=today) == WALLET_DAILY_LIMIT
-
-    # Same wallet on the NEXT UTC date starts fresh — the key changes
-    # because the date suffix changes, so the route's >= limit check
-    # against tomorrow's count returns False on the first call.
-    assert peek_wallet_daily_count(wallet, today=tomorrow) == 0
+        # Same wallet on the NEXT UTC date starts fresh — the key
+        # changes because the date suffix changes, so the route's
+        # >= limit check against tomorrow's count returns False on
+        # the first call.
+        assert peek_wallet_daily_count(wallet, today=tomorrow) == 0
+    finally:
+        if not pool_was_open:
+            deps.close_db_pool()
 
 
 def test_chat_global_ceiling_returns_archetype_message(
