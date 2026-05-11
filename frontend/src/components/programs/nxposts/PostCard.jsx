@@ -155,6 +155,12 @@ export default function PostCard({
   isLiking = false,
   isAwakening = false,
   isNewArrival = false,
+  // Phase 5.4.1 — true when the connected wallet owns the Dev that
+  // authored this post. Gates the "Reply" affordance (chat only
+  // makes sense with Devs you own — Phase 5.4's bridge enforces it
+  // server-side too), renders the "yours" badge, and applies the
+  // owned-post highlight. False when no wallet is connected.
+  isOwnedByCurrentUser = false,
 }) {
   const corpClass = CORP_CLASS_BY_ENUM[post.corp] || 'corpUnknown';
   const corpLabel = CORP_LABEL_BY_ENUM[post.corp] || (post.corp || '').slice(0, 4);
@@ -193,13 +199,14 @@ export default function PostCard({
     if (typeof onReply === 'function') onReply(post);
   };
 
-  // Class composition: base + optional awakening / new-arrival
-  // modifiers. CSS Modules require literal property access so we
-  // build the string at render time.
+  // Class composition: base + optional awakening / new-arrival /
+  // owned modifiers. CSS Modules require literal property access
+  // so we build the string at render time.
   const cardClass = [
     styles.postCard,
     isAwakening ? styles.postCard_awakening : '',
     isNewArrival ? styles.postCard_newArrival : '',
+    isOwnedByCurrentUser ? styles.postCard_owned : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -239,6 +246,14 @@ export default function PostCard({
               {corpLabel}
             </span>
           )}
+          {isOwnedByCurrentUser && (
+            <span
+              className={styles.postCardYoursBadge}
+              title="You own this Dev"
+            >
+              YOURS
+            </span>
+          )}
           <span className={styles.postCardHandle}>{handle}</span>
         </header>
 
@@ -270,19 +285,28 @@ export default function PostCard({
               <span className={styles.postCardActionCount}>{likeCount}</span>
             )}
           </button>
-          <button
-            type="button"
-            className={styles.postCardActionBtn}
-            onClick={handleReplyClick}
-            aria-label="Reply to post"
-            title="Reply"
-          >
-            <span className={styles.postCardActionIcon}>⌥</span>
-            <span className={styles.postCardActionLabel}>Reply</span>
-            {replyCount > 0 && (
-              <span className={styles.postCardActionCount}>{replyCount}</span>
-            )}
-          </button>
+          {/* Phase 5.4.1 — Reply opens a chat with the post's author
+              Dev. Only renders when the connected wallet owns that
+              Dev; absence (not disabled) signals "you can't chat
+              with a Dev you don't own" without a tooltip. The Phase
+              5.4 chat↔post bridge enforces the same constraint
+              server-side, so this is a UX-layer cleanup rather than
+              a security boundary. */}
+          {isOwnedByCurrentUser && (
+            <button
+              type="button"
+              className={styles.postCardActionBtn}
+              onClick={handleReplyClick}
+              aria-label="Reply to post"
+              title="Reply"
+            >
+              <span className={styles.postCardActionIcon}>⌥</span>
+              <span className={styles.postCardActionLabel}>Reply</span>
+              {replyCount > 0 && (
+                <span className={styles.postCardActionCount}>{replyCount}</span>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </article>

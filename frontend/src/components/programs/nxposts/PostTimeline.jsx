@@ -39,6 +39,12 @@ export default function PostTimeline({
   loading,
   error,
   awakeningTabActive = false,
+  // Phase 5.4.1 — Set<number> of token_ids owned by the connected
+  // wallet. Optional / defaulted to an empty Set so the timeline
+  // still renders when no wallet is connected; every post lookup
+  // returns false in that state, which is the correct read-only
+  // behaviour.
+  ownedTokenIdSet,
 }) {
   // Track the head-id between renders so we can flag fresh-after-
   // merge rows for the arrival animation. We don't need the value
@@ -182,6 +188,9 @@ export default function PostTimeline({
           // For other tabs we don't try to detect it (would need an
           // extra backend field).
           const isAwakening = awakeningTabActive;
+          const isOwnedByCurrentUser =
+            !!ownedTokenIdSet &&
+            ownedTokenIdSet.has(Number(post.token_id));
           return (
             <PostCard
               key={post.id}
@@ -193,6 +202,7 @@ export default function PostTimeline({
               isLiking={isLiking?.has?.(post.id) === true}
               isAwakening={isAwakening}
               isNewArrival={isNewArrival}
+              isOwnedByCurrentUser={isOwnedByCurrentUser}
             />
           );
         })}
