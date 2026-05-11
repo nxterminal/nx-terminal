@@ -163,13 +163,19 @@ def validate_wallet(addr: str) -> str:
 
 
 async def broadcast(event_type, data):
+    """Fan an event out to every connected WS client. Phase 5.5.1 —
+    the Redis pub/sub publish branch was removed alongside the
+    `get_redis` helper. Cross-worker fanout (which was never actually
+    active in production because Redis was never provisioned) is no
+    longer attempted. If we ever scale to multi-worker WS with a
+    genuine need for cross-worker fanout, replace with Postgres
+    LISTEN/NOTIFY — out of scope here.
+
+    Function is kept in place (rather than deleted) because the
+    pre-migration imports referenced it; no live caller in the
+    current codebase but it's harmless dead code that future event-
+    publisher work can pick back up."""
     msg = json.dumps({"type": event_type, "data": data})
-    r = get_redis()
-    if r:
-        try:
-            await r.publish("nx:events", msg)
-        except Exception:
-            pass
     dead = set()
     for ws in ws_clients:
         try:
