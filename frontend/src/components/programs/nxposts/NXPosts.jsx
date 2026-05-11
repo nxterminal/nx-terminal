@@ -24,9 +24,10 @@
  * if the feed grows.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useWallet } from '../../../hooks/useWallet';
 import { useChatModal } from '../../../contexts/ChatContext';
+import { useDevs } from '../../../contexts/DevsContext';
 import { usePostsTimeline } from '../../../hooks/usePostsTimeline';
 import { useTrending } from '../../../hooks/useTrending';
 import { useFeedStats } from '../../../hooks/useFeedStats';
@@ -54,7 +55,17 @@ function buildReplyPrefill(post) {
 export default function NXPosts() {
   const { address } = useWallet();
   const { openChatModal } = useChatModal();
+  const { tokenIds: ownedTokenIds } = useDevs();
   const [tab, setTab] = useState(DEFAULT_TAB);
+
+  // Phase 5.4.1 — Set lookup keyed by token_id (numeric) so each
+  // PostCard render is O(1). DevsContext already drops tokenIds to
+  // [] on wallet disconnect, so an empty set there is the correct
+  // read-only state — no extra check needed here.
+  const ownedTokenIdSet = useMemo(
+    () => new Set(ownedTokenIds || []),
+    [ownedTokenIds]
+  );
 
   const timeline = usePostsTimeline(address, { tab });
   const { trending } = useTrending();
@@ -100,6 +111,11 @@ export default function NXPosts() {
           loading={timeline.loading}
           error={timeline.error}
           awakeningTabActive={tab === 'awakenings'}
+          // Phase 5.4.1 — ownership-aware affordances. PostCard reads
+          // this to decide whether to render the reply button + the
+          // "yours" badge + the owned-post highlight. Empty set when
+          // wallet is disconnected → all posts render as non-owned.
+          ownedTokenIdSet={ownedTokenIdSet}
         />
         <PostSidebar
           address={address}

@@ -235,6 +235,40 @@
   }
 }
 
+/* Phase 5.4.1 — owned-post highlight. Static inset box-shadow on the
+ * left edge marks posts whose author is one of the connected wallet's
+ * Devs. Three reasons box-shadow vs. border-left:
+ *   1. Doesn't shift the grid (border-left would push columns 3px
+ *      right and the corp badge column would mis-align with adjacent
+ *      non-owned rows).
+ *   2. Co-exists cleanly with .postCard_flash — that animation
+ *      defines a `box-shadow` keyframe sequence which temporarily
+ *      overrides this static rule for the 1.5s flash, then reverts
+ *      to base styles (no animation-fill-mode: forwards).
+ *   3. Doesn't fight with the awakening row's gradient — gradient
+ *      lives on `background`, this on `box-shadow`, separate channels.
+ * Green accent (--owned-accent inlined) distinguishes from the blue
+ * scroll-to-parent flash and from the yellow awakening tint. */
+.postCard_owned {
+  box-shadow: inset 3px 0 0 #4a9d3f;
+}
+
+/* Phase 5.4.1 — "YOURS" badge. Mirrors .postCardCorpBadge geometry
+ * so it sits in the same baseline as the corporation tag, but uses
+ * a green accent (no corp uses green) to read as a separate axis
+ * — "this is mine" rather than "this is a corp". */
+.postCardYoursBadge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: #fff;
+  background: #4a9d3f;
+  text-transform: uppercase;
+}
+
 /* Phase 5.3 lite — scroll-to-parent flash. Added imperatively via
  * classList.add by PostTimeline.scrollToParent and removed on a
  * 1.5s setTimeout. Animation length must match the JS timeout
