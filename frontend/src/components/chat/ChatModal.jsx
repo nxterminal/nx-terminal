@@ -55,6 +55,7 @@ import ChatList from './ChatList';
 import ChatConversation from './ChatConversation';
 import ChatModalHeader from './ChatModalHeader';
 import NewChatPicker from './NewChatPicker';
+import BetaNotice from './BetaNotice';
 import styles from './chat.module.css';
 
 // Modal frame size — must match `.msnModalSplit` width / height in
@@ -246,6 +247,7 @@ export default function ChatModal() {
             onBack={selectedTokenId ? clearSelectedChat : null}
             onClose={closeChatModal}
           />
+          <BetaNotice />
           <div className={styles.msnContent}>
             {selectedTokenId && selectedDev ? (
               <ChatConversation
@@ -297,6 +299,7 @@ export default function ChatModal() {
           onBack={null}
           onClose={closeChatModal}
         />
+        <BetaNotice />
         <div className={styles.msnSplitBody}>
           <div className={styles.msnSplitLeft}>
             <ChatList

@@ -386,9 +386,11 @@ def test_chat_resting_unknown_archetype_uses_fallback_line(
     body = resp.json()
     assert body["is_resting"] is True
     text = body["response"]
-    # The fallback line is the explicit `voices.get_resting_message`
-    # default. It must be non-empty and read as the Dev itself talking
-    # — no system-message tells like "rate limit" or "quota".
+    # Phase 5.5 — fallback is now `flavor_messages.BUSY_MESSAGES_FALLBACK`
+    # (rotated, was a single line under voices.get_resting_message). The
+    # contract is unchanged: must be non-empty and read as the Dev
+    # itself talking — no system-message tells like "rate limit" or
+    # "quota".
     assert text and len(text) > 0
     for tell in ("rate limit", "quota", "API", "error", "HTTP"):
         assert tell.lower() not in text.lower(), (
@@ -678,3 +680,170 @@ def test_climax_turn_excludes_synthetic_post_turns():
         {"role": "user", "content": "e"},
     ]
     assert is_climax_turn("ok", real_only) is True
+
+
+# ─── Phase 5.5 — per-wallet rate limit + flavor messages ─────────────────
+
+
+def test_chat_per_wallet_daily_limit_enforced(client, stub_db, stub_llm, monkeypatch):
+    """When the per-wallet daily counter is already at WALLET_DAILY_LIMIT,
+    the route must short-circuit BEFORE the LLM call and return a 200 OK
+    busy message in the Dev's archetype voice. No LLM call, no error,
+    same response shape as a real chat reply."""
+    from backend.api import rate_limit as rl_module
+    from backend.services.nx_souls.flavor_messages import (
+        BUSY_MESSAGES_BY_ARCHETYPE,
+    )
+
+    stub_db(rarity="common", archetype="INFLUENCER")
+    # Force the counter to report "at limit" without needing Redis.
+    monkeypatch.setattr(
+        nx_souls_route, "peek_wallet_daily_count",
+        lambda _wallet: rl_module.WALLET_DAILY_LIMIT,
+    )
+
+    resp = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["is_resting"] is True
+    assert body["provider_used"] == "internal"
+    # Response must be one of the archetype's known variants — the
+    # frontend should treat it as a real reply, not an error.
+    assert body["response"] in BUSY_MESSAGES_BY_ARCHETYPE["INFLUENCER"]
+    # LLM cascade must NOT have been called (cost guard).
+    assert stub_llm.calls == [], (
+        "LLM cascade was invoked while per-wallet cap was hit — "
+        "this defeats the cost-saving guarantee of the cap path"
+    )
+
+
+class _FakeRedis:
+    """Minimal in-memory Redis stub for the per-wallet counter unit
+    tests. Implements just enough of the surface
+    (`incr`, `get`, `expire`) for `increment_wallet_daily_count` and
+    `peek_wallet_daily_count` to exercise their real code path."""
+
+    def __init__(self):
+        self.store: dict[str, int] = {}
+
+    def incr(self, key):
+        self.store[key] = int(self.store.get(key, 0)) + 1
+        return self.store[key]
+
+    def get(self, key):
+        val = self.store.get(key)
+        return None if val is None else str(val)
+
+    def expire(self, key, ttl, nx=None):  # noqa: ARG002 — match real sig
+        return True
+
+
+def test_chat_per_wallet_limit_resets_daily(monkeypatch):
+    """Counter is keyed by `wallet:UTC_date`, so advancing to a new
+    UTC day starts from zero. Tests the helpers directly — the chat
+    route uses these same functions, so verifying the keying scheme
+    here covers the route's reset behaviour without needing to mock
+    the clock end-to-end."""
+    from datetime import date, timedelta
+    from backend.api import rate_limit as rl_mod
+    from backend.api.rate_limit import (
+        WALLET_DAILY_LIMIT,
+        increment_wallet_daily_count,
+        peek_wallet_daily_count,
+    )
+
+    # `rate_limit` does `from backend.api.deps import get_sync_redis`
+    # at module load, so it has its own binding — patch the one
+    # `increment_wallet_daily_count` actually calls, not the deps one.
+    fake = _FakeRedis()
+    monkeypatch.setattr(rl_mod, "get_sync_redis", lambda: fake)
+
+    wallet = "0x" + "f" * 40
+    today = date(2026, 5, 11)
+    tomorrow = today + timedelta(days=1)
+
+    # Burn the day's allowance.
+    for i in range(WALLET_DAILY_LIMIT):
+        n = increment_wallet_daily_count(wallet, today=today)
+        assert n == i + 1
+    assert peek_wallet_daily_count(wallet, today=today) == WALLET_DAILY_LIMIT
+
+    # Same wallet on the NEXT UTC date starts fresh — the key changes
+    # because the date suffix changes, so the route's >= limit check
+    # against tomorrow's count returns False on the first call.
+    assert peek_wallet_daily_count(wallet, today=tomorrow) == 0
+
+
+def test_chat_global_ceiling_returns_archetype_message(
+    client, stub_db, monkeypatch
+):
+    """When the LLM router raises NXSoulsAllProvidersFailed with the
+    `daily_limit_exceeded` cause, the route must return 200 OK with a
+    busy message in the Dev's voice (Phase 5.5 — was 503 before).
+    Other provider-failure causes still raise 503; covered separately."""
+    from backend.services.nx_souls.exceptions import NXSoulsAllProvidersFailed
+    from backend.services.nx_souls.flavor_messages import (
+        BUSY_MESSAGES_BY_ARCHETYPE,
+    )
+
+    stub_db(rarity="common", archetype="DEGEN")
+
+    async def fake_call_llm(*_args, **_kwargs):
+        raise NXSoulsAllProvidersFailed("daily_limit_exceeded")
+
+    monkeypatch.setattr(nx_souls_route, "call_llm", fake_call_llm)
+
+    resp = client.post(f"/api/devs/{TOKEN_ID}/chat", json=_body())
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["is_resting"] is True
+    assert body["provider_used"] == "internal"
+    assert body["response"] in BUSY_MESSAGES_BY_ARCHETYPE["DEGEN"]
+
+
+def test_flavor_messages_unknown_archetype_uses_fallback():
+    """An archetype not in BUSY_MESSAGES_BY_ARCHETYPE falls back to
+    BUSY_MESSAGES_FALLBACK so the route never raises on a new
+    archetype added to the schema before its variants ship.
+
+    The fallback must also avoid the system-message giveaways the
+    existing resting test enforces ("rate limit", "quota", "API",
+    "error", "HTTP") so the immersion guarantee holds."""
+    from backend.services.nx_souls.flavor_messages import (
+        BUSY_MESSAGES_FALLBACK,
+        get_busy_message,
+    )
+
+    text = get_busy_message("NONEXISTENT_ARCHETYPE", "test_dev")
+    assert text  # non-empty
+    assert text in BUSY_MESSAGES_FALLBACK
+    for tell in ("rate limit", "quota", "API", "error", "HTTP"):
+        assert tell.lower() not in text.lower(), (
+            f"fallback variant leaked system-message tell: {tell!r}"
+        )
+
+
+def test_flavor_messages_returns_one_of_known_variants():
+    """For every known archetype, get_busy_message must return a
+    member of that archetype's variants list — across many calls
+    the random choice should never escape the registered set."""
+    from backend.services.nx_souls.flavor_messages import (
+        BUSY_MESSAGES_BY_ARCHETYPE,
+        get_busy_message,
+    )
+
+    # 50 calls per archetype catches a variant that was accidentally
+    # constructed (e.g., interpolated dev_name) rather than picked
+    # from the registered list. We deliberately do NOT assert full
+    # coverage of every variant across the 50 calls — for an
+    # archetype with 5 variants and a uniform pick that would be a
+    # flaky 1-in-~10⁵ assertion. Membership is the actual contract.
+    for archetype, variants in BUSY_MESSAGES_BY_ARCHETYPE.items():
+        for _ in range(50):
+            text = get_busy_message(archetype, "")
+            assert text in variants, (
+                f"{archetype}: get_busy_message returned {text!r} "
+                f"which is not in the registered variants"
+            )

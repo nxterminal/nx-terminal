@@ -50,12 +50,16 @@ from pydantic import BaseModel, Field
 
 from backend.api.deps import get_db, validate_wallet
 from backend.api.rate_limit import (
+    WALLET_DAILY_LIMIT,
     chat_limiter,
+    increment_wallet_daily_count,
+    peek_wallet_daily_count,
     souls_ip_per_day,
     souls_ip_per_hour,
     souls_ip_per_minute,
 )
 from backend.services.nx_souls.exceptions import NXSoulsAllProvidersFailed
+from backend.services.nx_souls.flavor_messages import get_busy_message
 from backend.services.nx_souls.llm_router import (
     MAX_POST_REF_CHARS,
     call_llm,
@@ -68,7 +72,6 @@ from backend.services.nx_souls.quota import (
     get_quota_state,
     increment_quota,
 )
-from backend.services.nx_souls.voices import get_resting_message
 
 log = logging.getLogger("nx_api")
 
@@ -370,6 +373,12 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
     with get_db() as conn:
         with conn.cursor() as cur:
             dev_row = _check_owner(cur, token_id, wallet, request_ip=ip)
+            # Phase 5.5 — hoist archetype + name into outer scope so
+            # the post-with-block per-wallet cap check and the
+            # global-ceiling except branch can serve in-voice busy
+            # messages without re-querying the dev row.
+            archetype = dev_row.get("archetype") or ""
+            dev_name = dev_row.get("name") or ""
             quota_state = get_quota_state(
                 cur, token_id, dev_row.get("rarity_tier")
             )
@@ -380,13 +389,18 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
                 # incremented (already at limit). is_resting=true tells
                 # the frontend to disable the input + render a
                 # "resting until UTC midnight" affordance.
-                resting_response = get_resting_message(
-                    dev_row.get("archetype") or ""
-                )
+                #
+                # Phase 5.5 — switched from `get_resting_message` (one
+                # fixed line per archetype) to `get_busy_message` (3-5
+                # variants per archetype, random rotation). Existing
+                # archetype-cross-talk tests still pass because every
+                # DEGEN variant carries "rekt" and every FED variant
+                # carries "operational hours".
+                resting_response = get_busy_message(archetype, dev_name)
                 log.info(
                     "NX Souls chat: serving rest message "
                     f"token_id={token_id} wallet={wallet} "
-                    f"archetype={dev_row.get('archetype')} "
+                    f"archetype={archetype} "
                     f"used={quota_state.used} limit={quota_state.limit}"
                 )
                 try:
@@ -444,6 +458,53 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
         # where the Dev was burned between check and persona fetch.
         raise HTTPException(404, "Dev not found")
 
+    # Phase 5.5 — per-wallet daily cap. Peek-only (no increment yet);
+    # we charge the slot only AFTER a successful LLM reply so a
+    # provider outage doesn't burn the user's quota. Same response
+    # shape as the per-Dev quota path so the frontend renders it
+    # naturally as if the Dev replied.
+    if peek_wallet_daily_count(wallet) >= WALLET_DAILY_LIMIT:
+        response_text = get_busy_message(archetype, dev_name)
+        log.info(
+            "NX Souls chat: serving wallet-cap rest message "
+            f"wallet={wallet} token_id={token_id} archetype={archetype} "
+            f"limit={WALLET_DAILY_LIMIT}"
+        )
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    _log_message_event(
+                        cur,
+                        token_id=token_id,
+                        wallet_address=wallet,
+                        user_message_len=len(req.message),
+                        response_len=len(response_text),
+                        provider_used="internal",
+                        climax=False,
+                        duration_ms=0,
+                    )
+        except Exception as log_e:  # pragma: no cover — best-effort
+            log.warning(
+                f"NX Souls: failed to log wallet-cap event: {log_e}"
+            )
+        _persist_chat_messages(
+            wallet_address=wallet,
+            token_id=token_id,
+            user_message=req.message,
+            response_text=response_text,
+            response_role="system_resting",
+            is_climax=False,
+            is_resting=True,
+            provider_used="internal",
+        )
+        return {
+            "ok": True,
+            "response": response_text,
+            "provider_used": "internal",
+            "quota": _quota_response_payload(quota_state),
+            "is_resting": True,
+        }
+
     session_msgs = [m.model_dump() for m in req.session_messages]
     # Phase 5.4 — pass the list (not just count) so is_climax_turn can
     # filter synthetic post-ref turns out of the depth check; otherwise
@@ -471,6 +532,15 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
         )
     except NXSoulsAllProvidersFailed as e:
         duration_ms = int((time.monotonic() - started) * 1000)
+        # Phase 5.5 — when the cause is the global LLM daily cost
+        # ceiling (router raises `daily_limit_exceeded`) we serve a
+        # 200 OK busy message instead of a 503, matching the UX of
+        # the per-Dev / per-wallet cap paths. Real provider outages
+        # (all_providers_exhausted, no_providers_configured) stay
+        # 503 — those are operational problems and the frontend's
+        # retry guidance is the right thing to surface.
+        cause = str(e) if e.args else ""
+        is_cost_cap = "daily_limit_exceeded" in cause
         try:
             with get_db() as conn:
                 with conn.cursor() as cur:
@@ -486,6 +556,29 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
                     )
         except Exception as log_e:  # pragma: no cover — best-effort logging
             log.warning(f"NX Souls: failed to log failure event: {log_e}")
+        if is_cost_cap:
+            response_text = get_busy_message(archetype, dev_name)
+            log.info(
+                "NX Souls chat: serving global-ceiling rest message "
+                f"wallet={wallet} token_id={token_id} archetype={archetype}"
+            )
+            _persist_chat_messages(
+                wallet_address=wallet,
+                token_id=token_id,
+                user_message=req.message,
+                response_text=response_text,
+                response_role="system_resting",
+                is_climax=False,
+                is_resting=True,
+                provider_used="internal",
+            )
+            return {
+                "ok": True,
+                "response": response_text,
+                "provider_used": "internal",
+                "quota": _quota_response_payload(quota_state),
+                "is_resting": True,
+            }
         log.warning(f"NX Souls: all providers failed for token {token_id}: {e}")
         raise HTTPException(
             status_code=503,
@@ -497,6 +590,12 @@ async def chat_with_dev(token_id: int, req: ChatRequest, request: Request):
         )
 
     duration_ms = int((time.monotonic() - started) * 1000)
+
+    # Phase 5.5 — charge the per-wallet daily slot ONLY after a
+    # successful LLM reply, so a transient provider outage (caught
+    # above but rare for the success path here) doesn't burn a slot
+    # the user never got value from. Fail-open on Redis outage.
+    increment_wallet_daily_count(wallet)
 
     # Successful reply — increment the quota counter and log the event.
     # Increment + event log share a connection / transaction so we never
