@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.deps import init_db_pool, close_db_pool, init_redis, close_redis, get_db
+from backend.api.deps import init_db_pool, close_db_pool, get_db
 from backend.api.middleware.correlation import CorrelationIdMiddleware
 from backend.api.routes import simulation, devs, protocols, ais, leaderboard, prompts, chat, players, shop, notifications, academy, sentinel, missions, streaks, achievements, admin, health, nxmarket, nx_souls, user, posts, posts_feed, llm_usage
 from backend.api.ws.feed import router as ws_router
@@ -33,7 +33,6 @@ async def lifespan(app: FastAPI):
     # Same call point as before; the previous inline _run_auto_migrations
     # was extracted verbatim + the schema.sql bootstrap was folded in.
     run_auto_migrations()
-    await init_redis()
     # Surface NX Souls provider availability once at startup so the
     # operator immediately sees which keys (if any) are missing.
     try:
@@ -45,7 +44,6 @@ async def lifespan(app: FastAPI):
     yield
     log.info("🛑 NX Terminal API shutting down...")
     close_db_pool()
-    await close_redis()
 
 
 # ============================================================

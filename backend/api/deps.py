@@ -1,5 +1,11 @@
 """
-NX TERMINAL — Shared dependencies (DB pool, Redis, broadcast)
+NX TERMINAL — Shared dependencies (DB pool, broadcast)
+
+Phase 5.5 (migration): Redis helpers (`init_redis`, `close_redis`,
+`get_redis`, `get_sync_redis`) and the `REDIS_URL` env var were
+removed when rate_limit.py migrated off Redis onto Postgres. Redis
+was never provisioned on Render in the first place — every limiter
+had been silently fail-open since deployment.
 """
 
 import os
@@ -12,8 +18,6 @@ from typing import Optional
 import psycopg2
 import psycopg2.pool
 import psycopg2.extras
-import redis as sync_redis
-import redis.asyncio as aioredis
 
 log = logging.getLogger("nx_api")
 
@@ -22,7 +26,6 @@ log = logging.getLogger("nx_api")
 # ============================================================
 
 DB_SCHEMA = os.getenv("NX_DB_SCHEMA", "nx")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 # Parse DATABASE_URL if provided (Render sets this)
 DATABASE_URL = os.getenv("DATABASE_URL", "")
@@ -54,8 +57,6 @@ log.info(f"DB config: host={DB_HOST} port={DB_PORT} db={DB_NAME} ssl={DB_SSLMODE
 # ============================================================
 
 _pool = None
-_redis = None
-_sync_redis = None
 
 
 def init_db_pool(minconn=2, maxconn=10):
@@ -84,52 +85,6 @@ def close_db_pool():
     if _pool:
         _pool.closeall()
         _pool = None
-
-
-async def init_redis():
-    global _redis
-    try:
-        _redis = aioredis.from_url(REDIS_URL, decode_responses=True)
-        await _redis.ping()
-        log.info("Redis connected")
-    except Exception as e:
-        log.warning(f"Redis not available ({e}), running without cache")
-        _redis = None
-
-
-async def close_redis():
-    global _redis
-    if _redis:
-        await _redis.close()
-        _redis = None
-
-
-def get_redis():
-    return _redis
-
-
-def get_sync_redis():
-    """Sync redis client for use from non-async code (rate limiter).
-
-    Lazily initialised on first call so the API can boot even if Redis
-    is down — callers must handle ``None`` as "fail open".
-    """
-    global _sync_redis
-    if _sync_redis is None:
-        try:
-            _sync_redis = sync_redis.from_url(REDIS_URL, decode_responses=True)
-            _sync_redis.ping()
-            log.info("Sync Redis connected")
-        except Exception as e:
-            log.warning(f"Sync Redis not available ({e}), rate limiter will fail open")
-            _sync_redis = None
-    return _sync_redis
-
-
-def reset_sync_redis():
-    """Test-only: drop the cached sync client."""
-    global _sync_redis
-    _sync_redis = None
 
 
 # ============================================================

@@ -121,6 +121,23 @@
   overflow: hidden;
 }
 
+/* Phase 5.5 — beta notice strip. Sits between the title bar and
+ * the modal body, full-width, single-line. Dark-blue background +
+ * cream text matches the MSN palette already declared on .msnModal
+ * so the strip reads as native chrome rather than a foreign
+ * notification. Border-bottom separates it from the body without
+ * needing a shadow. */
+.betaNotice {
+  padding: 4px 12px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--msn-gray-light);
+  background: var(--msn-blue-darker);
+  border-bottom: 1px solid var(--msn-gray-border);
+  text-align: center;
+  user-select: none;
+}
+
 .msnPlaceholder {
   padding: 20px;
   color: var(--msn-text-muted);
