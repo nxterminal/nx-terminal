@@ -22,8 +22,14 @@ SPRKLS_BETA_WALLETS: frozenset[str] = frozenset({
 })
 
 # When True, generation runs for every owner. Mirrors the frontend's
-# NX_SOULS_BETA_OPEN flag — flip together when opening to community.
-SPRKLS_BETA_OPEN = False
+# NX_SOULS_BETA_OPEN flag — flipped together with it.
+#
+# Phase 5.7: flipped to True — sprkls are now generated for every
+# wallet. `is_in_sprkls_beta` short-circuits to True on the first
+# line, so the allowlist above is a no-op dead branch (kept in place
+# for a separate cleanup PR; flipping this back to False instantly
+# re-gates to the operator wallet without re-typing it).
+SPRKLS_BETA_OPEN = True
 
 
 def is_in_sprkls_beta(wallet_address: str | None) -> bool:
