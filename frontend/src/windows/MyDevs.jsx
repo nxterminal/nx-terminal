@@ -1961,6 +1961,14 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         position: 'relative', overflow: 'visible',
       }}
     >
+      {/* Phase 5.6.2: the grayscale wrapper is SPLIT around the
+       * action row below so COFFEE / FEED's `.low-energy-critical`
+       * red can render at full saturation. CSS filters apply to a
+       * subtree's composited bitmap, so a child can't "undo" a
+       * parent `filter: grayscale(100%)` from inside — the only
+       * fix is to keep the urgent buttons OUT of the filtered
+       * subtree. Same approach as the "On Mission overlay"
+       * comment near the end of this component. */}
       <div style={{
         filter: ((onMission && !missionCompleted) || isExhausted) ? 'grayscale(100%)' : 'none',
         opacity: ((onMission && !missionCompleted) || isExhausted) ? 0.7 : 1,
@@ -2081,7 +2089,24 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
         </div>
       )}
 
-      {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width */}
+      </div>{/* end grayscale wrapper (top half) — Phase 5.6.2 split */}
+
+      {/* Row 4: Action Buttons — grid 6 cols, aligned to stats width.
+       *
+       * Phase 5.6.2: rendered OUTSIDE the grayscale wrapper so the
+       * `.low-energy-critical` red on COFFEE / FEED actually shows.
+       * CSS filters apply to a subtree's composited bitmap, so a
+       * child can't "undo" a parent `filter: grayscale(100%)` from
+       * inside — the only fix is to keep the urgent buttons out of
+       * the filtered subtree. Same approach as the "On Mission
+       * overlay" comment near the end of this component.
+       *
+       * The non-critical buttons (HACK / FIX / REPAIR / ECONOMY)
+       * lose the wrapper's 0.7 opacity dimming on an exhausted Dev,
+       * but their natural StoneBtn gray (#6b7b8a) is unchanged by
+       * the absent grayscale filter (gray-on-gray is a no-op).
+       * Net visual result: the rest of the card stays "exhausted-
+       * looking" while the urgent action buttons pop. */}
       {address && !dev._fetchFailed && !onMission && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '4px', width: '100%' }}>
           <StoneBtn emoji={'\u2615'} label="COFFEE"
@@ -2105,6 +2130,15 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             onRequest={(e) => { e.stopPropagation(); setShowRequestModal(true); }} />
         </div>
       )}
+
+      {/* Re-open the grayscale wrapper for the remaining content
+       * (action feedback, footer counters, QuickPrompt, modals) so
+       * the exhausted-state visual treatment still covers the rest
+       * of the card. */}
+      <div style={{
+        filter: ((onMission && !missionCompleted) || isExhausted) ? 'grayscale(100%)' : 'none',
+        opacity: ((onMission && !missionCompleted) || isExhausted) ? 0.7 : 1,
+      }}>
 
       {/* Action feedback */}
       {actionMsg && (
