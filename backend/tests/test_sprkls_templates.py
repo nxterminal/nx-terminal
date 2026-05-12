@@ -32,35 +32,67 @@ from backend.services.sprkls.visuals import generate_visual_metadata  # noqa: E4
 
 
 # ─── Beta allowlist ──────────────────────────────────────────────────
+#
+# Phase 5.7 flipped SPRKLS_BETA_OPEN to True — sprkls are now generated
+# for every wallet. The wallet-allowlist code path is dormant in
+# production but kept in the function so flipping the flag back to
+# False instantly re-gates. To preserve coverage of the dormant
+# wallet-matching logic, the "rejects" tests below patch
+# SPRKLS_BETA_OPEN back to False before asserting the rejection
+# semantics. A separate post-flip test asserts the live "everyone is
+# in" state.
 
 
 def test_beta_recognises_operator_lowercase():
+    # Passes under both flag states (allowlist contains the operator
+    # AND the flag-open branch returns True for any wallet).
     assert is_in_sprkls_beta("0xae882a8933b33429f53b7cee102ef3dbf9c9e88b") is True
 
 
 def test_beta_normalises_checksum_casing():
-    assert is_in_sprkls_beta("0xAe882a8933b33429F53b7cEe102ef3dBf9c9e88B") is True
+    # Verifies the lowercasing path inside is_in_sprkls_beta — only
+    # observable when the open flag is False and the function actually
+    # consults the allowlist.
+    with patch("backend.services.sprkls.beta.SPRKLS_BETA_OPEN", False):
+        assert is_in_sprkls_beta("0xAe882a8933b33429F53b7cEe102ef3dBf9c9e88B") is True
 
 
-def test_beta_rejects_unknown_wallet():
-    assert is_in_sprkls_beta("0xdeadbeef" + "00" * 16) is False
+def test_beta_rejects_unknown_wallet_when_flag_closed():
+    """Guards the wallet-matching code path for the case where a
+    future operator re-gates by flipping SPRKLS_BETA_OPEN back to
+    False. Phase 5.7 makes this dormant in production."""
+    with patch("backend.services.sprkls.beta.SPRKLS_BETA_OPEN", False):
+        assert is_in_sprkls_beta("0xdeadbeef" + "00" * 16) is False
 
 
-def test_beta_rejects_falsy_input():
-    assert is_in_sprkls_beta(None) is False
-    assert is_in_sprkls_beta("") is False
+def test_beta_rejects_falsy_input_when_flag_closed():
+    """Same dormant-path guard for the None/empty wallet case."""
+    with patch("backend.services.sprkls.beta.SPRKLS_BETA_OPEN", False):
+        assert is_in_sprkls_beta(None) is False
+        assert is_in_sprkls_beta("") is False
 
 
-def test_beta_open_flag_overrides_allowlist():
-    """When SPRKLS_BETA_OPEN flips true, every wallet is in. Verified
-    via patch so we don't have to flip the module global mid-test."""
-    with patch("backend.services.sprkls.beta.SPRKLS_BETA_OPEN", True):
-        assert is_in_sprkls_beta("0xnotreal") is True
+def test_beta_open_grants_all_wallets():
+    """Phase 5.7 live state — verifies that with SPRKLS_BETA_OPEN
+    at its current True value, every wallet (and every falsy input)
+    passes the gate. This is the production semantic post-public-
+    launch; the scheduler caller still filters falsy wallets
+    defensively before sprkls are generated."""
+    assert is_in_sprkls_beta("0xnotreal") is True
+    assert is_in_sprkls_beta("0xae882a8933b33429f53b7cee102ef3dbf9c9e88b") is True
+    # Falsy inputs also pass under the open flag — short-circuit
+    # returns True before the falsy check. The scheduler's
+    # `if not wallet or not is_in_sprkls_beta(wallet)` short-circuit
+    # still suppresses None-keyed generation.
+    assert is_in_sprkls_beta(None) is True
+    assert is_in_sprkls_beta("") is True
 
 
 def test_operator_in_allowlist_constant():
     """Pin that the operator wallet hasn't been accidentally removed
-    from the constant. Mirrors the frontend allowlist."""
+    from the constant. Mirrors the frontend allowlist. The constant
+    is dormant under Phase 5.7's open flag but kept so flipping back
+    to a closed beta doesn't require re-typing the wallet."""
     assert "0xae882a8933b33429f53b7cee102ef3dbf9c9e88b" in SPRKLS_BETA_WALLETS
 
 

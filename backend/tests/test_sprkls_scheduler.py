@@ -119,7 +119,31 @@ def _dev_row(token_id, owner, *, energy=80, status="active",
     }
 
 
-def test_eligible_wallets_excludes_non_beta():
+def test_eligible_wallets_excludes_non_beta_when_flag_closed():
+    """Phase 5.7 — SPRKLS_BETA_OPEN flipped to True in production, so
+    the dormant wallet-allowlist filter in `_eligible_wallets_with_devs`
+    no longer excludes anyone. This test patches the flag back to
+    False to guard the filtering code path for a hypothetical future
+    re-gate. The post-flip live behaviour is asserted separately by
+    `test_eligible_wallets_open_flag_includes_all` below."""
+    cur = StubCursor()
+    cur.push_fetchall([
+        _dev_row(1, OPERATOR),
+        _dev_row(2, NON_BETA),
+    ])
+    with patch("backend.services.sprkls.scheduler.is_in_sprkls_beta",
+               side_effect=lambda w: (w or "").lower() == OPERATOR):
+        out = scheduler_module._eligible_wallets_with_devs(cur)
+    wallets = {w for w, _ in out}
+    assert OPERATOR in wallets
+    assert NON_BETA not in wallets
+
+
+def test_eligible_wallets_open_flag_includes_all():
+    """Phase 5.7 live state — with SPRKLS_BETA_OPEN True (current
+    production value), both wallets are eligible for sprkls
+    generation. Mirrors the public-launch behaviour the operator
+    wants in production."""
     cur = StubCursor()
     cur.push_fetchall([
         _dev_row(1, OPERATOR),
@@ -128,7 +152,7 @@ def test_eligible_wallets_excludes_non_beta():
     out = scheduler_module._eligible_wallets_with_devs(cur)
     wallets = {w for w, _ in out}
     assert OPERATOR in wallets
-    assert NON_BETA not in wallets
+    assert NON_BETA in wallets
 
 
 def test_eligible_wallets_groups_by_owner():
