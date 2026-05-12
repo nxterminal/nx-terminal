@@ -1473,8 +1473,12 @@
  * ────────────────────────────────────────────────────────── */
 
 @keyframes lowEnergyCritical {
-  0%, 100% { box-shadow: 0 0 4px rgba(220, 50, 50, 0.4); }
-  50%      { box-shadow: 0 0 14px rgba(220, 50, 50, 0.9); }
+  /* Phase 5.6.1: brightened from rgba(220, 50, 50) (#dc3232) to
+   * rgba(239, 68, 68) (#ef4444) — the deeper red read as "dark
+   * gray" against the pixel-art chrome on production. Glow and
+   * fill below stay the same hue. */
+  0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
+  50%      { box-shadow: 0 0 14px rgba(239, 68, 68, 0.9); }
 }
 
 @keyframes lowEnergyWarning {
@@ -1484,13 +1488,17 @@
 
 .low-energy-critical {
   animation: lowEnergyCritical 1.2s ease-in-out infinite;
-  /* Red base color matches the existing box-shadow keyframe
-   * (rgba(220, 50, 50) → #dc3232) so the glow ring reads as the
-   * same hue as the fill. White text keeps WCAG-AA contrast on
-   * this red (~5.5:1). The class is only applied while
-   * energyVal === 0; restoring energy strips the class and the
-   * button returns to the default StoneBtn gray. */
-  background-color: #dc3232 !important;
+  /* Phase 5.6.1: red brightened from #dc3232 to #ef4444. The
+   * deeper #dc3232 read as "dark gray" against the pixel-art
+   * chrome on production — too desaturated to register as an
+   * urgent alert. #ef4444 (rgba(239, 68, 68)) pops cleanly
+   * against the gray button row. The keyframe above uses the
+   * same RGB so glow ring and fill stay the same hue. White
+   * text keeps WCAG-AA contrast on this red (~4.7:1). The class
+   * is only applied while energyVal === 0; restoring energy
+   * strips it and the button returns to the default StoneBtn
+   * gray. */
+  background-color: #ef4444 !important;
   color: #ffffff !important;
 }
 
