@@ -216,7 +216,11 @@ class SlidingWindowLimiter:
 # Storage: same rate_limit_counters table; the date suffix on the
 # key means each new UTC day is a new row with its own expires_at.
 
-WALLET_DAILY_LIMIT: int = 30
+# Phase 5.8: raised from 30 to 75 after public launch feedback
+# (Discord ticket 2026-05-12). Users hit the cap during normal
+# multi-Dev chatting; 75 gives headroom while the global $1/day
+# cost ceiling in services/llm_cost.py stays the ultimate backstop.
+WALLET_DAILY_LIMIT: int = 75
 _WALLET_DAY_NS: str = "souls_chat_wallet_day"
 
 
@@ -338,18 +342,23 @@ global_ip_limiter = SlidingWindowLimiter(
 # of) the per-(wallet, dev) cool-down. Each window is its own counter
 # so a burst of 5 within a minute followed by 5 more in the next minute
 # still trips the hour cap.
+#
+# Phase 5.8: per-IP caps raised after public launch feedback (Discord
+# ticket 2026-05-12). New values: 15/min (was 5), 150/hr (was 60),
+# 500/day (was 200). The $1/day LLM cost ceiling in
+# services/llm_cost.py is unchanged — it's the ultimate backstop.
 souls_ip_per_minute = SlidingWindowLimiter(
-    max_requests=5,
+    max_requests=15,
     window_seconds=60,
     namespace="souls_chat_ip_min",
 )
 souls_ip_per_hour = SlidingWindowLimiter(
-    max_requests=60,
+    max_requests=150,
     window_seconds=3600,
     namespace="souls_chat_ip_hr",
 )
 souls_ip_per_day = SlidingWindowLimiter(
-    max_requests=200,
+    max_requests=500,
     window_seconds=86400,
     namespace="souls_chat_ip_day",
 )
