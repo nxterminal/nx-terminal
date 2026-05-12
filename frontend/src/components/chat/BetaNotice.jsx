@@ -20,11 +20,13 @@
  * would invite users to optimize against it and would break if we
  * tune the value later.
  *
- * Phase 5.6.3 — copy refactor: the prior "Beta: chats reset every
- * 24h" was technically accurate but read like a system disclaimer.
- * The new line is in Spanish on purpose; it frames the 24h memory
- * reset as part of the Devs' personality rather than a system
- * limit, and matches the project's mixed-language lore tone.
+ * Phase 5.6.3/5.6.4 — copy refactor: the original "Beta: chats
+ * reset every 24h" read like a system disclaimer. The new line
+ * (English, in keeping with the rest of the UI) frames the 24h
+ * memory reset as part of the Devs' personality rather than a
+ * platform limit. The trailing "Probably." fragment is intentional
+ * — the self-aware undermining of the previous sentence is the
+ * joke; do not "fix" the grammar.
  */
 
 import styles from './chat.module.css';
@@ -32,7 +34,7 @@ import styles from './chat.module.css';
 export default function BetaNotice() {
   return (
     <div className={styles.betaNotice} role="status">
-      Los devs funcionan con cafeína y ciclos de memoria de 24h. Probablemente.
+      Devs run on caffeine and 24h memory cycles. Probably.
     </div>
   );
 }
