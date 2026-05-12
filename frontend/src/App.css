@@ -1458,8 +1458,18 @@
  * Mirrors the streakGlow keyframe pattern but with box-shadow
  * for a button glow rather than text-shadow. Two intensities:
  *   - .low-energy-warning  → energy <= 5 (subtle violet)
- *   - .low-energy-critical → energy === 0 (urgent red pulse)
+ *   - .low-energy-critical → energy === 0 (urgent red pulse +
+ *                            red background, Phase 5.6)
  * Applied conditionally to COFFEE and FEED buttons in MyDevs.jsx.
+ *
+ * Phase 5.6 note on `!important`: StoneBtn in MyDevs.jsx sets
+ * `background: '#6b7b8a'` and `color: '#1a2030'` as INLINE styles
+ * on the <button>. Inline styles win over external CSS unless
+ * !important is used. The pre-existing scroll-flash class in
+ * nxposts.module.css uses the same pattern (`background-color:
+ * rgba(...) !important`) — the red background here follows that
+ * precedent. Only the critical state gets red; the warning state
+ * stays violet glow.
  * ────────────────────────────────────────────────────────── */
 
 @keyframes lowEnergyCritical {
@@ -1474,6 +1484,14 @@
 
 .low-energy-critical {
   animation: lowEnergyCritical 1.2s ease-in-out infinite;
+  /* Red base color matches the existing box-shadow keyframe
+   * (rgba(220, 50, 50) → #dc3232) so the glow ring reads as the
+   * same hue as the fill. White text keeps WCAG-AA contrast on
+   * this red (~5.5:1). The class is only applied while
+   * energyVal === 0; restoring energy strips the class and the
+   * button returns to the default StoneBtn gray. */
+  background-color: #dc3232 !important;
+  color: #ffffff !important;
 }
 
 .low-energy-warning {

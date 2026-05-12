@@ -5,9 +5,18 @@
  * inherits them without re-declaring; future Phase 4.3-4.5
  * components in this folder pick them up the same way.
  *
- * Z-index sits at 9500: above Desktop/WindowManager (≤100s), below
- * the NX Souls chat modal (9999) so the modal cleanly covers a
- * toast when the user clicks it.
+ * Z-index sits at 10100 (Phase 5.6 — was 9500): the toast must
+ * render ABOVE the Clippy-style NX Assistant (.clippy at 10000 +
+ * .clippy-balloon at 10001 in App.css) so a sprkl notification
+ * isn't obscured by the assistant or its tooltip bubble. The
+ * notification auto-dismisses after a few seconds, so brief
+ * overlap with the assistant is acceptable; losing the
+ * notification entirely is not.
+ *
+ * Only the toast layer was bumped — graffiti / window / desktop
+ * file / screensaver / wallpaper sprkls (defined later in this
+ * file) keep their existing z-indexes in the 9200-9700 range.
+ * Their UX intent is different (decorative, not alerting).
  */
 
 /* ── Layer container (fixed bottom-right) ─────────────────────────── */
@@ -35,7 +44,10 @@
    * value without duplicating the math. */
   bottom: var(--sprkls-safe-bottom-px, 90px);
   right: 16px;
-  z-index: 9500;
+  /* Phase 5.6: bumped from 9500 → 10100 to render above the
+   * Clippy assistant (10000) and its balloon (10001) defined in
+   * App.css. See file header docstring for the rationale. */
+  z-index: 10100;
   display: flex;
   /* column-reverse anchors freshest toast at the BOTTOM of the
    * stack, growing upward — natural for a bottom-right corner. */
