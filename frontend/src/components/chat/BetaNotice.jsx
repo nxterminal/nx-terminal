@@ -18,9 +18,13 @@
  * The 30-msg/day per-wallet limit is NOT mentioned in the banner —
  * it's a server-side internal detail. Surfacing the exact number
  * would invite users to optimize against it and would break if we
- * tune the value later. "Beta: chats reset every 24h" is the
- * minimum users need to know (so they don't expect long-term
- * session persistence) without leaking config.
+ * tune the value later.
+ *
+ * Phase 5.6.3 — copy refactor: the prior "Beta: chats reset every
+ * 24h" was technically accurate but read like a system disclaimer.
+ * The new line is in Spanish on purpose; it frames the 24h memory
+ * reset as part of the Devs' personality rather than a system
+ * limit, and matches the project's mixed-language lore tone.
  */
 
 import styles from './chat.module.css';
@@ -28,7 +32,7 @@ import styles from './chat.module.css';
 export default function BetaNotice() {
   return (
     <div className={styles.betaNotice} role="status">
-      Beta: chats reset every 24h
+      Los devs funcionan con cafeína y ciclos de memoria de 24h. Probablemente.
     </div>
   );
 }
