@@ -433,6 +433,46 @@ export default function Desktop() {
         </div>
       )}
 
+      {/* Phase 5.9 — NX SOULS launch announcement post-it. Sits to
+       * the LEFT of "My Rank" (right: 190 = right:10 + width:170 +
+       * gap:10). Pastel violet palette follows the existing
+       * yellow/salmon post-it pattern (pastel body + darker header
+       * + dark contrasting text + sharp accent pin). Pin colour is
+       * amber against the violet, mirroring the alternating-hue
+       * pin convention used by the existing cards (red pin on
+       * yellow, blue pin on salmon). Rotation -2deg extends the
+       * alternating-tilt motif. Unconditional render — this is a
+       * feature-launch announcement, not user-data-dependent. */}
+      <div style={{
+        position: 'fixed', top: 10, right: 190, zIndex: 2,
+        pointerEvents: 'none', userSelect: 'none',
+        transform: 'rotate(-2deg)',
+      }}>
+        <div style={{
+          width: 12, height: 12, borderRadius: '50%', background: '#ffcc33',
+          position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)', zIndex: 3,
+        }} />
+        <div style={{
+          width: 170, background: '#c4a0e8',
+          boxShadow: '3px 3px 8px rgba(0,0,0,0.25)',
+          fontFamily: "'Patrick Hand', cursive",
+        }}>
+          <div style={{
+            background: '#a87fc8', padding: '3px 8px', fontSize: 'var(--text-sm)',
+            color: '#3a1a4a',
+          }}>📌 NX SOULS LIVE</div>
+          <div style={{ padding: '8px 10px', color: '#3a1a4a' }}>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', marginBottom: 2 }}>
+              talk to your devs
+            </div>
+            <div style={{ fontSize: 'var(--text-base)', opacity: 0.8 }}>
+              they have things to say
+            </div>
+          </div>
+        </div>
+      </div>
+
       <WindowManager
         windows={windows}
         closeWindow={closeWindow}
