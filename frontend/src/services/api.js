@@ -52,6 +52,9 @@ export const api = {
   // Leaderboard
   getLeaderboard: (sort = 'balance') => fetchJSON(`${API_BASE}/api/leaderboard?sort=${sort}`),
   getCorpLeaderboard: () => fetchJSON(`${API_BASE}/api/leaderboard/corporations`),
+  getTopHackers: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/top-hackers?limit=${limit}`),
+  getNxtHolders: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/nxt-holders?limit=${limit}`),
+  getDevCollectors: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/dev-collectors?limit=${limit}`),
 
   // Chat
   getDevChat: (channel = 'trollbox') => fetchJSON(`${API_BASE}/api/chat/devs?channel=${channel}`),

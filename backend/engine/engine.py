@@ -1926,6 +1926,11 @@ def run_engine():
     # to 1/day per Dev internally). Idempotency comes from the
     # per-Dev daily cap; running this twice within an hour is safe.
     posts_feed_tick_interval = timedelta(hours=1)
+    # Phase 5.11 — pull every dev-owning wallet's $NXT balance from
+    # MegaETH and upsert into nxt_holder_snapshot. Feeds the
+    # Leaderboard's NXT Holders tab. 5-min cadence keeps the table
+    # fresh without hammering the public RPC.
+    nxt_snapshot_tick_interval = timedelta(minutes=5)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2029,6 +2034,9 @@ def run_engine():
     # internally bails when no Dev rolls a post this tick, so the
     # cost of an early run is bounded.
     last_posts_feed_tick = datetime.now(timezone.utc) - posts_feed_tick_interval
+    # Same first-loop trick for the NXT snapshot — populates the
+    # Leaderboard immediately on engine start instead of waiting 5min.
+    last_nxt_snapshot_tick = datetime.now(timezone.utc) - nxt_snapshot_tick_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2129,6 +2137,20 @@ def run_engine():
                     except Exception as e:
                         log.error(f"run_feed_generation_tick error: {e}")
                     last_posts_feed_tick = now
+
+                # NXT holders snapshot — pull balanceOf for every
+                # dev-owning wallet via MegaETH eth_call and upsert
+                # into nxt_holder_snapshot. Feeds the Leaderboard's
+                # NXT Holders tab. RPC fan-out is thread-pooled inside
+                # the function (10-wide) so the tick stays well under
+                # a second for the current holder base.
+                if now - last_nxt_snapshot_tick >= nxt_snapshot_tick_interval:
+                    try:
+                        from backend.services.nxt_snapshot import run_nxt_snapshot_tick
+                        run_nxt_snapshot_tick(conn)
+                    except Exception as e:
+                        log.error(f"run_nxt_snapshot_tick error: {e}")
+                    last_nxt_snapshot_tick = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
