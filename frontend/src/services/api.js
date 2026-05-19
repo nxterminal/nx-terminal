@@ -417,8 +417,14 @@ export const api = {
     }),
 
   // NXMARKET leaderboard (PR C2) — top users by net profit. Period
-  // toggle: 'all' (entire history) or '30d' (last 30 days).
-  getLeaderboard: (period = 'all', limit = 25) =>
+  // toggle: 'all' (entire history) or '30d' (last 30 days). Renamed
+  // from getLeaderboard to avoid colliding with the main Leaderboard
+  // window's `api.getLeaderboard(sort)` at the top of this file —
+  // duplicate keys in the same object literal silently dropped the
+  // first definition, and the main Leaderboard's `?sort=balance`
+  // started landing here as `?period=balance` and 422'd against the
+  // `^(all|30d)$` pattern.
+  getNxmarketLeaderboard: (period = 'all', limit = 25) =>
     fetchJSON(
       `${API_BASE}/api/nxmarket/leaderboard?period=${encodeURIComponent(period)}&limit=${limit}`,
     ),

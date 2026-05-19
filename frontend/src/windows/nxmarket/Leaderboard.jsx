@@ -77,7 +77,7 @@ export default function Leaderboard({ wallet }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    api.getLeaderboard(period, 25)
+    api.getNxmarketLeaderboard(period, 25)
       .then(d => { if (!cancelled) setData(d); })
       .catch(e => { if (!cancelled) setError(e.message || 'Failed to load leaderboard'); })
       .finally(() => { if (!cancelled) setLoading(false); });
