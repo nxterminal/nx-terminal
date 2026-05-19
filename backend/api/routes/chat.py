@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_all, get_db, validate_wallet
+from backend.api.middleware.nickname_required import require_nickname
 from backend.api.rate_limit import chat_limiter
 
 router = APIRouter()
@@ -55,6 +56,7 @@ async def post_world_chat(msg: ChatMessage):
     """Post a message to world chat."""
     # Validate wallet format
     addr = validate_wallet(msg.player_address)
+    require_nickname(addr)
 
     # Rate limit: 1 message per wallet per 10s
     chat_limiter.check(f"wallet:{addr}")

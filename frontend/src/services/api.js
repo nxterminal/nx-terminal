@@ -16,8 +16,18 @@ async function fetchJSON(url, options) {
         detail = d;
       }
     } catch {}
+    // Phase 5.12 — surface nickname_required globally so Desktop can
+    // open the onboarding modal regardless of which call tripped the
+    // gate. Listener is the only consumer; if no one is mounted the
+    // event is a no-op.
+    if (r.status === 409 && structured && structured.error === 'nickname_required') {
+      try {
+        window.dispatchEvent(new CustomEvent('nx-nickname-required'));
+      } catch {}
+    }
     const err = new Error(detail || `HTTP ${r.status}`);
     if (structured) err.detail = structured;
+    err.status = r.status;
     throw err;
   }
   return r.json();
@@ -121,6 +131,20 @@ export const api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }),
+
+  // Phase 5.12 — nickname onboarding. checkNickname returns `{ok}` with
+  // a distinct `error` code per failure mode (invalid_nickname /
+  // nickname_reserved / nickname_taken) so the modal can render the
+  // right message. claimNickname does the one-shot UPDATE on the
+  // existing players row created by the on-chain mint listener.
+  checkNickname: (nickname) =>
+    fetchJSON(`${API_BASE}/api/players/check-nickname?nickname=${encodeURIComponent(nickname)}`),
+  claimNickname: (wallet_address, nickname) =>
+    fetchJSON(`${API_BASE}/api/players/claim-nickname`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_address, nickname }),
+    }),
 
   // NX Souls — chat list (per-wallet view of every Dev with quota /
   // status / resting flags). Backed by GET /api/user/{wallet}/conversations.

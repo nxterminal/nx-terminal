@@ -1619,6 +1619,89 @@ def run_auto_migrations() -> None:
                     "CREATE INDEX IF NOT EXISTS idx_nxt_holder_balance "
                     "ON nxt_holder_snapshot (balance DESC)"
                 )
+                # ── Nickname system (Phase 5.12) ──────────────────────
+                # Promotes `players.display_name` from optional/free-text
+                # to a unique, validated, immutable handle. See
+                # backend/config/reserved_nicknames.py for the blocklist
+                # and backend/api/middleware/nickname_required.py for
+                # the route-side gate.
+                #
+                # Strategy notes:
+                #   1. Sanitise empty strings to NULL so the gate fires
+                #      correctly on "user typed a space and saved".
+                #   2. NULL legacy rows that wouldn't pass the new
+                #      format regex (spaces, unicode, length<3 or >20).
+                #      Forces those users through the onboarding modal
+                #      on next sensitive action. Display-only NULLs are
+                #      already harmless.
+                #   3. `nickname_lower` is a STORED generated column so
+                #      the UNIQUE index can be partial (NULL-tolerant)
+                #      and case-insensitive at the same time.
+                #   4. Prefix-search index uses varchar_pattern_ops so
+                #      LIKE 'abc%' is index-served (paso 3 dependency).
+                #   5. CHECK constraint enforces format on every write.
+                #      Adding it AFTER the sanitise step so VALIDATE
+                #      passes for existing rows.
+                #   6. Immutability trigger blocks UPDATEs that change
+                #      an already-set nickname. Setting NULL → value is
+                #      allowed (legacy migration path); value → value is
+                #      forbidden until a future "change nickname" flow
+                #      replaces the trigger with cooldown logic.
+                cur.execute(
+                    "UPDATE players SET display_name = NULL "
+                    "WHERE display_name IS NOT NULL "
+                    "AND length(trim(display_name)) = 0"
+                )
+                cur.execute(
+                    "UPDATE players SET display_name = NULL "
+                    "WHERE display_name IS NOT NULL "
+                    "AND display_name !~ '^[A-Za-z0-9_]{3,20}$'"
+                )
+                cur.execute(
+                    "ALTER TABLE players "
+                    "ADD COLUMN IF NOT EXISTS nickname_lower VARCHAR(30) "
+                    "GENERATED ALWAYS AS (lower(display_name)) STORED"
+                )
+                cur.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_players_nickname_lower "
+                    "ON players (nickname_lower) "
+                    "WHERE nickname_lower IS NOT NULL"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_players_nickname_prefix "
+                    "ON players (nickname_lower varchar_pattern_ops) "
+                    "WHERE nickname_lower IS NOT NULL"
+                )
+                cur.execute(
+                    "ALTER TABLE players DROP CONSTRAINT IF EXISTS chk_nickname_format"
+                )
+                cur.execute(
+                    "ALTER TABLE players ADD CONSTRAINT chk_nickname_format "
+                    "CHECK (display_name IS NULL OR "
+                    "display_name ~ '^[A-Za-z0-9_]{3,20}$')"
+                )
+                cur.execute(
+                    "CREATE OR REPLACE FUNCTION nickname_immutable() "
+                    "RETURNS trigger AS $$ "
+                    "BEGIN "
+                    "  IF OLD.display_name IS NOT NULL "
+                    "     AND NEW.display_name IS DISTINCT FROM OLD.display_name "
+                    "  THEN "
+                    "    RAISE EXCEPTION "
+                    "      'nickname_immutable: once set, display_name cannot be changed' "
+                    "      USING ERRCODE = 'integrity_constraint_violation'; "
+                    "  END IF; "
+                    "  RETURN NEW; "
+                    "END $$ LANGUAGE plpgsql"
+                )
+                cur.execute(
+                    "DROP TRIGGER IF EXISTS trg_nickname_immutable ON players"
+                )
+                cur.execute(
+                    "CREATE TRIGGER trg_nickname_immutable "
+                    "BEFORE UPDATE OF display_name ON players "
+                    "FOR EACH ROW EXECUTE FUNCTION nickname_immutable()"
+                )
                 # End of per-phase migrations. The `_SafeCursorProxy`
                 # has captured any per-step failures in
                 # `warnings_list`; summary log happens after the

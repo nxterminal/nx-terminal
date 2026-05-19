@@ -43,6 +43,7 @@ function GlobalStatAnimation() {
 import ErrorPopup from './ErrorPopup';
 import BSOD from './BSOD';
 import Screensaver from './Screensaver';
+import NicknameOnboardingModal from './NicknameOnboardingModal';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useDevCount } from '../hooks/useDevCount';
 import { useWallet } from '../hooks/useWallet';
@@ -203,6 +204,11 @@ export default function Desktop() {
     () => localStorage.getItem('nx-click-mode') || 'double',
   );
   const [notifPopup, setNotifPopup] = useState(null);
+  // Phase 5.12 — onboarding modal. Opened either proactively (after
+  // wallet connect we read /api/players/{addr} and check display_name)
+  // or reactively (any backend call returns 409 nickname_required and
+  // fetchJSON dispatches the `nx-nickname-required` window event).
+  const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
   const idleTimerRef = useRef(null);
   const lastNotifCheck = useRef(0);
 
@@ -221,6 +227,34 @@ export default function Desktop() {
       window.removeEventListener('nx-tooltips-changed', handleTips);
       window.removeEventListener('nx-click-mode-changed', handleClickMode);
     };
+  }, []);
+
+  // Phase 5.12 — proactive nickname check on wallet connect. If the
+  // player row exists and display_name is null, open the onboarding
+  // modal immediately instead of waiting for them to trip a 409 on a
+  // sensitive action. 404 (no player row yet) is a no-op; they'll
+  // mint first via the on-chain flow, the listener will create the
+  // row with display_name=null, and the next connect cycle catches it.
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setNicknameModalOpen(false);
+      return;
+    }
+    let cancelled = false;
+    api.getPlayer(address).then((p) => {
+      if (cancelled) return;
+      if (p && !p.display_name) setNicknameModalOpen(true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [address, isConnected]);
+
+  // Phase 5.12 — reactive open: any backend call that hits the
+  // nickname gate triggers `nx-nickname-required` via api.js, no matter
+  // which window dispatched the call.
+  useEffect(() => {
+    const handler = () => setNicknameModalOpen(true);
+    window.addEventListener('nx-nickname-required', handler);
+    return () => window.removeEventListener('nx-nickname-required', handler);
   }, []);
 
   // Poll backend for new notifications (every 30s).
@@ -500,6 +534,13 @@ export default function Desktop() {
 
       {showBSOD && <BSOD onDismiss={() => setShowBSOD(false)} />}
       {showScreensaver && <Screensaver onDismiss={() => { setShowScreensaver(false); showScreensaverRef.current = false; resetIdleTimer(); }} />}
+
+      {nicknameModalOpen && address && (
+        <NicknameOnboardingModal
+          walletAddress={address}
+          onClaimed={() => setNicknameModalOpen(false)}
+        />
+      )}
 
       <Taskbar
         windows={windows}

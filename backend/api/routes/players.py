@@ -1,11 +1,15 @@
 """Routes: Players — registration, profile, devs, wallet"""
 
 import logging
+import re
 from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional
 from backend.api.deps import fetch_one, fetch_all, execute, get_db, validate_wallet
+from backend.api.middleware.nickname_required import require_nickname
+from backend.api.rate_limit import RateLimiter
+from backend.config.reserved_nicknames import is_reserved
 from backend.services.logging_helpers import log_info, log_warning
 from backend.services.admin_log import log_event as admin_log_event
 from backend.services.event_parser import parse_nxt_claimed_event
@@ -13,6 +17,39 @@ from backend.engine.claim_sync import _rpc_call_sync, NXDEVNFT_ADDRESS
 
 log = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# ── Nickname validation ─────────────────────────────────────
+#
+# Format mirrors the DB CHECK constraint chk_nickname_format —
+# keep both in sync. ASCII-only kills homoglyph attacks; the
+# 3–20 length floor leaves room for short handles while staying
+# under the column's VARCHAR(30) cap (the column was sized for the
+# free-text display_name era and isn't worth shrinking now).
+_NICKNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,20}$")
+_nickname_check_limiter = RateLimiter(
+    cooldown_seconds=1, namespace="nickname_check"
+)
+
+
+def _validate_nickname_format(raw: Optional[str]) -> str:
+    """Return the trimmed nickname if it passes format checks, else
+    raise 400 with the structured `invalid_nickname` error. Does NOT
+    consult the reserved-names blocklist or the uniqueness index —
+    callers do those checks separately so the frontend can show a
+    different message for each failure mode."""
+    if raw is None:
+        raise HTTPException(400, detail={
+            "error": "invalid_nickname",
+            "message": "Nickname is required.",
+        })
+    nickname = raw.strip()
+    if not _NICKNAME_RE.match(nickname):
+        raise HTTPException(400, detail={
+            "error": "invalid_nickname",
+            "message": "Use 3–20 letters, digits, or underscores.",
+        })
+    return nickname
 
 WELCOME_BODY = """\
 Welcome to NX Terminal.
@@ -81,19 +118,38 @@ Good luck, Commander.
 
 class RegisterRequest(BaseModel):
     wallet_address: str
-    display_name: Optional[str] = None
-    corporation: str  # From quiz result
+    display_name: str  # Phase 5.12: nickname is required at registration
+    corporation: str   # From quiz result
+
+
+class ClaimNicknameRequest(BaseModel):
+    wallet_address: str
+    nickname: str
 
 
 @router.post("/register")
 async def register_player(req: RegisterRequest):
-    """Register a new player after quiz. Called before first mint."""
-    # Validate wallet format
+    """Register a new player after quiz. Called before first mint.
+
+    Phase 5.12 — `display_name` is now required and validated. Most
+    players actually arrive via the on-chain mint listener
+    (engine/listener.py:ensure_player), which creates a row with
+    NULL display_name; those users go through `/claim-nickname`
+    below on next login. This route is the entry point for clients
+    that prefer to set the nickname BEFORE minting.
+    """
     addr = validate_wallet(req.wallet_address)
 
     valid_corps = ["CLOSED_AI", "MISANTHROPIC", "SHALLOW_MIND", "ZUCK_LABS", "Y_AI", "MISTRIAL_SYSTEMS"]
     if req.corporation not in valid_corps:
         raise HTTPException(400, f"Invalid corporation. Must be one of: {valid_corps}")
+
+    nickname = _validate_nickname_format(req.display_name)
+    if is_reserved(nickname):
+        raise HTTPException(400, detail={
+            "error": "nickname_reserved",
+            "message": "That nickname is reserved.",
+        })
 
     # Check if already registered
     existing = fetch_one(
@@ -103,23 +159,147 @@ async def register_player(req: RegisterRequest):
     if existing:
         raise HTTPException(409, "Player already registered")
 
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO players (wallet_address, display_name, corporation)
+                       VALUES (%s, %s, %s) RETURNING wallet_address, corporation, created_at""",
+                    (addr, nickname, req.corporation)
+                )
+                result = cur.fetchone()
+
+                cur.execute("""
+                    INSERT INTO notifications (player_address, type, title, body)
+                    VALUES (%s, 'welcome', %s, %s)
+                """, (addr,
+                      "Welcome to NX Terminal — Protocol Wars Awaits",
+                      WELCOME_BODY))
+    except Exception as exc:
+        # Translate the partial unique index violation into the same
+        # structured `nickname_taken` error the check + claim endpoints
+        # return, so the frontend's onboarding flow can react uniformly.
+        if "uq_players_nickname_lower" in str(exc):
+            raise HTTPException(409, detail={
+                "error": "nickname_taken",
+                "message": "That nickname is already in use.",
+            })
+        raise
+
+    return result
+
+
+@router.get("/check-nickname")
+async def check_nickname(nickname: str = Query(..., min_length=1, max_length=30)):
+    """Live nickname validation for the onboarding modal.
+
+    Returns one of:
+      { "ok": true }
+      { "ok": false, "error": "invalid_nickname", "message": "…" }
+      { "ok": false, "error": "nickname_reserved", "message": "…" }
+      { "ok": false, "error": "nickname_taken",   "message": "…" }
+
+    Distinct error codes (not just `ok: false`) so the frontend can
+    show a tailored message per failure mode. Rate-limited per IP
+    via the global per-IP middleware in main.py; the per-key cooldown
+    here is an additional brake against typing-burst storms.
+    """
+    # 1-second cooldown per literal nickname string. Cheap brake on
+    # someone scripting an enumeration of the namespace; the real
+    # uniqueness check is the partial index in Postgres.
+    _nickname_check_limiter.check(f"nick:{nickname.lower()}")
+
+    try:
+        candidate = _validate_nickname_format(nickname)
+    except HTTPException as exc:
+        d = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+        return {"ok": False, **d}
+
+    if is_reserved(candidate):
+        return {
+            "ok": False,
+            "error": "nickname_reserved",
+            "message": "That nickname is reserved.",
+        }
+
+    row = fetch_one(
+        "SELECT 1 FROM players WHERE nickname_lower = %s",
+        (candidate.lower(),),
+    )
+    if row:
+        return {
+            "ok": False,
+            "error": "nickname_taken",
+            "message": "That nickname is already in use.",
+        }
+
+    return {"ok": True}
+
+
+@router.post("/claim-nickname")
+async def claim_nickname(req: ClaimNicknameRequest):
+    """One-shot nickname claim for legacy players.
+
+    Players minted before Phase 5.12 had their row auto-created by
+    the engine listener with `display_name = NULL`. The onboarding
+    modal calls this endpoint to set the nickname on the existing
+    row. Once set, the DB trigger `trg_nickname_immutable` blocks
+    any further change — same one-and-done semantics as
+    `/register`.
+
+    If the wallet has no player row at all yet, returns 404 — the
+    user needs to mint (or hit /register) first. We deliberately do
+    NOT auto-create the row here because we don't know the
+    corporation; that comes from the quiz flow.
+    """
+    addr = validate_wallet(req.wallet_address)
+    nickname = _validate_nickname_format(req.nickname)
+    if is_reserved(nickname):
+        raise HTTPException(400, detail={
+            "error": "nickname_reserved",
+            "message": "That nickname is reserved.",
+        })
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO players (wallet_address, display_name, corporation)
-                   VALUES (%s, %s, %s) RETURNING wallet_address, corporation, created_at""",
-                (addr, req.display_name, req.corporation)
+                "SELECT display_name FROM players WHERE wallet_address = %s FOR UPDATE",
+                (addr,),
             )
-            result = cur.fetchone()
+            row = cur.fetchone()
+            if row is None:
+                raise HTTPException(404, detail={
+                    "error": "player_not_found",
+                    "message": "No player profile for this wallet.",
+                })
+            if row["display_name"] is not None and row["display_name"].strip():
+                # Idempotent re-claim of the same value returns OK so a
+                # double-tap from the modal doesn't 409. A genuine
+                # attempt to change to a different value is rejected.
+                if row["display_name"].lower() == nickname.lower():
+                    return {"ok": True, "nickname": row["display_name"]}
+                raise HTTPException(409, detail={
+                    "error": "nickname_already_set",
+                    "message": "Nickname is already set and cannot be changed.",
+                })
 
-            cur.execute("""
-                INSERT INTO notifications (player_address, type, title, body)
-                VALUES (%s, 'welcome', %s, %s)
-            """, (addr,
-                  "Welcome to NX Terminal — Protocol Wars Awaits",
-                  WELCOME_BODY))
+            try:
+                cur.execute(
+                    "UPDATE players SET display_name = %s "
+                    "WHERE wallet_address = %s "
+                    "RETURNING display_name",
+                    (nickname, addr),
+                )
+                updated = cur.fetchone()
+            except Exception as exc:
+                if "uq_players_nickname_lower" in str(exc):
+                    raise HTTPException(409, detail={
+                        "error": "nickname_taken",
+                        "message": "That nickname is already in use.",
+                    })
+                raise
 
-    return result
+    return {"ok": True, "nickname": updated["display_name"]}
 
 
 @router.get("/{wallet}")
@@ -201,6 +381,7 @@ async def record_claim(wallet: str, request: Request):
     receipt.
     """
     addr = wallet.lower()
+    require_nickname(addr)
     try:
         body = await request.json()
     except Exception:

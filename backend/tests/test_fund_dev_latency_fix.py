@@ -99,7 +99,9 @@ def clean(db_pool):
 def _seed_dev(token_id=1, owner=WALLET_A, archetype="10X_DEV"):
     with deps.get_db() as conn:
         with conn.cursor() as cur:
-            seed_player(cur, owner,)
+            # Phase 5.12 — fund_dev now goes through the nickname gate;
+            # seed a display_name so the gate stays silent for tests.
+            seed_player(cur, owner, display_name=f"funder_{token_id}")
             seed_dev(cur, token_id=token_id, owner_address=owner, name=f"dev{token_id}", archetype=archetype)
 
 

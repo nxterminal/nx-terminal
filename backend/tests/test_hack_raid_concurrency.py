@@ -79,12 +79,17 @@ def _seed(target_balance: int) -> None:
                 "TRUNCATE devs, players, actions, shop_purchases, "
                 "notifications, world_events RESTART IDENTITY CASCADE"
             )
-            for w, c in [
-                (ATTACKER_A_WALLET, "CLOSED_AI"),
-                (ATTACKER_B_WALLET, "CLOSED_AI"),
-                (VICTIM_WALLET, "MISANTHROPIC"),
+            # Phase 5.12 — hack_player now goes through the
+            # nickname_required gate (backend/api/middleware/
+            # nickname_required.py). Seeding a display_name keeps the
+            # gate silent so this test can focus on the concurrency
+            # invariant it was written for.
+            for w, c, nick in [
+                (ATTACKER_A_WALLET, "CLOSED_AI", "attackerA"),
+                (ATTACKER_B_WALLET, "CLOSED_AI", "attackerB"),
+                (VICTIM_WALLET, "MISANTHROPIC", "victimZ"),
             ]:
-                seed_player(cur, w, corporation=c)
+                seed_player(cur, w, corporation=c, display_name=nick)
             rows = [
                 (1, "attacker_one", ATTACKER_A_WALLET, "CLOSED_AI", 2000),
                 (2, "attacker_two", ATTACKER_B_WALLET, "CLOSED_AI", 2000),

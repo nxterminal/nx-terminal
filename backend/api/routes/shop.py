@@ -9,6 +9,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_active_event_effects
+from backend.api.middleware.nickname_required import require_nickname
 from backend.api.rate_limit import shop_limiter
 from backend.services.logging_helpers import log_info
 from backend.services.admin_log import log_event as admin_log_event
@@ -266,6 +267,7 @@ class PurchaseRequest(BaseModel):
 async def buy_item(req: PurchaseRequest):
     """Buy a shop item for your dev. Cost deducted from dev's $NXT balance."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
     shop_limiter.check(f"wallet:{addr}")
 
     item = SHOP_ITEMS.get(req.item_id)
@@ -456,6 +458,7 @@ class GraduateRequest(BaseModel):
 async def graduate_training(req: GraduateRequest):
     """Complete training and apply stat bonus."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -554,6 +557,7 @@ def _resolve_mega_name(addr: str) -> str:
 async def hack_mainframe(req: HackRequest):
     """Hack the corporate mainframe. Reward from treasury."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
     shop_limiter.check(f"hack_mainframe:{addr}")
 
     with get_db() as conn:
@@ -747,6 +751,7 @@ async def hack_mainframe(req: HackRequest):
 async def hack_player(req: HackRequest):
     """Attempt to hack a random dev from another corporation."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
     shop_limiter.check(f"hack_player:{addr}")
 
     with get_db() as conn:
@@ -1060,6 +1065,7 @@ class FundRequest(BaseModel):
 async def fund_dev(req: FundRequest):
     """Deposit on-chain $NXT into a dev's in-game balance."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
     shop_limiter.check(f"fund:{addr}")
 
     if req.amount <= 0:
@@ -1254,6 +1260,7 @@ class TransferRequest(BaseModel):
 async def transfer_nxt(req: TransferRequest):
     """Transfer $NXT between your own devs. No blockchain transaction needed."""
     addr = validate_wallet(req.player_address)
+    require_nickname(addr)
     shop_limiter.check(f"transfer:{addr}")
 
     if req.amount <= 0:
