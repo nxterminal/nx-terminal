@@ -219,6 +219,26 @@ def test_top_hackers_case_d_viewer_zero_metric(client, clean_db):
     assert r["viewer"]["is_virtual_rank"] is True
 
 
+def test_top_hackers_case_b_viewer_at_exact_limit_boundary(client, clean_db):
+    """Boundary: rank == limit. The viewer is the LAST row in the top
+    N. `in_top` must still be True — `<=` not `<`. Regression guard
+    against an off-by-one on the in_top flag."""
+    # 10 wallets, distinct descending hack counts (10, 9, ..., 1).
+    # Viewer is the 10th wallet with 1 hack — rank should be exactly 10.
+    for i in range(1, 11):
+        _seed_dev(i, _w(i))
+        for _ in range(11 - i):
+            _seed_action(i, "HACK_RAID", success=True)
+
+    r = client.get(
+        f"/api/leaderboard/top-hackers?limit=10&viewer_wallet={_w(10)}"
+    ).json()
+    assert len(r["top"]) == 10
+    assert r["viewer"]["rank"] == 10
+    assert r["viewer"]["in_top"] is True
+    assert r["viewer"]["is_virtual_rank"] is False
+
+
 def test_top_hackers_competition_ranking_handles_ties(client, clean_db):
     """Three wallets tied at 5 hacks each → all share rank 1. A fourth
     wallet with 2 hacks lands at rank 4 (NOT 2 — that's competition
@@ -285,6 +305,25 @@ def test_dev_collectors_case_c_viewer_outside_top(client, clean_db):
     assert r["viewer"]["is_virtual_rank"] is False
 
 
+def test_dev_collectors_case_b_viewer_at_exact_limit_boundary(client, clean_db):
+    """Boundary: rank == limit (10). Off-by-one guard."""
+    # 10 wallets owning 10, 9, ..., 1 devs respectively. Viewer = the
+    # one with the single dev; rank should be exactly 10.
+    next_tid = 1
+    for owner_idx in range(1, 11):
+        for _ in range(11 - owner_idx):
+            _seed_dev(next_tid, _w(owner_idx))
+            next_tid += 1
+
+    r = client.get(
+        f"/api/leaderboard/dev-collectors?limit=10&viewer_wallet={_w(10)}"
+    ).json()
+    assert len(r["top"]) == 10
+    assert r["viewer"]["rank"] == 10
+    assert r["viewer"]["in_top"] is True
+    assert r["viewer"]["is_virtual_rank"] is False
+
+
 def test_dev_collectors_case_d_viewer_zero(client, clean_db):
     # 4 wallets each with 1 dev. Viewer never seeded → 0 devs.
     for i in range(1, 5):
@@ -342,6 +381,23 @@ def test_nxt_holders_case_c_viewer_outside_top_with_balance(client, clean_db):
     assert r["viewer"]["rank"] == 12
     assert r["viewer"]["value"] == "1000000000000000000"  # 1 NXT
     assert r["viewer"]["in_top"] is False
+    assert r["viewer"]["is_virtual_rank"] is False
+
+
+def test_nxt_holders_case_b_viewer_at_exact_limit_boundary(client, clean_db):
+    """Boundary: rank == limit (10). Off-by-one guard."""
+    # 10 wallets with distinct descending balances (10, 9, ..., 1 NXT).
+    # Viewer is the smallest holder; rank should be exactly 10.
+    for i in range(1, 11):
+        _seed_snapshot(_w(i), (11 - i) * 10**18)
+
+    r = client.get(
+        f"/api/leaderboard/nxt-holders?limit=10&viewer_wallet={_w(10)}"
+    ).json()
+    assert len(r["holders"]) == 10
+    assert r["viewer"]["rank"] == 10
+    assert r["viewer"]["value"] == "1000000000000000000"  # 1 NXT
+    assert r["viewer"]["in_top"] is True
     assert r["viewer"]["is_virtual_rank"] is False
 
 
