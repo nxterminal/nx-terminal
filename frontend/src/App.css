@@ -594,6 +594,57 @@
   cursor: pointer;
 }
 
+/* Bloque F: viewer-row highlight + out-of-top separator.
+   Used by Leaderboard.jsx on the top-hackers / nxt-holders /
+   dev-collectors tabs to flag the connected wallet's position.
+   The bg colour reuses the same #FFC Win98 helper-bubble yellow
+   already used by .clippy-balloon for tonal consistency. */
+.win-table tr.viewer-row td {
+  background: #ffffcc;
+  font-weight: bold;
+}
+.win-table tr.viewer-row:hover td {
+  /* Without this, the hover rule above (`tr:hover td → --selection`)
+     would override the viewer highlight as soon as the cursor crosses
+     the row. Pin the viewer bg through hover so the YOU row stays
+     unmistakable. */
+  background: #ffffcc;
+  color: inherit;
+}
+[data-theme="dark"] .win-table tr.viewer-row td {
+  background: #4a4626;
+  color: #ffd700;
+}
+[data-theme="dark"] .win-table tr.viewer-row:hover td {
+  background: #4a4626;
+  color: #ffd700;
+}
+/* Used on row 11 (viewer is outside the top N). The 2px top border
+   creates the visual gap that signals "this row sits outside the
+   ranking above". */
+.win-table tr.out-of-top td {
+  border-top: 2px solid var(--border-dark, #808080);
+  padding-top: 6px;
+}
+
+/* The "YOU" tag rendered next to the viewer's rank. Reuses the
+   --selection / --selection-text pair — same Win98-blue + white
+   combo as the active taskbar button (.taskbar-btn.active) and the
+   window title bars. Strong contrast against the yellow viewer-row
+   background in both light and dark themes. */
+.rank-label-you {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  background: var(--selection, #000080);
+  color: var(--selection-text, #ffffff);
+  font-size: var(--text-xs, 10px);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--border-darker, #404040);
+  vertical-align: baseline;
+}
+
 /* ====== ARCHETYPE BADGES ====== */
 .badge {
   display: inline-block;
