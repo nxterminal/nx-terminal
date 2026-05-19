@@ -2038,6 +2038,22 @@ def run_engine():
     # Leaderboard immediately on engine start instead of waiting 5min.
     last_nxt_snapshot_tick = datetime.now(timezone.utc) - nxt_snapshot_tick_interval
 
+    # Outer-loop error tracking. The engine retries every
+    # SCHEDULER_INTERVAL_SEC (=1s); without dedup, a persistent error
+    # (DB down, schema mismatch after a partial deploy, exhausted pool)
+    # would emit a fresh traceback every second and flood logs. We
+    # fingerprint by exception type + str[:200] and:
+    #   - log full traceback the first time a given fingerprint hits;
+    #   - re-emit a no-traceback line at occurrence 5/25/100 and every
+    #     500 thereafter so persistence is still visible;
+    #   - back off the loop sleep linearly (cap 30s) so a hot-spin
+    #     never burns the CPU while the DB recovers;
+    #   - emit a one-line recovery notice when the engine resumes,
+    #     including the last fingerprint so we don't need to scroll
+    #     back through hundreds of lines to know what was broken.
+    consecutive_errors = 0
+    last_error_fingerprint: str | None = None
+
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
         # worker during this iteration shares the same id and is traceable.
@@ -2065,7 +2081,7 @@ def run_engine():
                     try:
                         process_pending_funds(conn)
                     except Exception as e:
-                        log.error(f"process_pending_funds error: {e}")
+                        log.error("process_pending_funds error: %s", e, exc_info=True)
                     last_pending_funds = now
 
                 # Scan on-chain for orphaned fund transfers (safety net for
@@ -2075,7 +2091,7 @@ def run_engine():
                     try:
                         scan_orphaned_funds(conn)
                     except Exception as e:
-                        log.error(f"scan_orphaned_funds error: {e}")
+                        log.error("scan_orphaned_funds error: %s", e, exc_info=True)
                     last_orphan_scan = now
 
                 # Flip expired NX Market rows from 'active' → 'closed'.
@@ -2088,7 +2104,7 @@ def run_engine():
                         )
                         auto_close_expired_markets()
                     except Exception as e:
-                        log.error(f"auto_close_expired_markets error: {e}")
+                        log.error("auto_close_expired_markets error: %s", e, exc_info=True)
                     last_nxmarket_close = now
 
                 # Auto-resolve as 'invalid' any NX Market that's been
@@ -2102,7 +2118,7 @@ def run_engine():
                         )
                         auto_timeout_invalid_markets()
                     except Exception as e:
-                        log.error(f"auto_timeout_invalid_markets error: {e}")
+                        log.error("auto_timeout_invalid_markets error: %s", e, exc_info=True)
                     last_nxmarket_timeout = now
 
                 # Sprkls tick — generate auto-posts for beta wallets
@@ -2113,7 +2129,7 @@ def run_engine():
                         from backend.services.sprkls import run_sprkls_tick
                         run_sprkls_tick(conn)
                     except Exception as e:
-                        log.error(f"run_sprkls_tick error: {e}")
+                        log.error("run_sprkls_tick error: %s", e, exc_info=True)
                     last_sprkls_tick = now
 
                 # Sprkls cleanup — hard-delete posts past expires_at
@@ -2123,7 +2139,7 @@ def run_engine():
                         from backend.services.sprkls import cleanup_expired_posts
                         cleanup_expired_posts(conn)
                     except Exception as e:
-                        log.error(f"cleanup_expired_posts error: {e}")
+                        log.error("cleanup_expired_posts error: %s", e, exc_info=True)
                     last_sprkls_cleanup = now
 
                 # NX POST feed tick — iterate all eligible Devs and
@@ -2135,7 +2151,7 @@ def run_engine():
                         from backend.services.posts import run_feed_generation_tick
                         run_feed_generation_tick(conn)
                     except Exception as e:
-                        log.error(f"run_feed_generation_tick error: {e}")
+                        log.error("run_feed_generation_tick error: %s", e, exc_info=True)
                     last_posts_feed_tick = now
 
                 # NXT holders snapshot — pull balanceOf for every
@@ -2149,7 +2165,7 @@ def run_engine():
                         from backend.services.nxt_snapshot import run_nxt_snapshot_tick
                         run_nxt_snapshot_tick(conn)
                     except Exception as e:
-                        log.error(f"run_nxt_snapshot_tick error: {e}")
+                        log.error("run_nxt_snapshot_tick error: %s", e, exc_info=True)
                     last_nxt_snapshot_tick = now
 
                 # Process due devs
@@ -2159,13 +2175,42 @@ def run_engine():
                     if cycle % 10 == 0:
                         log.info(f"📊 Cycle {cycle} — Processed {processed} devs this tick")
 
+            # Successful iteration — surface recovery if we were
+            # previously erroring, then reset the tracking state.
+            if consecutive_errors > 0:
+                log.info(
+                    "Engine recovered after %d consecutive error(s) (last: %s)",
+                    consecutive_errors, last_error_fingerprint,
+                )
+                consecutive_errors = 0
+                last_error_fingerprint = None
         except Exception as e:
-            log.error(f"Engine error: {e}")
+            consecutive_errors += 1
+            fingerprint = f"{type(e).__name__}:{str(e)[:200]}"
+            if fingerprint != last_error_fingerprint:
+                # New error class/message → full traceback.
+                log.error("Engine error: %s", e, exc_info=True)
+                last_error_fingerprint = fingerprint
+            elif (
+                consecutive_errors in (5, 25, 100)
+                or consecutive_errors % 500 == 0
+            ):
+                # Same error still happening — keep the signal alive
+                # without re-printing the traceback every second.
+                log.error(
+                    "Engine error (%dx consecutive, traceback suppressed): %s",
+                    consecutive_errors, e,
+                )
         finally:
             if _tick_cid_token is not None and reset_correlation_id:
                 reset_correlation_id(_tick_cid_token)
 
-        time.sleep(SCHEDULER_INTERVAL_SEC)
+        # Linear backoff while errors persist; normal SCHEDULER_INTERVAL_SEC
+        # cadence as soon as we hit a clean tick (consecutive_errors=0).
+        # Cap at 30s — the engine is a pure background worker so a
+        # 30s pause has no user-facing latency impact (user actions
+        # go through the FastAPI service, not this loop).
+        time.sleep(min(30, max(SCHEDULER_INTERVAL_SEC, consecutive_errors)))
 
 
 # ============================================================
