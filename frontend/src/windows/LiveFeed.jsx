@@ -25,65 +25,68 @@ const CHAT_TYPE_META = {
   reaction: { label: 'REPLY',    color: '#4488ff', msgColor: '#88aaff' },
 };
 
+// Tag color per action_type. Mirrors the palette already used in
+// MyDevs.ACTION_COLORS so the same activity reads the same colour
+// wherever it surfaces in the OS. Anything unmapped falls back to a
+// muted grey so a new backend action_type can't blow up the render.
+const ACTION_TAG_COLORS = {
+  CHAT:            'var(--terminal-amber, #ffaa00)',
+  CREATE_PROTOCOL: 'var(--terminal-green, #33ff33)',
+  CREATE_AI:       'var(--terminal-cyan, #00ffff)',
+  INVEST:          'var(--terminal-green, #33ff33)',
+  SELL:            'var(--terminal-green, #33ff33)',
+  CODE_REVIEW:     'var(--terminal-green, #33ff33)',
+  MOVE:            'var(--terminal-cyan, #00ffff)',
+  REST:            'var(--text-muted, #888)',
+  RECEIVE_SALARY:  'var(--gold, #ffd700)',
+  USE_ITEM:        'var(--terminal-cyan, #00ffff)',
+  BUY_ITEM:        'var(--terminal-cyan, #00ffff)',
+  FIX_BUG:         'var(--terminal-green, #33ff33)',
+  TRAIN:           'var(--terminal-cyan, #00ffff)',
+  GET_SABOTAGED:   'var(--terminal-red, #ff4444)',
+  HACK_RAID:       'var(--terminal-red, #ff4444)',
+  HACK_MAINFRAME:  'var(--terminal-red, #ff4444)',
+  DEPLOY:          'var(--terminal-green, #33ff33)',
+  FUND_DEV:        'var(--gold, #ffd700)',
+  TRANSFER:        'var(--terminal-cyan, #00ffff)',
+};
+const DEFAULT_TAG_COLOR = 'var(--text-muted, #888)';
+
 const IPFS_GW = 'https://gateway.pinata.cloud/ipfs/';
 
-// Avatar load tracking. Each unique ipfs_hash is fed through a throwaway
-// Image() on first sight; its onload/onerror determines whether the row
-// that carries that hash is allowed into the visible feed. The Live Feed
-// only renders chats whose avatar has been confirmed loaded — rows tied
-// to a failed or still-pending hash are held back entirely (we'd rather
-// show nothing than a 👤 placeholder). Subscribers are notified whenever
-// a hash resolves so the React filter can re-evaluate and the row can
-// pop in once its image is ready.
-const avatarLoaded = new Set();    // onload fired — safe to render
-const avatarFailedHash = new Set(); // onerror fired — drop the row forever
-const avatarAttempted = new Set();  // already dispatched new Image(), no double fetch
-const avatarSubs = new Set();       // listeners to rerun the feed filter
-
-function notifyAvatarSubs() {
-  for (const fn of avatarSubs) fn();
-}
-
-function preloadAvatar(ipfsHash) {
-  if (!ipfsHash || avatarAttempted.has(ipfsHash)) return;
-  avatarAttempted.add(ipfsHash);
-  const img = new Image();
-  img.onload = () => {
-    avatarLoaded.add(ipfsHash);
-    notifyAvatarSubs();
-  };
-  img.onerror = () => {
-    avatarFailedHash.add(ipfsHash);
-    notifyAvatarSubs();
-  };
-  img.src = `${IPFS_GW}${ipfsHash}`;
-}
-
-function preloadAvatarsFromItems(items) {
-  if (!Array.isArray(items)) return;
-  for (const item of items) {
-    if (item && item.ipfs_hash) preloadAvatar(item.ipfs_hash);
-  }
-}
-
-// Hook that returns a counter incrementing every time an avatar preload
-// resolves (onload or onerror). Components use the return value in their
-// useMemo deps so the visible-feed filter re-runs when new avatars become
-// safe to render.
-function useAvatarLoadTick() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const fn = () => setTick(t => t + 1);
-    avatarSubs.add(fn);
-    return () => { avatarSubs.delete(fn); };
-  }, []);
-  return tick;
+// Inline avatar fallback used when ipfs_hash is missing OR the IPFS
+// gateway returns an error on the live <img>. We render the row no
+// matter what — a degraded gateway never silently empties the feed.
+// Win98 grey square, archetype initial centred in black.
+function AvatarFallback({ archetype, size = 36 }) {
+  const initial = (archetype || '?').charAt(0).toUpperCase();
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        background: '#c0c0c0',
+        border: '1px solid #808080',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#000',
+        fontFamily: "'VT323', monospace",
+        fontWeight: 'bold',
+        fontSize: Math.max(14, Math.floor(size * 0.55)),
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {initial}
+    </div>
+  );
 }
 
 // Color of the message body. CHAT messages inherit from their chat_type
 // (hot_take/drama/meme/debate/reaction) so spicy posts pop visually.
-// Everything else is a neutral light grey — the dev name + action already
-// carry the color.
+// Everything else is a neutral light grey — the [TAG] colour already
+// carries the action's semantic signal.
 function getMessageColor(item) {
   if ((item.action_type || '').toUpperCase() !== 'CHAT') return '#aaa';
   const chatType = item.details && item.details.chat_type;
@@ -92,9 +95,7 @@ function getMessageColor(item) {
 }
 
 // Single-line message per action_type, formatted as if the dev were posting
-// in a group chat. The visible feed filter only lets CHAT rows through now,
-// so in practice this falls straight to the 'CHAT' case — the other branches
-// remain as defensive formatting in case the filter ever loosens.
+// in a group chat.
 function formatMessage(item) {
   const d = typeof item.details === 'object' && item.details !== null ? item.details : {};
   const type = (item.action_type || '').toUpperCase();
@@ -140,7 +141,7 @@ function formatMessage(item) {
     case 'CODE_REVIEW': {
       const name = d.name || 'a protocol';
       return d.found_bug
-        ? `Reviewed "${name}" and found a bug. Somebody\u2019s day is ruined.`
+        ? `Reviewed "${name}" and found a bug. Somebody’s day is ruined.`
         : `Reviewed "${name}". Surprisingly clean.`;
     }
     case 'RECEIVE_SALARY': {
@@ -199,10 +200,6 @@ function formatMessage(item) {
   }
 }
 
-// (formatBackendAction was removed when LiveFeed moved to the chat-group
-// layout — all rows now go through the FeedMessage component above, which
-// uses formatMessage() for the body text.)
-
 function formatTime(dateStr) {
   if (!dateStr) return '??:??';
   const d = new Date(dateStr);
@@ -213,24 +210,29 @@ function formatTime(dateStr) {
 // One feed action rendered as a chat bubble, WhatsApp-style:
 //   - isOwnDev=true  → right-aligned, greenish tint, +N SOCIAL badge visible
 //   - isOwnDev=false → left-aligned, neutral tint, no SOCIAL badge
-// Avatar is IPFS-hosted and already preload-verified by the visible-feed
-// filter before we ever mount this row. The bubble caps at ~80% width so
-// long chats wrap cleanly and the directional alignment stays visible.
+// The row mounts the instant the action arrives — the avatar resolves
+// asynchronously and swaps to AvatarFallback on error. The feed never
+// drops a row because of a slow or broken IPFS gateway.
 function FeedMessage({ item, isNew, isOwnDev }) {
   const archetype = item.archetype || '';
   const nameColor = ARCHETYPE_COLORS[archetype] || '#66ff66';
-  const avatar = `${IPFS_GW}${item.ipfs_hash}`;
   const details = typeof item.details === 'object' && item.details !== null
     ? item.details
     : {};
-  const chatType = (item.action_type || '').toUpperCase() === 'CHAT'
-    ? details.chat_type
-    : null;
+  const actionType = (item.action_type || 'UNKNOWN').toUpperCase();
+  const chatType = actionType === 'CHAT' ? details.chat_type : null;
   const meta = chatType && chatType !== 'idle' ? CHAT_TYPE_META[chatType] : null;
   const socialGain = Number(details.social_gain || 0);
   const corpDisplay = (item.corporation || '').replace(/_/g, ' ');
   const message = formatMessage(item);
   const msgColor = getMessageColor(item);
+  const tagColor = ACTION_TAG_COLORS[actionType] || DEFAULT_TAG_COLOR;
+
+  // Per-row avatar error flag. We render <img> optimistically; if the
+  // IPFS gateway errors out, we flip to the inline placeholder instead
+  // of dropping the row.
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImg = !!item.ipfs_hash && !imgFailed;
 
   // Bubble palette — own devs get a subtle green tint + brighter border so
   // the player's messages pop on the right, everything else is a neutral
@@ -275,23 +277,29 @@ function FeedMessage({ item, isNew, isOwnDev }) {
             border: '1px solid #222',
           }}
         >
-          <img
-            src={avatar}
-            alt=""
-            decoding="async"
-            style={{
-              width: '100%',
-              height: '100%',
-              imageRendering: 'pixelated',
-              objectFit: 'cover',
-              display: 'block',
-              // PFP crop — same values as MyDevs.GifImage and
-              // DevProfile header GIF. The 36×36 parent is already
-              // overflow: hidden so the scaled pixels clip cleanly.
-              transform: 'scale(2.2)',
-              transformOrigin: 'center 32%',
-            }}
-          />
+          {showImg ? (
+            <img
+              src={`${IPFS_GW}${item.ipfs_hash}`}
+              alt=""
+              decoding="async"
+              loading="lazy"
+              onError={() => setImgFailed(true)}
+              style={{
+                width: '100%',
+                height: '100%',
+                imageRendering: 'pixelated',
+                objectFit: 'cover',
+                display: 'block',
+                // PFP crop — same values as MyDevs.GifImage and
+                // DevProfile header GIF. The 36×36 parent is already
+                // overflow: hidden so the scaled pixels clip cleanly.
+                transform: 'scale(2.2)',
+                transformOrigin: 'center 32%',
+              }}
+            />
+          ) : (
+            <AvatarFallback archetype={archetype} size={36} />
+          )}
         </div>
 
         <div
@@ -350,6 +358,18 @@ function FeedMessage({ item, isNew, isOwnDev }) {
             }}
           >
             <div style={{ flex: 1, minWidth: 0, textAlign: isOwnDev ? 'right' : 'left' }}>
+              <span
+                style={{
+                  color: tagColor,
+                  fontFamily: "'VT323', monospace",
+                  fontWeight: 'bold',
+                  letterSpacing: '0.5px',
+                  marginRight: '6px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                [{actionType}]
+              </span>
               {meta && (
                 <span
                   style={{
@@ -434,10 +454,6 @@ export default function LiveFeed() {
       .then(data => {
         const items = Array.isArray(data) ? data : (data.feed || data.actions || []);
         if (items.length > 0) {
-          // Warm the browser cache for every unique avatar BEFORE the
-          // rows mount — avoids the "text first, avatar 500ms later"
-          // flash on initial paint.
-          preloadAvatarsFromItems(items);
           setFeed(items.reverse());
           setHasBackendData(true);
         }
@@ -445,15 +461,14 @@ export default function LiveFeed() {
       .catch(() => {});
   }, []);
 
-  // Poll the backend every 5s for new real rows (WS is dead — this is the
-  // only path for fresh, ipfs_hash-carrying messages to reach the feed).
+  // Poll the backend every 5s for new rows. Rows mount the moment they
+  // arrive — no avatar gate, no action-type filter.
   useEffect(() => {
     const id = setInterval(() => {
       api.getFeed(100)
         .then(data => {
           const items = Array.isArray(data) ? data : (data.feed || data.actions || []);
           if (!items.length) return;
-          preloadAvatarsFromItems(items);
           setFeed(prev => {
             const existingIds = new Set(
               prev.filter(x => x.id != null).map(x => x.id)
@@ -477,25 +492,12 @@ export default function LiveFeed() {
     }
   }, [feed, scrollLock]);
 
-  // Re-evaluate the filter whenever an avatar preload resolves so newly
-  // loaded chat rows can pop in and failed ones stay hidden.
-  const avatarTick = useAvatarLoadTick();
-
-  // Hard filter: only real CHAT rows from minted devs whose avatar has
-  // already resolved in the browser cache. Anything else — non-chat
-  // action types, rows without ipfs_hash, or hashes that 404'd on Pinata
-  // — is dropped entirely. No 👤 placeholder ever reaches the DOM.
-  const visibleFeed = useMemo(
-    () => feed.filter(item =>
-      (item.action_type || '').toUpperCase() === 'CHAT'
-      && item.ipfs_hash
-      && avatarLoaded.has(item.ipfs_hash),
-    ),
-    [feed, avatarTick],
-  );
+  // Every action from the backend renders. The CHAT-only filter and
+  // the avatar preload gate are gone — broken images degrade gracefully
+  // per-row via AvatarFallback inside FeedMessage.
+  const visibleFeed = feed;
 
   // Detect combo highlights and build a map of insertAfterIndex -> highlight.
-  // Computed over visibleFeed so the indices align with what we render.
   const highlightMap = useMemo(() => {
     const combos = detectCombos(visibleFeed);
     const map = {};
@@ -567,8 +569,7 @@ export default function LiveFeed() {
             const highlights = highlightMap[i];
 
             // Stable React key — avoids remounting FeedMessage every
-            // time a new row shifts the array indices. All rows are now
-            // backend CHAT actions with a BIGSERIAL id.
+            // time a new row shifts the array indices.
             const rowKey = `feed-${item.id}`;
             const isOwnDev = !!myAddr
               && !!item.owner_address
