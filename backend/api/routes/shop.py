@@ -796,10 +796,11 @@ async def hack_player(req: HackRequest):
                     "current": attacker.get("social_vitality", 50),
                 })
 
-            # Find random target from another corporation
+            # Find random target from another corporation, excluding devs
+            # owned by the attacker's own wallet (friendly-fire prevention).
             cur.execute(
-                "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
-                (attacker["corporation"],)
+                "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND lower(owner_address) != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
+                (attacker["corporation"], addr)
             )
             target = cur.fetchone()
             if not target:
