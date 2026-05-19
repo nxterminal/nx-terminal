@@ -57,6 +57,7 @@ from backend.services.posts.topics import (
     REPLY_PROBABILITY,
     WEEKLY_TOPICS,
 )
+from backend.services.social import _apply_social_vitality_gain
 
 log = logging.getLogger("nx_engine")
 
@@ -487,8 +488,15 @@ def generate_feed_post_for_dev(
     mentions = extract_mentions(content)
     tickers = extract_tickers(content)
 
-    # 7. Insert. Wrap in try/except — the engine tick must not abort
-    # because one row failed; the tick caller logs and moves on.
+    # 7. Insert + social_vitality gain. Both run on the same cursor so
+    # a failure in either rolls back the entire post operation; the
+    # engine tick caller swallows the exception and moves on.
+    #
+    # Social gain rule: only STANDALONE feed posts award social_vitality.
+    # Replies are reactions, not original socializing — gain is the
+    # same cap (40) as CHAT so the two passive routes don't stack into
+    # a free path to max stat. LURKER gains 0 (raw=0 in the table).
+    # Cap check + per-archetype amount live in services.social.vitality.
     try:
         post_id = _insert_feed_post(
             cur,
@@ -500,6 +508,10 @@ def generate_feed_post_for_dev(
             tickers=tickers,
             now=now,
         )
+        if parent_post is None:
+            _apply_social_vitality_gain(
+                cur, dev["token_id"], archetype, source="post",
+            )
     except Exception as e:
         log.warning(
             "[posts] insert failed dev=%s: %s",
