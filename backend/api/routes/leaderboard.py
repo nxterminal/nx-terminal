@@ -157,6 +157,14 @@ def _compute_nxt_holders_viewer(viewer: str, limit: int) -> dict[str, Any]:
             SELECT balance FROM nxt_holder_snapshot WHERE wallet = %s
         )
         SELECT
+            -- This alias is named `balance` but the surrounding query
+            -- has NO `ORDER BY balance` clause — the only comparison
+            -- (`WHERE balance > ...`) lives in a scalar subquery
+            -- scoped to nxt_holder_snapshot.balance (NUMERIC). If you
+            -- ever add an ORDER BY in here, qualify the column
+            -- (`nxt_holder_snapshot.balance`) or rename the alias —
+            -- see test_nxt_holders_ranks_by_numeric_not_lexicographic
+            -- for the bug this avoids.
             COALESCE((SELECT balance FROM viewer_row), 0)::TEXT AS balance,
             (SELECT COUNT(*) FROM nxt_holder_snapshot
              WHERE balance > COALESCE((SELECT balance FROM viewer_row), 0)) AS gt_count
@@ -282,7 +290,13 @@ async def get_nxt_holders(
                balance::TEXT AS balance,
                updated_at
         FROM nxt_holder_snapshot
-        ORDER BY balance DESC
+        -- Table-qualified to bypass postgres's ORDER BY name resolution
+        -- rule: a bare `ORDER BY balance` would prefer the SELECT alias
+        -- `balance` (TEXT) over the table column (NUMERIC) and sort
+        -- lexicographically. See the regression test in
+        -- test_leaderboard_new_tabs.py::test_nxt_holders_ranks_by_
+        -- numeric_not_lexicographic for the exact production symptom.
+        ORDER BY nxt_holder_snapshot.balance DESC
         LIMIT %s
         """,
         (limit,),
