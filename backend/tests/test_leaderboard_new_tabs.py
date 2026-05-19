@@ -233,6 +233,36 @@ def test_nxt_holders_ranks_by_balance_desc(client, clean_db):
     assert body["snapshot_updated_at"] is not None
 
 
+def test_nxt_holders_ranks_by_numeric_not_lexicographic(client, clean_db):
+    """Regression guard for the bug where `SELECT balance::TEXT AS balance
+    ... ORDER BY balance DESC` resolved the alias (TEXT) instead of the
+    column (NUMERIC), sorting lexicographically.
+
+    The previous test (`test_nxt_holders_ranks_by_balance_desc`) used
+    three balances of the SAME digit-count (1.0 / 2.5 / 5.0 NXT — all
+    19-char base-unit strings), so lex order accidentally matched
+    numeric order and the bug slipped through. This test uses the EXACT
+    values that surfaced in production — 979, 67981, 6300, 39127,
+    33750 NXT — chosen to have different digit-counts so the two
+    orderings diverge.
+
+    Lex order under the bug would be:
+        979 (3 dig) → 67981 (5 dig) → 6300 (4 dig) → 39127 → 33750
+    Numeric order (correct):
+        67981 → 39127 → 33750 → 6300 → 979
+    """
+    NXT = 10 ** 18  # base unit per 1 NXT
+    _seed_snapshot(WALLET_A, 979   * NXT)
+    _seed_snapshot(WALLET_B, 67981 * NXT)
+    _seed_snapshot(WALLET_C, 6300  * NXT)
+    _seed_snapshot("0x" + "dd" * 20, 39127 * NXT)
+    _seed_snapshot("0x" + "ee" * 20, 33750 * NXT)
+
+    body = client.get("/api/leaderboard/nxt-holders").json()
+    balances_desc = [int(h["balance"]) // NXT for h in body["holders"]]
+    assert balances_desc == [67981, 39127, 33750, 6300, 979]
+
+
 def test_nxt_holders_handles_uint256_max(client, clean_db):
     """Sanity: the column is NUMERIC(78,0). Max uint256 has 78
     digits. Round-trip the maximum through the endpoint."""
