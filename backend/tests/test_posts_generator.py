@@ -184,14 +184,26 @@ def test_generate_skipped_by_probability(monkeypatch):
 # ─── Standalone happy path ───────────────────────────────────────────
 
 
+def _find_insert(cur):
+    """Locate the INSERT INTO nx_posts call. After Phase 5.10, the
+    standalone path runs SELECT + UPDATE social_vitality AFTER the
+    insert, so cur.calls[-1] is no longer guaranteed to be the
+    INSERT."""
+    for sql, params in cur.calls:
+        if "INSERT INTO nx_posts" in sql:
+            return sql, params
+    raise AssertionError("INSERT INTO nx_posts not found in cur.calls")
+
+
 def test_generate_inserts_standalone_post(monkeypatch):
     """End-to-end sync: cap clear → probability rolls in (=1.0) →
     no reply (reply_probability=0.0) → LLM returns content →
     INSERT row. Verify the inserted columns include the extracted
     hashtags from the LLM output and parent_post_id is NULL."""
     cur = StubCursor()
-    cur.push_fetchone(None)            # has_dev_posted_today
-    cur.push_fetchone({"id": 555})     # INSERT RETURNING id
+    cur.push_fetchone(None)                          # has_dev_posted_today
+    cur.push_fetchone({"id": 555})                   # INSERT RETURNING id
+    cur.push_fetchone({"social_vitality": 10})       # current social for gain
 
     monkeypatch.setattr(
         gen_module, "_llm_generate_sync",
@@ -205,9 +217,7 @@ def test_generate_inserts_standalone_post(monkeypatch):
     )
     assert result == 555
 
-    # Last execute is the INSERT; pick it out and verify shape.
-    insert_sql, insert_params = cur.calls[-1]
-    assert "INSERT INTO nx_posts" in insert_sql
+    insert_sql, insert_params = _find_insert(cur)
     assert "'feed'" in insert_sql
     # token_id, wallet, content, parent_post_id, hashtags, mentions,
     # tickers, created_at, expires_at — positional.
@@ -248,8 +258,7 @@ def test_generate_reply_sets_parent_post_id(monkeypatch):
         reply_probability=1.0,
     )
     assert result == 777
-    insert_sql, insert_params = cur.calls[-1]
-    assert "INSERT INTO nx_posts" in insert_sql
+    insert_sql, insert_params = _find_insert(cur)
     assert insert_params[3] == 999  # parent_post_id
 
 
@@ -257,9 +266,10 @@ def test_generate_reply_falls_through_when_no_parent_available(monkeypatch):
     """reply_probability=1.0 but no parent in DB → the function
     posts standalone rather than skipping. Better to post."""
     cur = StubCursor()
-    cur.push_fetchone(None)  # has_dev_posted_today
-    cur.push_fetchone(None)  # no eligible parent
-    cur.push_fetchone({"id": 333})  # INSERT RETURNING id
+    cur.push_fetchone(None)                       # has_dev_posted_today
+    cur.push_fetchone(None)                       # no eligible parent
+    cur.push_fetchone({"id": 333})                # INSERT RETURNING id
+    cur.push_fetchone({"social_vitality": 0})     # social gain SELECT
 
     monkeypatch.setattr(
         gen_module, "_llm_generate_sync",
@@ -272,7 +282,7 @@ def test_generate_reply_falls_through_when_no_parent_available(monkeypatch):
         reply_probability=1.0,
     )
     assert result == 333
-    insert_sql, insert_params = cur.calls[-1]
+    insert_sql, insert_params = _find_insert(cur)
     assert insert_params[3] is None  # parent_post_id NULL — fell through
 
 
@@ -284,8 +294,9 @@ def test_generate_uses_fallback_when_llm_returns_none(monkeypatch):
     fallback content path is used. Insert still happens — the feed
     keeps flowing."""
     cur = StubCursor()
-    cur.push_fetchone(None)  # has_dev_posted_today
-    cur.push_fetchone({"id": 222})  # INSERT RETURNING id
+    cur.push_fetchone(None)                       # has_dev_posted_today
+    cur.push_fetchone({"id": 222})                # INSERT RETURNING id
+    cur.push_fetchone({"social_vitality": 5})     # social gain SELECT
 
     monkeypatch.setattr(gen_module, "_llm_generate_sync", lambda *a, **kw: None)
 
@@ -295,8 +306,7 @@ def test_generate_uses_fallback_when_llm_returns_none(monkeypatch):
         reply_probability=0.0,
     )
     assert result == 222
-    insert_sql, insert_params = cur.calls[-1]
-    assert "INSERT INTO nx_posts" in insert_sql
+    insert_sql, insert_params = _find_insert(cur)
     # Fallback content is non-empty.
     assert insert_params[2]
     # Bracket placeholders are scrubbed so '[absurd thing]' doesn't
@@ -390,6 +400,135 @@ def test_pick_eligible_parent_post_filters():
     assert "NOW() - %s::interval" in sql
     assert params[0] == 8047
     assert params[1] == f"{gen_module.REPLY_MAX_AGE_HOURS} hours"
+
+
+# ─── social_vitality gain (Phase 5.10) ───────────────────────────────
+
+
+def _find_social_update(cur):
+    for sql, params in cur.calls:
+        if "UPDATE devs SET social_vitality" in sql:
+            return sql, params
+    return None
+
+
+def test_standalone_post_awards_social_vitality_to_degen(monkeypatch):
+    """DEGEN raw=2, current=10 → effective=2, UPDATE adds 2."""
+    cur = StubCursor()
+    cur.push_fetchone(None)                          # has_dev_posted_today
+    cur.push_fetchone({"id": 555})                   # INSERT RETURNING id
+    cur.push_fetchone({"social_vitality": 10})       # current social
+
+    monkeypatch.setattr(
+        gen_module, "_llm_generate_sync", lambda *a, **kw: "post body",
+    )
+
+    gen_module.generate_feed_post_for_dev(
+        cur, _dev(archetype="DEGEN"),
+        daily_post_probability=1.0,
+        reply_probability=0.0,
+    )
+
+    update = _find_social_update(cur)
+    assert update is not None, "expected UPDATE devs SET social_vitality"
+    _, params = update
+    # _apply_social_vitality_gain UPDATE params: (effective, token_id).
+    assert params[0] == 2
+    assert params[1] == 8047
+
+
+def test_reply_does_not_award_social_vitality(monkeypatch):
+    """Only standalone posts award the gain; replies are reactions
+    and must not trigger any UPDATE on devs."""
+    cur = StubCursor()
+    cur.push_fetchone(None)  # has_dev_posted_today
+    cur.push_fetchone({
+        "id":          999,
+        "token_id":    8000,
+        "content":     "parent",
+        "author_name": "ORIG",
+    })
+    cur.push_fetchone({"id": 777})  # INSERT RETURNING id
+    # No social_vitality fetch pushed — none should be requested.
+
+    monkeypatch.setattr(
+        gen_module, "_llm_generate_sync", lambda *a, **kw: "ok",
+    )
+
+    gen_module.generate_feed_post_for_dev(
+        cur, _dev(archetype="DEGEN"),
+        daily_post_probability=1.0,
+        reply_probability=1.0,
+    )
+
+    assert _find_social_update(cur) is None
+    # Also confirm we never even SELECTed social_vitality.
+    for sql, _ in cur.calls:
+        assert "SELECT social_vitality" not in sql
+
+
+def test_lurker_standalone_post_awards_nothing(monkeypatch):
+    """LURKER raw=0 short-circuits: no SELECT, no UPDATE on devs."""
+    cur = StubCursor()
+    cur.push_fetchone(None)                # has_dev_posted_today
+    cur.push_fetchone({"id": 444})         # INSERT RETURNING id
+
+    monkeypatch.setattr(
+        gen_module, "_llm_generate_sync", lambda *a, **kw: "lurking",
+    )
+
+    gen_module.generate_feed_post_for_dev(
+        cur, _dev(archetype="LURKER"),
+        daily_post_probability=1.0,
+        reply_probability=0.0,
+    )
+
+    assert _find_social_update(cur) is None
+    for sql, _ in cur.calls:
+        assert "SELECT social_vitality" not in sql
+
+
+def test_cap_clamps_gain_to_40(monkeypatch):
+    """current=39, raw=3 (INFLUENCER) → effective=1 (clamped to 40)."""
+    cur = StubCursor()
+    cur.push_fetchone(None)
+    cur.push_fetchone({"id": 888})
+    cur.push_fetchone({"social_vitality": 39})
+
+    monkeypatch.setattr(
+        gen_module, "_llm_generate_sync", lambda *a, **kw: "cap test",
+    )
+
+    gen_module.generate_feed_post_for_dev(
+        cur, _dev(archetype="INFLUENCER"),
+        daily_post_probability=1.0,
+        reply_probability=0.0,
+    )
+
+    update = _find_social_update(cur)
+    assert update is not None
+    _, params = update
+    assert params[0] == 1  # 40 - 39 = 1, not the raw 3
+
+
+def test_at_cap_no_update(monkeypatch):
+    """current=40 → effective=0 → no UPDATE issued."""
+    cur = StubCursor()
+    cur.push_fetchone(None)
+    cur.push_fetchone({"id": 666})
+    cur.push_fetchone({"social_vitality": 40})
+
+    monkeypatch.setattr(
+        gen_module, "_llm_generate_sync", lambda *a, **kw: "already capped",
+    )
+
+    gen_module.generate_feed_post_for_dev(
+        cur, _dev(archetype="DEGEN"),
+        daily_post_probability=1.0,
+        reply_probability=0.0,
+    )
+
+    assert _find_social_update(cur) is None
 
 
 # ─── Insert SQL contract ─────────────────────────────────────────────

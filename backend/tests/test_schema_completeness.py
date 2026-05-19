@@ -93,6 +93,9 @@ EXPECTED_TABLES: set[str] = {
     # absent in production until Phase 5.5.2 fixed the transaction-
     # poisoning bug that prevented the per-phase CREATE from running.
     "rate_limit_counters",
+    # Phase 5.11: NXT holders snapshot, populated every 5 min by
+    # services.nxt_snapshot. Feeds the Leaderboard's NXT Holders tab.
+    "nxt_holder_snapshot",
     "shop_purchases",
     "simulation_state",
     "support_tickets",
@@ -154,6 +157,8 @@ EXPECTED_INDEXES: set[str] = {
     "idx_rate_limit_counters_expires",
     "idx_nx_posts_created_desc",
     "idx_devs_owner",
+    # Phase 5.11: keeps the NXT Holders leaderboard ORDER BY cheap.
+    "idx_nxt_holder_balance",
 }
 
 

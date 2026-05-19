@@ -1600,6 +1600,25 @@ def run_auto_migrations() -> None:
                     "CREATE INDEX IF NOT EXISTS idx_rate_limit_counters_expires "
                     "ON rate_limit_counters (expires_at)"
                 )
+                # Phase 5.11: NXT holders snapshot. Populated every 5
+                # minutes by services.nxt_snapshot.run_nxt_snapshot_tick,
+                # which calls balanceOf(wallet) on NXTToken for every
+                # distinct owner_address in devs and upserts the result
+                # here. NUMERIC(78,0) is the conservative width for an
+                # ERC-20 uint256 — never store token balances in FLOAT.
+                # Index on (balance DESC) keeps the leaderboard ORDER BY
+                # cheap; the table is small (one row per holder wallet).
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS nxt_holder_snapshot (
+                        wallet      TEXT PRIMARY KEY,
+                        balance     NUMERIC(78, 0) NOT NULL,
+                        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_nxt_holder_balance "
+                    "ON nxt_holder_snapshot (balance DESC)"
+                )
                 # End of per-phase migrations. The `_SafeCursorProxy`
                 # has captured any per-step failures in
                 # `warnings_list`; summary log happens after the

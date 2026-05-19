@@ -49,6 +49,15 @@ try:
         is_shadow_write_enabled,
         tx_hash_to_bigint,
     )
+    # Social-vitality gain (per-archetype table + cap + writer) lives
+    # in backend.services.social so the posts generator can award the
+    # same stat through the same code path. Re-exported under the
+    # legacy name CHAT_SOCIAL_GAIN to keep existing string searches
+    # anchored.
+    from backend.services.social import (
+        SOCIAL_VITALITY_GAIN as CHAT_SOCIAL_GAIN,
+        _apply_social_vitality_gain,
+    )
     from backend.api.middleware.correlation import (
         new_correlation_id,
         set_correlation_id,
@@ -80,6 +89,12 @@ except ImportError as _e:
     is_shadow_write_enabled = lambda: False  # type: ignore
     tx_hash_to_bigint = None  # type: ignore
     new_correlation_id = set_correlation_id = reset_correlation_id = None  # type: ignore
+    # Engine still imports — social gain becomes a silent no-op until
+    # PYTHONPATH is fixed. Callers in this file never check None first
+    # because in steady state this branch shouldn't be hit; if it is,
+    # CHAT actions will raise on the call and the action log catches it.
+    CHAT_SOCIAL_GAIN = {}  # type: ignore
+    _apply_social_vitality_gain = None  # type: ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("nx_engine")
@@ -109,49 +124,6 @@ ARCHETYPE_META = {
     "FED":          {"vote_weight": 0.3, "code_quality": (70, 95), "prompt_influence": 0.8},
     "SCRIPT_KIDDIE":{"vote_weight": 1.0, "code_quality": (15, 75), "prompt_influence": 1.0},
 }
-
-# Social vitality gained when a dev executes a CHAT action, by archetype.
-# Combines with PERSONALITY_MATRIX CHAT weights: INFLUENCERs chat ~2.3x more
-# often than LURKERs AND gain 3x per chat, amplifying the personality gap
-# without touching the matrix itself. LURKER gains 0 because observing
-# anonymously isn't really socializing.
-CHAT_SOCIAL_GAIN = {
-    "INFLUENCER":   3,
-    "DEGEN":        2,
-    "FED":          2,
-    "HACKTIVIST":   1,
-    "10X_DEV":      1,
-    "GRINDER":      1,
-    "SCRIPT_KIDDIE":1,
-    "LURKER":       0,
-}
-
-
-def _apply_chat_social_gain(cur, dev_token_id: int, archetype: str) -> int:
-    """Apply CHAT_SOCIAL_GAIN honestly, respecting the 40 cap.
-
-    Returns the effective gain — the value that actually hit the DB. If
-    the dev was already at cap, returns 0 so the Live Feed's "+N SOCIAL"
-    badge reflects reality instead of lying (bug #4 in the audit).
-    """
-    raw = CHAT_SOCIAL_GAIN.get(archetype, 1)
-    if raw <= 0:
-        return 0
-    cur.execute(
-        "SELECT social_vitality FROM devs WHERE token_id = %s",
-        (dev_token_id,),
-    )
-    row = cur.fetchone()
-    current = row["social_vitality"] if row else 0
-    effective = max(0, min(raw, 40 - current))
-    if effective > 0:
-        cur.execute(
-            "UPDATE devs SET social_vitality = social_vitality + %s "
-            "WHERE token_id = %s",
-            (effective, dev_token_id),
-        )
-    return effective
-
 
 # Chat-type selection weights per archetype for Live Feed enrichment.
 # These drive gen_chat_by_type(): INFLUENCER leans hot_take/drama,
@@ -600,10 +572,12 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
             # requires Team Lunch (6 $NXT) or successful hacks. Passive
             # recovery handles 0→25 for free; chat fills 25→40; shop fills 40→100.
             #
-            # _apply_chat_social_gain returns the EFFECTIVE gain (what actually
+            # _apply_social_vitality_gain returns the EFFECTIVE gain (what actually
             # persisted to the DB), which is 0 if the dev is already at cap —
             # so the Live Feed "+N SOCIAL" badge never lies.
-            social_gain = _apply_chat_social_gain(cur, dev["token_id"], arch)
+            social_gain = _apply_social_vitality_gain(
+                cur, dev["token_id"], arch, source="chat",
+            )
 
             result["chat_msg"] = msg
             result["chat_channel"] = channel
@@ -704,7 +678,9 @@ def execute_action(conn, dev: dict, action: str, context: dict) -> dict:
         and result.get("chat_channel")
         and dev.get("ipfs_hash")
     ):
-        contextual_gain = _apply_chat_social_gain(cur, dev["token_id"], arch)
+        contextual_gain = _apply_social_vitality_gain(
+            cur, dev["token_id"], arch, source="chat",
+        )
         contextual_details = {
             "location": dev["location"],
             "message": result["chat_msg"],
@@ -1950,6 +1926,11 @@ def run_engine():
     # to 1/day per Dev internally). Idempotency comes from the
     # per-Dev daily cap; running this twice within an hour is safe.
     posts_feed_tick_interval = timedelta(hours=1)
+    # Phase 5.11 — pull every dev-owning wallet's $NXT balance from
+    # MegaETH and upsert into nxt_holder_snapshot. Feeds the
+    # Leaderboard's NXT Holders tab. 5-min cadence keeps the table
+    # fresh without hammering the public RPC.
+    nxt_snapshot_tick_interval = timedelta(minutes=5)
 
     # Auto-migrate new columns before any queries
     try:
@@ -2053,6 +2034,9 @@ def run_engine():
     # internally bails when no Dev rolls a post this tick, so the
     # cost of an early run is bounded.
     last_posts_feed_tick = datetime.now(timezone.utc) - posts_feed_tick_interval
+    # Same first-loop trick for the NXT snapshot — populates the
+    # Leaderboard immediately on engine start instead of waiting 5min.
+    last_nxt_snapshot_tick = datetime.now(timezone.utc) - nxt_snapshot_tick_interval
 
     while True:
         # Fresh correlation id per engine tick so every log emitted by the
@@ -2153,6 +2137,20 @@ def run_engine():
                     except Exception as e:
                         log.error(f"run_feed_generation_tick error: {e}")
                     last_posts_feed_tick = now
+
+                # NXT holders snapshot — pull balanceOf for every
+                # dev-owning wallet via MegaETH eth_call and upsert
+                # into nxt_holder_snapshot. Feeds the Leaderboard's
+                # NXT Holders tab. RPC fan-out is thread-pooled inside
+                # the function (10-wide) so the tick stays well under
+                # a second for the current holder base.
+                if now - last_nxt_snapshot_tick >= nxt_snapshot_tick_interval:
+                    try:
+                        from backend.services.nxt_snapshot import run_nxt_snapshot_tick
+                        run_nxt_snapshot_tick(conn)
+                    except Exception as e:
+                        log.error(f"run_nxt_snapshot_tick error: {e}")
+                    last_nxt_snapshot_tick = now
 
                 # Process due devs
                 processed = run_scheduler_tick(conn)
