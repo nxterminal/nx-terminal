@@ -360,3 +360,178 @@ def test_run_tick_upserts_balances(monkeypatch, clean_db):
         (WALLET_B.lower(), "2500"),
         (WALLET_A.lower(), "1000"),
     ]
+
+
+# ─── Corporations ─────────────────────────────────────────────────────
+
+
+NXT = 10 ** 18  # base units per 1 NXT
+
+
+def _seed_dev_corp(token_id, owner, corp, *, status='active'):
+    """Variant of `_seed_dev` that takes the corporation and status
+    explicitly — the original helper hardcodes both for the other
+    tabs that don't care about them."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            _ensure_player(cur, owner)
+            cur.execute(
+                """
+                INSERT INTO devs (
+                    token_id, name, owner_address, archetype,
+                    corporation, status, personality_seed,
+                    stat_coding, stat_hacking, stat_trading,
+                    stat_social, stat_endurance, stat_luck,
+                    balance_nxt
+                ) VALUES (%s, %s, %s, 'DEGEN', %s, %s, %s,
+                          50, 50, 50, 50, 50, 50, 0)
+                """,
+                (token_id, f"DEV-{token_id}", owner.lower(),
+                 corp, status, token_id * 1000),
+            )
+
+
+def _corp_row(rows, corp):
+    """Pick the row for `corp` from the /corporations response.
+    Corps with zero devs don't appear in the GROUP BY output, so
+    "not present" means the test setup didn't seed any."""
+    matches = [r for r in rows if r["corporation"] == corp]
+    assert len(matches) == 1, (
+        f"Expected exactly one row for {corp}, got {len(matches)}: {rows}"
+    )
+    return matches[0]
+
+
+def test_corporations_counts_all_statuses(client, clean_db):
+    """`total_devs` includes every minted dev regardless of status —
+    not just 'active'. Regression against the pre-fix
+    `WHERE status='active'` filter that dropped ~89% of the roster
+    (users saw 26 devs reported vs 242 minted)."""
+    # 10 devs in CLOSED_AI, two of each enum value.
+    statuses = ['active', 'resting', 'frozen', 'on_mission', 'exhausted']
+    for i, status in enumerate(statuses * 2, start=1):
+        _seed_dev_corp(i, WALLET_A, 'CLOSED_AI', status=status)
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    row = _corp_row(rows, 'CLOSED_AI')
+    assert row["total_devs"] == 10
+
+
+def test_corporations_wallet_counted_once_per_corp(client, clean_db):
+    """A wallet owning N devs in one corp contributes its snapshot
+    balance ONCE to that corp's total, not N times. Also asserts the
+    response shape: `total_balance` round-trips as a JSON integer
+    (parseable with JS `Number()`), not as a stringified base-unit
+    value."""
+    for tid in range(1, 6):  # 5 devs, same wallet, same corp
+        _seed_dev_corp(tid, WALLET_A, 'ZUCK_LABS')
+    _seed_snapshot(WALLET_A, 10_000 * NXT)
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    row = _corp_row(rows, 'ZUCK_LABS')
+    assert row["total_devs"] == 5
+    assert row["total_balance"] == 10_000
+    assert isinstance(row["total_balance"], int)
+
+
+def test_corporations_wallet_in_two_corps_contributes_to_both(client, clean_db):
+    """A wallet with devs in distinct corps appears in EACH corp's
+    balance — the intentional 'double counting across corps'
+    semantics. (Within a single corp, the wallet still contributes
+    once — see the previous test.)"""
+    _seed_dev_corp(1, WALLET_A, 'CLOSED_AI')
+    _seed_dev_corp(2, WALLET_A, 'ZUCK_LABS')
+    _seed_snapshot(WALLET_A, 5_000 * NXT)
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    assert _corp_row(rows, 'CLOSED_AI')["total_balance"] == 5_000
+    assert _corp_row(rows, 'ZUCK_LABS')["total_balance"] == 5_000
+
+
+def test_corporations_wallet_without_snapshot_balance_zero(client, clean_db):
+    """A wallet not yet picked up by the snapshot job (just connected,
+    RPC flake) LEFT-JOINs to NULL → COALESCE → 0. The response shows
+    an integer 0 — never NULL, never an error."""
+    _seed_dev_corp(1, WALLET_A, 'MISANTHROPIC')
+    # Deliberately no `_seed_snapshot(WALLET_A, ...)` — wallet has no
+    # snapshot row yet.
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    row = _corp_row(rows, 'MISANTHROPIC')
+    assert row["total_devs"] == 1
+    assert row["total_balance"] == 0
+    assert isinstance(row["total_balance"], int)
+
+
+def test_corporations_realistic_dataset(client, clean_db):
+    """Prod-shaped scenario: 6 corps × 40 devs × 10 wallets, statuses
+    cycled, balances spread 1k–70k NXT. End-to-end sanity that the
+    aggregate numbers are in the right order of magnitude (vs the
+    26-vs-242 + 2k-vs-67k symptom that triggered this fix)."""
+    corps = ['CLOSED_AI', 'MISANTHROPIC', 'SHALLOW_MIND',
+             'ZUCK_LABS', 'Y_AI', 'MISTRIAL_SYSTEMS']
+    statuses = ['active', 'resting', 'frozen', 'on_mission', 'exhausted']
+
+    token = 0
+    for corp_idx, corp in enumerate(corps):
+        for wallet_idx in range(10):
+            # Wallets are corp-scoped here so each corp's totals are
+            # independent — the cross-corp wallet case is covered by
+            # the dedicated test above.
+            wallet = "0x" + f"{corp_idx:02d}{wallet_idx:02d}".ljust(40, "0")
+            balance_nxt = 1_000 + (corp_idx * 10 + wallet_idx) * 1_156
+            _seed_snapshot(wallet, balance_nxt * NXT)
+            for _ in range(4):
+                token += 1
+                _seed_dev_corp(token, wallet, corp,
+                               status=statuses[token % len(statuses)])
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    assert len(rows) == 6
+    assert {r["corporation"] for r in rows} == set(corps)
+
+    # Lowest-balance corp is CLOSED_AI (corp_idx=0, wallet_idx 0..9):
+    #   sum = 10*1000 + 1156*(0+1+...+9) = 10000 + 52020 = 62020
+    # Every other corp is higher (corp_idx pushes the base up).
+    for row in rows:
+        assert row["total_devs"] == 40
+        assert row["total_balance"] >= 62_020, (
+            f"{row['corporation']} total_balance={row['total_balance']} "
+            f"— below floor 62020 for the smallest seeded corp"
+        )
+        assert isinstance(row["total_balance"], int)
+
+
+def test_corporations_cartesian_explosion_regression(client, clean_db):
+    """Catches the cartesian-explosion bug from the rejected first
+    draft of this fix — a single `FROM devs d LEFT JOIN corp_wallets`
+    that multiplied COUNT/SUM by the number of distinct wallets per
+    corp.
+
+    Trip wire: CORP_A with 3 devs across 2 distinct wallets — W1
+    owning 2, W2 owning 1. Snapshot balances W1=1000, W2=2000.
+
+      Correct: total_devs=3, total_balance=3000.
+      Buggy:   total_devs=6 (3 devs × 2 wallets joined), and
+               total_balance=6000 (each wallet's balance counted
+               3 times, once per dev in the corp).
+
+    The "wallet-counted-once-per-corp" test above (1 wallet, 5 devs)
+    does NOT catch this — with a single distinct wallet, the join
+    doesn't multiply rows and COUNT comes out right by accident.
+    Same failure mode as the NXT-holders digit-count regression:
+    you need ≥ 2 wallets to make the buggy and correct outputs
+    diverge.
+    """
+    WALLET_W1 = "0x" + "11" * 20
+    WALLET_W2 = "0x" + "22" * 20
+    _seed_dev_corp(1, WALLET_W1, 'Y_AI')
+    _seed_dev_corp(2, WALLET_W1, 'Y_AI')
+    _seed_dev_corp(3, WALLET_W2, 'Y_AI')
+    _seed_snapshot(WALLET_W1, 1_000 * NXT)
+    _seed_snapshot(WALLET_W2, 2_000 * NXT)
+
+    rows = client.get("/api/leaderboard/corporations").json()
+    row = _corp_row(rows, 'Y_AI')
+    assert row["total_devs"] == 3
+    assert row["total_balance"] == 3_000

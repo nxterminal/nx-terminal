@@ -60,15 +60,64 @@ async def get_leaderboard(
 
 @router.get("/corporations")
 async def get_corporation_leaderboard():
-    """Get aggregated corporation leaderboard."""
+    """Aggregated corporation leaderboard.
+
+    `total_devs` counts every minted dev per corp regardless of
+    `status` — operational state ('active'/'resting'/'frozen'/
+    'on_mission'/'exhausted') is irrelevant to a "how many devs in
+    this corp" tally.
+
+    `total_balance` sums `nxt_holder_snapshot.balance` (on-chain, the
+    same source NXT Holders consumes) — NOT `devs.balance_nxt` (the
+    in-game ledger, which doesn't reflect real wallet holdings). Each
+    wallet contributes its balance ONCE per corp it has devs in: a
+    wallet with 5 devs in CORP_A counts its balance once for CORP_A;
+    a wallet with devs in two corps contributes to both (intentional
+    — wallets diversified across corps belong to each ranking).
+
+    Serialized as NXT-integer (`FLOOR(base_units / 1e18)::BIGINT`) so
+    the frontend stays on `Number(value)` without precision loss.
+    Max realistic NXT ≈ 1e10; BIGINT holds up to ≈ 9.2e18.
+
+    The three-CTE shape is deliberate: stat aggregates run directly
+    over `devs` (no join, no row inflation); balance aggregates run
+    over `DISTINCT (corp, wallet)` so a wallet's snapshot row joins
+    once per corp, not once per dev. Folding them into a single
+    `FROM devs LEFT JOIN ...` produced a cartesian explosion that
+    multiplied COUNT/SUM by the number of devs per corp.
+    """
     return fetch_all("""
-        SELECT corporation,
-               COUNT(*) as total_devs,
-               COALESCE(SUM(balance_nxt), 0) as total_balance,
-               COALESCE(AVG(reputation), 0) as avg_reputation,
-               COALESCE(SUM(protocols_created), 0) as total_protocols
-        FROM devs WHERE status = 'active'
-        GROUP BY corporation
+        WITH dev_stats AS (
+            SELECT corporation,
+                   COUNT(*)                AS total_devs,
+                   AVG(reputation)         AS avg_reputation,
+                   SUM(protocols_created)  AS total_protocols
+            FROM devs
+            GROUP BY corporation
+        ),
+        corp_wallets AS (
+            SELECT DISTINCT
+                   corporation,
+                   LOWER(owner_address) AS wallet
+            FROM devs
+        ),
+        corp_balance AS (
+            SELECT cw.corporation,
+                   SUM(s.balance) AS total_balance_base
+            FROM corp_wallets cw
+            LEFT JOIN nxt_holder_snapshot s ON s.wallet = cw.wallet
+            GROUP BY cw.corporation
+        )
+        SELECT ds.corporation,
+               ds.total_devs,
+               COALESCE(
+                   FLOOR(cb.total_balance_base / POWER(10::NUMERIC, 18)),
+                   0
+               )::BIGINT                          AS total_balance,
+               COALESCE(ds.avg_reputation, 0)     AS avg_reputation,
+               COALESCE(ds.total_protocols, 0)    AS total_protocols
+        FROM dev_stats ds
+        LEFT JOIN corp_balance cb ON cb.corporation = ds.corporation
         ORDER BY total_balance DESC
     """)
 
