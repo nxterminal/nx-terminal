@@ -1,16 +1,19 @@
-"""Tests for the energy gate on HACK and REPAIR (defense in depth).
+"""Tests for the server-side energy gate (defense in depth).
 
-The dev-card UI disables the HACK and REPAIR buttons when a dev has 0
-energy. These tests cover the matching server-side guard, so a stale or
-tampered client cannot act on an exhausted dev:
+The dev-card UI disables HACK, REPAIR and ECONOMY when a dev has 0
+energy. These tests cover the matching server-side guards, so a stale
+or tampered client cannot act on an exhausted dev:
 
   - POST /api/shop/hack-mainframe  energy=0 -> 400 insufficient_energy
   - POST /api/shop/hack-player     energy=0 -> 400 insufficient_energy
   - POST /api/shop/buy pc_repair   energy=0 -> 400 insufficient_energy
+  - POST /api/shop/fund            energy=0 -> 400 insufficient_energy
+  - POST /api/shop/transfer        energy=0 on the caller -> 400
 
-ECONOMY (fund / transfer / request) is intentionally NOT gated — it is
-the rescue path for a dev with 0 energy and 0 $NXT — so it has no test
-here by design.
+/transfer serves both TRANSFER (caller = from_dev) and REQUEST
+(caller = to_dev); the gate hits the caller, identified by the request
+`mode`. A transfer INTO an exhausted dev is still allowed — the gate
+must not block that rescue path.
 
 The shop rate limiter is stubbed to a no-op so back-to-back requests
 aren't 429'd. Devs seeded without an explicit `energy` keep the schema
@@ -142,3 +145,93 @@ def test_buy_pc_repair_rejects_zero_energy(client, clean, no_limits):
     })
     assert resp.status_code == 400, resp.text
     assert resp.json()["detail"]["error"] == "insufficient_energy"
+
+
+def test_fund_rejects_zero_energy(client, clean, no_limits):
+    """A dev with 0 energy cannot be funded (ECONOMY > FUND)."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            seed_player(cur, ATTACKER, display_name="owner",
+                        corporation="CLOSED_AI")
+            seed_dev(cur, token_id=1, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=2000, energy=0)
+
+    resp = client.post("/api/shop/fund", json={
+        "player_address": ATTACKER,
+        "dev_token_id": 1,
+        "amount": 100,
+        "tx_hash": "0x" + "1" * 64,
+    })
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["error"] == "insufficient_energy"
+
+
+def test_transfer_rejects_zero_energy_sender(client, clean, no_limits):
+    """TRANSFER mode: the caller is from_dev — 0 energy there is rejected."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            seed_player(cur, ATTACKER, display_name="owner",
+                        corporation="CLOSED_AI")
+            seed_dev(cur, token_id=1, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=500, energy=0)
+            seed_dev(cur, token_id=2, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=0, energy=10)
+
+    resp = client.post("/api/shop/transfer", json={
+        "player_address": ATTACKER,
+        "from_dev_token_id": 1,
+        "to_dev_token_id": 2,
+        "amount": 100,
+        "mode": "transfer",
+    })
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["error"] == "insufficient_energy"
+
+
+def test_request_rejects_zero_energy_requester(client, clean, no_limits):
+    """REQUEST mode: the caller is to_dev — 0 energy there is rejected.
+
+    The funds source (from_dev) is healthy, so this proves the gate
+    targets the caller and not from_dev."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            seed_player(cur, ATTACKER, display_name="owner",
+                        corporation="CLOSED_AI")
+            seed_dev(cur, token_id=1, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=0, energy=0)
+            seed_dev(cur, token_id=2, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=500, energy=10)
+
+    # REQUEST: dev 1 (the exhausted caller) pulls funds from dev 2.
+    resp = client.post("/api/shop/transfer", json={
+        "player_address": ATTACKER,
+        "from_dev_token_id": 2,
+        "to_dev_token_id": 1,
+        "amount": 100,
+        "mode": "request",
+    })
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["error"] == "insufficient_energy"
+
+
+def test_transfer_to_exhausted_recipient_allowed(client, clean, no_limits):
+    """A healthy dev can still transfer INTO an exhausted dev — the gate
+    hits the caller (from_dev), not the recipient. Guards the rescue path
+    so the energy gate doesn't introduce a false positive."""
+    with deps.get_db() as conn:
+        with conn.cursor() as cur:
+            seed_player(cur, ATTACKER, display_name="owner",
+                        corporation="CLOSED_AI")
+            seed_dev(cur, token_id=1, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=500, energy=10)
+            seed_dev(cur, token_id=2, owner_address=ATTACKER,
+                     corporation="CLOSED_AI", balance_nxt=0, energy=0)
+
+    resp = client.post("/api/shop/transfer", json={
+        "player_address": ATTACKER,
+        "from_dev_token_id": 1,
+        "to_dev_token_id": 2,
+        "amount": 100,
+        "mode": "transfer",
+    })
+    assert resp.status_code == 200, resp.text
