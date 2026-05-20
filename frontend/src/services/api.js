@@ -1,6 +1,17 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://nx-terminal.onrender.com';
 const WS_BASE = API_BASE.replace('https', 'wss').replace('http', 'ws');
 
+// Build the leaderboard query string used by the three Phase 5.12
+// tabs (top-hackers / nxt-holders / dev-collectors). viewer_wallet is
+// appended only when it's a non-empty string — keeps the back-compat
+// URL exact (and the response shape stable) when the caller has no
+// wallet connected.
+function _lbQuery(limit, viewerWallet) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (viewerWallet) params.set('viewer_wallet', viewerWallet);
+  return params.toString();
+}
+
 // Phase 5.12 — auto-retry parking for nickname-gated requests.
 //
 // When a call 409s with `nickname_required` we do NOT surface the
@@ -105,9 +116,18 @@ export const api = {
   // Leaderboard
   getLeaderboard: (sort = 'balance') => fetchJSON(`${API_BASE}/api/leaderboard?sort=${sort}`),
   getCorpLeaderboard: () => fetchJSON(`${API_BASE}/api/leaderboard/corporations`),
-  getTopHackers: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/top-hackers?limit=${limit}`),
-  getNxtHolders: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/nxt-holders?limit=${limit}`),
-  getDevCollectors: (limit = 50) => fetchJSON(`${API_BASE}/api/leaderboard/dev-collectors?limit=${limit}`),
+  // Bloque F: `viewerWallet` is optional. When provided the response
+  // shape changes — see leaderboard.py docstrings. When null/empty
+  // we omit the param entirely so the back-compat list/holders
+  // shape is preserved (backend's _normalise_viewer would also fold
+  // empty values back to "no viewer", but skipping the param keeps
+  // the URL clean).
+  getTopHackers: (limit = 50, viewerWallet = null) =>
+    fetchJSON(`${API_BASE}/api/leaderboard/top-hackers?${_lbQuery(limit, viewerWallet)}`),
+  getNxtHolders: (limit = 50, viewerWallet = null) =>
+    fetchJSON(`${API_BASE}/api/leaderboard/nxt-holders?${_lbQuery(limit, viewerWallet)}`),
+  getDevCollectors: (limit = 50, viewerWallet = null) =>
+    fetchJSON(`${API_BASE}/api/leaderboard/dev-collectors?${_lbQuery(limit, viewerWallet)}`),
 
   // Chat
   getDevChat: (channel = 'trollbox') => fetchJSON(`${API_BASE}/api/chat/devs?channel=${channel}`),

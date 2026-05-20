@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useWallet } from '../hooks/useWallet';
+
+// Phase 5.12: top N for the three tabs that surface a "your position"
+// row. Hardcoded to 10 — fewer than the 50-row default keeps the
+// table compact when the viewer row is appended below. By Balance
+// and Corporations keep the legacy 50-row default.
+const TOP_N = 10;
 
 const ARCHETYPE_COLORS = {
   '10X_DEV': 'var(--red-on-grey, #aa0000)', 'LURKER': 'var(--common-on-grey, #333333)', 'DEGEN': 'var(--gold-on-grey, #7a5c00)',
@@ -121,15 +128,28 @@ function WalletCell({ wallet }) {
   );
 }
 
-function RankCell({ rank }) {
+function RankCell({ rank, isViewer = false }) {
   return (
     <td style={{
       color: rank <= 3 ? 'var(--gold-on-grey)' : undefined,
-      fontWeight: rank <= 3 ? 'bold' : undefined,
+      fontWeight: rank <= 3 || isViewer ? 'bold' : undefined,
     }}>
       {rank}
+      {/* Inline YOU tag — only renders for the viewer row. Class
+          styling lives in App.css (.rank-label-you). High contrast
+          against both the yellow row bg and the table default. */}
+      {isViewer && <span className="rank-label-you">YOU</span>}
     </td>
   );
+}
+
+// True iff this top-N row corresponds to the connected wallet.
+// Both sides are normalised to lowercase so input casing from the
+// browser/wagmi address vs the backend's already-lowercased rows
+// can't cause a miss.
+function isViewerRow(rowWallet, viewerWallet) {
+  if (!viewerWallet || !rowWallet) return false;
+  return rowWallet.toLowerCase() === viewerWallet.toLowerCase();
 }
 
 export default function Leaderboard({ openDevProfile }) {
@@ -143,8 +163,17 @@ export default function Leaderboard({ openDevProfile }) {
   const [holders, setHolders] = useState([]);
   const [holdersUpdatedAt, setHoldersUpdatedAt] = useState(null);
   const [collectors, setCollectors] = useState([]);
+  // Phase 5.12: viewer object from the backend response when a
+  // wallet is connected. Cleared on tab change or wallet
+  // disconnect — `null` means "no viewer row to render".
+  const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Connected wallet drives the optional viewer_wallet query param.
+  // useWallet wraps wagmi's useAccount(), so this rerenders the
+  // component on every connect / disconnect / chain switch.
+  const { address } = useWallet();
 
   // Single fetcher keyed by `tab`. Re-runs on tab change AND on the
   // 30s auto-refresh interval. setError(null) on each request so a
@@ -152,30 +181,50 @@ export default function Leaderboard({ openDevProfile }) {
   // close/reopen.
   function fetchForTab(activeTab) {
     setError(null);
+    // Default: no viewer for this tab cycle. Each branch below
+    // overrides this when the response carries a viewer object.
     if (activeTab === 'balance') {
       return api.getLeaderboard('balance').then(d => {
         setByBalance(Array.isArray(d) ? d : d.leaderboard || []);
+        setViewer(null);
       });
     }
     if (activeTab === 'corporations') {
       return api.getCorpLeaderboard().then(d => {
         setCorpData(Array.isArray(d) ? d : d.corporations || []);
+        setViewer(null);
       });
     }
     if (activeTab === 'top-hackers') {
-      return api.getTopHackers().then(d => {
-        setHackers(Array.isArray(d) ? d : d.hackers || []);
+      return api.getTopHackers(TOP_N, address).then(d => {
+        // Response shape: list (no viewer_wallet) or {top, viewer}.
+        if (Array.isArray(d)) {
+          setHackers(d);
+          setViewer(null);
+        } else {
+          setHackers(Array.isArray(d.top) ? d.top : []);
+          setViewer(d.viewer || null);
+        }
       });
     }
     if (activeTab === 'nxt-holders') {
-      return api.getNxtHolders().then(d => {
+      return api.getNxtHolders(TOP_N, address).then(d => {
+        // NXT Holders always returns a wrapper {holders, snapshot_updated_at}.
+        // The `viewer` key is present only when viewer_wallet was sent.
         setHolders(Array.isArray(d?.holders) ? d.holders : []);
         setHoldersUpdatedAt(d?.snapshot_updated_at || null);
+        setViewer(d?.viewer || null);
       });
     }
     if (activeTab === 'dev-collectors') {
-      return api.getDevCollectors().then(d => {
-        setCollectors(Array.isArray(d) ? d : d.collectors || []);
+      return api.getDevCollectors(TOP_N, address).then(d => {
+        if (Array.isArray(d)) {
+          setCollectors(d);
+          setViewer(null);
+        } else {
+          setCollectors(Array.isArray(d.top) ? d.top : []);
+          setViewer(d.viewer || null);
+        }
       });
     }
     return Promise.resolve();
@@ -183,11 +232,14 @@ export default function Leaderboard({ openDevProfile }) {
 
   useEffect(() => {
     setLoading(true);
+    // Wallet change clears the previous viewer immediately so the
+    // old row 11 doesn't linger while the next fetch is in flight.
+    setViewer(null);
     fetchForTab(tab)
       .catch((e) => setError(e?.message || 'Network error'))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, address]);
 
   // Auto-refresh every 30s (silent — no loading flash on refresh,
   // only on tab change).
@@ -197,7 +249,7 @@ export default function Leaderboard({ openDevProfile }) {
     }, 30000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, address]);
 
   // ── Per-tab body renderer. Each block handles its own empty/
   // error states so the surrounding chrome doesn't need to know
@@ -266,32 +318,51 @@ export default function Leaderboard({ openDevProfile }) {
     }
 
     if (tab === 'top-hackers') {
-      if (hackers.length === 0) {
+      if (hackers.length === 0 && !viewer) {
         return <EmptyState message="No successful hacks recorded yet. Send your devs to raid rivals or crack the mainframe." />;
       }
+      // Only render row 11 when viewer is OUTSIDE the top-N. When
+      // in_top is true the backend already places the viewer's row
+      // inside `hackers`, so we just highlight it there.
+      const showRow11 = viewer && !viewer.in_top;
       return (
         <table className="win-table">
           <thead>
             <tr><th>#</th><th>Wallet</th><th>Successful Hacks</th><th>Devs Contributing</th></tr>
           </thead>
           <tbody>
-            {hackers.map((h, i) => (
-              <tr key={h.wallet || i}>
-                <RankCell rank={i + 1} />
-                <WalletCell wallet={h.wallet} />
-                <td>{formatNumber(h.hacks_successful)}</td>
-                <td>{formatNumber(h.contributing_devs)}</td>
+            {hackers.map((h, i) => {
+              const mine = isViewerRow(h.wallet, viewer?.wallet);
+              return (
+                <tr key={h.wallet || i} className={mine ? 'viewer-row' : undefined}>
+                  <RankCell rank={i + 1} isViewer={mine} />
+                  <WalletCell wallet={h.wallet} />
+                  <td>{formatNumber(h.hacks_successful)}</td>
+                  <td>{formatNumber(h.contributing_devs)}</td>
+                </tr>
+              );
+            })}
+            {showRow11 && (
+              // Row 11 = viewer-row + out-of-top separator. Wallet
+              // is non-clickable just like the top-N rows
+              // (TODO(wallet-profile) — same blocker).
+              <tr className="viewer-row out-of-top">
+                <RankCell rank={viewer.rank} isViewer={true} />
+                <WalletCell wallet={viewer.wallet} />
+                <td>{formatNumber(viewer.value)}</td>
+                <td>{formatNumber(viewer.secondary_value)}</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       );
     }
 
     if (tab === 'nxt-holders') {
-      if (holders.length === 0) {
+      if (holders.length === 0 && !viewer) {
         return <EmptyState message="No on-chain $NXT holders snapshot yet. The snapshot job runs every 5 minutes." />;
       }
+      const showRow11 = viewer && !viewer.in_top;
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ flex: 1, overflow: 'auto' }}>
@@ -300,13 +371,23 @@ export default function Leaderboard({ openDevProfile }) {
                 <tr><th>#</th><th>Wallet</th><th>Balance</th></tr>
               </thead>
               <tbody>
-                {holders.map((h, i) => (
-                  <tr key={h.wallet || i}>
-                    <RankCell rank={i + 1} />
-                    <WalletCell wallet={h.wallet} />
-                    <td>{formatNxtBalance(h.balance)} $NXT</td>
+                {holders.map((h, i) => {
+                  const mine = isViewerRow(h.wallet, viewer?.wallet);
+                  return (
+                    <tr key={h.wallet || i} className={mine ? 'viewer-row' : undefined}>
+                      <RankCell rank={i + 1} isViewer={mine} />
+                      <WalletCell wallet={h.wallet} />
+                      <td>{formatNxtBalance(h.balance)} $NXT</td>
+                    </tr>
+                  );
+                })}
+                {showRow11 && (
+                  <tr className="viewer-row out-of-top">
+                    <RankCell rank={viewer.rank} isViewer={true} />
+                    <WalletCell wallet={viewer.wallet} />
+                    <td>{formatNxtBalance(viewer.value)} $NXT</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -325,22 +406,33 @@ export default function Leaderboard({ openDevProfile }) {
     }
 
     if (tab === 'dev-collectors') {
-      if (collectors.length === 0) {
+      if (collectors.length === 0 && !viewer) {
         return <EmptyState message="No wallets hold any devs yet. Mint to claim the #1 collector spot." />;
       }
+      const showRow11 = viewer && !viewer.in_top;
       return (
         <table className="win-table">
           <thead>
             <tr><th>#</th><th>Wallet</th><th>Devs Owned</th></tr>
           </thead>
           <tbody>
-            {collectors.map((c, i) => (
-              <tr key={c.wallet || i}>
-                <RankCell rank={i + 1} />
-                <WalletCell wallet={c.wallet} />
-                <td>{formatNumber(c.dev_count)}</td>
+            {collectors.map((c, i) => {
+              const mine = isViewerRow(c.wallet, viewer?.wallet);
+              return (
+                <tr key={c.wallet || i} className={mine ? 'viewer-row' : undefined}>
+                  <RankCell rank={i + 1} isViewer={mine} />
+                  <WalletCell wallet={c.wallet} />
+                  <td>{formatNumber(c.dev_count)}</td>
+                </tr>
+              );
+            })}
+            {showRow11 && (
+              <tr className="viewer-row out-of-top">
+                <RankCell rank={viewer.rank} isViewer={true} />
+                <WalletCell wallet={viewer.wallet} />
+                <td>{formatNumber(viewer.value)}</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       );
