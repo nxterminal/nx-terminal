@@ -30,6 +30,7 @@ const TYPE_SENDERS = {
   vip_mint: 'NX Terminal Ops <ops@nxterminal.corp>',
   dev_deployed: 'NX Terminal Deployment <deploy@nxterminal.corp>',
   hack_received: 'NX Terminal Security <security@nxterminal.corp>',
+  hack_failed: 'NX Terminal Security <security@nxterminal.corp>',
   world_event: 'NX Terminal Ops <ops@nxterminal.corp>',
   prompt_response: 'NX Terminal <prompts@nxterminal.corp>',
   ticket_sent: 'Me <outgoing>',

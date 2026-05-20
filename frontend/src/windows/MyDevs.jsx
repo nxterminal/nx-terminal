@@ -1535,7 +1535,7 @@ function FeedDropdown({ dev, busy, onBuy, className = '' }) {
 }
 
 // ── Hack Dropdown (MAINFRAME + PLAYER) ─────────────────
-function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
+function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer, onHackRandom }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -1551,7 +1551,7 @@ function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
       <StoneBtn emoji={'🔓'} label={'HACK ▾'}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         disabled={busy}
-        title="Hack: choose Mainframe (15 $NXT, safe) or Player (25 $NXT, risky)" />
+        title="Hack: Mainframe (15 $NXT, safe), Player (25 $NXT, pick a target) or Random (25 $NXT, random target)" />
       {open && (
         <div onClick={e => e.stopPropagation()} style={{
           position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
@@ -1570,7 +1570,15 @@ function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer }) {
             background: 'transparent', color: '#1a2030', cursor: 'pointer',
             fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
             textAlign: 'left',
-          }}>{'\uD83D\uDC64'} PLAYER — 25 $NXT</button>
+          }}>{'\uD83D\uDC64'} HACK PLAYER — 25 $NXT</button>
+          {/* Secondary — legacy random matchmaker, visually muted. */}
+          <button onClick={(e) => { onHackRandom(e); setOpen(false); }} style={{
+            display: 'block', width: '100%', padding: '5px 8px', border: 'none',
+            borderTop: '1px solid #5a6877',
+            background: 'transparent', color: '#3a4654', cursor: 'pointer',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-sm)',
+            textAlign: 'left', opacity: 0.85,
+          }}>{'🎲'} HACK RANDOM — 25 $NXT</button>
         </div>
       )}
     </div>
@@ -1615,9 +1623,9 @@ function HackResultModal({ result, onClose }) {
           <div style={{ fontSize: 'var(--text-base)', color: '#cfcfcf', marginBottom: 16 }}>
             TARGET: {result.target_name}
             {result.target_corp && ` [${result.target_corp}]`}
-            {result.target_owner && (
+            {result.target_nickname && (
               <span style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 2 }}>
-                {result.target_owner}
+                {result.target_nickname}
               </span>
             )}
           </div>
@@ -1665,6 +1673,9 @@ const HACK_ERROR_CONFIG = {
   insufficient_funds: { icon: '💰', title: '> INSUFFICIENT FUNDS', color: '#ff4444' },
   low_social:         { icon: '👤', title: '> LOW REPUTATION',     color: '#ff6644' },
   no_targets:         { icon: '🔍', title: '> NO TARGETS',         color: '#cfcfcf' },
+  no_active_devs:     { icon: '🔍', title: '> TARGET OFFLINE',     color: '#cfcfcf' },
+  target_not_found:   { icon: '🔍', title: '> TARGET NOT FOUND',   color: '#cfcfcf' },
+  cannot_hack_self:   { icon: '🚫', title: '> INVALID TARGET',     color: '#ff6644' },
 };
 const HACK_ERROR_DEFAULT = { icon: '❌', title: '> HACK ERROR', color: '#ff4444' };
 
@@ -1715,6 +1726,144 @@ function HackErrorModal({ error, onClose }) {
               Required: {error.required} Social | Current: {error.current}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Hack Targeting Modal (PvP search + pick) ───────────
+// Phase 5.13. Opened by the "HACK PLAYER" dropdown item. Search is
+// prefix-on-nickname (or exact-on-wallet); 300ms debounce; stale
+// responses are dropped via a sequence counter so fast typing can't
+// render an out-of-order result set. Closeable (X / Esc / backdrop)
+// — this is target choice, not onboarding.
+function HackTargetingModal({ callerAddress, onConfirm, onClose }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const debounceRef = useRef(null);
+  const seqRef = useRef(0);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = query.trim();
+    setError('');
+    if (q.length < 3) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const mySeq = ++seqRef.current;
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.searchPlayers(q, callerAddress);
+        if (mySeq !== seqRef.current) return; // stale — a newer query won
+        setResults(Array.isArray(res) ? res : []);
+        setLoading(false);
+      } catch (err) {
+        if (mySeq !== seqRef.current) return;
+        setError(err?.message || 'Search failed.');
+        setResults([]);
+        setLoading(false);
+      }
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, callerAddress]);
+
+  const q = query.trim();
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#1a1a2e', border: '2px solid #44ccff55',
+        width: 380, maxWidth: '92vw', fontFamily: "'VT323', monospace",
+        boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px rgba(68,204,255,0.12)',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '10px 14px', background: '#0a0a1e', borderBottom: '2px solid #44ccff',
+        }}>
+          <span style={{ fontSize: 'var(--text-xl)', letterSpacing: 2, color: '#44ccff' }}>
+            {'> SELECT TARGET'}
+          </span>
+          <button onClick={onClose} style={{
+            background: 'none', border: '1px solid #555', color: '#cfcfcf',
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', cursor: 'pointer', padding: '2px 8px',
+          }}>X</button>
+        </div>
+        {/* Body */}
+        <div style={{ padding: 14 }}>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search nickname or 0x wallet…"
+            spellCheck={false}
+            autoComplete="off"
+            style={{
+              width: '100%', boxSizing: 'border-box', padding: '6px 8px',
+              background: '#0a0a1e', border: '1px solid #44ccff55', color: '#cfcfcf',
+              fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', outline: 'none',
+            }}
+          />
+          <div style={{
+            marginTop: 4, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
+            minHeight: 16,
+          }}>
+            {q.length > 0 && q.length < 3 && 'Type at least 3 characters.'}
+            {loading && 'Searching…'}
+            {!loading && error && <span style={{ color: '#ff6666' }}>{error}</span>}
+            {!loading && !error && q.length >= 3 && results.length === 0 && 'No players found.'}
+          </div>
+          {/* Results */}
+          <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 6 }}>
+            {results.map((r) => (
+              <div key={r.nickname} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 8, padding: '8px 6px', borderBottom: '1px solid #2a2a4e',
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 'var(--text-lg)', color: '#cfcfcf',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{r.nickname}</div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    {r.corp ? `${r.corp} · ` : ''}{r.dev_count} dev{r.dev_count === 1 ? '' : 's'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => { if (r.has_active_devs) onConfirm(r.nickname); }}
+                  disabled={!r.has_active_devs}
+                  title={r.has_active_devs ? `Hack ${r.nickname}` : 'no active devs'}
+                  style={{
+                    flexShrink: 0,
+                    background: r.has_active_devs ? '#2a2a4e' : '#1a1a2e',
+                    border: `1px solid ${r.has_active_devs ? '#ff6644' : '#444'}`,
+                    color: r.has_active_devs ? '#ff8866' : '#555',
+                    fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
+                    padding: '4px 12px',
+                    cursor: r.has_active_devs ? 'pointer' : 'not-allowed',
+                  }}
+                >HACK</button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1792,6 +1941,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showTargeting, setShowTargeting] = useState(false);
   const [spends, setSpends] = useState([]);
 
   const triggerChanges = useCallback((changes) => {
@@ -1881,11 +2031,12 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     setTimeout(() => setActionMsg(null), 4000);
   };
 
-  const doHackPlayer = async (e) => {
-    e.stopPropagation();
+  // Phase 5.13 — shared executor for both PvP paths. targetNickname
+  // null → legacy random matchmaker; a string → targeted raid.
+  const executeHackPlayer = async (targetNickname) => {
     if (!address || !lockBusy()) return;
     try {
-      const res = await api.hackPlayer(address, dev.token_id);
+      const res = await api.hackPlayer(address, dev.token_id, targetNickname);
       if (res.changes && res.changes.length) triggerChanges(res.changes);
       else triggerSpend(25);
       if (onHackResult) onHackResult(res);
@@ -1897,6 +2048,21 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     }
     unlockBusy();
     setTimeout(() => setActionMsg(null), 4000);
+  };
+
+  // HACK PLAYER (primary) — opens the targeting modal. busy is NOT
+  // locked here: the user may browse search results for a while; the
+  // lock happens in executeHackPlayer when the raid actually fires.
+  const doHackPlayer = (e) => {
+    e.stopPropagation();
+    if (!address) return;
+    setShowTargeting(true);
+  };
+
+  // HACK RANDOM (secondary) — legacy matchmaker, no modal.
+  const doHackRandom = (e) => {
+    e.stopPropagation();
+    executeHackPlayer(null);
   };
 
   const doGraduate = async (e) => {
@@ -2116,7 +2282,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             title="Coffee: 3 $NXT \u2192 +25 Caffeine, +3 Energy" />
           <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
           <HackDropdown dev={dev} busy={busy}
-            onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer} />
+            onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer}
+            onHackRandom={doHackRandom} />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
@@ -2180,6 +2347,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       )}
       {showRequestModal && (
         <TransferModal dev={dev} allDevs={allDevs} address={address} mode="request" onClose={() => setShowRequestModal(false)} onDevUpdate={onDevUpdate} />
+      )}
+      {showTargeting && (
+        <HackTargetingModal
+          callerAddress={address}
+          onClose={() => setShowTargeting(false)}
+          onConfirm={(nickname) => { setShowTargeting(false); executeHackPlayer(nickname); }}
+        />
       )}
       </div>{/* end grayscale wrapper */}
 

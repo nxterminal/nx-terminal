@@ -6,6 +6,7 @@ import random
 import logging
 import time
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db, validate_wallet, get_active_event_effects
@@ -513,6 +514,11 @@ async def graduate_training(req: GraduateRequest):
 class HackRequest(BaseModel):
     player_address: str
     attacker_dev_id: int
+    # Phase 5.13 — PvP targeting. When present, /hack-player resolves
+    # this nickname to a wallet and raids one of that player's devs.
+    # When absent, the legacy random matchmaker runs (unchanged).
+    # hack-mainframe ignores this field entirely.
+    target_nickname: Optional[str] = None
 
 
 HACK_COST = 15
@@ -529,28 +535,30 @@ HACK_PLAYER_STEAL_MAX = 60
 HACK_PLAYER_SOCIAL_GAIN = 8
 
 
-def _resolve_mega_name(addr: str) -> str:
-    """Resolve a wallet to a .mega name via dotmega.domains, falling back
-    to the truncated 0x…abcd format on any failure. Always returns a
-    printable label — never raises — so a dotmega outage can't break
-    /shop/hack-player or any other caller. Called once per successful
-    PvP hack (capped by the 24h per-attacker cooldown), so the extra
-    HTTPS latency is bounded.
+def _resolve_nickname(cur, addr: str) -> str:
+    """Resolve a wallet to its NX Terminal nickname (players.display_name).
+
+    Phase 5.13 — replaces the old dotmega .mega lookup. The nickname is
+    the canonical public identity since Phase 5.12, so PvP breach mail
+    shows it instead of a truncated wallet. Falls back to the truncated
+    0x…abcd form only for legacy players who minted but never claimed a
+    nickname (possible on the random-matchmaker path — those wallets
+    never appear in /players/search so they can't be targeted directly).
     """
     if not addr:
         return "???"
     fallback = f"{addr[:6]}...{addr[-4:]}"
     try:
-        r = http_requests.get(
-            f"https://api.dotmega.domains/resolve?address={addr.lower()}",
-            timeout=3,
+        cur.execute(
+            "SELECT display_name FROM players WHERE wallet_address = %s",
+            (addr.lower(),),
         )
-        if r.status_code != 200:
-            return fallback
-        data = r.json()
-        return data.get("name") or fallback
+        row = cur.fetchone()
+        if row and row.get("display_name"):
+            return row["display_name"]
     except Exception:
-        return fallback
+        pass
+    return fallback
 
 
 @router.post("/hack-mainframe")
@@ -801,18 +809,63 @@ async def hack_player(req: HackRequest):
                     "current": attacker.get("social_vitality", 50),
                 })
 
-            # Find random target from another corporation, excluding devs
-            # owned by the attacker's own wallet (friendly-fire prevention).
-            cur.execute(
-                "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND lower(owner_address) != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
-                (attacker["corporation"], addr)
-            )
-            target = cur.fetchone()
-            if not target:
-                raise HTTPException(400, detail={
-                    "error": "no_targets",
-                    "message": "No valid targets found. All devs are broke or protected.",
-                })
+            # ── Target selection ──────────────────────────────────
+            # Phase 5.13 — two paths:
+            #   target_nickname present → resolve it to a wallet and
+            #     raid one of that player's hackable devs (the modal
+            #     flow). No corporation restriction: the attacker
+            #     deliberately chose this player, so the only bar is
+            #     the friendly-fire rule (can't be your own wallet).
+            #   target_nickname absent  → legacy random matchmaker
+            #     across all rival corporations, excluding own devs.
+            # Both paths produce a `target` row with the same columns
+            # so everything below is shared.
+            if req.target_nickname:
+                cur.execute(
+                    "SELECT wallet_address FROM players WHERE nickname_lower = %s",
+                    (req.target_nickname.strip().lower(),),
+                )
+                target_player = cur.fetchone()
+                if not target_player:
+                    raise HTTPException(404, detail={
+                        "error": "target_not_found",
+                        "message": "No player with that nickname.",
+                    })
+                target_wallet = target_player["wallet_address"].lower()
+                if target_wallet == addr:
+                    raise HTTPException(400, detail={
+                        "error": "cannot_hack_self",
+                        "message": "You can't hack your own devs.",
+                    })
+                # Re-verify hackability AT HACK TIME (not at search
+                # time) — the target may have spent down or rested its
+                # devs between the search and this confirm.
+                cur.execute(
+                    "SELECT token_id, name, corporation, balance_nxt, owner_address "
+                    "FROM devs WHERE lower(owner_address) = %s "
+                    "AND status = 'active' AND balance_nxt > 0 "
+                    "ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
+                    (target_wallet,)
+                )
+                target = cur.fetchone()
+                if not target:
+                    raise HTTPException(400, detail={
+                        "error": "no_active_devs",
+                        "message": "Target has no devs that can be hacked right now.",
+                    })
+            else:
+                # Find random target from another corporation, excluding
+                # devs owned by the attacker's own wallet (friendly-fire).
+                cur.execute(
+                    "SELECT token_id, name, corporation, balance_nxt, owner_address FROM devs WHERE corporation != %s AND lower(owner_address) != %s AND status = 'active' AND balance_nxt > 0 ORDER BY RANDOM() LIMIT 1 FOR UPDATE",
+                    (attacker["corporation"], addr)
+                )
+                target = cur.fetchone()
+                if not target:
+                    raise HTTPException(400, detail={
+                        "error": "no_targets",
+                        "message": "No valid targets found. All devs are broke or protected.",
+                    })
 
             # Deduct cost and set cooldown
             cur.execute(
@@ -848,6 +901,14 @@ async def hack_player(req: HackRequest):
             success_prob = HACK_PLAYER_BASE_SUCCESS + (attacker["stat_hacking"] / 200.0)
             success_prob += event_fx.get("hack_success_bonus", 0.0)
             success = random.random() < success_prob
+
+            # Phase 5.13 — resolve both identities once. Nicknames are
+            # the public identity in PvP mail + the hack result. The
+            # attacker is always nicknamed (require_nickname gate); the
+            # target may fall back to a truncated wallet if it's a
+            # legacy never-onboarded player picked by the matchmaker.
+            attacker_nick = _resolve_nickname(cur, attacker["owner_address"])
+            target_nick = _resolve_nickname(cur, target["owner_address"])
 
             if success:
                 steal_amount = random.randint(HACK_PLAYER_STEAL_MIN, min(HACK_PLAYER_STEAL_MAX, target["balance_nxt"]))
@@ -904,13 +965,9 @@ async def hack_player(req: HackRequest):
                                  "target_corp": target["corporation"], "stolen": steal_amount}),
                      effective_cost)
                 )
-                # Notify target owner
+                # Notify target owner — breach notice identifies the
+                # attacker by NICKNAME (Phase 5.13), no wallet exposed.
                 if target.get("owner_address"):
-                    # Prefer the attacker's .mega name in the breach notice
-                    # for a friendlier UX. Falls back to truncated wallet on
-                    # any dotmega failure so the hack still notifies on
-                    # schedule even if the resolver is down.
-                    attacker_wallet = _resolve_mega_name(attacker["owner_address"])
                     cur.execute(
                         """INSERT INTO notifications (player_address, type, title, body, dev_id)
                            VALUES (%s, 'hack_received', %s, %s, %s)""",
@@ -918,8 +975,8 @@ async def hack_player(req: HackRequest):
                          f"⚠ SECURITY BREACH — {target['name']} was hacked",
                          f"Your dev {target['name']} [{target['corporation']}] was hacked.\n"
                          f"Lost: {steal_amount} $NXT\n"
-                         f"Attacker: {attacker['name']} [{attacker['corporation']}]\n"
-                         f"Wallet: {attacker_wallet}",
+                         f"Attacker: {attacker_nick}\n"
+                         f"Their dev: {attacker['name']} [{attacker['corporation']}]",
                          target["token_id"])
                     )
                 # BONUS: Social boosts on successful hack
@@ -933,7 +990,8 @@ async def hack_player(req: HackRequest):
                     "stolen": steal_amount, "cost": effective_cost,
                     "net_gain": steal_amount - effective_cost,
                     "target_name": target["name"], "target_corp": target["corporation"],
-                    "target_owner": target["owner_address"][:6] + "..." + target["owner_address"][-4:],
+                    "target_nickname": target_nick,
+                    "attacker_nickname": attacker_nick,
                     "message": f"Breached {target['name']}'s firewall. Extracted {steal_amount} $NXT.",
                     "changes": [
                         {"stat": "$NXT", "amount": -effective_cost, "type": "spend"},
@@ -977,12 +1035,29 @@ async def hack_player(req: HackRequest):
                             "dev=%s error=%s",
                             target["token_id"], _e,
                         )
+                # Phase 5.13 — notify the attacker their raid failed.
+                # Counter-intrusion notice identifies the target by
+                # NICKNAME, mirroring the breach mail on the win path.
+                if attacker.get("owner_address"):
+                    cur.execute(
+                        """INSERT INTO notifications (player_address, type, title, body, dev_id)
+                           VALUES (%s, 'hack_failed', %s, %s, %s)""",
+                        (attacker["owner_address"].lower(),
+                         f"⚠ INTRUSION DETECTED — {attacker['name']} was caught",
+                         f"Your hack attempt failed.\n"
+                         f"Target: {target_nick}\n"
+                         f"Their dev {target['name']} [{target['corporation']}] "
+                         f"detected the intrusion.\n"
+                         f"Seized: {effective_cost} $NXT",
+                         req.attacker_dev_id)
+                    )
                 result = {
                     "success": True, "hack_success": False, "hack_type": "player",
                     "stolen": 0, "cost": effective_cost,
                     "net_gain": -effective_cost,
                     "target_name": target["name"], "target_corp": target["corporation"],
-                    "target_owner": target["owner_address"][:6] + "..." + target["owner_address"][-4:],
+                    "target_nickname": target_nick,
+                    "attacker_nickname": attacker_nick,
                     "message": f"Intrusion detected by {target['name']}. {effective_cost} $NXT seized by target.",
                     "changes": [
                         {"stat": "$NXT", "amount": -effective_cost, "type": "spend"},

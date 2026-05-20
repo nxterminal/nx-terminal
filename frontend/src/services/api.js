@@ -159,11 +159,18 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, attacker_dev_id }),
     }),
-  hackPlayer: (player_address, attacker_dev_id) =>
+  // Phase 5.13 — target_nickname optional. When passed, the backend
+  // raids that specific player (PvP targeting modal). When omitted,
+  // the legacy random matchmaker runs (the "HACK RANDOM" button).
+  hackPlayer: (player_address, attacker_dev_id, target_nickname = null) =>
     fetchJSON(`${API_BASE}/api/shop/hack-player`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ player_address, attacker_dev_id }),
+      body: JSON.stringify(
+        target_nickname
+          ? { player_address, attacker_dev_id, target_nickname }
+          : { player_address, attacker_dev_id },
+      ),
     }),
   fixBug: (player_address, dev_id) =>
     fetchJSON(`${API_BASE}/api/shop/fix-bug`, {
@@ -208,6 +215,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet_address, nickname }),
     }),
+  // Phase 5.13 — PvP targeting search. q ≥ 3 chars; prefix match on
+  // nickname or exact match on a full 0x wallet. `caller` is excluded
+  // from results. Response never contains wallet addresses.
+  searchPlayers: (q, caller = null, limit = 10) => {
+    const params = new URLSearchParams({ q, limit: String(limit) });
+    if (caller) params.set('caller', caller);
+    return fetchJSON(`${API_BASE}/api/players/search?${params.toString()}`);
+  },
 
   // NX Souls — chat list (per-wallet view of every Dev with quota /
   // status / resting flags). Backed by GET /api/user/{wallet}/conversations.

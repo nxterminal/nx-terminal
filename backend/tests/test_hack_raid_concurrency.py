@@ -130,7 +130,9 @@ def test_concurrent_hack_raids_do_not_inflate_nxt(db_pool, monkeypatch):
 
     monkeypatch.setattr(shop.random, "random", always_succeed)
     monkeypatch.setattr(shop.random, "randint", steal_everything_possible)
-    monkeypatch.setattr(shop, "_resolve_mega_name", lambda addr: "test.mega")
+    # Phase 5.13 — _resolve_mega_name (dotmega HTTP lookup) was replaced
+    # by _resolve_nickname, a pure DB read with no network call, so no
+    # stub is needed here anymore.
     monkeypatch.setattr(shop.shop_limiter, "check", lambda key: None)
 
     results: list = [None, None]

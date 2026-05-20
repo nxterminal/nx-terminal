@@ -167,7 +167,7 @@ function getInitialUnreadCount() {
 const INBOX_DISPLAY_TYPES = new Set([
   'broadcast', 'streak_claim', 'achievement', 'vip_welcome',
   'vip_alert', 'vip_mint', 'dev_deployed', 'hack_received',
-  'world_event', 'prompt_response',
+  'hack_failed', 'world_event', 'prompt_response',
 ]);
 
 export default function Desktop() {
@@ -209,6 +209,9 @@ export default function Desktop() {
   // or reactively (any backend call returns 409 nickname_required and
   // fetchJSON dispatches the `nx-nickname-required` window event).
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
+  // Phase 5.13 — cached /api/players/{addr} profile, drives the
+  // "MY IDENTITY" desktop post-it (nickname + wallet + dev count).
+  const [playerProfile, setPlayerProfile] = useState(null);
   const idleTimerRef = useRef(null);
   const lastNotifCheck = useRef(0);
 
@@ -229,24 +232,28 @@ export default function Desktop() {
     };
   }, []);
 
-  // Phase 5.12 — proactive nickname check on wallet connect. If the
-  // player row exists and display_name is null, open the onboarding
-  // modal immediately instead of waiting for them to trip a 409 on a
-  // sensitive action. 404 (no player row yet) is a no-op; they'll
-  // mint first via the on-chain flow, the listener will create the
-  // row with display_name=null, and the next connect cycle catches it.
+  // Phase 5.12/5.13 — load the player profile on wallet connect. Two
+  // jobs: (1) if the row exists with a NULL display_name, open the
+  // onboarding modal proactively instead of waiting for a 409; (2)
+  // cache the profile so the "MY IDENTITY" post-it can render. 404
+  // (no player row — never minted) is a no-op: profile stays null and
+  // the post-it stays hidden.
+  const loadPlayerProfile = useCallback(() => {
+    if (!isConnected || !address) return;
+    api.getPlayer(address).then((p) => {
+      setPlayerProfile(p || null);
+      if (p && !p.display_name) setNicknameModalOpen(true);
+    }).catch(() => setPlayerProfile(null));
+  }, [address, isConnected]);
+
   useEffect(() => {
     if (!isConnected || !address) {
       setNicknameModalOpen(false);
+      setPlayerProfile(null);
       return;
     }
-    let cancelled = false;
-    api.getPlayer(address).then((p) => {
-      if (cancelled) return;
-      if (p && !p.display_name) setNicknameModalOpen(true);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [address, isConnected]);
+    loadPlayerProfile();
+  }, [address, isConnected, loadPlayerProfile]);
 
   // Phase 5.12 — reactive open: any backend call that hits the
   // nickname gate triggers `nx-nickname-required` via api.js, no matter
@@ -507,6 +514,61 @@ export default function Desktop() {
         </div>
       </div>
 
+      {/* Phase 5.13 — "MY IDENTITY" post-it. Sits LEFT of NX SOULS
+       * LIVE (right: 370 = 190 + width:170 + gap:10). Pastel teal,
+       * +2deg tilt, amber pin — continues the alternating-hue motif.
+       * Shows the player's nickname + truncated wallet. The
+       * no-nickname branch is defensive (the gate forces onboarding
+       * first) — it renders a clickable "claim your identity" CTA. */}
+      {isConnected && address && playerProfile && (
+        <div style={{
+          position: 'fixed', top: 10, right: 370, zIndex: 2,
+          userSelect: 'none', transform: 'rotate(2deg)',
+          pointerEvents: playerProfile.display_name ? 'none' : 'auto',
+          cursor: playerProfile.display_name ? 'default' : 'pointer',
+        }}
+          onClick={playerProfile.display_name ? undefined : () => setNicknameModalOpen(true)}
+        >
+          <div style={{
+            width: 12, height: 12, borderRadius: '50%', background: '#cc3333',
+            position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)', zIndex: 3,
+          }} />
+          <div style={{
+            width: 170, background: '#a0d8c4',
+            boxShadow: '3px 3px 8px rgba(0,0,0,0.25)',
+            fontFamily: "'Patrick Hand', cursive",
+          }}>
+            <div style={{
+              background: '#7fc8a8', padding: '3px 8px', fontSize: 'var(--text-sm)',
+              color: '#1a3a2e',
+            }}>📌 MY IDENTITY</div>
+            <div style={{ padding: '8px 10px', color: '#1a3a2e' }}>
+              {playerProfile.display_name ? (
+                <>
+                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold', marginBottom: 2 }}>
+                    {playerProfile.display_name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-sm)', opacity: 0.7 }}>
+                    {address.slice(0, 6)}...{address.slice(-4)}
+                  </div>
+                  {(playerProfile.devs?.length || playerProfile.corporation) && (
+                    <div style={{ fontSize: 'var(--text-base)', opacity: 0.8, marginTop: 2 }}>
+                      {playerProfile.devs?.length || 0} devs
+                      {playerProfile.corporation ? ` · ${playerProfile.corporation}` : ''}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold' }}>
+                  claim your identity →
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <WindowManager
         windows={windows}
         closeWindow={closeWindow}
@@ -538,7 +600,7 @@ export default function Desktop() {
       {nicknameModalOpen && address && (
         <NicknameOnboardingModal
           walletAddress={address}
-          onClaimed={() => setNicknameModalOpen(false)}
+          onClaimed={() => { setNicknameModalOpen(false); loadPlayerProfile(); }}
         />
       )}
 
