@@ -298,6 +298,15 @@ async def buy_item(req: PurchaseRequest):
             elif dev["balance_nxt"] < item_cost:
                 raise HTTPException(400, f"Not enough $NXT. Need {item_cost}, have {dev['balance_nxt']}")
 
+            # Defense in depth: pc_repair (REPAIR) is gated on energy in
+            # the dev-card UI. Mirror it server-side so a stale client
+            # can't repair an exhausted dev.
+            if req.item_id == "pc_repair" and dev["energy"] == 0:
+                raise HTTPException(400, detail={
+                    "error": "insufficient_energy",
+                    "message": "Dev needs energy to perform this action.",
+                })
+
             effect = item["effect"]
 
             # Training: check dev isn't already training
@@ -572,7 +581,7 @@ async def hack_mainframe(req: HackRequest):
         with conn.cursor() as cur:
             # Lock attacker
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype, energy FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.attacker_dev_id,)
             )
             attacker = cur.fetchone()
@@ -605,6 +614,15 @@ async def hack_mainframe(req: HackRequest):
                         "remaining_hours": int(rem // 3600),
                         "remaining_minutes": int((rem % 3600) // 60),
                     })
+
+            # Defense in depth: HACK is gated on energy in the dev-card
+            # UI (button disabled at energy 0). Mirror it server-side so
+            # a stale client can't act on an exhausted dev.
+            if attacker["energy"] == 0:
+                raise HTTPException(400, detail={
+                    "error": "insufficient_energy",
+                    "message": "Dev needs energy to perform this action.",
+                })
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
@@ -766,7 +784,7 @@ async def hack_player(req: HackRequest):
         with conn.cursor() as cur:
             # Lock attacker
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, corporation, stat_hacking, last_raid_at, social_vitality, archetype, energy FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.attacker_dev_id,)
             )
             attacker = cur.fetchone()
@@ -799,6 +817,15 @@ async def hack_player(req: HackRequest):
                         "remaining_hours": int(rem // 3600),
                         "remaining_minutes": int((rem % 3600) // 60),
                     })
+
+            # Defense in depth: HACK is gated on energy in the dev-card
+            # UI (button disabled at energy 0). Mirror it server-side so
+            # a stale client can't act on an exhausted dev.
+            if attacker["energy"] == 0:
+                raise HTTPException(400, detail={
+                    "error": "insufficient_energy",
+                    "message": "Dev needs energy to perform this action.",
+                })
 
             # Check social threshold
             if attacker.get("social_vitality", 50) < 15:
