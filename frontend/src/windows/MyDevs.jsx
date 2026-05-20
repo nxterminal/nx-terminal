@@ -1630,8 +1630,8 @@ const HACK_ERROR_CONFIG = {
 };
 const HACK_ERROR_DEFAULT = { icon: '❌', title: '> HACK ERROR', color: '#ff4444' };
 
-// Hack cooldown window — mirrors backend HACK_COOLDOWN_HOURS (24h).
-const HACK_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+// Hack cooldown window — mirrors backend HACK_COOLDOWN_HOURS (6h).
+const HACK_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 function HackErrorModal({ error, onClose }) {
   if (!error) return null;
@@ -2104,9 +2104,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           <div style={exhaustedDimStyle}>
             <StoneBtn emoji={'🔓'} label="HACK"
               onClick={openHackModal}
-              disabled={busy || energyVal === 0 || isInCooldown}
+              disabled={busy || energyVal === 0}
               title={energyVal === 0 ? 'Dev needs energy. Use COFFEE or FEED first.'
-                : isInCooldown ? `Dev in cooldown. ${cooldownH}h ${cooldownM}m remaining.`
                 : 'Hack: Mainframe, Player or Random — opens the hack console'} />
           </div>
           <div style={exhaustedDimStyle}>
