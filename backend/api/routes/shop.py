@@ -1188,7 +1188,7 @@ async def fund_dev(req: FundRequest):
 
             # Verify dev ownership
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, archetype FROM devs WHERE token_id = %s FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, archetype, energy FROM devs WHERE token_id = %s FOR UPDATE",
                 (req.dev_token_id,)
             )
             dev = cur.fetchone()
@@ -1196,6 +1196,15 @@ async def fund_dev(req: FundRequest):
                 raise HTTPException(404, "Dev not found")
             if dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own this dev")
+
+            # Defense in depth: ECONOMY is gated on energy in the
+            # dev-card UI. The funded dev is the caller — mirror the
+            # gate server-side.
+            if dev["energy"] == 0:
+                raise HTTPException(400, detail={
+                    "error": "insufficient_energy",
+                    "message": "Dev needs energy to perform this action.",
+                })
 
             # Single-shot RPC probe. If the receipt isn't indexed yet we
             # fast-fail to the pending queue (~500ms response); the 30s
@@ -1356,6 +1365,10 @@ class TransferRequest(BaseModel):
     from_dev_token_id: int
     to_dev_token_id: int
     amount: int
+    # 'transfer' (caller = from_dev) or 'request' (caller = to_dev).
+    # Identifies the dev that initiated the action so the energy gate
+    # hits the caller. Defaults to 'transfer' for any non-UI caller.
+    mode: str = "transfer"
 
 
 @router.post("/transfer")
@@ -1375,7 +1388,7 @@ async def transfer_nxt(req: TransferRequest):
             # Lock both devs ordered by token_id to prevent deadlocks
             ids = sorted([req.from_dev_token_id, req.to_dev_token_id])
             cur.execute(
-                "SELECT token_id, owner_address, balance_nxt, name, status, archetype FROM devs WHERE token_id IN (%s, %s) ORDER BY token_id FOR UPDATE",
+                "SELECT token_id, owner_address, balance_nxt, name, status, archetype, energy FROM devs WHERE token_id IN (%s, %s) ORDER BY token_id FOR UPDATE",
                 (ids[0], ids[1])
             )
             rows = cur.fetchall()
@@ -1393,6 +1406,25 @@ async def transfer_nxt(req: TransferRequest):
                 raise HTTPException(403, "You don't own the source dev")
             if to_dev["owner_address"].lower() != addr:
                 raise HTTPException(403, "You don't own the destination dev")
+
+            # Defense in depth: ECONOMY is gated on energy in the
+            # dev-card UI. /transfer serves both TRANSFER and REQUEST
+            # modes, and the "acting dev" (caller) differs:
+            #   - transfer: caller = from_dev (sends money)
+            #   - request:  caller = to_dev   (asks for money)
+            # The gate hits the caller only — gating from_dev blindly
+            # would wrongly block a legit transfer/request whose
+            # source happens to be exhausted. Decision 2026-05-20.
+            acting_dev = None
+            if req.mode == "transfer":
+                acting_dev = from_dev
+            elif req.mode == "request":
+                acting_dev = to_dev
+            if acting_dev is not None and acting_dev["energy"] == 0:
+                raise HTTPException(400, detail={
+                    "error": "insufficient_energy",
+                    "message": "Dev needs energy to perform this action.",
+                })
 
             # Check mission status
             if from_dev["status"] == "on_mission":
