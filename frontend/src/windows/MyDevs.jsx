@@ -5,6 +5,7 @@ import { useChatModal } from '../contexts/ChatContext';
 import { isUserRejection, toReadableMessage } from '../hooks/walletErrors';
 import { api } from '../services/api';
 import { useDevs } from '../contexts/DevsContext';
+import HackModal from '../components/HackModal';
 import { isInNXSoulsBeta } from '../config/betaFeatures';
 import { NXT_TOKEN_ADDRESS, TREASURY_ADDRESS, ERC20_TRANSFER_ABI } from '../services/contract';
 import { playSpendSound, playGainSound, playActionSound } from '../utils/sound';
@@ -1469,7 +1470,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer, onRequest }) {
 }
 
 // ── Feed Dropdown (CARROT / PIZZA / BURGER) ─────────────
-// Mirrors EconDropdown / HackDropdown — inline styles, mousedown
+// Mirrors EconDropdown — inline styles, mousedown
 // click-outside, opens upward over the button. Each option routes
 // through the parent's doShopAction (passed in as onBuy) so the
 // toast / updated_dev / triggerChanges plumbing is free.
@@ -1528,57 +1529,6 @@ function FeedDropdown({ dev, busy, onBuy, className = '' }) {
               </button>
             );
           })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Hack Dropdown (MAINFRAME + PLAYER) ─────────────────
-function HackDropdown({ dev, busy, onHackMainframe, onHackPlayer, onHackRandom }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <StoneBtn emoji={'🔓'} label={'HACK ▾'}
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
-        disabled={busy}
-        title="Hack: Mainframe (15 $NXT, safe), Player (25 $NXT, pick a target) or Random (25 $NXT, random target)" />
-      {open && (
-        <div onClick={e => e.stopPropagation()} style={{
-          position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
-          zIndex: 20, background: '#6b7b8a', borderRadius: '2px', overflow: 'hidden',
-          boxShadow: 'inset -2px -2px 0 #3a4654, inset 2px 2px 0 #8fa0b0, 0 3px 0 #2a3444',
-        }}>
-          <button onClick={(e) => { onHackMainframe(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
-            background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-            textAlign: 'left',
-          }}>{'\uD83D\uDDA5\uFE0F'} MAINFRAME — 15 $NXT</button>
-          <button onClick={(e) => { onHackPlayer(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '6px 8px', border: 'none',
-            borderTop: '2px solid #3a4654',
-            background: 'transparent', color: '#1a2030', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-            textAlign: 'left',
-          }}>{'\uD83D\uDC64'} HACK PLAYER — 25 $NXT</button>
-          {/* Secondary — legacy random matchmaker, visually muted. */}
-          <button onClick={(e) => { onHackRandom(e); setOpen(false); }} style={{
-            display: 'block', width: '100%', padding: '5px 8px', border: 'none',
-            borderTop: '1px solid #5a6877',
-            background: 'transparent', color: '#3a4654', cursor: 'pointer',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-sm)',
-            textAlign: 'left', opacity: 0.85,
-          }}>{'🎲'} HACK RANDOM — 25 $NXT</button>
         </div>
       )}
     </div>
@@ -1732,200 +1682,6 @@ function HackErrorModal({ error, onClose }) {
   );
 }
 
-// ── Hack Targeting Modal (PvP search + pick) ───────────
-// Phase 5.13. Opened by the "HACK PLAYER" dropdown item. Search is
-// prefix-on-nickname (or exact-on-wallet); 300ms debounce; stale
-// responses are dropped via a sequence counter so fast typing can't
-// render an out-of-order result set. Closeable (X / Esc / backdrop)
-// — this is target choice, not onboarding.
-//
-// `suppressHint` — pass true if a future programmatic opener (deep
-// link, etc.) ever opens this modal; the one-time "use HACK RANDOM"
-// hint should only appear on user-initiated opens. Today every open
-// is user-initiated (a click on the HACK dropdown), so it defaults
-// off and the hint shows normally.
-const HINT_KEY_PREFIX = 'nx:hint:targeting_modal_dismissed:';
-
-function HackTargetingModal({ callerAddress, onConfirm, onClose, suppressHint = false }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const debounceRef = useRef(null);
-  const seqRef = useRef(0);
-  const inputRef = useRef(null);
-
-  // One-time "HACK RANDOM still exists" hint. Persisted per wallet in
-  // localStorage — same pattern as the app's other UI prefs (theme,
-  // tooltips, icon scale). A different browser/device re-shows it once,
-  // which is fine for a trivial hint. The hint can only suggest "HACK >
-  // RANDOM" because the user reached this modal THROUGH that very
-  // dropdown, so the RANDOM item is guaranteed present on their device.
-  const hintStorageKey = callerAddress
-    ? `${HINT_KEY_PREFIX}${callerAddress.toLowerCase()}`
-    : null;
-  const [hintDismissed, setHintDismissed] = useState(() => {
-    if (suppressHint || !hintStorageKey) return true;
-    try {
-      return localStorage.getItem(hintStorageKey) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  const dismissHint = () => {
-    setHintDismissed(true);
-    if (!hintStorageKey) return;
-    try {
-      localStorage.setItem(hintStorageKey, '1');
-    } catch {
-      /* private mode / storage full — hint just reappears next open */
-    }
-  };
-
-  useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
-
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const q = query.trim();
-    setError('');
-    if (q.length < 3) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const mySeq = ++seqRef.current;
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await api.searchPlayers(q, callerAddress);
-        if (mySeq !== seqRef.current) return; // stale — a newer query won
-        setResults(Array.isArray(res) ? res : []);
-        setLoading(false);
-      } catch (err) {
-        if (mySeq !== seqRef.current) return;
-        setError(err?.message || 'Search failed.');
-        setResults([]);
-        setLoading(false);
-      }
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, callerAddress]);
-
-  const q = query.trim();
-  return (
-    <div onClick={onClose} style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.7)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: '#1a1a2e', border: '2px solid #44ccff55',
-        width: 380, maxWidth: '92vw', fontFamily: "'VT323', monospace",
-        boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 30px rgba(68,204,255,0.12)',
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '10px 14px', background: '#0a0a1e', borderBottom: '2px solid #44ccff',
-        }}>
-          <span style={{ fontSize: 'var(--text-xl)', letterSpacing: 2, color: '#44ccff' }}>
-            {'> SELECT TARGET'}
-          </span>
-          <button onClick={onClose} style={{
-            background: 'none', border: '1px solid #555', color: '#cfcfcf',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', cursor: 'pointer', padding: '2px 8px',
-          }}>X</button>
-        </div>
-        {/* Body */}
-        <div style={{ padding: 14 }}>
-          {/* One-time hint — legacy random matchmaking moved to a
-              dropdown item; surface it once per wallet. */}
-          {!hintDismissed && (
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-              background: '#0a0a1e', border: '1px solid #ffcc4455',
-              padding: '8px 10px', marginBottom: 10,
-            }}>
-              <div style={{
-                flex: 1, fontSize: 'var(--text-sm)', color: '#ffcc44', lineHeight: 1.4,
-              }}>
-                {'💡 Prefer the classic random matchmaking? Use HACK > RANDOM from the dropdown.'}
-              </div>
-              <button onClick={dismissHint} style={{
-                flexShrink: 0, background: '#2a2a4e', border: '1px solid #ffcc4455',
-                color: '#ffcc44', fontFamily: "'VT323', monospace",
-                fontSize: 'var(--text-sm)', cursor: 'pointer', padding: '3px 10px',
-              }}>Got it</button>
-            </div>
-          )}
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search nickname or 0x wallet…"
-            spellCheck={false}
-            autoComplete="off"
-            style={{
-              width: '100%', boxSizing: 'border-box', padding: '6px 8px',
-              background: '#0a0a1e', border: '1px solid #44ccff55', color: '#cfcfcf',
-              fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)', outline: 'none',
-            }}
-          />
-          <div style={{
-            marginTop: 4, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
-            minHeight: 16,
-          }}>
-            {q.length > 0 && q.length < 3 && 'Type at least 3 characters.'}
-            {loading && 'Searching…'}
-            {!loading && error && <span style={{ color: '#ff6666' }}>{error}</span>}
-            {!loading && !error && q.length >= 3 && results.length === 0 && 'No players found.'}
-          </div>
-          {/* Results */}
-          <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 6 }}>
-            {results.map((r) => (
-              <div key={r.nickname} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 8, padding: '8px 6px', borderBottom: '1px solid #2a2a4e',
-              }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 'var(--text-lg)', color: '#cfcfcf',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{r.nickname}</div>
-                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                    {r.corp ? `${r.corp} · ` : ''}{r.dev_count} dev{r.dev_count === 1 ? '' : 's'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => { if (r.has_active_devs) onConfirm(r.nickname); }}
-                  disabled={!r.has_active_devs}
-                  title={r.has_active_devs ? `Hack ${r.nickname}` : 'no active devs'}
-                  style={{
-                    flexShrink: 0,
-                    background: r.has_active_devs ? '#2a2a4e' : '#1a1a2e',
-                    border: `1px solid ${r.has_active_devs ? '#ff6644' : '#444'}`,
-                    color: r.has_active_devs ? '#ff8866' : '#555',
-                    fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-                    padding: '4px 12px',
-                    cursor: r.has_active_devs ? 'pointer' : 'not-allowed',
-                  }}
-                >HACK</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Animation Color Map ────────────────────────────────
 const ANIM_COLORS = {
   '$NXT_spend': '#ff4444', '$NXT_gain': '#ffdd44',
@@ -1997,7 +1753,7 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [showTargeting, setShowTargeting] = useState(false);
+  const [showHackModal, setShowHackModal] = useState(false);
   const [spends, setSpends] = useState([]);
 
   const triggerChanges = useCallback((changes) => {
@@ -2069,56 +1825,29 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     setTimeout(() => setActionMsg(null), 2500);
   };
 
-  const doHackMainframe = async (e) => {
-    e.stopPropagation();
-    if (!address || !lockBusy()) return;
-    try {
-      const res = await api.hackMainframe(address, dev.token_id);
-      if (res.changes && res.changes.length) triggerChanges(res.changes);
-      else triggerSpend(15);
-      if (onHackResult) onHackResult(res);
-      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
-      if (fresh && onDevUpdate) onDevUpdate(fresh);
-    } catch (err) {
-      if (err.detail && onHackError) onHackError(err.detail);
-      else setActionMsg(parseError(err));
-    }
-    unlockBusy();
-    setTimeout(() => setActionMsg(null), 4000);
-  };
-
-  // Phase 5.13 — shared executor for both PvP paths. targetNickname
-  // null → legacy random matchmaker; a string → targeted raid.
-  const executeHackPlayer = async (targetNickname) => {
-    if (!address || !lockBusy()) return;
-    try {
-      const res = await api.hackPlayer(address, dev.token_id, targetNickname);
-      if (res.changes && res.changes.length) triggerChanges(res.changes);
-      else triggerSpend(25);
-      if (onHackResult) onHackResult(res);
-      const fresh = await api.getDev(dev.token_id, address).catch(() => null);
-      if (fresh && onDevUpdate) onDevUpdate(fresh);
-    } catch (err) {
-      if (err.detail && onHackError) onHackError(err.detail);
-      else setActionMsg(parseError(err));
-    }
-    unlockBusy();
-    setTimeout(() => setActionMsg(null), 4000);
-  };
-
-  // HACK PLAYER (primary) — opens the targeting modal. busy is NOT
-  // locked here: the user may browse search results for a while; the
-  // lock happens in executeHackPlayer when the raid actually fires.
-  const doHackPlayer = (e) => {
+  // Phase 5.14 — the HACK button opens the unified HackModal; the modal
+  // owns tab selection (MAINFRAME / PLAYER / RANDOM), search, execution
+  // and the hack animation. These callbacks just close it and hand the
+  // outcome to the parent's HackResultModal / HackErrorModal (plus a
+  // dev refresh on a result so the new balance shows).
+  const openHackModal = (e) => {
     e.stopPropagation();
     if (!address) return;
-    setShowTargeting(true);
+    setShowHackModal(true);
   };
 
-  // HACK RANDOM (secondary) — legacy matchmaker, no modal.
-  const doHackRandom = (e) => {
-    e.stopPropagation();
-    executeHackPlayer(null);
+  const handleHackResult = (res) => {
+    setShowHackModal(false);
+    if (res.changes && res.changes.length) triggerChanges(res.changes);
+    if (onHackResult) onHackResult(res);
+    api.getDev(dev.token_id, address)
+      .then((fresh) => { if (fresh && onDevUpdate) onDevUpdate(fresh); })
+      .catch(() => {});
+  };
+
+  const handleHackError = (detail) => {
+    setShowHackModal(false);
+    if (onHackError) onHackError(detail);
   };
 
   const doGraduate = async (e) => {
@@ -2337,9 +2066,9 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             className={energyClass}
             title="Coffee: 3 $NXT \u2192 +25 Caffeine, +3 Energy" />
           <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
-          <HackDropdown dev={dev} busy={busy}
-            onHackMainframe={doHackMainframe} onHackPlayer={doHackPlayer}
-            onHackRandom={doHackRandom} />
+          <StoneBtn emoji={'🔓'} label="HACK"
+            onClick={openHackModal} disabled={busy}
+            title="Hack: Mainframe, Player or Random — opens the hack console" />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
             onClick={doFixBug} disabled={busy || bugsVal <= 0}
             title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
@@ -2404,11 +2133,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
       {showRequestModal && (
         <TransferModal dev={dev} allDevs={allDevs} address={address} mode="request" onClose={() => setShowRequestModal(false)} onDevUpdate={onDevUpdate} />
       )}
-      {showTargeting && (
-        <HackTargetingModal
-          callerAddress={address}
-          onClose={() => setShowTargeting(false)}
-          onConfirm={(nickname) => { setShowTargeting(false); executeHackPlayer(nickname); }}
+      {showHackModal && (
+        <HackModal
+          dev={dev}
+          address={address}
+          onResult={handleHackResult}
+          onError={handleHackError}
+          onClose={() => setShowHackModal(false)}
         />
       )}
       </div>{/* end grayscale wrapper */}
