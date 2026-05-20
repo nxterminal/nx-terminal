@@ -327,6 +327,114 @@ async def claim_nickname(req: ClaimNicknameRequest):
     return {"ok": True, "nickname": updated["display_name"]}
 
 
+# Full Ethereum address — used by /search to decide wallet-exact vs
+# nickname-prefix. A nickname CAN start with "0x" (the charset allows
+# it), so only a complete 0x + 40-hex string is treated as a wallet.
+_FULL_WALLET_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_search_limiter = RateLimiter(cooldown_seconds=1, namespace="player_search")
+
+
+@router.get("/search")
+async def search_players(
+    q: str = Query(..., min_length=3, max_length=42),
+    caller: Optional[str] = Query(default=None),
+    limit: int = Query(default=10, ge=1, le=20),
+):
+    """Search players for the PvP targeting modal.
+
+    Matching:
+      - `q` is a full 0x-address  → exact match on wallet_address.
+      - otherwise                 → case-insensitive PREFIX match on
+                                     nickname_lower (index-served by
+                                     idx_players_nickname_prefix).
+
+    Privacy: the response NEVER includes wallet_address. A target is
+    identified to the attacker purely by nickname — the backend does
+    the nickname→wallet resolution when the hack is confirmed.
+
+    `caller` (the searching wallet) is excluded from results so a
+    player can't target themselves, and is the rate-limit key.
+
+    Result item:
+      nickname        display_name with original casing
+      has_active_devs at least one dev that can actually be hacked
+                      (status='active' AND balance_nxt > 0) — drives
+                      the modal's enabled/disabled HACK button
+      dev_count       total devs owned (any status)
+      corp            dominant corporation among the player's devs
+    """
+    caller_addr = None
+    if caller:
+        caller_addr = validate_wallet(caller)
+    # 1s cooldown keyed on the caller (or a shared anon bucket when no
+    # wallet is supplied) — a brake on scripted namespace enumeration.
+    _search_limiter.check(f"search:{caller_addr or 'anon'}")
+
+    q = q.strip()
+    if len(q) < 3:
+        raise HTTPException(400, detail={
+            "error": "query_too_short",
+            "message": "Type at least 3 characters.",
+        })
+
+    # Two LATERAL subqueries per row keep the main query free of a
+    # GROUP BY: `stats` counts devs, `dc` picks the dominant corp.
+    select_body = """
+        SELECT p.display_name AS nickname,
+               stats.dev_count,
+               stats.active_count,
+               dc.corporation AS corp
+          FROM players p
+          LEFT JOIN LATERAL (
+              SELECT COUNT(*) AS dev_count,
+                     COUNT(*) FILTER (
+                         WHERE status = 'active' AND balance_nxt > 0
+                     ) AS active_count
+                FROM devs WHERE owner_address = p.wallet_address
+          ) stats ON TRUE
+          LEFT JOIN LATERAL (
+              SELECT corporation
+                FROM devs WHERE owner_address = p.wallet_address
+                GROUP BY corporation
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+          ) dc ON TRUE
+    """
+
+    if _FULL_WALLET_RE.match(q):
+        where = "WHERE p.wallet_address = %s AND p.display_name IS NOT NULL"
+        params: list = [q.lower()]
+    else:
+        # Escape the LIKE metachar `_` (legal in nicknames) so a query
+        # like "ab_" matches the literal underscore, not "any char".
+        escaped = q.lower().replace("\\", "\\\\").replace("_", "\\_").replace("%", "\\%")
+        where = (
+            "WHERE p.nickname_lower LIKE %s ESCAPE '\\' "
+            "AND p.display_name IS NOT NULL"
+        )
+        params = [escaped + "%"]
+
+    if caller_addr:
+        where += " AND p.wallet_address != %s"
+        params.append(caller_addr)
+
+    params.append(limit)
+    rows = fetch_all(
+        f"{select_body} {where} ORDER BY p.nickname_lower LIMIT %s",
+        tuple(params),
+    )
+
+    return [
+        {
+            "nickname": r["nickname"],
+            "has_active_devs": (r["active_count"] or 0) > 0,
+            "dev_count": r["dev_count"] or 0,
+            "corp": r["corp"],
+        }
+        for r in rows
+    ]
+
+
 @router.get("/{wallet}")
 async def get_player(wallet: str):
     """Get player profile."""
