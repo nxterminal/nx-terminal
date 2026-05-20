@@ -118,8 +118,12 @@ def clean(app):
         with conn.cursor() as cur:
             cur.execute("TRUNCATE claim_history, admin_logs RESTART IDENTITY CASCADE")
             cur.execute("TRUNCATE players CASCADE")
-            seed_player(cur, WALLET)
-            seed_player(cur, OTHER_WALLET)
+            # Phase 5.12 — record-claim now goes through the
+            # nickname_required gate. Seed a display_name so the gate
+            # stays silent; none of the assertions below depend on a
+            # NULL nickname.
+            seed_player(cur, WALLET, display_name="claimer_a1")
+            seed_player(cur, OTHER_WALLET, display_name="claimer_b2")
 
 
 @pytest.fixture()
