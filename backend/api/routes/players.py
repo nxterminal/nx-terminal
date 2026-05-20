@@ -127,6 +127,10 @@ class ClaimNicknameRequest(BaseModel):
     nickname: str
 
 
+# NOTE: Endpoint hardened with display_name requirement, but
+# currently unused — players are created lazily by
+# engine/listener.py:ensure_player. Kept ready in case a future
+# explicit-signup flow is added.
 @router.post("/register")
 async def register_player(req: RegisterRequest):
     """Register a new player after quiz. Called before first mint.
@@ -137,6 +141,11 @@ async def register_player(req: RegisterRequest):
     NULL display_name; those users go through `/claim-nickname`
     below on next login. This route is the entry point for clients
     that prefer to set the nickname BEFORE minting.
+
+    As of Phase 5.12 the frontend does NOT call this route at all —
+    every live player is onboarded through the mint listener +
+    `/claim-nickname`. It stays here, fully validated, so a future
+    explicit-signup flow can adopt it without re-deriving the rules.
     """
     addr = validate_wallet(req.wallet_address)
 
@@ -273,9 +282,25 @@ async def claim_nickname(req: ClaimNicknameRequest):
                     "message": "No player profile for this wallet.",
                 })
             if row["display_name"] is not None and row["display_name"].strip():
-                # Idempotent re-claim of the same value returns OK so a
-                # double-tap from the modal doesn't 409. A genuine
-                # attempt to change to a different value is rejected.
+                # Nickname already set. Enforce the 1:1 immutable rule
+                # — three branches, only two reachable here (the
+                # NULL -> value case skips this block and runs the
+                # UPDATE below):
+                #
+                #   value -> SAME value : 200 OK, no DB write. This is
+                #     the idempotent re-claim path (e.g. a double-tap
+                #     on the modal submit, or fetchJSON replaying a
+                #     parked request). Comparison is case-insensitive
+                #     because uniqueness itself is enforced on the
+                #     generated nickname_lower column — "Bread" and
+                #     "bread" are the same identity. The stored
+                #     original casing is returned unchanged.
+                #
+                #   value -> OTHER value : 409 nickname_already_set.
+                #     A genuine attempt to change the handle. Rejected
+                #     here at the app layer; the DB trigger
+                #     trg_nickname_immutable is the backstop if this
+                #     check is ever bypassed.
                 if row["display_name"].lower() == nickname.lower():
                     return {"ok": True, "nickname": row["display_name"]}
                 raise HTTPException(409, detail={

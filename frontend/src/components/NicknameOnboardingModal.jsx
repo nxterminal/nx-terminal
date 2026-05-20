@@ -108,6 +108,15 @@ export default function NicknameOnboardingModal({ walletAddress, onClaimed }) {
     try {
       const trimmed = value.trim();
       await api.claimNickname(walletAddress, trimmed);
+      // Phase 5.12 — wake any request parked by fetchJSON's nickname
+      // gate so it replays now that the wallet has a nickname. Fired
+      // before onClaimed so the parked retry and the modal close race
+      // freely; order between them doesn't matter.
+      try {
+        window.dispatchEvent(
+          new CustomEvent('nx-nickname-claimed', { detail: { nickname: trimmed } }),
+        );
+      } catch {}
       onClaimed?.(trimmed);
     } catch (err) {
       const code = err?.detail?.error;
