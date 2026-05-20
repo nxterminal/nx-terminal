@@ -2,48 +2,59 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import HackAnimation, { hackAnimationAlwaysSkip } from './HackAnimation';
 
-// HackModal — Phase 5.14. Unified hack experience: one big dark-terminal
-// window with three tabs (MAINFRAME / PLAYER / RANDOM), replacing the
-// old HACK dropdown + small HackTargetingModal.
+// HackModal — Phase 5.15. Compact, pure-terminal redesign of the hack
+// console. ~500×400, command-line styling: a mode is picked from inline
+// chips (not tabs), the PLAYER mode searches + selects a target, and
+// EXECUTE swaps the body for the inline HackAnimation (no takeover).
 //
-// Flow: pick a tab → EXECUTE → the request fires and the HackAnimation
-// plays in parallel → when BOTH finish, the modal hands the result up
-// via onResult / onError (the parent then shows HackResultModal /
-// HackErrorModal). onClose is only for a user-initiated close during
-// the select phase — once executing, the modal is committed.
+// Props unchanged from Phase 5.14 so MyDevs needs no edits:
+//   dev, address, onResult(res), onError(detail), onClose()
+// onResult / onError hand the outcome up (parent shows HackResultModal
+// / HackErrorModal); onClose is a user-initiated close, select-phase
+// only — once executing, the hack is committed.
 
-const GREEN = '#44ffaa';
-const ACCENT = '#44ccff';
+const MINT = '#44ffaa';
+const BG = '#0a0a0e';
 
-const TABS = [
-  { id: 'mainframe', label: 'MAINFRAME', cost: 15,
-    desc: 'Hack the system. Steal $NXT from the void.' },
-  { id: 'player', label: 'PLAYER', cost: 25,
-    desc: 'Search and target a specific developer.' },
-  { id: 'random', label: 'RANDOM', cost: 25,
-    desc: 'Classic chaos. Random target from the network.' },
-];
+const MODES = {
+  player: {
+    cost: 25,
+    desc: '> search and target a specific developer.',
+  },
+  mainframe: {
+    cost: 15,
+    desc: '> hacking the mainframe extracts $NXT from the void.',
+  },
+  random: {
+    cost: 25,
+    desc: '> hacking random selects a target from active devs.',
+  },
+};
+const MODE_ORDER = ['player', 'mainframe', 'random'];
 
 export default function HackModal({ dev, address, onResult, onError, onClose }) {
-  const [tab, setTab] = useState('player'); // PLAYER is the default tab
+  const [mode, setMode] = useState('player');
   const [phase, setPhase] = useState('select'); // 'select' | 'executing'
 
-  // PLAYER-tab search state.
+  // PLAYER search/select state.
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [selected, setSelected] = useState(null); // selected nickname
   const debounceRef = useRef(null);
   const seqRef = useRef(0);
   const inputRef = useRef(null);
 
-  // Executing-phase state.
-  const [response, setResponse] = useState(null); // null=pending | {ok,data} | {ok:false,...}
+  // Executing state.
+  const [response, setResponse] = useState(null); // null=pending | {ok,...}
   const [animationDone, setAnimationDone] = useState(false);
-  const skipAnimationRef = useRef(false);
+  const [execTarget, setExecTarget] = useState('');
+  const skipAnimRef = useRef(false);
   const finalizedRef = useRef(false);
+  const [execHover, setExecHover] = useState(false);
 
-  // Esc closes the modal — select phase only (executing is committed).
+  // Esc closes — select phase only.
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && phase === 'select') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -51,17 +62,18 @@ export default function HackModal({ dev, address, onResult, onError, onClose }) 
   }, [phase, onClose]);
 
   useEffect(() => {
-    if (tab === 'player' && phase === 'select' && inputRef.current) {
+    if (mode === 'player' && phase === 'select' && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [tab, phase]);
+  }, [mode, phase]);
 
   // PLAYER search — 300ms debounce, stale responses dropped by seq.
   useEffect(() => {
-    if (tab !== 'player') return undefined;
+    if (mode !== 'player') return undefined;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
     setSearchError('');
+    setSelected(null); // query changed → drop any prior target selection
     if (q.length < 3) {
       setResults([]);
       setSearching(false);
@@ -77,13 +89,13 @@ export default function HackModal({ dev, address, onResult, onError, onClose }) 
         setSearching(false);
       } catch (err) {
         if (mySeq !== seqRef.current) return;
-        setSearchError(err?.message || 'Search failed.');
+        setSearchError(err?.message || 'search failed.');
         setResults([]);
         setSearching(false);
       }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, tab, address]);
+  }, [query, mode, address]);
 
   // Finalize once the animation AND the response are both ready.
   useEffect(() => {
@@ -102,34 +114,55 @@ export default function HackModal({ dev, address, onResult, onError, onClose }) 
     }
   }, [phase, animationDone, response, onResult, onError]);
 
-  function startHack(kind, targetNickname) {
-    skipAnimationRef.current = hackAnimationAlwaysSkip(address);
+  function changeMode(m) {
+    setMode(m);
+    setSelected(null);
+  }
+
+  function startHack() {
+    let kind;
+    let nickname = null;
+    let animTarget;
+    if (mode === 'player') {
+      if (!selected) return;
+      kind = 'player';
+      nickname = selected;
+      animTarget = selected;
+    } else if (mode === 'mainframe') {
+      kind = 'mainframe';
+      animTarget = 'system';
+    } else {
+      kind = 'random';
+      animTarget = 'random';
+    }
+    skipAnimRef.current = hackAnimationAlwaysSkip(address);
+    setExecTarget(animTarget);
     setResponse(null);
-    // When the animation is skipped, treat it as already-done so the
-    // finalize effect only waits on the network response.
-    setAnimationDone(skipAnimationRef.current);
+    setAnimationDone(skipAnimRef.current); // skipped → animation already "done"
     setPhase('executing');
 
     const request = kind === 'mainframe'
       ? api.hackMainframe(address, dev.token_id)
-      : api.hackPlayer(address, dev.token_id, targetNickname || null);
-
+      : api.hackPlayer(address, dev.token_id, nickname);
     request
       .then((res) => setResponse({ ok: true, data: res }))
       .catch((err) => setResponse({ ok: false, detail: err?.detail, err }));
   }
 
-  const activeTab = TABS.find((t) => t.id === tab);
+  const cost = MODES[mode].cost;
+  const canExecute = mode !== 'player' || !!selected;
   const q = query.trim();
 
-  // ── Executing phase — animation or a minimal "processing" view ──
+  // ── Executing phase — inline animation or minimal processing view ──
   if (phase === 'executing') {
-    const showAnimation = !skipAnimationRef.current && !animationDone;
+    const showAnimation = !skipAnimRef.current && !animationDone;
     return (
       <Backdrop onClose={null}>
         <Dialog>
           {showAnimation ? (
             <HackAnimation
+              mode={mode}
+              target={execTarget}
               responseReady={response != null}
               onDone={() => setAnimationDone(true)}
               walletAddress={address}
@@ -139,9 +172,9 @@ export default function HackModal({ dev, address, onResult, onError, onClose }) 
               width: '100%', height: '100%', background: '#000',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)',
-              color: GREEN, textShadow: `0 0 6px ${GREEN}66`,
+              color: MINT, textShadow: `0 0 6px ${MINT}66`,
             }}>
-              {'> PROCESSING...'}
+              {'> processing...'}
             </div>
           )}
         </Dialog>
@@ -156,74 +189,102 @@ export default function HackModal({ dev, address, onResult, onError, onClose }) 
         {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '10px 14px', background: '#0a0a1e',
-          borderBottom: `2px solid ${ACCENT}`, flexShrink: 0,
+          padding: '8px 12px', borderBottom: `1px solid ${MINT}33`, flexShrink: 0,
         }}>
-          <span style={{ fontSize: 'var(--text-xl)', letterSpacing: 2, color: ACCENT }}>
-            {'> HACK'}
+          <span style={{ color: MINT, fontSize: 'var(--text-lg)', letterSpacing: 1 }}>
+            {'> HACK_TERMINAL_v5.13'}
           </span>
           <button onClick={onClose} style={{
-            background: 'none', border: '1px solid #555', color: '#cfcfcf',
-            fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
-            cursor: 'pointer', padding: '2px 8px',
+            background: 'none', border: `1px solid ${MINT}55`, color: MINT,
+            fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
+            cursor: 'pointer', padding: '0 6px', lineHeight: 1.4,
           }}>X</button>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', flexShrink: 0, background: '#0a0a1e' }}>
-          {TABS.map((t) => {
-            const active = t.id === tab;
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer',
-                background: active ? '#1a1a2e' : 'transparent',
-                color: active ? ACCENT : 'var(--text-secondary)',
-                fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
-                letterSpacing: 1,
-                borderBottom: active ? `2px solid ${ACCENT}` : '2px solid transparent',
-              }}>{t.label}</button>
-            );
-          })}
-        </div>
-
-        {/* Cost + descriptor */}
+        {/* Body */}
         <div style={{
-          padding: '8px 14px', flexShrink: 0,
-          fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-          color: 'var(--text-secondary)', borderBottom: '1px solid #2a2a4e',
+          flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px',
+          color: MINT, fontSize: 'var(--text-lg)', lineHeight: 1.7,
         }}>
-          <span style={{ color: '#ffdd44' }}>{activeTab.cost} $NXT</span>
-          {' — '}{activeTab.desc}
+          {/* Mode chips */}
+          <div>{'> select target_type:'}</div>
+          <div style={{ display: 'flex', gap: 8, margin: '4px 0 12px' }}>
+            {MODE_ORDER.map((m) => {
+              const active = m === mode;
+              return (
+                <button key={m} onClick={() => changeMode(m)} style={{
+                  fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
+                  cursor: 'pointer', padding: '2px 10px',
+                  background: active ? MINT : 'transparent',
+                  color: active ? '#000' : MINT,
+                  border: `1px solid ${active ? MINT : MINT + '44'}`,
+                }}>{`[ ${m} ]`}</button>
+              );
+            })}
+          </div>
+
+          {/* Cost */}
+          <div style={{ marginBottom: 12 }}>
+            {'> cost: '}
+            <span style={{ color: '#ffdd44' }}>{`${cost} $NXT`}</span>
+          </div>
+
+          {/* Mode-specific area */}
+          {mode === 'player' ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{'> target:'}</span>
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="nickname or 0x wallet"
+                  spellCheck={false}
+                  autoComplete="off"
+                  style={{
+                    flex: 1, background: '#000', border: `1px solid ${MINT}44`,
+                    color: MINT, caretColor: MINT, outline: 'none',
+                    fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
+                    padding: '2px 6px',
+                  }}
+                />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <PlayerResults
+                  q={q}
+                  searching={searching}
+                  searchError={searchError}
+                  results={results}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
+              </div>
+            </>
+          ) : (
+            <div style={{ opacity: 0.85 }}>{MODES[mode].desc}</div>
+          )}
         </div>
 
-        {/* Tab body */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-          {tab === 'player' && (
-            <PlayerTab
-              query={query}
-              setQuery={setQuery}
-              inputRef={inputRef}
-              searching={searching}
-              searchError={searchError}
-              results={results}
-              q={q}
-              onExecute={(nickname) => startHack('player', nickname)}
-            />
-          )}
-          {tab === 'mainframe' && (
-            <SimpleTab
-              body="Breach the corporate mainframe and siphon $NXT straight from the system treasury. No rival player involved — success scales with your dev's hacking skill."
-              buttonLabel="EXECUTE MAINFRAME HACK"
-              onExecute={() => startHack('mainframe')}
-            />
-          )}
-          {tab === 'random' && (
-            <SimpleTab
-              body="Random target from active developers across the network, excluding your own devs. The classic matchmaker — you don't pick who, the network does."
-              buttonLabel="EXECUTE RANDOM HACK"
-              onExecute={() => startHack('random')}
-            />
-          )}
+        {/* EXECUTE */}
+        <div style={{
+          flexShrink: 0, padding: '10px', borderTop: `1px solid ${MINT}33`,
+          display: 'flex', justifyContent: 'center',
+        }}>
+          <button
+            onClick={startHack}
+            disabled={!canExecute}
+            onMouseEnter={() => setExecHover(true)}
+            onMouseLeave={() => setExecHover(false)}
+            style={{
+              fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
+              letterSpacing: 1, padding: '6px 22px',
+              border: `1px solid ${canExecute ? MINT : '#444'}`,
+              cursor: canExecute ? 'pointer' : 'not-allowed',
+              background: canExecute && execHover ? MINT : 'transparent',
+              color: !canExecute ? '#555' : (execHover ? '#000' : MINT),
+              textShadow: canExecute && !execHover ? `0 0 6px ${MINT}55` : 'none',
+            }}
+          >{'[ > EXECUTE_HACK ]'}</button>
         </div>
       </Dialog>
     </Backdrop>
@@ -238,7 +299,7 @@ function Backdrop({ children, onClose }) {
       onClick={onClose || undefined}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.7)', display: 'flex',
+        background: 'rgba(0,0,0,0.75)', display: 'flex',
         alignItems: 'center', justifyContent: 'center', zIndex: 1000,
       }}
     >
@@ -250,128 +311,58 @@ function Backdrop({ children, onClose }) {
 function Dialog({ children }) {
   return (
     <div onClick={(e) => e.stopPropagation()} style={{
-      width: 'min(880px, 80vw)', height: 'min(600px, 82vh)',
-      background: '#1a1a2e', border: `2px solid ${ACCENT}55`,
+      width: 'min(500px, 90vw)', height: 'min(400px, 80vh)',
+      background: BG, border: `1px solid ${MINT}66`,
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
       fontFamily: "'VT323', monospace",
-      boxShadow: 'inset -3px -3px 0 #0a0a1e, inset 3px 3px 0 #2a2a4e, 0 0 36px rgba(68,204,255,0.14)',
+      boxShadow: `0 0 32px ${MINT}22`,
     }}>
       {children}
     </div>
   );
 }
 
-// ── MAINFRAME / RANDOM tab — descriptor + one big EXECUTE button ───
+// ── PLAYER results — compact terminal output lines ────────────────
 
-function SimpleTab({ body, buttonLabel, onExecute }) {
-  return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 24,
-      textAlign: 'center',
-    }}>
-      <div style={{
-        maxWidth: 420, color: '#cfcfcf', fontSize: 'var(--text-lg)',
-        lineHeight: 1.6,
-      }}>{body}</div>
-      <button onClick={onExecute} style={{
-        background: '#2a2a4e', border: `2px solid ${GREEN}`, color: GREEN,
-        fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)',
-        letterSpacing: 1, cursor: 'pointer', padding: '12px 28px',
-        textShadow: `0 0 6px ${GREEN}55`,
-      }}>{buttonLabel}</button>
-    </div>
-  );
-}
-
-// ── PLAYER tab — search box + result cards ────────────────────────
-
-function PlayerTab({
-  query, setQuery, inputRef, searching, searchError, results, q, onExecute,
-}) {
-  let emptyMessage = '';
-  if (q.length === 0) {
-    emptyMessage = 'Search by nickname to select a target.';
-  } else if (q.length < 3) {
-    emptyMessage = 'Type at least 3 characters.';
-  } else if (searching) {
-    emptyMessage = 'Searching…';
-  } else if (searchError) {
-    emptyMessage = searchError;
-  } else if (results.length === 0) {
-    emptyMessage = `No players found matching '${q}'.`;
+function PlayerResults({ q, searching, searchError, results, selected, onSelect }) {
+  if (q.length === 0) return null;
+  const dim = { color: `${MINT}88` };
+  if (q.length < 3) return <div style={dim}>{'  > type at least 3 chars...'}</div>;
+  if (searching) return <div style={dim}>{'  > searching...'}</div>;
+  if (searchError) return <div style={{ color: '#ff6666' }}>{`  > ${searchError}`}</div>;
+  if (results.length === 0) {
+    return <div style={dim}>{`  > no targets found for '${q}'.`}</div>;
   }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
-      <input
-        ref={inputRef}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search nickname or 0x wallet…"
-        spellCheck={false}
-        autoComplete="off"
-        style={{
-          width: '100%', boxSizing: 'border-box', padding: '10px 12px',
-          background: '#0a0a1e', border: `1px solid ${ACCENT}55`, color: '#cfcfcf',
-          fontFamily: "'VT323', monospace", fontSize: 'var(--text-xl)', outline: 'none',
-        }}
-      />
-      {emptyMessage && (
-        <div style={{
-          color: searchError ? '#ff6666' : 'var(--text-secondary)',
-          fontSize: 'var(--text-lg)', padding: '8px 2px',
-        }}>{emptyMessage}</div>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
-        {results.map((r) => (
-          <TargetCard key={r.nickname} result={r} onExecute={onExecute} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TargetCard({ result, onExecute }) {
-  const hackable = !!result.has_active_devs;
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      gap: 12, padding: '12px 14px',
-      background: '#0a0a1e', border: '1px solid #2a2a4e',
-    }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            fontSize: 'var(--text-xl)', color: GREEN,
-            textShadow: `0 0 6px ${GREEN}55`,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{result.nickname}</span>
-          {result.corp && (
-            <span style={{
-              flexShrink: 0, fontSize: 'var(--text-sm)', color: '#ffdd44',
-              border: '1px solid #ffdd4455', padding: '1px 6px',
-            }}>{result.corp}</span>
-          )}
-        </div>
-        <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginTop: 2 }}>
-          {result.dev_count} dev{result.dev_count === 1 ? '' : 's'}
-        </div>
-      </div>
-      <button
-        onClick={() => { if (hackable) onExecute(result.nickname); }}
-        disabled={!hackable}
-        title={hackable ? `Hack ${result.nickname}` : 'no active devs'}
-        style={{
-          flexShrink: 0,
-          background: hackable ? '#2a2a4e' : '#141422',
-          border: `2px solid ${hackable ? '#ff6644' : '#444'}`,
-          color: hackable ? '#ff8866' : '#555',
-          fontFamily: "'VT323', monospace", fontSize: 'var(--text-lg)',
-          letterSpacing: 1, padding: '8px 16px',
-          cursor: hackable ? 'pointer' : 'not-allowed',
-        }}
-      >EXECUTE HACK</button>
+    <div>
+      {results.map((r) => {
+        const hackable = !!r.has_active_devs;
+        const isSel = selected === r.nickname;
+        return (
+          <div
+            key={r.nickname}
+            onClick={() => { if (hackable) onSelect(r.nickname); }}
+            title={hackable ? `select ${r.nickname}` : 'no active devs'}
+            style={{
+              padding: '1px 4px', whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+              cursor: hackable ? 'pointer' : 'not-allowed',
+              background: isSel ? MINT : 'transparent',
+              color: isSel ? '#000' : (hackable ? MINT : '#5a6a64'),
+            }}
+          >
+            {'  > '}
+            <span>{r.nickname}</span>
+            {'  '}
+            <span style={{ opacity: 0.7 }}>{`[${r.corp || '???'}]`}</span>
+            {' '}
+            <span style={{ opacity: 0.7 }}>
+              {`(${r.dev_count} dev${r.dev_count === 1 ? '' : 's'})`}
+            </span>
+            {!hackable && <span style={{ opacity: 0.7 }}>{'  -- no active devs'}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
