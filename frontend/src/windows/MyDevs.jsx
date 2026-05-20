@@ -1626,8 +1626,12 @@ const HACK_ERROR_CONFIG = {
   no_active_devs:     { icon: '🔍', title: '> TARGET OFFLINE',     color: '#cfcfcf' },
   target_not_found:   { icon: '🔍', title: '> TARGET NOT FOUND',   color: '#cfcfcf' },
   cannot_hack_self:   { icon: '🚫', title: '> INVALID TARGET',     color: '#ff6644' },
+  insufficient_energy:{ icon: '⚡', title: '> NO ENERGY',          color: '#ff6644' },
 };
 const HACK_ERROR_DEFAULT = { icon: '❌', title: '> HACK ERROR', color: '#ff4444' };
+
+// Hack cooldown window — mirrors backend HACK_COOLDOWN_HOURS (24h).
+const HACK_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function HackErrorModal({ error, onClose }) {
   if (!error) return null;
@@ -1750,6 +1754,16 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   // commit 0e35822 pulled the action row out of the grayscale
   // wrapper. COFFEE / FEED stay un-dimmed so their red glow shows.
   const exhaustedDimStyle = { opacity: isExhausted ? 0.7 : 1 };
+  // Hack cooldown ("SYSTEM LOCKDOWN"). The dev list already returns
+  // last_raid_at, so the lockdown is surfaced on the card proactively
+  // instead of only after a failed hack attempt.
+  const cooldownEndsAt = dev.last_raid_at
+    ? new Date(dev.last_raid_at).getTime() + HACK_COOLDOWN_MS
+    : 0;
+  const isInCooldown = cooldownEndsAt > Date.now();
+  const cooldownRemainingMs = isInCooldown ? cooldownEndsAt - Date.now() : 0;
+  const cooldownH = Math.floor(cooldownRemainingMs / 3600000);
+  const cooldownM = Math.floor((cooldownRemainingMs % 3600000) / 60000);
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1760,6 +1774,16 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showHackModal, setShowHackModal] = useState(false);
   const [spends, setSpends] = useState([]);
+  const [, setCooldownTick] = useState(0);
+
+  // Re-render once a minute while the dev is in hack cooldown so the
+  // LOCKDOWN badge counts down live. 60s cadence — cheap, and the
+  // badge only needs minute resolution.
+  useEffect(() => {
+    if (!isInCooldown) return undefined;
+    const id = setInterval(() => setCooldownTick((t) => t + 1), 60000);
+    return () => clearInterval(id);
+  }, [isInCooldown]);
 
   const triggerChanges = useCallback((changes) => {
     if (!changes || !changes.length) return;
@@ -1994,6 +2018,12 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
                 textTransform: 'uppercase', fontWeight: 'bold',
               }}>{dev.status || 'active'}</span>
             )}
+            {isInCooldown && (
+              <span style={{
+                color: '#ff9800',
+                textTransform: 'uppercase', fontWeight: 'bold',
+              }}>🔒 LOCKDOWN {cooldownH}h {cooldownM}m</span>
+            )}
           </div>
           {/* VIEW full image button — opens the in-app DevImageModal with
               PFP / FULL BODY toggle + downloads. Click stops propagation
@@ -2073,8 +2103,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
           <div style={exhaustedDimStyle}>
             <StoneBtn emoji={'🔓'} label="HACK"
-              onClick={openHackModal} disabled={busy}
-              title="Hack: Mainframe, Player or Random — opens the hack console" />
+              onClick={openHackModal}
+              disabled={busy || energyVal === 0 || isInCooldown}
+              title={energyVal === 0 ? 'Dev needs energy. Use COFFEE or FEED first.'
+                : isInCooldown ? `Dev in cooldown. ${cooldownH}h ${cooldownM}m remaining.`
+                : 'Hack: Mainframe, Player or Random — opens the hack console'} />
           </div>
           <div style={exhaustedDimStyle}>
             <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
@@ -2084,9 +2117,13 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
           <div style={exhaustedDimStyle}>
             <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
               onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
-              disabled={busy || pcHealth >= 100}
-              title={pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
+              disabled={busy || energyVal === 0 || pcHealth >= 100}
+              title={energyVal === 0 ? 'Dev needs energy. Use COFFEE or FEED first.'
+                : pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
           </div>
+          {/* NOTE: ECONOMY intentionally NOT disabled on energy=0
+            * — it's the rescue path for devs with 0 energy + 0 $NXT.
+            * See investigation FASE 1 (paso 6). */}
           <div style={exhaustedDimStyle}>
             <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
               onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
