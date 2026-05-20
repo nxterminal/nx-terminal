@@ -1,30 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
-// HackAnimation — Phase 5.14. Terminal-style "hacking…" sequence shown
-// while a hack request is in flight, for drama. Green-on-black, VT323,
-// subtle CRT scanlines.
+// HackAnimation — Phase 5.15. Compact, INLINE terminal animation. Lives
+// inside the HackModal dialog (no fullscreen takeover). Green-on-black,
+// VT323, with a random glitch-character overlay as the signature
+// effect (the Phase 5.14 scanlines are gone).
 //
-// Timing contract (see HackModal): the animation is a MINIMUM wait —
-// the hack request runs in parallel. `responseReady` tells the
-// animation the backend has replied. `onDone` fires exactly once, when
-// BOTH the scripted sequence has finished AND the response is ready,
-// OR immediately when the user hits SKIP. If the response is slower
-// than the script, the last line keeps looping its dots until it
-// arrives (no visible timeout).
+// Timing contract (unchanged from Phase 5.14): the hack request runs
+// in parallel; this animation is a MINIMUM wait. `responseReady` tells
+// it the backend has replied. `onDone` fires once — when the scripted
+// sequence AND the response are both ready, or immediately on SKIP. A
+// slow response just loops the last line's dots, no visible timeout.
 
-const LINES = [
-  '> INITIATING HACK SEQUENCE...',
-  '> Connecting to target node...',
-  '> Bypassing firewall...',
-  '> Injecting payload...',
-  '> Extracting data...',
+const MINT = '#44ffaa';
+const GLITCH_CHARS = '█▓░╫╪@#$%&*?!░▒▓'.split('');
+const GLITCH_COLORS = [MINT, '#ffffff', '#ff4ddd', '#4dd8ff'];
+
+const STEP_LINES = [
+  { base: '> establishing connection...', marker: true },
+  { base: '> bypassing defense...', marker: true },
+  { base: '> injecting payload...', marker: true },
+  { base: '> extracting data...', marker: false, waiting: true },
 ];
+const TOTAL_LINES = STEP_LINES.length + 1; // + the header line
 
-const LINE_INTERVAL = 400;          // ms between line reveals
-const HOLD_AFTER_LAST = 1200;       // ms held after the last line → ~3s total
-const SKIP_DELAY = 1000;            // SKIP button appears after this
-const TICK_MS = 400;                // cursor blink + waiting-dots cadence
-const GREEN = '#44ffaa';
+const LINE_INTERVAL = 300;        // ms between line reveals (~2s total)
+const HOLD_AFTER_LAST = 700;
+const SKIP_DELAY = 1000;
+const FRAME_MS = 100;             // glitch refresh + cursor/dots cadence
+const MARKER_COL = 30;            // pad column for the [✓]/[▮] markers
 
 const ALWAYS_SKIP_PREFIX = 'nx:hack_animation:always_skip:';
 
@@ -32,9 +35,8 @@ function alwaysSkipKey(wallet) {
   return wallet ? `${ALWAYS_SKIP_PREFIX}${wallet.toLowerCase()}` : null;
 }
 
-// Read by HackModal BEFORE an execution to decide whether to skip the
-// animation entirely. Exported so the modal and the component share one
-// source of truth for the key format.
+// Read by HackModal before an execution. Key format preserved from
+// Phase 5.14 so a player's existing "always skip" choice carries over.
 export function hackAnimationAlwaysSkip(wallet) {
   const key = alwaysSkipKey(wallet);
   if (!key) return false;
@@ -45,31 +47,51 @@ export function hackAnimationAlwaysSkip(wallet) {
   }
 }
 
-export default function HackAnimation({ responseReady, onDone, walletAddress }) {
-  const [revealed, setRevealed] = useState(1);   // line 1 visible immediately
+function makeGlitch() {
+  const n = 12;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push({
+      id: i,
+      ch: GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)],
+      x: Math.random() * 96,
+      y: Math.random() * 92,
+      // Mostly mint/white; ~15% of the time a magenta/cyan colour shift.
+      color: Math.random() < 0.15
+        ? GLITCH_COLORS[2 + Math.floor(Math.random() * 2)]
+        : GLITCH_COLORS[Math.floor(Math.random() * 2)],
+      opacity: 0.3 + Math.random() * 0.2,
+    });
+  }
+  return out;
+}
+
+export default function HackAnimation({ mode, target, responseReady, onDone, walletAddress }) {
+  const [revealed, setRevealed] = useState(1); // header visible immediately
   const [scriptedDone, setScriptedDone] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [frame, setFrame] = useState(0);
   const [alwaysSkip, setAlwaysSkip] = useState(() => hackAnimationAlwaysSkip(walletAddress));
   const doneFiredRef = useRef(false);
 
-  // Scripted reveal + skip-button timers.
+  // Scripted line reveal + skip-button timers.
   useEffect(() => {
     const timers = [];
-    for (let i = 1; i < LINES.length; i++) {
+    for (let i = 1; i < TOTAL_LINES; i++) {
       timers.push(setTimeout(() => setRevealed(i + 1), i * LINE_INTERVAL));
     }
     timers.push(setTimeout(
       () => setScriptedDone(true),
-      (LINES.length - 1) * LINE_INTERVAL + HOLD_AFTER_LAST,
+      (TOTAL_LINES - 1) * LINE_INTERVAL + HOLD_AFTER_LAST,
     ));
     timers.push(setTimeout(() => setShowSkip(true), SKIP_DELAY));
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // Single cadence interval drives the blinking cursor + waiting dots.
+  // Single fast interval: drives the glitch overlay, cursor blink and
+  // the waiting-dots cadence.
   useEffect(() => {
-    const iv = setInterval(() => setTick((t) => t + 1), TICK_MS);
+    const iv = setInterval(() => setFrame((f) => f + 1), FRAME_MS);
     return () => clearInterval(iv);
   }, []);
 
@@ -88,8 +110,6 @@ export default function HackAnimation({ responseReady, onDone, walletAddress }) 
     onDone();
   };
 
-  // "Don't show again" only affects the NEXT hack — never aborts the
-  // current animation (per the Phase 5.14 spec).
   const toggleAlwaysSkip = (checked) => {
     setAlwaysSkip(checked);
     const key = alwaysSkipKey(walletAddress);
@@ -102,9 +122,33 @@ export default function HackAnimation({ responseReady, onDone, walletAddress }) 
     }
   };
 
-  const cursorOn = tick % 2 === 0;
+  const glitch = useMemo(() => makeGlitch(), [frame]);
+  const cursorOn = Math.floor(frame / 5) % 2 === 0;
+  const dotCount = Math.floor(frame / 4) % 4;
   const waiting = scriptedDone && !responseReady;
-  const dotCount = tick % 4;
+
+  const headerLine = `> hack target=${target} mode=${mode}`;
+
+  // Build the visible line list with their status markers.
+  const lines = [];
+  for (let i = 0; i < revealed; i++) {
+    const isLast = i === revealed - 1;
+    if (i === 0) {
+      lines.push({ text: headerLine, isLast });
+      continue;
+    }
+    const step = STEP_LINES[i - 1];
+    if (step.waiting) {
+      const text = waiting
+        ? '> extracting data' + '.'.repeat(dotCount)
+        : step.base;
+      lines.push({ text, isLast });
+    } else {
+      // [✓] once a later line has appeared, [▮] while still in progress.
+      const marker = i < revealed - 1 ? '[✓]' : '[▮]';
+      lines.push({ text: step.base.padEnd(MARKER_COL) + marker, isLast });
+    }
+  }
 
   return (
     <div style={{
@@ -114,51 +158,46 @@ export default function HackAnimation({ responseReady, onDone, walletAddress }) 
     }}>
       {/* Terminal text */}
       <div style={{
-        position: 'absolute', inset: 0, padding: '28px 32px',
-        color: GREEN, fontSize: 'var(--text-xl)', lineHeight: 1.7,
-        textShadow: `0 0 6px ${GREEN}66`, zIndex: 1,
+        position: 'absolute', inset: 0, padding: '20px 22px',
+        color: MINT, fontSize: 'var(--text-lg)', lineHeight: 1.6,
+        textShadow: `0 0 6px ${MINT}66`, zIndex: 1, whiteSpace: 'pre',
       }}>
-        {LINES.slice(0, revealed).map((line, idx) => {
-          const isLastVisible = idx === revealed - 1;
-          let text = line;
-          if (idx === LINES.length - 1 && waiting) {
-            // Slow response — loop the last line's dots, no timeout shown.
-            text = '> Extracting data' + '.'.repeat(dotCount);
-          }
-          return (
-            <div key={idx}>
-              {text}
-              {isLastVisible && (
-                <span style={{ opacity: cursorOn ? 1 : 0 }}>{'█'}</span>
-              )}
-            </div>
-          );
-        })}
+        {lines.map((ln, idx) => (
+          <div key={idx}>
+            {ln.text}
+            {ln.isLast && (
+              <span style={{ opacity: cursorOn ? 1 : 0 }}>{'█'}</span>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Subtle CRT scanlines */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
-        background: 'repeating-linear-gradient(to bottom,'
-          + ' rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,'
-          + ' rgba(0,0,0,0.35) 2px, rgba(0,0,0,0.35) 3px)',
-      }} />
+      {/* Glitch-character overlay — the Phase 5.15 signature effect */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}>
+        {glitch.map((g) => (
+          <span key={g.id} style={{
+            position: 'absolute', left: `${g.x}%`, top: `${g.y}%`,
+            color: g.color, opacity: g.opacity, fontSize: 'var(--text-lg)',
+            textShadow: `0 0 4px ${g.color}`,
+          }}>{g.ch}</span>
+        ))}
+      </div>
 
-      {/* SKIP — appears after 1s so the animation is seen at least once */}
+      {/* SKIP — small, top-right, after 1s */}
       {showSkip && (
         <button onClick={handleSkip} style={{
-          position: 'absolute', top: 14, right: 14, zIndex: 3,
-          background: '#0a0a1e', border: `1px solid ${GREEN}66`, color: GREEN,
-          fontFamily: "'VT323', monospace", fontSize: 'var(--text-base)',
-          cursor: 'pointer', padding: '3px 12px',
-        }}>SKIP {'»'}</button>
+          position: 'absolute', top: 8, right: 8, zIndex: 3,
+          background: '#0a0a0e', border: `1px solid ${MINT}66`, color: MINT,
+          fontFamily: "'VT323', monospace", fontSize: 'var(--text-sm)',
+          cursor: 'pointer', padding: '1px 8px',
+        }}>skip {'»'}</button>
       )}
 
-      {/* "Don't show again" — corner checkbox; affects only the next hack */}
+      {/* "Don't show again" — checkbox at the foot of the animation */}
       <label style={{
-        position: 'absolute', bottom: 12, right: 16, zIndex: 3,
-        display: 'flex', alignItems: 'center', gap: 6,
-        color: `${GREEN}aa`, fontFamily: "'VT323', monospace",
+        position: 'absolute', bottom: 8, left: 0, right: 0, zIndex: 3,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        color: `${MINT}aa`, fontFamily: "'VT323', monospace",
         fontSize: 'var(--text-sm)', cursor: 'pointer',
       }}>
         <input
@@ -166,7 +205,7 @@ export default function HackAnimation({ responseReady, onDone, walletAddress }) 
           checked={alwaysSkip}
           onChange={(e) => toggleAlwaysSkip(e.target.checked)}
         />
-        Don&apos;t show this animation again
+        don&apos;t show this animation again
       </label>
     </div>
   );
