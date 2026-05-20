@@ -1127,7 +1127,7 @@ function TransferModal({ dev, allDevs, address, onClose, onDevUpdate, mode = 'tr
       // ledger entries (transfer_out + transfer_in), same audit.
       const fromId = isRequest ? Number(otherDevId) : dev.token_id;
       const toId   = isRequest ? dev.token_id : Number(otherDevId);
-      const res = await api.transferNxt(address, fromId, toId, amountNum);
+      const res = await api.transferNxt(address, fromId, toId, amountNum, mode);
       setStage('success');
       if (res.updated_from && onDevUpdate) onDevUpdate(res.updated_from);
       if (res.updated_to && onDevUpdate) onDevUpdate(res.updated_to);
@@ -1422,6 +1422,7 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer, onRequest }) {
   const requestAvailable = (allDevs || []).some(d =>
     d.token_id !== dev.token_id && !d._fetchFailed && d.balance_nxt > 0
   );
+  const energyZero = (dev.energy ?? 0) === 0;
 
   const itemStyle = (enabled) => ({
     display: 'block', width: '100%', padding: '6px 8px', border: 'none',
@@ -1436,8 +1437,8 @@ function EconDropdown({ dev, allDevs, busy, onFund, onTransfer, onRequest }) {
     <div ref={ref} style={{ position: 'relative' }}>
       <StoneBtn emoji={'\uD83D\uDCB0'} label="ECONOMY"
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
-        disabled={busy}
-        title="Fund, transfer, or request $NXT" />
+        disabled={busy || energyZero}
+        title={energyZero ? 'Dev needs energy. Use COFFEE or FEED first.' : 'Fund, transfer, or request $NXT'} />
       {open && (
         <div onClick={e => e.stopPropagation()} style={{
           position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
@@ -2120,9 +2121,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
               title={energyVal === 0 ? 'Dev needs energy. Use COFFEE or FEED first.'
                 : pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
           </div>
-          {/* NOTE: ECONOMY intentionally NOT disabled on energy=0
-            * — it's the rescue path for devs with 0 energy + 0 $NXT.
-            * See investigation FASE 1 (paso 6). */}
+          {/* NOTE: ECONOMY disabled when energy=0 (decided 2026-05-20).
+            * Trade-off accepted: devs with energy=0 AND $NXT=0 can
+            * soft-lock until passive energy regen kicks in (engine.py).
+            * The user can still recover via passive regen + COFFEE/FEED
+            * once energy is partially restored. */}
           <div style={exhaustedDimStyle}>
             <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
               onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}

@@ -184,11 +184,11 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_address, dev_token_id, amount, tx_hash }),
     }),
-  transferNxt: (player_address, from_dev_token_id, to_dev_token_id, amount) =>
+  transferNxt: (player_address, from_dev_token_id, to_dev_token_id, amount, mode = 'transfer') =>
     fetchJSON(`${API_BASE}/api/shop/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ player_address, from_dev_token_id, to_dev_token_id, amount }),
+      body: JSON.stringify({ player_address, from_dev_token_id, to_dev_token_id, amount, mode }),
     }),
   getPendingFundStatus: (tx_hash) =>
     fetchJSON(`${API_BASE}/api/shop/pending-funds/status/${tx_hash}`),
