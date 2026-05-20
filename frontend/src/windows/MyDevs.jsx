@@ -1745,6 +1745,11 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
     energyVal === 0 ? 'low-energy-critical' :
     energyVal <= 5  ? 'low-energy-warning'  :
     '';
+  // Restores the opacity:0.7 dimming the non-care action buttons
+  // (HACK / FIX / REPAIR / ECONOMY) had on an exhausted dev before
+  // commit 0e35822 pulled the action row out of the grayscale
+  // wrapper. COFFEE / FEED stay un-dimmed so their red glow shows.
+  const exhaustedDimStyle = { opacity: isExhausted ? 0.7 : 1 };
   const loc = dev.location ? dev.location.replace(/_/g, ' ') : null;
   const [actionMsg, setActionMsg] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -2066,20 +2071,28 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             className={energyClass}
             title="Coffee: 3 $NXT \u2192 +25 Caffeine, +3 Energy" />
           <FeedDropdown dev={dev} busy={busy} onBuy={doShopAction} className={energyClass} />
-          <StoneBtn emoji={'🔓'} label="HACK"
-            onClick={openHackModal} disabled={busy}
-            title="Hack: Mainframe, Player or Random — opens the hack console" />
-          <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
-            onClick={doFixBug} disabled={busy || bugsVal <= 0}
-            title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
-          <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
-            onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
-            disabled={busy || pcHealth >= 100}
-            title={pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
-          <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
-            onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
-            onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
-            onRequest={(e) => { e.stopPropagation(); setShowRequestModal(true); }} />
+          <div style={exhaustedDimStyle}>
+            <StoneBtn emoji={'🔓'} label="HACK"
+              onClick={openHackModal} disabled={busy}
+              title="Hack: Mainframe, Player or Random — opens the hack console" />
+          </div>
+          <div style={exhaustedDimStyle}>
+            <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
+              onClick={doFixBug} disabled={busy || bugsVal <= 0 || energyVal < 5}
+              title={energyVal < 5 && bugsVal > 0 ? `Fix Bugs needs 5 energy (have ${energyVal})` : bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
+          </div>
+          <div style={exhaustedDimStyle}>
+            <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
+              onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
+              disabled={busy || pcHealth >= 100}
+              title={pcHealth >= 100 ? "PC is healthy" : `PC Repair: 8 $NXT \u2192 100% (${pcHealth}%)`} />
+          </div>
+          <div style={exhaustedDimStyle}>
+            <EconDropdown dev={dev} allDevs={allDevs} busy={busy}
+              onFund={(e) => { e.stopPropagation(); setShowFundModal(true); }}
+              onTransfer={(e) => { e.stopPropagation(); setShowTransferModal(true); }}
+              onRequest={(e) => { e.stopPropagation(); setShowRequestModal(true); }} />
+          </div>
         </div>
       )}
 
