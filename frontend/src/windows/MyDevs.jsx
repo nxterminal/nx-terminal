@@ -1738,7 +1738,15 @@ function HackErrorModal({ error, onClose }) {
 // responses are dropped via a sequence counter so fast typing can't
 // render an out-of-order result set. Closeable (X / Esc / backdrop)
 // — this is target choice, not onboarding.
-function HackTargetingModal({ callerAddress, onConfirm, onClose }) {
+//
+// `suppressHint` — pass true if a future programmatic opener (deep
+// link, etc.) ever opens this modal; the one-time "use HACK RANDOM"
+// hint should only appear on user-initiated opens. Today every open
+// is user-initiated (a click on the HACK dropdown), so it defaults
+// off and the hint shows normally.
+const HINT_KEY_PREFIX = 'nx:hint:targeting_modal_dismissed:';
+
+function HackTargetingModal({ callerAddress, onConfirm, onClose, suppressHint = false }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1746,6 +1754,34 @@ function HackTargetingModal({ callerAddress, onConfirm, onClose }) {
   const debounceRef = useRef(null);
   const seqRef = useRef(0);
   const inputRef = useRef(null);
+
+  // One-time "HACK RANDOM still exists" hint. Persisted per wallet in
+  // localStorage — same pattern as the app's other UI prefs (theme,
+  // tooltips, icon scale). A different browser/device re-shows it once,
+  // which is fine for a trivial hint. The hint can only suggest "HACK >
+  // RANDOM" because the user reached this modal THROUGH that very
+  // dropdown, so the RANDOM item is guaranteed present on their device.
+  const hintStorageKey = callerAddress
+    ? `${HINT_KEY_PREFIX}${callerAddress.toLowerCase()}`
+    : null;
+  const [hintDismissed, setHintDismissed] = useState(() => {
+    if (suppressHint || !hintStorageKey) return true;
+    try {
+      return localStorage.getItem(hintStorageKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissHint = () => {
+    setHintDismissed(true);
+    if (!hintStorageKey) return;
+    try {
+      localStorage.setItem(hintStorageKey, '1');
+    } catch {
+      /* private mode / storage full — hint just reappears next open */
+    }
+  };
 
   useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
 
@@ -1809,6 +1845,26 @@ function HackTargetingModal({ callerAddress, onConfirm, onClose }) {
         </div>
         {/* Body */}
         <div style={{ padding: 14 }}>
+          {/* One-time hint — legacy random matchmaking moved to a
+              dropdown item; surface it once per wallet. */}
+          {!hintDismissed && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+              background: '#0a0a1e', border: '1px solid #ffcc4455',
+              padding: '8px 10px', marginBottom: 10,
+            }}>
+              <div style={{
+                flex: 1, fontSize: 'var(--text-sm)', color: '#ffcc44', lineHeight: 1.4,
+              }}>
+                {'💡 Prefer the classic random matchmaking? Use HACK > RANDOM from the dropdown.'}
+              </div>
+              <button onClick={dismissHint} style={{
+                flexShrink: 0, background: '#2a2a4e', border: '1px solid #ffcc4455',
+                color: '#ffcc44', fontFamily: "'VT323', monospace",
+                fontSize: 'var(--text-sm)', cursor: 'pointer', padding: '3px 10px',
+              }}>Got it</button>
+            </div>
+          )}
           <input
             ref={inputRef}
             value={query}
