@@ -2070,8 +2070,8 @@ function DevCard({ dev, onClick, address, onRetry, onDevUpdate, mission, allDevs
             onClick={openHackModal} disabled={busy}
             title="Hack: Mainframe, Player or Random — opens the hack console" />
           <StoneBtn emoji={'\uD83D\uDD27'} label={bugsVal > 0 ? `FIX:${bugsVal}` : 'FIX'}
-            onClick={doFixBug} disabled={busy || bugsVal <= 0}
-            title={bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
+            onClick={doFixBug} disabled={busy || bugsVal <= 0 || energyVal < 5}
+            title={energyVal < 5 && bugsVal > 0 ? `Fix Bugs needs 5 energy (have ${energyVal})` : bugsVal > 0 ? `Fix Bugs: 5 Energy \u2192 -8 Bugs, +3 Knowledge (${bugsVal} bugs)` : 'No bugs to fix'} />
           <StoneBtn emoji={'\uD83D\uDDA5\uFE0F'} label="REPAIR"
             onClick={(e) => doShopAction(e, 'pc_repair', 'PC Repair')}
             disabled={busy || pcHealth >= 100}
