@@ -84,11 +84,19 @@ def clean(db_pool):
 
 
 def _seed_players_and_devs(rows: Iterable[tuple]):
-    """Each row: (token_id, name, owner, archetype, balance_nxt)."""
+    """Each row: (token_id, name, owner, archetype, balance_nxt).
+
+    Phase 5.12 — seeds a synthetic display_name per wallet so the
+    nickname_required gate added to shop endpoints (transfer_nxt,
+    fund_dev, hack_*) doesn't 409 these tests."""
     with deps.get_db() as conn:
         with conn.cursor() as cur:
             for tid, name, owner, arch, bal in rows:
-                seed_player(cur, owner,)
+                # Derive nickname from the wallet so identical owners
+                # across rows produce identical names (seed_player is
+                # ON CONFLICT DO NOTHING, so the first INSERT wins).
+                nick = f"u_{owner[2:10]}"
+                seed_player(cur, owner, display_name=nick)
                 seed_dev(cur, token_id=tid, owner_address=owner, name=name, archetype=arch, balance_nxt=bal)
 
 

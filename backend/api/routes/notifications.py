@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.api.deps import fetch_one, fetch_all, get_db
+from backend.api.middleware.nickname_required import require_nickname
 
 log = logging.getLogger("nx_api")
 router = APIRouter()
@@ -21,6 +22,7 @@ class TicketRequest(BaseModel):
 async def submit_ticket(req: TicketRequest):
     """Submit a support ticket. Rate-limited to 3/day/wallet."""
     addr = req.wallet.lower()
+    require_nickname(addr)
     if not req.subject.strip() or not req.message.strip():
         raise HTTPException(400, "Subject and message are required")
 

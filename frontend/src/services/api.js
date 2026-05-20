@@ -12,7 +12,38 @@ function _lbQuery(limit, viewerWallet) {
   return params.toString();
 }
 
-async function fetchJSON(url, options) {
+// Phase 5.12 — auto-retry parking for nickname-gated requests.
+//
+// When a call 409s with `nickname_required` we do NOT surface the
+// error to the caller. Instead `fetchJSON` opens the onboarding modal
+// (via the `nx-nickname-required` event), parks the request by simply
+// holding its `url` + `options` in the closure, waits for the modal
+// to emit `nx-nickname-claimed`, and then replays the identical fetch.
+// The caller's original promise (`await api.hackPlayer(...)`) resolves
+// with the retried result — feature code never has to know the gate
+// exists.
+//
+// `nx-nickname-cancelled` is the defensive escape hatch: the modal is
+// non-skippable today so it never fires, but if a future change adds
+// a dismiss path this rejects every parked request (dropping the
+// stored { url, options }) instead of leaving promises hanging.
+function waitForNicknameClaim() {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      window.removeEventListener('nx-nickname-claimed', onClaimed);
+      window.removeEventListener('nx-nickname-cancelled', onCancelled);
+    };
+    const onClaimed = () => { cleanup(); resolve(); };
+    const onCancelled = () => {
+      cleanup();
+      reject(new Error('nickname_onboarding_cancelled'));
+    };
+    window.addEventListener('nx-nickname-claimed', onClaimed);
+    window.addEventListener('nx-nickname-cancelled', onCancelled);
+  });
+}
+
+async function fetchJSON(url, options, _isNicknameRetry = false) {
   const r = await fetch(url, options);
   if (!r.ok) {
     let detail = '';
@@ -27,8 +58,30 @@ async function fetchJSON(url, options) {
         detail = d;
       }
     } catch {}
+
+    // Phase 5.12 — nickname gate. Park the request, open the modal,
+    // replay it once the user claims a nickname. `_isNicknameRetry`
+    // guards against an infinite loop: if the replayed request is
+    // STILL gated (claim somehow didn't persist), we fall through and
+    // surface the 409 like any other error rather than re-opening the
+    // modal forever. Any non-409 failure of the replay is thrown by
+    // the recursive call and propagates to the original caller.
+    if (
+      r.status === 409 &&
+      structured &&
+      structured.error === 'nickname_required' &&
+      !_isNicknameRetry
+    ) {
+      try {
+        window.dispatchEvent(new CustomEvent('nx-nickname-required'));
+      } catch {}
+      await waitForNicknameClaim(); // rejects if the modal is cancelled
+      return fetchJSON(url, options, true); // replay exactly once
+    }
+
     const err = new Error(detail || `HTTP ${r.status}`);
     if (structured) err.detail = structured;
+    err.status = r.status;
     throw err;
   }
   return r.json();
@@ -141,6 +194,20 @@ export const api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }),
+
+  // Phase 5.12 — nickname onboarding. checkNickname returns `{ok}` with
+  // a distinct `error` code per failure mode (invalid_nickname /
+  // nickname_reserved / nickname_taken) so the modal can render the
+  // right message. claimNickname does the one-shot UPDATE on the
+  // existing players row created by the on-chain mint listener.
+  checkNickname: (nickname) =>
+    fetchJSON(`${API_BASE}/api/players/check-nickname?nickname=${encodeURIComponent(nickname)}`),
+  claimNickname: (wallet_address, nickname) =>
+    fetchJSON(`${API_BASE}/api/players/claim-nickname`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_address, nickname }),
+    }),
 
   // NX Souls — chat list (per-wallet view of every Dev with quota /
   // status / resting flags). Backed by GET /api/user/{wallet}/conversations.

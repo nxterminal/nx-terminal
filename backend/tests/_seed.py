@@ -51,6 +51,7 @@ Usage
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 
@@ -137,6 +138,20 @@ def seed_player(
         "wallet_address": wallet_address,
         "corporation": corporation,
     }
+    # Phase 5.12 — the nickname_required gate
+    # (backend/api/middleware/nickname_required.py) returns 409 for any
+    # wallet whose players row has a NULL display_name. Default a
+    # deterministic, unique, format-valid nickname here so every seeded
+    # player passes the gate without each of the ~20 call sites having
+    # to remember. The value is derived from the wallet (md5 → 16 hex,
+    # letter-prefixed) so it satisfies chk_nickname_format
+    # (^[A-Za-z0-9_]{3,20}$) and the uq_players_nickname_lower unique
+    # index. Tests that specifically need a NULL nickname pass
+    # display_name=None explicitly — that lands in `overrides` below
+    # and overrides this default.
+    if "display_name" not in overrides:
+        digest = hashlib.md5(wallet_address.lower().encode()).hexdigest()
+        cols["display_name"] = f"t{digest[:16]}"
     for key, val in overrides.items():
         if key not in _PLAYERS_COLUMNS:
             raise ValueError(

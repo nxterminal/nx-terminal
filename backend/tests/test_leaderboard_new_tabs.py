@@ -13,6 +13,7 @@ exists by the time these tests run.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -78,11 +79,16 @@ def clean_db(app):
 
 
 def _ensure_player(cur, wallet):
+    # Phase 5.12 — seed a format-valid, unique display_name so this row
+    # would pass the nickname_required gate. The leaderboard endpoints
+    # under test are GET-only and ungated, so this is purely defensive
+    # against a future gated call landing in this file.
+    digest = hashlib.md5(wallet.lower().encode()).hexdigest()
     cur.execute(
-        "INSERT INTO players (wallet_address, corporation) "
-        "VALUES (%s, 'MISANTHROPIC') "
+        "INSERT INTO players (wallet_address, corporation, display_name) "
+        "VALUES (%s, 'MISANTHROPIC', %s) "
         "ON CONFLICT DO NOTHING",
-        (wallet.lower(),),
+        (wallet.lower(), f"t{digest[:16]}"),
     )
 
 
